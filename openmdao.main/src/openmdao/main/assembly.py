@@ -12,7 +12,6 @@ import traceback
 from itertools import chain
 
 from numpy import ndarray
-from zope.interface import implementedBy
 
 # pylint: disable=E0611,F0401
 import networkx as nx
@@ -21,9 +20,8 @@ from openmdao.main.mpiwrap import MPI, mpiprint
 
 from openmdao.main.exceptions import NoFlatError
 from openmdao.main.interfaces import implements, IAssembly, IDriver, \
-                                     IArchitecture, IComponent, IContainer, \
-                                     ICaseIterator, ICaseRecorder, \
-                                     IDOEgenerator, IHasParameters
+                                     IComponent, IContainer, \
+                                     ICaseRecorder, IHasParameters
 from openmdao.main.mp_support import has_interface
 from openmdao.main.container import _copydict
 from openmdao.main.component import Component, Container
@@ -31,11 +29,6 @@ from openmdao.main.variable import Variable
 from openmdao.main.vartree import VariableTree
 from openmdao.main.datatypes.api import List, Slot, Bool, VarTree
 from openmdao.main.driver import Driver
-from openmdao.main.hasparameters import HasParameters, ParameterGroup
-from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, \
-                                         HasIneqConstraints
-from openmdao.main.hasobjective import HasObjective, HasObjectives
-from openmdao.main.hasresponses import HasResponses
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import is_instance
 from openmdao.main.printexpr import eliminate_expr_ws
@@ -120,14 +113,6 @@ class PassthroughProperty(Variable):
         if value != old:
             self._vals[obj][name] = self._trait.validate(obj, name, value)
             obj.trait_property_changed(name, old, value)
-
-
-def _find_common_interface(obj1, obj2):
-    for iface in (IAssembly, IComponent, IDriver, IArchitecture, IContainer,
-                  ICaseIterator, ICaseRecorder, IDOEgenerator):
-        if has_interface(obj1, iface) and has_interface(obj2, iface):
-            return iface
-    return None
 
 
 class RecordingOptions(VariableTree):
@@ -489,44 +474,6 @@ class Assembly(Component):
 
         return newtrait
 
-    def get_passthroughs(self):
-        ''' Get all the inputs and outputs of the assembly's child components
-        and indicate for each whether or not it is a passthrough variable.
-        If it is a passthrough, provide the assembly's name for the variable.
-        '''
-        inputs = {}
-        outputs = {}
-        passthroughs = {}
-
-        for name in self.list_inputs() + self.list_outputs():
-            target = self.get_metadata(name, 'target')
-            if target is not None:
-                passthroughs[target] = name
-
-        for comp in self.list_components():
-            inputs[comp] = {}
-            input_vars = self.get(comp).list_inputs()
-            for var_name in input_vars:
-                var_path = '.'.join((comp, var_name))
-                if var_path in passthroughs:
-                    inputs[comp][var_name] = passthroughs[var_path]
-                else:
-                    inputs[comp][var_name] = False
-
-            outputs[comp] = {}
-            output_vars = self.get(comp).list_outputs()
-            for var_name in output_vars:
-                var_path = '.'.join((comp, var_name))
-                if var_path in passthroughs:
-                    outputs[comp][var_name] = passthroughs[var_path]
-                else:
-                    outputs[comp][var_name] = False
-
-        return {
-            'inputs': inputs,
-            'outputs': outputs
-        }
-
     @rbac(('owner', 'user'))
     def check_config(self, strict=False):
         """
@@ -777,7 +724,6 @@ class Assembly(Component):
         self.J_input_keys = self.J_output_keys = None
         self._system = None
 
-
     def _set_failed(self, path, value):
         parts = path.split('.', 1)
         if len(parts) > 1:
@@ -789,7 +735,6 @@ class Assembly(Component):
         """Runs driver and updates our boundary variables."""
         for system in self._system.local_subsystems():
             system.pre_run()
-        #self._system.vec['u'].set_from_scope(self)
         self._system.run(self.itername, ffd_order=self.ffd_order,
                          case_uuid=self._case_uuid)
 
@@ -1144,9 +1089,6 @@ class Assembly(Component):
         conts = [getattr(self, n) for n in sorted(self.list_containers())]
         return [c for c in conts if has_interface(c, IComponent)]
 
-    def get_iteration_tree(self):
-        return self._top_driver.get_iteration_tree()
-
     def get_system(self):
         return self._system
 
@@ -1187,10 +1129,6 @@ class Assembly(Component):
             # remove driver system entirely and just go directly to workflow
             # system...
             self._system = rgraph.node[self._top_driver.name]['system']
-
-        # assemblies don't add systems to their parent
-        # graph, so return an empty tuple
-        return ()
 
     @rbac(('owner', 'user'))
     def get_req_cpus(self):
@@ -1308,7 +1246,7 @@ class Assembly(Component):
             if outputs is None:
                 outputs = dsrcs
 
-            dgraph = self._explode_vartrees(dgraph)
+            dgraph = dgraph._explode_vartrees(self)
             
             # add any variables requested that don't exist in the graph
             for inp in inputs:
@@ -1329,13 +1267,13 @@ class Assembly(Component):
                     
             dgraph = dgraph.relevant_subgraph(inputs, outputs, keep)
             
-            self._remove_vartrees(dgraph)
+            dgraph._remove_vartrees(self)
             
             keep.update(inputs)
             keep.update(outputs)
         else:
-            dgraph = self._explode_vartrees(dgraph)
-            self._remove_vartrees(dgraph)
+            dgraph = dgraph._explode_vartrees(self)
+            dgraph._remove_vartrees(self)
 
         dgraph._fix_state_connections(self)
 
@@ -1374,7 +1312,6 @@ class Assembly(Component):
             if has_interface(comp, IAssembly):
                 comp.setup_reduced_graph(inputs=_get_scoped_inputs(comp, dgraph, inputs),
                                          outputs=_get_scoped_outputs(comp, dgraph, outputs))
-
 
     def _get_var_info(self, node):
         """Collect any variable metadata from the
@@ -1477,105 +1414,6 @@ class Assembly(Component):
 
         return varmeta
 
-    def _add_driver_subvar_conns(self, depgraph, collapsed):
-        """Connect any var nodes with subvar sources that don't have an upstream component
-        to their basevar's upstream component.
-        """
-        for node, data in collapsed.nodes_iter(data=True):
-            if 'basevar' in data and collapsed.in_degree(node) == 0:
-                base = self.name2collapsed[data['basevar']]
-                if base in collapsed:
-                    preds = collapsed.predecessors(base)
-                    if preds:
-                        collapsed.add_edge(preds[0], node)
-        return collapsed
-
-    def _remove_vartrees(self, g):
-        """Remove all vartree nodes."""
-        vtnodes = [n for n in g if self.contains(n) and isinstance(self.get(n), VariableTree)]
-        
-        for vt in vtnodes:
-            succ = g.successors(vt)
-            pred = g.predecessors(vt)
-            
-            if '.' in vt:
-                # connect subs to parent comp
-                cname = vt.split('.', 1)[0]
-                if cname in succ:
-                    for p in pred:
-                        if p != cname and base_var(g, p) == vt:
-                            g.add_edge(p, cname)
-                elif cname in pred:
-                    for s in succ:
-                        if s != cname and base_var(g, s) == vt:
-                            g.add_edge(cname, s)
-                            
-        g.remove_nodes_from(vtnodes)
-                
-    def _explode_vartrees(self, dgraph):
-        """Given a depgraph, take all connected variable nodes corresponding
-        to VariableTrees and replace them with a variable node for each
-        variable in the VariableTree.
-        """
-        vtvars = dict([(n,None) for n in dgraph if isinstance(self.get(n), VariableTree)])        
-        conns = [(u,v) for u,v in dgraph.list_connections() if u in vtvars]
-        
-        depgraph = dgraph.subgraph(dgraph.nodes_iter())
-        
-        # explode all vt nodes first
-        for vt in vtvars:
-            obj = self.get(vt)
-            vtvars[vt] = ['.'.join((vt, n.split('.',1)[1]))
-                                     for n in obj.list_all_vars()]
-            vtvars[vt].sort()
-            for sub in vtvars[vt]:
-                if sub not in depgraph:
-                    depgraph.add_subvar(sub)
-        
-        vtconns = {}
-        for u,v in conns:
-            varlist = [vtvars[u], vtvars[v]]
-
-            if len(varlist[0]) != len(varlist[1]):
-                self.raise_exception("connected vartrees '%s' and '%s' do not have the same variable list" %
-                                     (u, v))
-
-            for src, dest in zip(varlist[0], varlist[1]):
-                if src.split('.')[-1] != dest.split('.')[-1]:
-                    self.raise_exception("variables '%s' and '%s' in vartree connection '%s' -> '%s' do not match" %
-                                         (src, dest, u, v))
-
-            vtconns[(u,v)] = varlist
-
-
-        for (u,v), varlist in vtconns.items():
-            ucomp = udestcomp = vcomp = None
-
-            # see if there's a u component
-            comp = u.split('.', 1)[0]
-            if comp in depgraph and depgraph.node[comp].get('comp'):
-                if comp in depgraph.predecessors(u):
-                    ucomp = comp
-                elif comp in depgraph.successors(u):  # handle input as output case
-                    udestcomp = comp
-
-            # see if there's a v component
-            comp = v.split('.', 1)[0]
-            if comp in depgraph and depgraph.node[comp].get('comp'):
-                if comp in depgraph.successors(v):
-                    vcomp = comp
-
-            for src, dest in zip(varlist[0], varlist[1]):
-                depgraph.add_edge(src, dest, conn=True)
-                if ucomp:
-                    depgraph.add_edge(ucomp, src)
-                if udestcomp:
-                    depgraph.add_edge(src, udestcomp)
-                if vcomp:
-                    depgraph.add_edge(dest, vcomp)
-
-        return depgraph
-
     def get_comps_and_pseudos(self):
         for node, data in self._depgraph.nodes_iter(data=True):
             if 'comp' in data:
@@ -1661,19 +1499,6 @@ def dump_iteration_tree(obj, f=sys.stdout, full=True, tabsize=4, derivs=False):
 
     _dump_iteration_tree(obj, f, 0)
 
-def _get_wflow_names(iter_tree):
-    """Return a list of names with driver sub-iter-trees collapsed
-    down to just the driver name, i.e., return what would be
-    in driver.workflow.get_names(full=True).
-    """
-    names = []
-    for n in iter_tree[1]:
-        if isinstance(n, basestring):
-            names.append(n)
-        else:
-            names.append(n[0])
-    return names
-
 def _get_scoped_inputs(comp, g, explicit_ins):
     """Return a list of input varnames scoped to the given name."""
     cnamedot = comp.name + '.'
@@ -1709,26 +1534,3 @@ def _get_scoped_outputs(comp, g, explicit_outs):
         return None
 
     return [n.split('.',1)[1] for n in outputs]
-
-def _gdump(g):
-    print "nodes:"
-    for n,d in g.nodes_iter(data=True):
-        print n, d
-    print "edges"
-    for u,v,d in g.edges(data=True):
-        print "   ",u," --> ",v, d
-
-def _dump_all(asm):
-    """a debugging function to help track down diffs between models."""
-    asm._system.dump(stream=sys.stdout)
-    print "%s reduced graph" % asm.get_pathname()
-    _gdump(asm._reduced_graph)
-    for drv in [asm._top_driver] + list(asm._top_driver.subdrivers(recurse=True)):
-        print "driver", drv.name
-        print "reduced graph"
-        _gdump(drv.get_reduced_graph())
-        print "wf reduced_graph"
-        _gdump(drv.workflow._reduced_graph)
-        for comp in drv.workflow:
-            if has_interface(comp, IAssembly):
-                _dump_all(comp)

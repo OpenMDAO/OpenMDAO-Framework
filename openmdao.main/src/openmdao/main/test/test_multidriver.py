@@ -592,19 +592,6 @@ class MultiDriverTestCase(unittest.TestCase):
         self.assertEqual(set(edges['~opt1.comp|f']), set(['@out0']))
         self.assertEqual(set(edges['~opt2.comp|f']), set(['@out0']))
 
-    def test_get_itertree(self):
-        self.rosen_setUp()
-        self.assertEqual(self.top.get_iteration_tree(),
-                         ['driver',
-                          [['driver1',
-                            ['comp1', 'comp2', 'comp3', 'comp4',
-                             'adder1', 'adder2', 'adder3',
-                             '._pseudo_1', '._pseudo_0', '._pseudo_3', '._pseudo_2']
-                            ]
-                           ]
-                          ])
-        self.top.run()
-
 
 if __name__ == "__main__":
 

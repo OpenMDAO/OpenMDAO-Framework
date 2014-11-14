@@ -1084,6 +1084,93 @@ class DependencyGraph(DGraphBase):
     
         return self
 
+    def _explode_vartrees(self, scope):
+        """Given a depgraph, take all connected variable nodes corresponding
+        to VariableTrees and replace them with a variable node for each
+        variable in the VariableTree.
+        """
+        vtvars = dict([(n,None) for n in self if isinstance(scope.get(n), VariableTree)])        
+        conns = [(u,v) for u,v in self.list_connections() if u in vtvars]
+        
+        depgraph = self.subgraph(self.nodes_iter())
+        
+        # explode all vt nodes first
+        for vt in vtvars:
+            obj = scope.get(vt)
+            vtvars[vt] = ['.'.join((vt, n.split('.',1)[1]))
+                                     for n in obj.list_all_vars()]
+            vtvars[vt].sort()
+            for sub in vtvars[vt]:
+                if sub not in depgraph:
+                    depgraph.add_subvar(sub)
+        
+        vtconns = {}
+        for u,v in conns:
+            varlist = [vtvars[u], vtvars[v]]
+
+            if len(varlist[0]) != len(varlist[1]):
+                scope.raise_exception("connected vartrees '%s' and '%s' do not have the same variable list" %
+                                      (u, v))
+
+            for src, dest in zip(varlist[0], varlist[1]):
+                if src.split('.')[-1] != dest.split('.')[-1]:
+                    scope.raise_exception("variables '%s' and '%s' in vartree connection '%s' -> '%s' do not match" %
+                                          (src, dest, u, v))
+
+            vtconns[(u,v)] = varlist
+
+
+        for (u,v), varlist in vtconns.items():
+            ucomp = udestcomp = vcomp = None
+
+            # see if there's a u component
+            comp = u.split('.', 1)[0]
+            if comp in depgraph and depgraph.node[comp].get('comp'):
+                if comp in depgraph.predecessors(u):
+                    ucomp = comp
+                elif comp in depgraph.successors(u):  # handle input as output case
+                    udestcomp = comp
+
+            # see if there's a v component
+            comp = v.split('.', 1)[0]
+            if comp in depgraph and depgraph.node[comp].get('comp'):
+                if comp in depgraph.successors(v):
+                    vcomp = comp
+
+            for src, dest in zip(varlist[0], varlist[1]):
+                depgraph.add_edge(src, dest, conn=True)
+                if ucomp:
+                    depgraph.add_edge(ucomp, src)
+                if udestcomp:
+                    depgraph.add_edge(src, udestcomp)
+                if vcomp:
+                    depgraph.add_edge(dest, vcomp)
+
+        return depgraph
+
+    def _remove_vartrees(self, scope):
+        """Remove all vartree nodes."""
+        vtnodes = [n for n in self if scope.contains(n) 
+                     and isinstance(scope.get(n), VariableTree)]
+        
+        for vt in vtnodes:
+            succ = self.successors(vt)
+            pred = self.predecessors(vt)
+            
+            if '.' in vt:
+                # connect subs to parent comp
+                cname = vt.split('.', 1)[0]
+                if cname in succ:
+                    for p in pred:
+                        if p != cname and base_var(self, p) == vt:
+                            self.add_edge(p, cname)
+                elif cname in pred:
+                    for s in succ:
+                        if s != cname and base_var(self, s) == vt:
+                            self.add_edge(cname, s)
+                            
+        self.remove_nodes_from(vtnodes)
+
 
 class CollapsedGraph(DGraphBase):
     def __init__(self, *args, **kwargs):

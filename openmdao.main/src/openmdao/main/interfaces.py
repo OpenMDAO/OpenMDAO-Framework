@@ -264,11 +264,6 @@ class IDriver(IComponent):
         in this Driver's workflow or any of its sub-workflows.
         """
 
-    def get_workflow(self):
-        """ Get the driver info and the list of components that make up the
-            driver's workflow; recurse on nested drivers.
-        """
-
     def requires_derivs(self):
         """ Returns True if this Driver requires derivatives. """
 
