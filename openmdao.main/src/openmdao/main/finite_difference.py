@@ -4,7 +4,7 @@
 # pylint: disable=E0611,F0401
 from sys import float_info
 
-from openmdao.main.array_helpers import flattened_size, flattened_value
+from openmdao.main.array_helpers import flattened_size
 from openmdao.main.interfaces import IVariableTree
 from openmdao.main.mp_support import has_interface
 from openmdao.main.mpiwrap import mpiprint
@@ -69,6 +69,7 @@ class FiniteDifference(object):
             if 'high' in meta:
                 high = meta['high']
 
+            # Settings in the add_parameter call trump all others
             param_srcs = [item for item in srcs if item in driver_targets]
             if param_srcs:
                 if param_srcs[0] in driver_params:
@@ -82,7 +83,8 @@ class FiniteDifference(object):
                 else:
                     # have to check through all the param groups
                     for param_group in driver_params:
-                        is_fd_step_not_set = is_low_not_set = is_high_not_set = True
+                        is_fd_step_not_set = is_low_not_set = \
+                                             is_high_not_set = True
                         if not isinstance(param_group, str) and \
                            param_srcs[0] in param_group:
                             param = driver_params[param_group]
@@ -287,7 +289,7 @@ class FiniteDifference(object):
                     Jfd = (yc/fd_step).imag
 
                     # Undo step
-                    self.set_value_complex(src, complex_step, i-i1, 
+                    self.set_value_complex(src, complex_step, i-i1,
                                            undo_complex=True)
                     self.system.set_complex_step(False)
 
@@ -348,7 +350,10 @@ class FiniteDifference(object):
             if src in self.system.vec['u']:
                 vec = self.system.vec['u'][src]
                 vec[index] += val
-                break  # avoid adding to the same array entry multiple times for param groups
+
+                # avoid adding to the same array entry multiple times for
+                # param groups
+                break
 
     def set_value_complex(self, srcs, val, index, undo_complex=False):
         """Set/unset a complex value in the model"""
@@ -365,7 +370,10 @@ class FiniteDifference(object):
                     vec[index] = 0.0
                 else:
                     vec[index] = val
-                break  # avoid adding to the same array entry multiple times for param groups
+
+                # avoid adding to the same array entry multiple times for
+                # param groups
+                break
 
     def get_value(self, src, i1, i2, index):
         """Get a value from the model. We only need this function for
@@ -555,7 +563,7 @@ class DirectionalFD(object):
     def set_value(self, fd_step, arg):
         """Set a value in the model"""
 
-        for j, srcs in enumerate(self.inputs):
+        for srcs in self.inputs:
 
             # Support for Parameter Groups:
             if isinstance(srcs, basestring):
@@ -571,7 +579,7 @@ class DirectionalFD(object):
     def set_value_complex(self, fd_step, arg, undo_complex=False):
         """Set a complex value in the model"""
 
-        for j, srcs in enumerate(self.inputs):
+        for srcs in self.inputs:
 
             # Support for Parameter Groups:
             if isinstance(srcs, basestring):

@@ -12,7 +12,6 @@ from os.path import isabs, isdir, dirname, exists, join, normpath, relpath
 import pkg_resources
 import sys
 import weakref
-import re
 
 # pylint: disable=E0611,F0401
 from traits.trait_base import not_event
@@ -21,27 +20,20 @@ from traits.api import Property
 from openmdao.main.container import Container
 from openmdao.main.derivatives import applyJ, applyJT
 from openmdao.main.interfaces import implements, obj_has_interface, \
-                                     IAssembly, IComponent, IDriver, ISolver, \
-                                     IHasCouplingVars, IHasObjectives, \
-                                     IHasParameters, IHasResponses, \
-                                     IHasConstraints, \
-                                     IHasEqConstraints, IHasIneqConstraints, \
-                                     IHasEvents, IImplicitComponent
-from openmdao.main.hasparameters import ParameterGroup
+                                     IAssembly, IComponent, IDriver, ISolver
 from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, \
                                          HasIneqConstraints
 from openmdao.main.hasobjective import HasObjective, HasObjectives
 from openmdao.main.file_supp import FileMetadata
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import has_interface, is_instance
-from openmdao.main.datatypes.api import Bool, List, Str, Int, Slot, Dict, \
+from openmdao.main.datatypes.api import Bool, List, Str, Int, Slot, \
                                         FileRef, Enum
 from openmdao.main.vartree import VariableTree
 from openmdao.main.mpiwrap import MPI_info
 
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.eggobserver import EggObserver
-from openmdao.util.graph import list_deriv_vars
 #from openmdao.main.mpiwrap import mpiprint
 
 import openmdao.util.log as tracing
@@ -487,11 +479,11 @@ class Component(Container):
                not obj_has_interface(self, IDriver, IAssembly):
                 tracing.TRACER.debug(self.get_itername())
                 #tracing.TRACER.debug(self.get_itername() + '  ' + self.name)
-                
+
             self.execute()
             self._post_execute()
             self._post_run()
-            
+
         except Exception:
             info = sys.exc_info()
             self._set_exec_state('INVALID')
