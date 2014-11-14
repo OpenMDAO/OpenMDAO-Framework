@@ -487,11 +487,11 @@ class Component(Container):
                not obj_has_interface(self, IDriver, IAssembly):
                 tracing.TRACER.debug(self.get_itername())
                 #tracing.TRACER.debug(self.get_itername() + '  ' + self.name)
+                
             self.execute()
-
             self._post_execute()
-
             self._post_run()
+            
         except Exception:
             info = sys.exc_info()
             self._set_exec_state('INVALID')
