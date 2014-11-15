@@ -147,7 +147,7 @@ class TestCase(unittest.TestCase):
                 self.assertTrue(lines[i].startswith('        "writer.x":'))
             elif expect.startswith('        "writer.y":'):
                 self.assertTrue(lines[i].startswith('        "writer.y":'))
-            elif expect.startswith('                    "platform":'):
+            elif expect.startswith('            "platform":'):
                 self.assertTrue(lines[i].startswith('            "platform":'))
             elif not expect.startswith('    "graph":'):
                 self.assertEqual(lines[i], expect)
