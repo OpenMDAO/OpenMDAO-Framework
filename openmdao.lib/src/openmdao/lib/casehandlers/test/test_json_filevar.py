@@ -90,7 +90,10 @@ class TestCase(unittest.TestCase):
         self.top.recorders = [JSONCaseRecorder(sout)]
 
         self.top.recording_options.save_problem_formulation=True
-        self.top.recording_options.includes=['writer.x','writer.y','c2.f_xy', 'writer.file_out','c2.file_in']
+        self.top.recording_options.includes=[
+            'writer.x', 'writer.y', 'c2.f_xy',
+            'writer.file_out', 'c2.file_in'
+        ]
 
         self.top.run()
 
@@ -140,10 +143,17 @@ class TestCase(unittest.TestCase):
                 value = float(re.match('.*:([^,]*),', lines[i]).group(1))
                 # Multiple representations of zero...
                 self.assertEqual(value, expect)
+            elif expect.startswith('        "writer.x":'):
+                self.assertTrue(lines[i].startswith('        "writer.x":'))
+            elif expect.startswith('        "writer.y":'):
+                self.assertTrue(lines[i].startswith('        "writer.y":'))
+            elif expect.startswith('                    "platform":'):
+                self.assertTrue(lines[i].startswith('            "platform":'))
             elif not expect.startswith('    "graph":'):
                 self.assertEqual(lines[i], expect)
 
     def tearDown(self):
+        # os.remove('x.in')
         self.top = None
 
 
