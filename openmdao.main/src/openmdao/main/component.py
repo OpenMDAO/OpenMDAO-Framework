@@ -409,8 +409,9 @@ class Component(Container):
 
         if self._new_config:
             self.check_config()
-            if self.parent is None and has_interface(self, IAssembly):
-                self._setup()  # only call _setup from top level
+            # per Bret
+            # if self.parent is None and has_interface(self, IAssembly):
+            #     self._setup()  # only call _setup from top level
             self._new_config = False
 
     def execute(self):
@@ -560,8 +561,8 @@ class Component(Container):
         self.ffd_order = ffd_order
         self._case_uuid = case_uuid
 
-        if self.parent is None:
-            self._run_begins()
+        # if self.parent is None: # per Bret
+        #     self._run_begins()
         try:
             self._pre_execute()
             self._set_exec_state('RUNNING')

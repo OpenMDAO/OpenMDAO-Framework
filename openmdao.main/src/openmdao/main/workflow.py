@@ -86,6 +86,7 @@ class Workflow(object):
         self._rec_responses = None
         self._rec_constraints = None
         self._rec_outputs = None
+        self._rec_all_outputs = None
 
         if members:
             for member in members:
@@ -564,6 +565,7 @@ class Workflow(object):
                     inputs.append(name)
 
         #driver.get_reduced_graph()
+        self._rec_all_outputs = []
         for comp in driver.workflow: 
             successors = driver._reduced_graph.successors(comp.name)
             for output_name, aliases in successors:
@@ -573,6 +575,7 @@ class Workflow(object):
                             output_name = n
                             break
                 outputs.append(output_name)
+                self._rec_all_outputs.append(output_name)
 
         # Objectives
         self._rec_objectives = []
@@ -663,6 +666,7 @@ class Workflow(object):
         path = prefix+name
         if self._check_path(path, includes, excludes):
             self._rec_outputs.append(name)
+            self._rec_all_outputs.append(name)
             outputs.append(name)
 
         # If recording required, register names in recorders.
@@ -717,33 +721,40 @@ class Workflow(object):
                 value = value[0]
             inputs.append(value)
 
-        # Objectives.
-        for key in self._rec_objectives:
-            try:
-                outputs.append(driver.eval_named_objective(key))
-            except Exception as exc:
-                driver.raise_exception("Can't evaluate '%s' for recording: %s"
-                                       % (key, exc), RuntimeError)
-        # Responses.
-        for key in self._rec_responses:
-            try:
-                outputs.append(driver.eval_response(key))
-            except Exception as exc:
-                driver.raise_exception("Can't evaluate '%s' for recording: %s"
-                                       % (key, exc), RuntimeError)
-        # Constraints.
-        for con in self._rec_constraints:
-            try:
-                value = con.evaluate(scope)
-            except Exception as exc:
-                driver.raise_exception("Can't evaluate '%s' for recording: %s"
-                                       % (con, exc), RuntimeError)
-            if len(value) == 1:  # evaluate() always returns list.
-                value = value[0]
-            outputs.append(value)
+        ## Objectives.
+        #for key in self._rec_objectives:
+            #try:
+                #outputs.append(driver.eval_named_objective(key))
+            #except Exception as exc:
+                #driver.raise_exception("Can't evaluate '%s' for recording: %s"
+                                       #% (key, exc), RuntimeError)
+        ## Responses.
+        #for key in self._rec_responses:
+            #try:
+                #outputs.append(driver.eval_response(key))
+            #except Exception as exc:
+                #driver.raise_exception("Can't evaluate '%s' for recording: %s"
+                                       #% (key, exc), RuntimeError)
+        ## Constraints.
+        #for con in self._rec_constraints:
+            #try:
+                #value = con.evaluate(scope)
+            #except Exception as exc:
+                #driver.raise_exception("Can't evaluate '%s' for recording: %s"
+                                       #% (con, exc), RuntimeError)
+            #if len(value) == 1:  # evaluate() always returns list.
+                #value = value[0]
+            #outputs.append(value)
 
-        # Other outputs.
-        for name in self._rec_outputs:
+        ## Other outputs.
+        #for name in self._rec_outputs:
+            #try:
+                #outputs.append(scope.get(name))
+            #except Exception as exc:
+                #scope.raise_exception("Can't get '%s' for recording: %s"
+                                      #% (name, exc), RuntimeError)
+        ## Other outputs.
+        for name in self._rec_all_outputs:
             try:
                 outputs.append(scope.get(name))
             except Exception as exc:

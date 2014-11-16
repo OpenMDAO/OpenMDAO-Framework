@@ -11,6 +11,10 @@ import time
 import json
 import bson
 
+import cPickle
+from pymongodb_bson_binary_util import dumps, Binary
+
+
 from numpy  import ndarray
 from struct import pack
 from uuid   import uuid1
@@ -163,7 +167,6 @@ class _BaseRecorder(object):
                       case_uuid, parent_uuid):
         """ Return case info dictionary. """
         in_names, out_names = self._cfg_map[driver]
-        
         data = dict(zip(in_names, inputs))
         data.update(zip(out_names, outputs))
 
@@ -360,8 +363,6 @@ def _fixup(value):
         return [_fixup(val) for val in value]
     elif isinstance(value, ndarray):
         #return value.tolist()
-        import cPickle
-        from myjson_util import dumps, Binary
         return dumps(Binary( cPickle.dumps( value, protocol=2) ) )
     elif isinstance(value, VariableTree):
         return dict([(name, _fixup(getattr(value, name)))
