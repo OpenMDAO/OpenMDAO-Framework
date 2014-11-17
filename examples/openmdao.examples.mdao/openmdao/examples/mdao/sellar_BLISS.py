@@ -54,7 +54,7 @@ class Dis12Linear(Component):
     con2 = Float(0.0, iotype='out')
 
     def execute(self):
-        print self.z_store, self.z1, self.z2
+        #print self.z_store, self.z1, self.z2
         self.obj = self.ssa_F[0] + self.ssa_dF[0]*(self.z_store[0] - self.z1) + \
                                    self.ssa_dF[1]*(self.z_store[1] - self.z2)
         self.con1 = self.ssa_G[0] + self.ssa_dG[0][0]*(self.z_store[0] - self.z1) + \
@@ -96,8 +96,8 @@ class SellarBLISS(Assembly):
         # Top level is Fixed-Point Iteration
         self.add('driver', FixedPointIterator())
         self.driver.add_parameter(('dis1.x1', 'dis1lin.x1'), low=0.0, high=10.0, start=1.0)
-        self.driver.add_parameter(['dis1pre.z1', 'dis1.z1', 'dis2.z1', 'dis12lin.z1'], low=-10.0, high=10.0, start=5.0)
-        self.driver.add_parameter(['dis1pre.z2', 'dis1.z2', 'dis2.z2', 'dis12lin.z2'], low=  0.0, high=10.0, start=2.0)
+        self.driver.add_parameter(['dis1pre.z1', 'dis1.z1', 'dis2.z1', 'dis12lin.z1'], low=-10.0, high=10.0)
+        self.driver.add_parameter(['dis1pre.z2', 'dis1.z2', 'dis2.z2', 'dis12lin.z2'], low=  0.0, high=10.0)
         self.driver.add_constraint('dis1lin.x1_store = dis1.x1')
         self.driver.add_constraint('dis12lin.z_store[0] = dis1.z1')
         self.driver.add_constraint('dis12lin.z_store[1] = dis1.z2')
@@ -188,9 +188,9 @@ if __name__ == "__main__": # pragma: no cover
     prob = SellarBLISS()
     prob.name = 'top'
 
-    #prob.dis1.z1 = prob.dis2.z1 = prob.dis12lin.z1 = prob.dis1pre.z1 = 5.0
-    #prob.dis1.z2 = prob.dis2.z2 = prob.dis12lin.z2 = prob.dis1pre.z2 = 2.0
-    #prob.dis1.x1 = prob.dis1lin.x1 = 1.0
+    prob.dis1.z1 = prob.dis2.z1 = prob.dis12lin.z1 = prob.dis1pre.z1 = 5.0
+    prob.dis1.z2 = prob.dis2.z2 = prob.dis12lin.z2 = prob.dis1pre.z2 = 2.0
+    prob.dis1.x1 = prob.dis1lin.x1 = 1.0
     #prob.dis2.y1 = 3.16
     tt = time.time()
     prob.run()

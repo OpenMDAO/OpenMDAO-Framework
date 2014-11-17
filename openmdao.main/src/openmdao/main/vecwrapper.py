@@ -271,7 +271,7 @@ class VecWrapper(VecWrapperBase):
                         substart = get_flat_index_start(sub_idx)
                         self._info[name] = (self.array[sub_idx], substart)
                         self._subviews.add(name)
-    
+
                         if self.array[sub_idx].size != sz:
                             raise RuntimeError("size mismatch: in system %s, view for %s is %s, idx=%s, size=%d" %
                                                  (system.name, name,
@@ -390,7 +390,7 @@ class InputVecWrapper(VecWrapperBase):
         for sub in system.simple_subsystems():
             for arg in sub._in_nodes:
                 all_ins.add(arg)
-                
+
         # now add views for subvars that are subviews of their
         # basevars
         for name in all_ins:
@@ -398,7 +398,7 @@ class InputVecWrapper(VecWrapperBase):
 
             if name in system.vector_vars or name2collapsed.get(var.get('basevar')) not in self:
                 continue
-            
+
             sz = var['size']
             if sz > 0 and not var.get('noflat'):
                 idx = var['flat_idx']
@@ -431,7 +431,7 @@ class InputVecWrapper(VecWrapperBase):
 
     def _map_resids_to_states(self, system):
         pass
-    
+
     def get_dests_by_comp(self):
         """Return a dict of comp name keyed to a list of input nodes, with
         any subvars removed that have basevars in the vector.
@@ -443,11 +443,11 @@ class InputVecWrapper(VecWrapperBase):
                 for d in dests:
                     cname, _, vname = d.partition('.')
                     ret.setdefault(cname, []).append(node)
-                        
+
         for cname, in_nodes in ret.items():
             bases = [n[0] for n in in_nodes if n[0].split('[',1)[0]==n[0]]
             ret[cname] = [n for n in in_nodes if n[0] in bases or n[0].split('[',1)[0] not in bases]
-            
+
         return ret
 
     def set_to_scope(self, scope, vnames=None):
@@ -480,7 +480,7 @@ class InputVecWrapper(VecWrapperBase):
 
         for name in vnames:
             step, start = self._info.get(name,(None, None))
-            
+
             if start is not None:
                 if isinstance(name, tuple):
                     for dest in name[1]:
