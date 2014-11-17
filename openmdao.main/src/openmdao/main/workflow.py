@@ -603,7 +603,7 @@ class Workflow(object):
                 continue
             path = prefix+src
             if src not in inputs and src not in outputs and \
-               (save_problem_formulation or self._check_path(path, includes, excludes)):
+               self._check_path(path, includes, excludes):
                 self._rec_outputs.append(src)
                 outputs.append(src)
 

@@ -164,7 +164,7 @@ about :term:`Git` and Github itself. The
 `GitHub help page <https://help.github.com/>`_ is a good place to start. If you're a 
 Windows user, make sure to read the details about using Git Bash on the `Windows 
 specific installation instructions <https://help.github.com/articles/set-up-git>`_. 
-The `Pro Git book <http://git-scm.com/book>`_ is also excellent.  It's very
+The `Pro Git book <http://git-scm.com/book/en/v2>`_ is also excellent.  It's very
 important to take a look at these, because Git differs from other version
 control systems in some significant ways. 
 

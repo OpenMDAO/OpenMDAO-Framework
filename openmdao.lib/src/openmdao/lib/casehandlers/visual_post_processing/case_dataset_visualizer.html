@@ -2,8 +2,6 @@
     <head>
         <link rel='stylesheet' type='text/css' href='http://w2ui.com/src/w2ui-1.4.1.min.css' />
         <script src='http://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js'></script>
-        <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.11.2/themes/smoothness/jquery-ui.css" />
-        <script src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.11.2/jquery-ui.min.js"></script>
         <script src="http://d3js.org/d3.v3.min.js"></script>
         <script type='text/javascript' src='http://w2ui.com/src/w2ui-1.4.1.min.js'></script>
         <script type='text/javascript' src='http://www.flotcharts.org/javascript/jquery.flot.min.js'></script>
@@ -507,20 +505,42 @@
                             }
                         }
                     });
-                    console.log('updatePlot', plottable[queryValue], vals);
 
-                    var series = vals.map(function(e, i) {
-                        return [i, vals[i]]
-                    })
+                    var label = plottable[queryValue].title;
+                    var series = [];
 
-                    $.plot('#plotDiv', [{ label: plottable[queryValue].title, data: series }], {
+                    if (vals.length > 0) {
+                        // if it's an array and a single case is selected, plot the array
+                        if (vals[0] instanceof Array) {
+                            if (vals.length === 1) {
+                                label = label + ' for Case #' + queryCase
+                                series = vals[0].map(function(e, i) {
+                                    // assume it's a 2-D or 1-D array
+                                    if (Array.isArray(vals[i])) {
+                                        return [vals[0][i][0], vals[0][i][1]]
+                                    }
+                                    else {
+                                        return [i, vals[0][i]]
+                                    }
+                                });
+                            }
+                            else {
+                                alert(queryValue+' is an Array variable,\nplease select a single case.');
+                            }
+                        }
+                        else {
+                            series = vals.map(function(e, i) {
+                                return [i, vals[i]]
+                            })
+                        }
+                    }
+
+                    $.plot('#plotDiv', [{ label: label, data: series }], {
                         series: {
                             lines: { show: true },
                             points: { show: true }
                         }
                     });
-
-                    // plotSeries(plottable[queryValue].title, series);
                 }
 
                 // generate plot
@@ -543,7 +563,7 @@
                     var plottable = {};
                     $.each(simulation_info.variable_metadata, function(name, value) {
                         var type = 'Variable';
-                        if ((value.vartypename === 'Float') || (value.vartypename === 'Int')) {
+                        if ((value.vartypename === 'Float') || (value.vartypename === 'Int') || (value.vartypename === 'Array')) {
                             if (parameter_list.indexOf(name) >= 0) {
                                 type = 'Parameter';
                             }
@@ -822,7 +842,7 @@
 
                 // Starting from the top "case_object", which is really the sim info data,
                 // Walk down the children leaves, creating the value for nodes in the w2ui call below
-                simulation_info_object = case_objects[simulation_info_id] ;
+                simulation_info_object = case_objects[simulation_info_id];
                 node_tree = get_nodes(simulation_info_object);
 
                 // use w2ui to do the layout of the divs
