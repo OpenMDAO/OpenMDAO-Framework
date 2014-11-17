@@ -317,8 +317,8 @@ class Test_Pseudo_Deriv(unittest.TestCase):
         model.add('sub', SubAsmb())
         model.driver.workflow.add('sub')
         model.run()
-        J = model.driver.workflow.calc_gradient(inputs=['sub.x', 'sub.y'],
-                                                outputs=['sub.z'])
+        J = model.driver.calc_gradient(inputs=['sub.x', 'sub.y'],
+                                       outputs=['sub.z'])
 
         assert_rel_error(self, J[0,0], 10.0, .001)
         assert_rel_error(self, J[0,1], 10.0, .001)

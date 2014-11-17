@@ -422,7 +422,7 @@ class MultiDriverTestCase(unittest.TestCase):
         #       |      |
         #       |<-----D2
         #
-        
+
         raise SkipTest("We currently don't allow a component instance in multiple workflows.")
         print "*** test_2drivers_same_iterset ***"
         global exec_order
@@ -552,9 +552,9 @@ class MultiDriverTestCase(unittest.TestCase):
                           'D2', 'C2', 'C2', 'C2', 'C2'])
 
     def test_cascade_opt(self):
-        
+
         raise SkipTest("We currently don't allow a component instance in multiple workflows.")
-        
+
         top = set_as_top(Assembly())
 
         eq = ['f = (x-3)**2 + x*y + (y+4)**2 - 3']
@@ -583,8 +583,8 @@ class MultiDriverTestCase(unittest.TestCase):
         assert_rel_error(self, top.comp.x, 6.666309, 0.01)
         assert_rel_error(self, top.comp.y, -7.333026, 0.01)
 
-        J = top.driver.workflow.calc_gradient(inputs=['comp.x', 'comp.y'],
-                                              outputs=['comp.f'])
+        J = top.driver.calc_gradient(inputs=['comp.x', 'comp.y'],
+                                     outputs=['comp.f'])
         edges = top.driver.workflow._edges
         print edges
         self.assertEqual(set(edges['@in0']), set(['~opt1.comp|x', '~opt2.comp|x']))

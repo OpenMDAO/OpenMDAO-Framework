@@ -280,9 +280,9 @@ class TestCase(unittest.TestCase):
         assert_rel_error(self, 1.0-prob.x1, 1.0, 0.1)
 
     def test_BLISS(self):
-        
+
         #raise SkipTest("We currently don't allow a component instance in multiple workflows.")
-        
+
         prob = set_as_top(SellarBLISS())
 
         prob.dis1.z1 = prob.dis2.z1 = prob.z_store[0] = 5.0
@@ -354,7 +354,7 @@ class TestSubOptInclusion(unittest.TestCase):
         # Fix for a bug reported on the forum
         sim = set_as_top(SolverCO2())
         sim.run()
-        J = sim.driver.workflow.calc_gradient()
+        J = sim.driver.calc_gradient()
 
         assert_rel_error(self, J[0, 0], -2.0, .001)
         assert_rel_error(self, J[0, 1], -2.0, .001)

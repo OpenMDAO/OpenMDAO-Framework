@@ -13,11 +13,11 @@ from openmdao.main.datatypes.api import Array, Float, VarTree
 from openmdao.util.testutil import assert_rel_error
 
 class GeomComponent(Component):
-    
+
     x = Float(1.0, iotype='in')
 
     geom_out = VarTree(GeomData(2, 1), iotype='out')
-    
+
     def list_deriv_vars(self):
         return ('x'), ('geom_out.points',)
 
@@ -31,7 +31,7 @@ class GeomComponent(Component):
 
     def apply_derivT(self, arg, result):
 
-        result['x'] += self.J[:, 0]*arg['geom_out']  
+        result['x'] += self.J[:, 0]*arg['geom_out']
         return result
 
     def execute(self):
@@ -42,7 +42,7 @@ class GeomComponent(Component):
 
         self.geom_out.points[0, :] = J[0, :]*x
         self.geom_out.points[1, :] = J[1, :]*x
-        
+
 
 class GeomRecieve(Component):
 
@@ -108,13 +108,13 @@ class Testcase_deriv_obj(unittest.TestCase):
         inputs = self.inputs
         outputs = self.outputs
 
-        J = top.driver.workflow.calc_gradient(inputs, outputs, mode='forward')
+        J = top.driver.calc_gradient(inputs, outputs, mode='forward')
         self._check_J(J)
 
-        J = top.driver.workflow.calc_gradient(inputs, outputs, mode='adjoint')
+        J = top.driver.calc_gradient(inputs, outputs, mode='adjoint')
         self._check_J(J)
 
-        J = top.driver.workflow.calc_gradient(inputs, outputs, mode='fd')
+        J = top.driver.calc_gradient(inputs, outputs, mode='fd')
         self._check_J(J)
 
     def test_geom_provide_deriv_check_fd_tail(self):

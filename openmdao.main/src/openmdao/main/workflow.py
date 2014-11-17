@@ -201,32 +201,6 @@ class Workflow(object):
             # the parts of the tuple.
             raise err[0], err[1], err[2]
 
-    def _system_reset_needed(self, inputs, outputs, force_regen):
-        if force_regen or not self.scope._derivs_required or self._system is None:
-            return True
-
-        if inputs is None and self._calc_gradient_inputs is not None:
-            return True
-
-        if outputs is None and self._calc_gradient_outputs is not None:
-            return True
-
-        wfgraph = self._reduced_graph
-        oldins = simple_node_iter([n[1] for n,d in wfgraph.nodes_iter(data=True)
-                                     if 'comp' not in d and wfgraph.out_degree(n) > 0
-                                                        and wfgraph.in_degree(n) > 0])
-
-        oldouts = simple_node_iter([n[0] for n,d in wfgraph.nodes_iter(data=True)
-                                     if 'comp' not in d and wfgraph.in_degree(n) > 0])
-
-        if set(inputs) - set(oldins):
-            return True
-
-        if set(outputs) - set(oldouts):
-            return True
-
-        return False
-
     def calc_gradient(self, inputs=None, outputs=None, mode='auto',
                       return_format='array', force_regen=False, options=None):
         """Returns the Jacobian of derivatives between inputs and outputs.
@@ -277,12 +251,10 @@ class Workflow(object):
         inputs  = [_fix_tups(x) for x in inputs]
         outputs = [_fix_tups(x) for x in outputs]
 
-        reset = self._system_reset_needed(inputs, outputs, force_regen)
-
         self._calc_gradient_inputs = inputs[:]
         self._calc_gradient_outputs = outputs[:]
 
-        if reset:
+        if force_regen is True:
             # recreate system hierarchy from the top
 
             top = self.scope
@@ -394,8 +366,9 @@ class Workflow(object):
             if stream is None:
                 stream = StringIO()
 
-        J = self.calc_gradient(inputs, outputs, mode=mode)
-        Jbase = self.calc_gradient(inputs, outputs, mode='fd')
+        J = self.calc_gradient(inputs, outputs, mode=mode, force_regen=True)
+        Jbase = self.calc_gradient(inputs, outputs, mode='fd',
+                                   force_regen=True)
 
         print >> stream, 24*'-'
         print >> stream, 'Calculated Gradient'

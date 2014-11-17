@@ -20,7 +20,7 @@ import openmdao.examples.nozzle_geometry_doe
 class PlugNozzleGeometry(STLGroup):
 
     def __init__(self):
-        
+
 
         this_dir, this_filename = os.path.split(os.path.abspath(openmdao.examples.nozzle_geometry_doe.__file__))
         plug_file = os.path.join(this_dir, 'plug.stl')
@@ -39,9 +39,9 @@ class PlugNozzleGeometry(STLGroup):
         super(PlugNozzleGeometry,self).__init__(geom_parts=geom_parts)
 
 
-class TestcaseSTLGroup(unittest.TestCase): 
+class TestcaseSTLGroup(unittest.TestCase):
 
-    def setUp(self): 
+    def setUp(self):
 
         self.top = set_as_top(Assembly())
         self.top.add('plug_noz', PlugNozzleGeometry())
@@ -49,13 +49,13 @@ class TestcaseSTLGroup(unittest.TestCase):
         self.top.run()
 
 
-    def test_vars_created(self): 
-        """make sure the inputs and outputs are created properly""" 
+    def test_vars_created(self):
+        """make sure the inputs and outputs are created properly"""
 
         pn = self.top.plug_noz
 
         self.assertTrue(hasattr(pn, 'plug'))
-        plug = pn.plug 
+        plug = pn.plug
         self.assertTrue(hasattr(plug,'X'))
         self.assertTrue(plug.X.shape, (10,))
         self.assertTrue(hasattr(plug,'R'))
@@ -115,12 +115,12 @@ class TestcaseSTLGroup(unittest.TestCase):
 
         params = ["plug.X", "plug2.X", "cowl.X", "cowl2.X"]
         for param in params:
-            J = self.top.driver.workflow.calc_gradient(['plug_noz.'+param,],['plug_noz.geom_data.points',], mode='forward')
+            J = self.top.driver.calc_gradient(['plug_noz.'+param,],['plug_noz.geom_data.points',], mode='forward')
             Jx_forward = J[0::3]
             Jy_forward = J[1::3]
             Jz_forward = J[2::3]
 
-            J = self.top.driver.workflow.calc_gradient(['plug_noz.'+param,],['plug_noz.geom_data.points',], mode='adjoint')
+            J = self.top.driver.calc_gradient(['plug_noz.'+param,],['plug_noz.geom_data.points',], mode='adjoint')
             Jx_adjoint = J[0::3]
             Jy_adjoint = J[1::3]
             Jz_adjoint = J[2::3]
@@ -142,12 +142,12 @@ class TestcaseSTLGroup(unittest.TestCase):
         params = ["plug.R", "plug2.R", "cowl.R", "cowl2.R"]
         for param in params:
 
-            J = self.top.driver.workflow.calc_gradient(['plug_noz.'+param,],['plug_noz.geom_data.points',], mode='forward')
+            J = self.top.driver.calc_gradient(['plug_noz.'+param,],['plug_noz.geom_data.points',], mode='forward')
             Jx_forward = J[0::3]
             Jy_forward = J[1::3]
             Jz_forward = J[2::3]
 
-            J = self.top.driver.workflow.calc_gradient(['plug_noz.'+param,],['plug_noz.geom_data.points',], mode='adjoint')
+            J = self.top.driver.calc_gradient(['plug_noz.'+param,],['plug_noz.geom_data.points',], mode='adjoint')
             Jx_adjoint = J[0::3]
             Jy_adjoint = J[1::3]
             Jz_adjoint = J[2::3]
@@ -171,12 +171,12 @@ class TestcaseSTLGroup(unittest.TestCase):
 
         params = ["cowl.thickness", "cowl2.thickness"]
         for param in params:
-            J = self.top.driver.workflow.calc_gradient(['plug_noz.'+param,],['plug_noz.geom_data.points',], mode='forward')
+            J = self.top.driver.calc_gradient(['plug_noz.'+param,],['plug_noz.geom_data.points',], mode='forward')
             Jx_forward = J[0::3]
             Jy_forward = J[1::3]
             Jz_forward = J[2::3]
 
-            J = self.top.driver.workflow.calc_gradient(['plug_noz.'+param,],['plug_noz.geom_data.points',], mode='adjoint')
+            J = self.top.driver.calc_gradient(['plug_noz.'+param,],['plug_noz.geom_data.points',], mode='adjoint')
             Jx_adjoint = J[0::3]
             Jy_adjoint = J[1::3]
             Jz_adjoint = J[2::3]
@@ -208,8 +208,8 @@ class TestcaseSTLGroup(unittest.TestCase):
         ins = ['plug_noz.'+param for param in params]
         outs = ['plug_noz.geom_data.points',]
 
-        J_forward = self.top.driver.workflow.calc_gradient(ins,outs, mode='forward')
-        J_fd = self.top.driver.workflow.calc_gradient(ins,outs, mode='fd')
+        J_forward = self.top.driver.calc_gradient(ins,outs, mode='forward')
+        J_fd = self.top.driver.calc_gradient(ins,outs, mode='fd')
 
         self.assertTrue(np.any(np.abs(J_forward) > 0.0))
         self.assertTrue(np.any(np.abs(J_fd) > 0.0))

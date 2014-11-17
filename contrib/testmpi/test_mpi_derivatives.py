@@ -70,8 +70,8 @@ class MPITests(MPITestCase):
     def test_calc_gradient_fwd(self):
         self.top.run()
 
-        J = self.top.driver.workflow.calc_gradient(mode='forward',
-                                                   return_format='dict')
+        J = self.top.driver.calc_gradient(mode='forward',
+                                          return_format='dict')
         #mpiprint("J local: %s" % J)
 
         J = self.top.driver.workflow._system.get_combined_J(J)
@@ -83,8 +83,8 @@ class MPITests(MPITestCase):
     def test_calc_gradient_adjoint(self):
         self.top.run()
 
-        J = self.top.driver.workflow.calc_gradient(mode='adjoint',
-                                                   return_format='dict')
+        J = self.top.driver.calc_gradient(mode='adjoint',
+                                          return_format='dict')
         #mpiprint("J local: %s" % J)
 
         J = self.top.driver.workflow._system.get_combined_J(J)
@@ -96,8 +96,8 @@ class MPITests(MPITestCase):
     def test_calc_gradient_fd(self):
         self.top.run()
 
-        J = self.top.driver.workflow.calc_gradient(mode='fd',
-                                                   return_format='dict')
+        J = self.top.driver.calc_gradient(mode='fd',
+                                          return_format='dict')
 
         assert_rel_error(self, J['_pseudo_0.out0']['comp.x'][0][0], 5.0, 0.0001)
         assert_rel_error(self, J['_pseudo_0.out0']['comp.y'][0][0], 21.0, 0.0001)
