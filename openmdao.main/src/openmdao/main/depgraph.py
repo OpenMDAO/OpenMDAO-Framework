@@ -964,10 +964,12 @@ class DependencyGraph(DGraphBase):
             self.add_edge('@driver', src)
         for dest in dests:
             self.add_edge(dest, '@driver')
+        for u,v in self.list_connections():
+            self.add_edge('@driver', u)
+            self.add_edge(v, '@driver')
         for k in keep:
-            if '.' not in k:
-                self.add_edge('@driver', k)
-                self.add_edge(k, '@driver')
+            self.add_edge('@driver', k)
+            self.add_edge(k, '@driver')
 
         for comps in strongly_connected_components(self):
             if '@driver' in comps:
@@ -984,14 +986,6 @@ class DependencyGraph(DGraphBase):
         # not connected
         comps.update(srcs)
         comps.update(dests)
-
-        # keep any var we've been told to keep if its
-        # parent component is relevant or if it's a component.
-        for k in keep:
-            if k.split('.', 1)[0] in comps:
-                comps.add(k)
-            elif k in self and self.node[k].get('comp'):
-                comps.add(k)
 
         return self.subgraph(comps)
 
@@ -1750,8 +1744,10 @@ def _add_collapsed_node(g, src, dests):
     g.add_node(newname, meta.copy())
 
     # now wire up the new node
-    collapse_nodes(g, newname, [newname[0]]+list(newname[1]), remove=False)
+    collapse_nodes(g, newname, set([newname[0]]+list(newname[1])), remove=False)
 
+    to_add = []
+    
     # and make sure its source, dests are components
     for p in g.predecessors(newname):
         cname = p.split('.', 1)[0]
@@ -1763,20 +1759,26 @@ def _add_collapsed_node(g, src, dests):
         if g.node[cname].get('comp'):
             if p == cname or p in g[cname]:
                 if 'drv_conn' in cmeta:
-                    g.add_edge(cname, newname, drv_conn=cmeta['drv_conn'])
+                    to_add.append((cname, newname, {'drv_conn':cmeta['drv_conn']}))
                 elif 'drv_conn' in pmeta:
-                    g.add_edge(cname, newname, drv_conn=pmeta['drv_conn'])
+                    to_add.append((cname, newname, {'drv_conn':pmeta['drv_conn']}))
                 elif drvsrc == p:
-                    g.add_edge(cname, newname, drv_conn=drvsrc)
+                    to_add.append((cname, newname, {'drv_conn':drvsrc}))
                 elif not g.has_edge(cname, newname):
-                    g.add_edge(cname, newname)
+                    to_add.append((cname, newname, {}))
 
     for s in g.successors(newname):
+        if isinstance(s, tuple):
+            continue
         cname = s.split('.', 1)[0]
         g.remove_edge(newname, s)
         if g.node[cname].get('comp'):
             if s == cname or cname in g[s]:
-                g.add_edge(newname, cname)
+                to_add.append((newname, cname, {}))
+                
+    for u,v, meta in to_add:
+        g.add_edge(u, v, **meta)
+
 
 def all_comps(g):
     """Returns a list of all component and PseudoComponent

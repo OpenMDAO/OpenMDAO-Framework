@@ -200,6 +200,7 @@ class Driver(Component):
                 if not g.has_edge(name, self.name):
                     to_add.append((name, self.name))
             g.add_edges_from(to_add)
+            comps = []
             for comps in strongly_connected_components(g):
                 if self.name in comps:
                     break
@@ -515,8 +516,9 @@ class Driver(Component):
         """Allocate communicators from here down to all of our
         child Components.
         """
-        self._system = self.parent._reduced_graph.node[self.name]['system']
-        return self.workflow.setup_systems(self.system_type)
+        if self.name in self.parent._reduced_graph:
+            self._system = self.parent._reduced_graph.node[self.name]['system']
+            return self.workflow.setup_systems(self.system_type)
 
 
     #### MPI related methods ####
