@@ -54,7 +54,7 @@ class Dis12Linear(Component):
     con2 = Float(0.0, iotype='out')
 
     def execute(self):
-
+        print self.z_store, self.z1, self.z2
         self.obj = self.ssa_F[0] + self.ssa_dF[0]*(self.z_store[0] - self.z1) + \
                                    self.ssa_dF[1]*(self.z_store[1] - self.z2)
         self.con1 = self.ssa_G[0] + self.ssa_dG[0][0]*(self.z_store[0] - self.z1) + \
@@ -68,8 +68,8 @@ class SellarBLISS(Assembly):
     Disciplines coupled with FixedPointIterator.
     """
 
-    z_store = Array([0., 0.], dtype=Float, iotype='in')
-    x1_store = Float(0.0, iotype='in')
+    #z_store = Array([0., 0.], dtype=Float, iotype='in')
+    #x1_store = Float(0.0, iotype='in')
 
     def configure(self):
         """ Creates a new Assembly with this problem
@@ -85,11 +85,8 @@ class SellarBLISS(Assembly):
         self.add('dis1lin', Dis1Linear())
         self.add('dis12lin', Dis12Linear())
 
-        self.connect('z_store', 'dis12lin.z_store')
-        self.connect('x1_store', 'dis1lin.x1_store')
-        #self.connect('dis1.z1', 'dis12lin.z1')
-        #self.connect('dis1.z2', 'dis12lin.z2')
-        #self.connect('dis1.x1', 'dis1lin.x1')
+        #self.connect('z_store', 'dis12lin.z_store')
+        #self.connect('x1_store', 'dis1lin.x1_store')
         self.connect('dis1pre.y2', 'dis1.y2')
 
         objective = '(dis1.x1)**2 + dis1.z2 + dis1.y1 + exp(-dis2.y2)'
@@ -101,9 +98,9 @@ class SellarBLISS(Assembly):
         self.driver.add_parameter(('dis1.x1', 'dis1lin.x1'), low=0.0, high=10.0, start=1.0)
         self.driver.add_parameter(['dis1pre.z1', 'dis1.z1', 'dis2.z1', 'dis12lin.z1'], low=-10.0, high=10.0, start=5.0)
         self.driver.add_parameter(['dis1pre.z2', 'dis1.z2', 'dis2.z2', 'dis12lin.z2'], low=  0.0, high=10.0, start=2.0)
-        self.driver.add_constraint('x1_store = dis1.x1')
-        self.driver.add_constraint('z_store[0] = dis1.z1')
-        self.driver.add_constraint('z_store[1] = dis1.z2')
+        self.driver.add_constraint('dis1lin.x1_store = dis1.x1')
+        self.driver.add_constraint('dis12lin.z_store[0] = dis1.z1')
+        self.driver.add_constraint('dis12lin.z_store[1] = dis1.z2')
         self.driver.max_iteration = 50
         self.driver.tolerance = .001
 
@@ -148,30 +145,30 @@ class SellarBLISS(Assembly):
         # Discipline Optimization
         # (Only discipline1 has an optimization input)
         self.add('bbopt1', CONMINdriver())
-        self.bbopt1.add_parameter('x1_store', low=0.0, high=10.0, start=1.0)
+        self.bbopt1.add_parameter('dis1lin.x1_store', low=0.0, high=10.0, start=1.0)
         self.bbopt1.add_objective('dis1lin.obj')
         self.bbopt1.add_constraint('dis1lin.con1 < 0')
         #this one is technically unncessary
         self.bbopt1.add_constraint('dis1lin.con2 < 0')
 
-        self.bbopt1.add_constraint('(x1_store-dis1lin.x1)<.5')
-        self.bbopt1.add_constraint('(x1_store-dis1lin.x1)>-.5')
+        self.bbopt1.add_constraint('(dis1lin.x1_store-dis1lin.x1)<.5')
+        self.bbopt1.add_constraint('(dis1lin.x1_store-dis1lin.x1)>-.5')
         self.bbopt1.iprint = 0
         self.bbopt1.linobj = True
 
         # Global Optimization
         self.add('sysopt', CONMINdriver())
-        self.sysopt.add_parameter('z_store[0]', low=-10.0, high=10.0, start=5.0)
-        self.sysopt.add_parameter('z_store[1]', low=0.0, high=10.0, start=2.0)
+        self.sysopt.add_parameter('dis12lin.z_store[0]', low=-10.0, high=10.0, start=5.0)
+        self.sysopt.add_parameter('dis12lin.z_store[1]', low=0.0, high=10.0, start=2.0)
         self.sysopt.add_objective('dis12lin.obj')
 
         self.sysopt.add_constraint('dis12lin.con1 < 0')
         self.sysopt.add_constraint('dis12lin.con2 < 0')
 
-        self.sysopt.add_constraint('z_store[0]-dis12lin.z1<.5')
-        self.sysopt.add_constraint('z_store[0]-dis12lin.z1>-.5')
-        self.sysopt.add_constraint('z_store[1]-dis12lin.z2<.5')
-        self.sysopt.add_constraint('z_store[1]-dis12lin.z2>-.5')
+        self.sysopt.add_constraint('dis12lin.z_store[0]-dis12lin.z1<.5')
+        self.sysopt.add_constraint('dis12lin.z_store[0]-dis12lin.z1>-.5')
+        self.sysopt.add_constraint('dis12lin.z_store[1]-dis12lin.z2<.5')
+        self.sysopt.add_constraint('dis12lin.z_store[1]-dis12lin.z2>-.5')
         self.sysopt.iprint = 0
         self.sysopt.linobj = True
 
@@ -191,15 +188,21 @@ if __name__ == "__main__": # pragma: no cover
     prob = SellarBLISS()
     prob.name = 'top'
 
+    #prob.dis1.z1 = prob.dis2.z1 = prob.dis12lin.z1 = prob.dis1pre.z1 = 5.0
+    #prob.dis1.z2 = prob.dis2.z2 = prob.dis12lin.z2 = prob.dis1pre.z2 = 2.0
+    #prob.dis1.x1 = prob.dis1lin.x1 = 1.0
+    #prob.dis2.y1 = 3.16
     tt = time.time()
     prob.run()
+    print "These should be equal"
+    print prob.dis1pre.z1, prob.dis1.z1, prob.dis2.z1, prob.dis12lin.z1
     print "\n"
-    print "Minimum found at (%f, %f, %f)" % (prob.dis1.z1,
-                                             prob.dis1.z2,
-                                             prob.dis1.x1)
-    print "Targets at (%f, %f, %f)" % (prob.z_store[0],
-                                             prob.z_store[1],
-                                             prob.x1_store)
+    print "Minimum found at (%f, %f, %f)" % (prob.dis1pre.z1,
+                                             prob.dis1pre.z2,
+                                             prob.dis1pre.x1)
+    print "Targets at (%f, %f, %f)" % (prob.dis12lin.z_store[0],
+                                             prob.dis12lin.z_store[1],
+                                             prob.dis1lin.x1_store)
     print "Couping vars: %f, %f" % (prob.dis1.y1, prob.dis2.y2)
     print "Minimum objective: ", (prob.dis1.x1)**2 + prob.dis1.z2 + \
                                   prob.dis1.y1 + math.exp(-prob.dis2.y2)
