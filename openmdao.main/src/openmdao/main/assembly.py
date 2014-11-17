@@ -1212,65 +1212,63 @@ class Assembly(Component):
         # figure out the relevant subgraph based on given inputs and outputs
         if not (inputs is None and outputs is None):
             self._derivs_required = True
-            dsrcs, ddests = self._top_driver.get_expr_var_depends(recurse=True)
-            keep.add(self._top_driver.name)
-            keep.update([c.name for c in self._top_driver.iteration_set()])
+            
+        dsrcs, ddests = self._top_driver.get_expr_var_depends(recurse=True)
+        keep.add(self._top_driver.name)
+        keep.update([c.name for c in self._top_driver.iteration_set()])
 
-            # keep any connected boundary vars
-            for u,v in chain(dgraph.list_connections(), list_driver_connections(dgraph)):
-                if is_boundary_node(dgraph, u):
-                        keep.add(u)
-                if is_boundary_node(dgraph, v):
-                    keep.add(v)
+        # keep any connected boundary vars
+        for u,v in chain(dgraph.list_connections(), list_driver_connections(dgraph)):
+            if is_boundary_node(dgraph, u):
+                    keep.add(u)
+            if is_boundary_node(dgraph, v):
+                keep.add(v)
 
-            if inputs is None:
-                inputs = list(ddests)
-            else:
-                # fix any single tuples
-                inputs = [fix_single_tuple(i) for i in inputs]
-
-                # identify any broadcast inputs
-                ins = []
-                for inp in inputs:
-                    if isinstance(inp, basestring):
-                        keep.add(inp)
-                        ins.append(inp)
-                    else:
-                        keep.update(inp)
-                        ins.append(inp[0])
-                inputs = ins
-
-            if outputs is None:
-                outputs = dsrcs
-
-            dgraph = dgraph._explode_vartrees(self)
-
-            # add any variables requested that don't exist in the graph
-            for inp in inputs:
-                if inp not in dgraph:
-                    base = base_var(dgraph, inp)
-                    for n in chain(dgraph.successors(base), dgraph.predecessors(base)):
-                        if base_var(dgraph, n) != base:
-                            keep.add(base)
-                    dgraph.add_connected_subvar(inp)
-
-            for out in outputs:
-                if out not in dgraph:
-                    base = base_var(dgraph, out)
-                    for n in chain(dgraph.successors(base), dgraph.predecessors(base)):
-                        if base_var(dgraph, n) != base:
-                            keep.add(base)
-                    dgraph.add_connected_subvar(out)
-
-            dgraph = dgraph.relevant_subgraph(inputs, outputs, keep)
-
-            dgraph._remove_vartrees(self)
-
-            keep.update(inputs)
-            keep.update(outputs)
+        if inputs is None:
+            inputs = list(ddests)
         else:
-            dgraph = dgraph._explode_vartrees(self)
-            dgraph._remove_vartrees(self)
+            # fix any single tuples
+            inputs = [fix_single_tuple(i) for i in inputs]
+
+            # identify any broadcast inputs
+            ins = []
+            for inp in inputs:
+                if isinstance(inp, basestring):
+                    keep.add(inp)
+                    ins.append(inp)
+                else:
+                    keep.update(inp)
+                    ins.append(inp[0])
+            inputs = ins
+
+        if outputs is None:
+            outputs = dsrcs
+
+        dgraph = dgraph._explode_vartrees(self)
+
+        # add any variables requested that don't exist in the graph
+        for inp in inputs:
+            if inp not in dgraph:
+                base = base_var(dgraph, inp)
+                for n in chain(dgraph.successors(base), dgraph.predecessors(base)):
+                    if base_var(dgraph, n) != base:
+                        keep.add(base)
+                dgraph.add_connected_subvar(inp)
+
+        for out in outputs:
+            if out not in dgraph:
+                base = base_var(dgraph, out)
+                for n in chain(dgraph.successors(base), dgraph.predecessors(base)):
+                    if base_var(dgraph, n) != base:
+                        keep.add(base)
+                dgraph.add_connected_subvar(out)
+
+        dgraph = dgraph.relevant_subgraph(inputs, outputs, keep)
+
+        dgraph._remove_vartrees(self)
+
+        keep.update(inputs)
+        keep.update(outputs)
 
         dgraph._fix_state_connections(self)
 

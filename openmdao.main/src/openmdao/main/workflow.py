@@ -784,8 +784,8 @@ class Workflow(object):
         self._reduced_graph = reduced
 
         # remove our driver from the reduced graph
-        #if self.parent.name in parent_graph:
-        reduced.remove_node(drvname)
+        if drvname in parent_graph:
+            reduced.remove_node(drvname)
 
         params = set()
         for s in parent_graph.successors(drvname):
