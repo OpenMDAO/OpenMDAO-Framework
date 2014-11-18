@@ -85,7 +85,6 @@ class BroydenSolver(Driver):
 
     def execute(self):
         """Solver execution."""
-        print "%s running" % self.name
 
         # perform an initial run for self-consistency
         self.pre_iteration()

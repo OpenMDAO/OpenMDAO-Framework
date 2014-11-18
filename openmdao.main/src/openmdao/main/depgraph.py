@@ -1278,6 +1278,16 @@ class CollapsedGraph(DGraphBase):
 
             self.collapse_driver(child_drv, excludes)
 
+        # remove output edge of bidirectional edges to/from drivers
+        to_remove = []
+        subdrvnames = [s.name for s in subdrivers]
+        for n in subdrvnames:
+            for s in self.successors(n):
+                if n in self.successors(s):
+                    to_remove.append((n, s))
+                    
+        self.remove_edges_from(to_remove)
+
         # now remove any comps that are shared by subdrivers but are not found
         # in our workflow
         to_remove = set()
