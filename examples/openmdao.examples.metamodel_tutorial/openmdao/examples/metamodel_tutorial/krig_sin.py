@@ -10,7 +10,6 @@ from openmdao.lib.drivers.api import DOEdriver
 from openmdao.lib.surrogatemodels.api import FloatKrigingSurrogate
 from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.main.datatypes.api import Float
-from openmdao.main.sequentialflow import SequentialWorkflow
 
 
 class Sin(Component):
@@ -57,7 +56,6 @@ class Simulation(Assembly):
 
         # Cross-validate the metamodel using random data
         self.add("DOE_Validate", DOEdriver())
-        self.DOE_Validate.workflow = SequentialWorkflow()
         self.DOE_Validate.DOEgenerator = Uniform()
         self.DOE_Validate.DOEgenerator.num_samples = 100
         self.DOE_Validate.add_parameter(("sin_meta_model.x", "sin_verify.x"),
