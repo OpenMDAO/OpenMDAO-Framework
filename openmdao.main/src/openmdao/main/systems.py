@@ -676,12 +676,12 @@ class System(object):
         """
         if subsystem is None:
             scatter = self.scatter_full
-            #if scatter:
-            #    print "%s full scatter" % self.name
+            if scatter:
+                print "%s full scatter" % self.name
         else:
             scatter = subsystem.scatter_partial
-            #if scatter:
-            #    print "%s scatter to %s" % (self.name, subsystem.name)
+            if scatter:
+                print "%s scatter to %s" % (self.name, subsystem.name)
 
         if scatter is not None:
             srcvec = self.vec[srcvecname]

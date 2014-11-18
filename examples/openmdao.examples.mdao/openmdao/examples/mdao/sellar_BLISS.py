@@ -36,10 +36,10 @@ class Dis1Linear(Component):
         self.obj  = self.sa_dis1_F[0] + self.sa_dis1_dF[0]*(self.x1_store - self.x1)
         self.con1 = self.sa_dis1_G[0] + self.sa_dis1_dG[0][0]*(self.x1_store - self.x1)
         self.con2 = self.sa_dis1_G[1] + self.sa_dis1_dG[1][0]*(self.x1_store - self.x1)
-
-        #print "%s x1: %f  x1_store: %f  sa_dis1_F: %s  sa_dis1_G: %s  sa_dis1_dF: %s  sa_dis1_dG: %s" % (self.name, self.x1, self.x1_store, self.sa_dis1_F,
-        #                                                                                                self.sa_dis1_G, self.sa_dis1_dF, self.sa_dis1_dG)
-        #print "%s obj: %f  con1: %f  con2: %f" % (self.name, self.obj, self.con1, self.con2)
+        
+        print "%s x1: %f  x1_store: %f  sa_dis1_F: %s  sa_dis1_G: %s  sa_dis1_dF: %s  sa_dis1_dG: %s" % (self.name, self.x1, self.x1_store, self.sa_dis1_F,
+                                                                                                         self.sa_dis1_G, self.sa_dis1_dF, self.sa_dis1_dG)
+        print "%s obj: %f  con1: %f  con2: %f" % (self.name, self.obj, self.con1, self.con2)
 
 class Dis12Linear(Component):
     """ Linear model of one a sellar model or system. """
@@ -65,10 +65,10 @@ class Dis12Linear(Component):
                                     self.ssa_dG[0][1]*(self.z_store[1] - self.z2)
         self.con2 = self.ssa_G[1] + self.ssa_dG[1][0]*(self.z_store[0] - self.z1) + \
                                     self.ssa_dG[1][1]*(self.z_store[1] - self.z2)
-
-        #print "%s z1: %f  z2: %f  z_store: %s  ssa_F: %s  ssa_G: %s  ssa_dF: %s  ssa_dG: %s" % (self.name, self.z1, self.z2, self.z_store,
-        #                                                                                                 self.ssa_F, self.ssa_G, self.ssa_dF, self.ssa_dG)
-        #print "%s obj: %f  con1: %f  con2: %f" % (self.name, self.obj, self.con1, self.con2)
+        
+        print "%s z1: %f  z2: %f  z_store: %s  ssa_F: %s  ssa_G: %s  ssa_dF: %s  ssa_dG: %s" % (self.name, self.z1, self.z2, self.z_store,
+                                                                                                         self.ssa_F, self.ssa_G, self.ssa_dF, self.ssa_dG)
+        print "%s obj: %f  con1: %f  con2: %f" % (self.name, self.obj, self.con1, self.con2)
 
 
 class SellarBLISS(Assembly):
