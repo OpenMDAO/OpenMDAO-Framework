@@ -453,14 +453,14 @@ class FixedPointIterator_with_Cyclic_TestCase(unittest.TestCase):
 
         inputs = ['d1.z1', 'd1.z2', 'd2.z1', 'd2.z2']
         outputs = ['d1.y1', 'd2.y2']
-        J1 = self.top.driver.workflow.calc_gradient(inputs=inputs,
-                                                   outputs=outputs)
-        J2 = self.top.driver.workflow.calc_gradient(inputs=inputs,
-                                                   outputs=outputs,
-                                                   mode='adjoint')
-        J3 = self.top.driver.workflow.calc_gradient(inputs=inputs,
-                                                   outputs=outputs,
-                                                   mode='fd')
+        J1 = self.top.driver.calc_gradient(inputs=inputs,
+                                           outputs=outputs)
+        J2 = self.top.driver.calc_gradient(inputs=inputs,
+                                           outputs=outputs,
+                                           mode='adjoint')
+        J3 = self.top.driver.calc_gradient(inputs=inputs,
+                                           outputs=outputs,
+                                           mode='fd')
 
         J = (J1 - J3)
         self.assertTrue(J.max() < 1.0e-3)

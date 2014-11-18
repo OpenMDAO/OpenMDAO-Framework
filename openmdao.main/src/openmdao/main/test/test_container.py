@@ -436,17 +436,6 @@ class ContainerTestCase(unittest.TestCase):
                       globals(), locals(), ValueError,
                       "b: add would cause container recursion")
 
-    def test_get_attributes(self):
-        c = Container()
-        c.add_trait('inp', Float(desc='Stuff', low=-200, high=200))
-        c.set('inp', 42)
-        attrs = c.get_attributes()
-        self.assertTrue("Inputs" in attrs.keys())
-        check = {'name': 'inp', 'value': 42.0, 'high': 200.0, 'connected': '', 'low': -200.0,
-                         'type': 'float', 'desc': 'Stuff'}
-        for key in check.keys():
-            self.assertEqual(check[key], attrs["Inputs"][0][key])
-
     def test_set_metadata(self):
         c = Container()
         c.add_trait('inp', List(range(1000), ddcomp_start=0, ddcomp_end=-1))

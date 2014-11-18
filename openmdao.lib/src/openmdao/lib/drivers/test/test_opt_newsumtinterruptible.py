@@ -270,6 +270,14 @@ class NEWSUMTdriverParaboloidTestCase(unittest.TestCase):
         self.assertAlmostEqual(self.top.comp.opt_design_vars[1],
                                self.top.comp.x[1], places=2)
 
+    def test_empty_ilin_initialization(self):
+        # Test the bug fix related to ilin parameter (re)initialization
+        self.top.driver.add_objective('comp.result')
+        self.top.driver.add_parameter('comp.x[0]', -10, 10)
+        self.top.driver.add_parameter('comp.x[1]', -10, 10)
+
+        self.top.run()
+        self.top.run()
 
     def test_initial_run(self):
         # Test the fix that put run_iteration at the top

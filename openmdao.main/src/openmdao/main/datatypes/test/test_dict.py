@@ -1,7 +1,7 @@
 import unittest
 
 from openmdao.main.datatypes.api import Int, Float, Dict
-from openmdao.main.api import Component, Assembly, set_as_top
+from openmdao.main.api import Component
 
 class MyComponent(Component):
 
@@ -15,24 +15,6 @@ class DictTestCase(unittest.TestCase):
         comp = MyComponent()
         comp.set('arr[1]', 2.0)
         self.assertEqual(2.0, comp.arr[1])
-        
-        # while here, let's test the get_attributes
-        attrs = comp.get_attributes(True)
-        attr = attrs['Inputs']
-        self.assertTrue( { 'key_type' : 'Int',
-                           'name' : 'arr',
-                           'id' : 'arr',
-                           'indent' : 0,
-                           'value' : {1:2.0},
-                           'value_type' : 'Float',
-                           'connected' : '',
-                           'connection_types' : 0,
-                           'type' : 'dict',
-                           'implicit' : ''} in attr)
-                       
-        
-        
-        
 
 if __name__ == '__main__':
     unittest.main()

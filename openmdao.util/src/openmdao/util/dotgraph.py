@@ -5,9 +5,9 @@ import webbrowser
 
 import networkx as nx
 from openmdao.main.interfaces import IDriver, IAssembly
-from openmdao.main.depgraph import DependencyGraph, is_var_node, collapse_nodes, reduced2component
+from openmdao.main.depgraph import DependencyGraph
 from openmdao.main.problem_formulation import ArchitectureAssembly
-from openmdao.main.systems import System, AssemblySystem, SerialSystem, ParallelSystem, \
+from openmdao.main.systems import AssemblySystem, SerialSystem, ParallelSystem, \
                                   OutVarSystem, InVarSystem, SolverSystem, \
                                   FiniteDiffDriverSystem, TransparentDriverSystem, OpaqueSystem
 from openmdao.util.graph import base_var
@@ -344,7 +344,7 @@ def plot_graphs(obj, recurse=True, fmt='pdf', pseudos=True,
                 print "Can't plot system graph of '%s': %s" % (name, str(err))
 
         try:
-            plot_graph(reduced2component(obj._reduced_graph),
+            plot_graph(obj._reduced_graph.component_graph(),
                        fmt=fmt, outfile=prefix+name+'_compgraph'+'.'+fmt,
                        pseudos=pseudos, workflow=workflow, scope=obj)
         except Exception as err:

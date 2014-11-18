@@ -507,7 +507,7 @@ class Has2SidedConstraintsTestCase(unittest.TestCase):
         drv.add_constraint('0.1 < 3.0*comp1.a < 1.5')
         self.asm.run()
 
-        J = drv.workflow.calc_gradient(inputs=['comp1.a'])
+        J = drv.calc_gradient(inputs=['comp1.a'])
 
         # ineq
         self.assertEqual(J[0], 2.5)

@@ -310,31 +310,6 @@ class JSONCaseRecorder(_BaseRecorder):
 
         self._cases = None
 
-    def get_attributes(self, io_only=True):
-        """ Return attribute dictionary for GUI. """
-        attrs = {}
-        attrs['type'] = type(self).__name__
-        variables = []
-
-        attr = {}
-        attr['name'] = 'indent'
-        attr['type'] = type(self.indent).__name__
-        attr['value'] = str(self.indent)
-        attr['connected'] = ''
-        attr['desc'] = 'Number of spaces to indent each level.'
-        variables.append(attr)
-
-        attr = {}
-        attr['name'] = 'sort_keys'
-        attr['type'] = type(self.sort_keys).__name__
-        attr['value'] = str(self.sort_keys)
-        attr['connected'] = ''
-        attr['desc'] = 'If True, sort dictionary keys.'
-        variables.append(attr)
-
-        attrs["Inputs"] = variables
-        return attrs
-
     def get_iterator(self):
         """ Just returns None. """
         return None
@@ -462,12 +437,6 @@ class BSONCaseRecorder(_BaseRecorder):
             self.out = None
 
         self._cases = None
-
-    def get_attributes(self, io_only=True):
-        """ Return attribute dictionary for GUI. """
-        attrs = {}
-        attrs['type'] = type(self).__name__
-        return attrs
 
     def get_iterator(self):
         """ Just returns None. """

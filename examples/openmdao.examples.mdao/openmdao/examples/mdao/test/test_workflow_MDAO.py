@@ -4,6 +4,7 @@ from nose import SkipTest
 from numpy import array
 
 from openmdao.examples.mdao.sellar_MDF import SellarMDF
+from openmdao.examples.mdao.sellar_MDF_solver import SellarMDF as SellarMDF_no_deriv
 from openmdao.examples.mdao.sellar_IDF import SellarIDF
 from openmdao.examples.mdao.sellar_CO import SellarCO
 from openmdao.examples.mdao.sellar_BLISS import SellarBLISS
@@ -194,6 +195,18 @@ class TestCase(unittest.TestCase):
         assert_rel_error(self, 1.0-prob.dis1.z2, 1.0, 0.01)
         assert_rel_error(self, 1.0-prob.dis1.x1, 1.0, 0.1)
 
+    def test_MDF_no_deriv(self):
+        prob = SellarMDF_no_deriv()
+        set_as_top(prob)
+        prob.dis1.z1 = prob.dis2.z1 = 5.0
+        prob.dis1.z2 = prob.dis2.z2 = 2.0
+        prob.dis1.x1 = 1.0
+
+        prob.run()
+        assert_rel_error(self, prob.dis1.z1, 1.977, 0.01)
+        assert_rel_error(self, 1.0-prob.dis1.z2, 1.0, 0.01)
+        assert_rel_error(self, 1.0-prob.dis1.x1, 1.0, 0.1)
+
     def test_IDF(self):
         prob = SellarIDF()
         set_as_top(prob)
@@ -280,14 +293,14 @@ class TestCase(unittest.TestCase):
         assert_rel_error(self, 1.0-prob.x1, 1.0, 0.1)
 
     def test_BLISS(self):
-        
+
         #raise SkipTest("We currently don't allow a component instance in multiple workflows.")
-        
+
         prob = set_as_top(SellarBLISS())
 
-        prob.dis1.z1 = prob.dis2.z1 = prob.z_store[0] = 5.0
-        prob.dis1.z2 = prob.dis2.z2 = prob.z_store[1] = 2.0
-        prob.dis1.x1 = prob.x1_store = 1.0
+        prob.dis1.z1 = prob.dis2.z1 = prob.dis12lin.z1 = prob.dis1pre.z1 = 5.0
+        prob.dis1.z2 = prob.dis2.z2 = prob.dis12lin.z2 = prob.dis1pre.z2 = 2.0
+        prob.dis1.x1 = prob.dis1lin.x1 = 1.0
 
         prob.run()
         assert_rel_error(self, prob.dis1.z1, 1.977, 0.04)
@@ -354,7 +367,7 @@ class TestSubOptInclusion(unittest.TestCase):
         # Fix for a bug reported on the forum
         sim = set_as_top(SolverCO2())
         sim.run()
-        J = sim.driver.workflow.calc_gradient()
+        J = sim.driver.calc_gradient()
 
         assert_rel_error(self, J[0, 0], -2.0, .001)
         assert_rel_error(self, J[0, 1], -2.0, .001)

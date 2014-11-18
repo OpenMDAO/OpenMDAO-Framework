@@ -240,9 +240,6 @@ def get_flat_index_start(idx):
         return idx
 
 def get_var_shape(name, scope):
-    meta = scope.get_metadata(name, 'data_shape')
-    if meta:
-        return meta
     val = scope.get(name)
     if isinstance(val, ndarray):
         if val.shape == ():
@@ -261,10 +258,6 @@ def get_var_shape(name, scope):
     return None
 
 def is_differentiable_var(name, scope):
-    meta = scope.get_metadata(name, 'data_shape')
-    if meta:
-        return True
-
     return is_differentiable_val(scope.get(name))
 
 def is_differentiable_val(val):
@@ -303,13 +296,6 @@ def flattened_size(name, val, scope=None):
         getsize = getattr(val, 'get_flattened_size', None)
         if getsize is not None:
             return getsize()
-
-        elif scope is not None:
-            dshape = scope.get_metadata(name.split('[')[0]).get('data_shape')
-
-            # Custom data objects with data_shape in the metadata
-            if dshape:
-                return prod(dshape)
 
     raise NoFlatError('Variable %s is of type %s which is not convertable'
                     ' to a 1D float array.' % (name, type(val)))

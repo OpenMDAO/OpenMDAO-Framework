@@ -2,12 +2,14 @@
 order.
 """
 
+# pylint: disable=E0611,F0401
+
 from types import NoneType
 
-from openmdao.main.workflow import Workflow
 from openmdao.main.depgraph import find_related_pseudos
 from openmdao.main.interfaces import IDriver
 from openmdao.main.mp_support import has_interface
+from openmdao.main.workflow import Workflow
 from openmdao.util.decorators import method_accepts
 from openmdao.util.debug import strict_chk_config
 
@@ -27,13 +29,6 @@ class SequentialWorkflow(Workflow):
         super(SequentialWorkflow, self).__init__(parent, members)
 
         # Bookkeeping
-        self._edges = None
-        self._comp_edges = None
-        self._derivative_graph = None
-        self._J_cache = {}
-        self._bounds_cache = {}
-        self._shape_cache = {}
-        self._width_cache = {}
         self._iternames = None
         self._initnames = None
 
@@ -63,15 +58,7 @@ class SequentialWorkflow(Workflow):
         """
         super(SequentialWorkflow, self).config_changed()
 
-        self._edges = None
-        self._comp_edges = None
-        self._derivative_graph = None
-        self.res = None
         self._names = None
-        self._J_cache = {}
-        self._bounds_cache = {}
-        self._shape_cache = {}
-        self._width_cache = {}
         self._iternames = None
         self._initnames = None
 

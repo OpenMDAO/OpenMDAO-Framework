@@ -3,17 +3,16 @@
 #public symbols
 __all__ = ["Driver"]
 
-from zope.interface import implementedBy
-from networkx.algorithms.components import strongly_connected_components
-
 # pylint: disable=E0611,F0401
+
+from networkx.algorithms.components import strongly_connected_components
 
 from openmdao.main.component import Component
 from openmdao.main.dataflow import Dataflow
 from openmdao.main.datatypes.api import Bool, Enum, Float, Int, Slot, \
                                         List, VarTree
 from openmdao.main.depgraph import find_all_connecting, \
-                                   collapse_driver, get_reduced_subgraph
+                                   collapse_driver
 from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, \
                                          HasIneqConstraints
 from openmdao.main.hasevents import HasEvents
@@ -22,7 +21,7 @@ from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasresponses import HasResponses
 from openmdao.main.interfaces import IDriver, IHasEvents, ISolver, \
                                      implements
-from openmdao.main.mp_support import is_instance, has_interface
+from openmdao.main.mp_support import has_interface
 from openmdao.main.rbac import rbac
 from openmdao.main.vartree import VariableTree
 from openmdao.main.workflow import Workflow
@@ -188,10 +187,8 @@ class Driver(Component):
             nodes = set([c.name for c in self.iteration_set()])
             nodes.add(self.name)
 
-            # if self.workflow._calc_gradient_inputs:
-            #     nodes.update(simple_node_iter(self.workflow._calc_gradient_inputs))
             g = parent_graph.subgraph(parent_graph.nodes_iter())
-            g = get_reduced_subgraph(parent_graph, nodes)
+            g = parent_graph.full_subgraph(nodes)
             self._reduced_graph = g.subgraph(g.nodes_iter())
 
             to_add = []
@@ -203,6 +200,7 @@ class Driver(Component):
                 if not g.has_edge(name, self.name):
                     to_add.append((name, self.name))
             g.add_edges_from(to_add)
+            comps = []
             for comps in strongly_connected_components(g):
                 if self.name in comps:
                     break
@@ -391,7 +389,7 @@ class Driver(Component):
             inst.restore_references(inst_refs)
 
     @rbac('*', 'owner')
-    def run(self, force=False, ffd_order=0, case_uuid=''):
+    def run(self, force=False, case_uuid=''):
         """Run this object. This should include fetching input variables if
         necessary, executing, and updating output variables. Do not override
         this function.
@@ -399,11 +397,6 @@ class Driver(Component):
         force: bool
             If True, force component to execute even if inputs have not
             changed. (Default is False)
-
-        ffd_order: int
-            Order of the derivatives to be used when finite differencing (1
-            for first derivatives, 2 for second derivatives). During regular
-            execution, ffd_order should be 0. (Default is 0)
 
         case_uuid: str
             Identifier for the Case that is associated with this run.
@@ -417,7 +410,7 @@ class Driver(Component):
 
         # Reset the workflow.
         self.workflow.reset()
-        super(Driver, self).run(ffd_order, case_uuid)
+        super(Driver, self).run(case_uuid)
 
     @rbac(('owner', 'user'))
     def configure_recording(self, recording_options=None):
@@ -483,14 +476,12 @@ class Driver(Component):
             self._logger.warning("'%s': workflow is empty!"
                                  % self.get_pathname())
 
-        wf.run(ffd_order=self.ffd_order)
+        wf.run()
 
-    def calc_derivatives(self, first=False, second=False, savebase=False,
-                         required_inputs=None, required_outputs=None):
+    def calc_derivatives(self, first=False, second=False):
         """ Calculate derivatives and save baseline states for all components
         in this workflow."""
-        self.workflow.calc_derivatives(first, second, savebase,
-                                       required_inputs, required_outputs)
+        self.workflow.calc_derivatives(first, second)
 
     def post_iteration(self):
         """Called after each iteration."""
@@ -506,44 +497,6 @@ class Driver(Component):
         self._depgraph = None
         if self.workflow is not None:
             self.workflow.config_changed()
-
-    def get_workflow(self):
-        """ Get the driver info and the list of components that make up the
-            driver's workflow; recurse on nested drivers.
-        """
-        from openmdao.main.assembly import Assembly
-        ret = {}
-        ret['pathname'] = self.get_pathname()
-        ret['type'] = type(self).__module__ + '.' + type(self).__name__
-        ret['workflow'] = []
-        comps = [comp for comp in self.workflow]
-        for comp in comps:
-
-            # Skip pseudo-comps
-            if hasattr(comp, '_pseudo_type'):
-                continue
-
-            pathname = comp.get_pathname()
-            if is_instance(comp, Assembly) and comp.driver:
-                inames = [cls.__name__
-                          for cls in list(implementedBy(comp.__class__))]
-                ret['workflow'].append({
-                    'pathname':   pathname,
-                    'type':       type(comp).__module__ + '.' + type(comp).__name__,
-                    'interfaces': inames,
-                    'driver':     comp.driver.get_workflow(),
-                })
-            elif is_instance(comp, Driver):
-                ret['workflow'].append(comp.get_workflow())
-            else:
-                inames = [cls.__name__
-                          for cls in list(implementedBy(comp.__class__))]
-                ret['workflow'].append({
-                    'pathname':   pathname,
-                    'type':       type(comp).__module__ + '.' + type(comp).__name__,
-                    'interfaces': inames,
-                })
-        return ret
 
     def _get_param_constraint_pairs(self):
         """Returns a list of tuples of the form (param, constraint)."""
@@ -563,8 +516,9 @@ class Driver(Component):
         """Allocate communicators from here down to all of our
         child Components.
         """
-        self._system = self.parent._reduced_graph.node[self.name]['system']
-        return self.workflow.setup_systems(self.system_type)
+        if self.name in self.parent._reduced_graph:
+            self._system = self.parent._reduced_graph.node[self.name]['system']
+            return self.workflow.setup_systems(self.system_type)
 
 
     #### MPI related methods ####
@@ -593,19 +547,6 @@ class Driver(Component):
         names.update(self.workflow.get_full_nodeset())
         return names
 
-    def get_iteration_tree(self):
-        """Return a list of lists indicating the iteration
-        hierarchy for this driver.  This recurses down into
-        sub-Drivers but NOT into sub-Assemblies.
-        """
-        tree = [self.get_pathname(), []]
-        for comp in self.workflow:
-            if IDriver.providedBy(comp):
-                tree[1].append(comp.get_iteration_tree())
-            else:
-                tree[1].append(comp.get_pathname())
-        return tree
-
     def calc_gradient(self, inputs=None, outputs=None, mode='auto',
                       return_format='array', force_regen=True):
         """Returns the Jacobian of derivatives between inputs and outputs.
@@ -630,8 +571,9 @@ class Driver(Component):
             is set to True because this function is meant for manual testing.
         """
 
-        return self.workflow.calc_gradient(inputs, outputs, mode, return_format,
-                                           force_regen)
+        return self.workflow.calc_gradient(inputs=inputs, outputs=outputs,
+                                           mode=mode, return_format=return_format,
+                                           force_regen=force_regen)
 
     @rbac(('owner', 'user'))
     def setup_depgraph(self, dgraph):
@@ -646,7 +588,7 @@ class Driver(Component):
             # if hasattr(self, 'list_param_group_targets'):
             #     params = self.list_param_group_targets()
 
-            # for now do nothing here because params are already 
+            # for now do nothing here because params are already
             # in the depgraph
             pass
 

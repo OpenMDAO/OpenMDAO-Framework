@@ -91,22 +91,6 @@ class IntTestCase(unittest.TestCase):
             self.assertEqual(str(err), errstring)
         else:
             self.fail("Exception expected")
-            
-    def test_get_attributes(self):
-
-        # Mixed enum
-        self.hobj.add('e1', Enum("red", ("red","green", 3), iotype='in'))
-        attrs = self.hobj.get_attributes(True)
-        attr = attrs['Inputs']
-        self.assertTrue( { 'name' : 'e1',
-                           'id' : 'e1',
-                           'indent' : 0,
-                           'values' : ('red', 'green', 3),
-                           'value_types' : ['str', 'str', 'int'],
-                           'value' : 'red',
-                           'connected' : '',
-                           'type' : 'enum', 
-                           'assumed_default':False} in attr)
 
     def enum_typecheck(self):
         

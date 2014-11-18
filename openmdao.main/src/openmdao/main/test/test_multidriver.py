@@ -351,11 +351,6 @@ class MultiDriverTestCase(unittest.TestCase):
             '\n   driver\n      comp1\n      driver1\n         comp3\n      comp2\n'
             '      comp4\n')
 
-        # test all_wflows_order
-        comps = top.all_wflows_order()
-        self.assertEqual(comps,
-                         ['driver', 'comp1', 'driver1', 'comp3', '_pseudo_0', 'comp2', 'comp4', '_pseudo_1'])
-
     def test_2_nested_drivers_same_assembly_extra_comp(self):
         print "*** test_2_nested_drivers_same_assembly ***"
         #
@@ -427,7 +422,7 @@ class MultiDriverTestCase(unittest.TestCase):
         #       |      |
         #       |<-----D2
         #
-        
+
         raise SkipTest("We currently don't allow a component instance in multiple workflows.")
         print "*** test_2drivers_same_iterset ***"
         global exec_order
@@ -557,9 +552,9 @@ class MultiDriverTestCase(unittest.TestCase):
                           'D2', 'C2', 'C2', 'C2', 'C2'])
 
     def test_cascade_opt(self):
-        
+
         raise SkipTest("We currently don't allow a component instance in multiple workflows.")
-        
+
         top = set_as_top(Assembly())
 
         eq = ['f = (x-3)**2 + x*y + (y+4)**2 - 3']
@@ -588,27 +583,14 @@ class MultiDriverTestCase(unittest.TestCase):
         assert_rel_error(self, top.comp.x, 6.666309, 0.01)
         assert_rel_error(self, top.comp.y, -7.333026, 0.01)
 
-        J = top.driver.workflow.calc_gradient(inputs=['comp.x', 'comp.y'],
-                                              outputs=['comp.f'])
+        J = top.driver.calc_gradient(inputs=['comp.x', 'comp.y'],
+                                     outputs=['comp.f'])
         edges = top.driver.workflow._edges
         print edges
         self.assertEqual(set(edges['@in0']), set(['~opt1.comp|x', '~opt2.comp|x']))
         self.assertEqual(set(edges['@in1']), set(['~opt1.comp|y', '~opt2.comp|y']))
         self.assertEqual(set(edges['~opt1.comp|f']), set(['@out0']))
         self.assertEqual(set(edges['~opt2.comp|f']), set(['@out0']))
-
-    def test_get_itertree(self):
-        self.rosen_setUp()
-        self.assertEqual(self.top.get_iteration_tree(),
-                         ['driver',
-                          [['driver1',
-                            ['comp1', 'comp2', 'comp3', 'comp4',
-                             'adder1', 'adder2', 'adder3',
-                             '._pseudo_1', '._pseudo_0', '._pseudo_3', '._pseudo_2']
-                            ]
-                           ]
-                          ])
-        self.top.run()
 
 
 if __name__ == "__main__":

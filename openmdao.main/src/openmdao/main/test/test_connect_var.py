@@ -229,19 +229,6 @@ class VariableTestCase(unittest.TestCase):
     def _parse_list(self, liststr):
         liststr = liststr[1:len(liststr)-2]
         return set([s.strip("'") for s in liststr.split(', ') if s.strip()])
-        
-    def test_attributes(self):
-        # Check for correct 'connected' information.
-        self.top.connect('oneout.arrout[0]', 'oneinp.arrinp[0]')
-        self.top.connect('oneout.arrout[1]', 'oneinp.arrinp[1]')
-        inputs = self.top.oneinp.get_attributes()['Inputs'] 
-        for item in inputs:
-            if item['name'] == 'arrinp':
-                self.assertEqual(self._parse_list(item['connected']),
-                    self._parse_list("['oneout.arrout[1]', 'oneout.arrout[0]']"))
-                break
-        else:
-            self.fail('No arrinp item!')
 
 
 if __name__ == '__main__':

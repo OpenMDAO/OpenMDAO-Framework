@@ -179,15 +179,13 @@ class TestcaseDerivObj(unittest.TestCase):
         outputs = self.outputs
         top = self.top
 
-        J = top.driver.workflow.calc_gradient(inputs, outputs, mode='fd')
+        J = top.driver.calc_gradient(inputs, outputs, mode='fd')
         self._check_J(J)
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs, outputs, mode='forward')
+        J = top.driver.calc_gradient(inputs, outputs, mode='forward')
         self._check_J(J)
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs, outputs, mode='adjoint')
+        J = top.driver.calc_gradient(inputs, outputs, mode='adjoint')
         self._check_J(J)
 
     def _check_J(self, J):
@@ -267,7 +265,7 @@ class TestcaseNonDiff(unittest.TestCase):
 
         inputs = ['comp1.x']
         outputs = ['comp2.y']
-        J = model.driver.workflow.calc_gradient(inputs, outputs, mode='forward')
+        J = model.driver.calc_gradient(inputs, outputs, mode='forward')
 
         self.assertAlmostEqual(J[0, 0], 2.5)
         msystem = model.driver.workflow._system
@@ -276,7 +274,7 @@ class TestcaseNonDiff(unittest.TestCase):
         self.assertTrue(msystem.subsystems()[1]._inner_system.subsystems()[1].name == 'comp1')
         self.assertTrue(msystem.subsystems()[1]._inner_system.subsystems()[2].name == 'comp2')
 
-        J = model.driver.workflow.calc_gradient(inputs, outputs, mode='fd')
+        J = model.driver.calc_gradient(inputs, outputs, mode='fd')
 
     def test_non_diff_subassy(self):
         # What about subassys?
@@ -296,8 +294,8 @@ class TestcaseNonDiff(unittest.TestCase):
 
         inputs = ['comp1.x']
         outputs = ['sub.y']
-        J = model.driver.workflow.calc_gradient(inputs, outputs, mode='forward')
-        
+        J = model.driver.calc_gradient(inputs, outputs, mode='forward')
+
         self.assertAlmostEqual(J[0, 0], 2.5)
 
 if __name__ == '__main__':

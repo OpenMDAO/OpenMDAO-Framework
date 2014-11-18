@@ -214,56 +214,6 @@ class NamespaceTestCase(unittest.TestCase):
         self._check_files(self.asm.scomp1.get_files('in'),
                           self.asm.scomp2.get_files('out'))
 
-        # Check set_attributes on the vartrees
-        attrs = self.asm.scomp1.cont_in.get_attributes()
-        self.assertTrue("Inputs" in attrs.keys())
-        self.assertTrue({'name': 'v1',
-                         'id': '.v1',
-                         'indent': 0,
-                         'value': 1.0,
-                         'high': None,
-                         'connected': '',
-                         'low': None,
-                         'type': 'float',
-                         'desc': 'vv1',
-                         'assumed_default': False} in attrs['Inputs'])
-        self.assertTrue({'name': 'v2',
-                         'id': '.v2',
-                         'indent': 0,
-                         'value': 2.0,
-                         'high': None,
-                         'connected': '',
-                         'low': None,
-                         'type': 'float',
-                         'desc': 'vv2',
-                         'assumed_default': False} in attrs['Inputs'])
-        # The number shall be 11 becuase of recursion, and also including
-        # file variables
-        self.assertEqual(len(attrs['Inputs']), 11)
-        attrs = self.asm.scomp1.cont_out.get_attributes()
-        self.assertTrue("Outputs" in attrs.keys())
-        self.assertTrue({'name': 'v1',
-                         'id': '.v1',
-                         'indent': 0,
-                         'value': 2.0,
-                         'high': None,
-                         'connected': '',
-                         'low': None,
-                         'type': 'float',
-                         'desc': 'vv1',
-                         'assumed_default': False} in attrs['Outputs'])
-        self.assertTrue({'name': 'v2',
-                         'id': '.v2',
-                         'indent': 0,
-                         'value': 3.0,
-                         'high': None,
-                         'connected': '',
-                         'low': None,
-                         'type': 'float',
-                         'desc': 'vv2',
-                         'assumed_default': False} in attrs['Outputs'])
-        self.assertEqual(len(attrs['Outputs']), 11)
-
         # Now connect
         try:
             self.asm.connect('scomp1.cont_out.v1', 'scomp2.cont_in.v2')
@@ -466,62 +416,13 @@ class NestedVTTestCase(unittest.TestCase):
         self.assertEqual(comp.top_tree_in.lev1.lev2._iotype, 'in')
         self.assertEqual(comp.top_tree_in.lev1.lev2.iotype, 'in')
 
-        attr = comp.top_tree_in.get_attributes()
-        outputs = attr.get('Outputs', [])
-        self.assertEqual(outputs, [])
-        inputs = attr['Inputs']
-        self.assertEqual(set([d['name'] for d in inputs]),
-                         set(['topfloat', 'lev1', 'lev1float',
-                              'lev2', 'lev2float']))
-
         newvt = comp.top_tree_in.copy()
         newvt._iotype = 'out'
-
-        attr = newvt.get_attributes()
-        inputs = attr.get('Inputs', [])
-        outputs = attr.get('Outputs', [])
-        self.assertEqual(inputs, [])
-        self.assertEqual(set([d['name'] for d in outputs]),
-                         set(['topfloat', 'lev1', 'lev1float',
-                              'lev2', 'lev2float']))
 
         self.assertEqual(newvt.lev1.lev2.iotype, 'out')
         newvt._iotype = 'in'
         self.assertEqual(newvt.iotype, 'in')
         self.assertEqual(newvt.lev1.lev2.iotype, 'in')
-
-    def test_nested_iotype_passthrough(self):
-        # nested tree
-        asm = set_as_top(Assembly())
-        comp = asm.add("comp", NestedTreeComp())
-        asm.create_passthrough('comp.top_tree_in')
-
-        attr = asm.top_tree_in.get_attributes()
-        outputs = attr.get('Outputs', [])
-        self.assertEqual(outputs, [])
-        inputs = attr['Inputs']
-        self.assertEqual(set([d['name'] for d in inputs]),
-                         set(['topfloat', 'lev1', 'lev1float',
-                              'lev2', 'lev2float']))
-
-        newvt = asm.top_tree_in.copy()
-        newvt._iotype = 'out'
-
-        attr = newvt.get_attributes()
-        inputs = attr.get('Inputs', [])
-        outputs = attr.get('Outputs', [])
-        self.assertEqual(inputs, [])
-        self.assertEqual(set([d['name'] for d in outputs]),
-                         set(['topfloat', 'lev1', 'lev1float',
-                              'lev2', 'lev2float']))
-
-        attr = comp.top_tree_in.get_attributes()
-        outputs = attr.get('Outputs', [])
-        self.assertEqual(outputs, [])
-        inputs = attr['Inputs']
-        self.assertEqual(set([d['name'] for d in inputs]),
-                         set(['topfloat', 'lev1', 'lev1float',
-                              'lev2', 'lev2float']))
 
 
 class ListConnectTestCase(unittest.TestCase):

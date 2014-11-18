@@ -4,6 +4,7 @@ Solver based on scipy.optimize.brentq
 
 from scipy.optimize import brentq
 
+# pylint: disable-msg=E0611,F0401
 from openmdao.main.driver import Driver
 from openmdao.main.interfaces import IHasParameters, IHasEqConstraints, \
                                      ISolver, implements
@@ -20,8 +21,11 @@ class Brent(Driver):
 
     implements(IHasParameters, IHasEqConstraints, ISolver)
 
-    lower_bound = Float(0., iotype="in", desc="lower bound for the root search")
-    upper_bound = Float(100., iotype="in", desc="upper bound for the root search")
+    # pylint: disable-msg=E1101
+    lower_bound = Float(0., iotype="in", 
+                        desc="lower bound for the root search")
+    upper_bound = Float(100., iotype="in", 
+                        desc="upper bound for the root search")
 
 
     xtol = Float(0.0, iotype="in",

@@ -16,7 +16,7 @@ from openmdao.main.mpiwrap import MPI_info
 from openmdao.main.index import deep_getattr
 
 from openmdao.units.units import PhysicalQuantity, UnitsOnlyPQ
-from openmdao.util.typegroups import real_types, int_types, complex_or_real_types
+from openmdao.util.typegroups import int_types, complex_or_real_types
 
 
 
@@ -289,10 +289,10 @@ class PseudoComponent(object):
             scope.connect(src, dest)
 
         if driver is not None:
-            scope._depgraph.add_driver_input(driver.name, 
+            scope._depgraph.add_driver_input(driver.name,
                                              self.name+'.out0')
 
-    def run(self, ffd_order=0, case_uuid=''):
+    def run(self, case_uuid=''):
         if self._negate:
             setattr(self, 'out0', -self._srcexpr.evaluate())
         else:
@@ -322,8 +322,8 @@ class PseudoComponent(object):
     def set_itername(self, itername):
         self._itername = itername
 
-    def linearize(self, first=False, second=False, savebase=False,
-                  required_inputs=None, required_outputs=None):
+    def linearize(self, first=False, second=False):
+        """Component wrapper for the ProvideJ hook."""
         if first:
             return self.provideJ()
         if second:

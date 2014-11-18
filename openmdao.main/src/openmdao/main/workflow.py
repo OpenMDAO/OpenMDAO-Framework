@@ -19,9 +19,8 @@ from openmdao.main.systems import SerialSystem, ParallelSystem, \
                                   OpaqueSystem, VarSystem, \
                                   partition_subsystems, ParamSystem, \
                                   get_comm_if_active, collapse_to_system_node
-from openmdao.main.depgraph import _get_inner_connections, reduced2component, \
-                                   get_nondiff_groups, collapse_subdrivers, \
-                                   internal_nodes, collapse_nodes, simple_node_iter
+from openmdao.main.depgraph import _get_inner_connections, get_nondiff_groups, \
+                                   collapse_nodes, simple_node_iter
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.interfaces import IVariableTree, IDriver
 
@@ -155,7 +154,7 @@ class Workflow(object):
         """ Reset execution count. """
         self._exec_count = self._initial_count
 
-    def run(self, ffd_order=0, case_uuid=None):
+    def run(self, case_uuid=None):
         """ Run the Components in this Workflow. """
         self._stop = False
         self._exec_count += 1
@@ -178,9 +177,7 @@ class Workflow(object):
             for node in self._cycle_vars:
                 fvec[node][:] = uvec[node][:]
 
-            self._system.run(iterbase=iterbase,
-                             ffd_order=ffd_order,
-                             case_uuid=case_uuid)
+            self._system.run(iterbase=iterbase, case_uuid=case_uuid)
 
             # update resid vector for cyclic vars
             for node in self._cycle_vars:
@@ -205,32 +202,6 @@ class Workflow(object):
             # the parts of the tuple.
             raise err[0], err[1], err[2]
 
-    def _system_reset_needed(self, inputs, outputs, force_regen):
-        if force_regen or not self.scope._derivs_required or self._system is None:
-            return True
-        
-        if inputs is None and self._calc_gradient_inputs is not None:
-            return True
-        
-        if outputs is None and self._calc_gradient_outputs is not None:
-            return True
-        
-        wfgraph = self._reduced_graph
-        oldins = simple_node_iter([n[1] for n,d in wfgraph.nodes_iter(data=True)
-                                     if 'comp' not in d and wfgraph.out_degree(n) > 0
-                                                        and wfgraph.in_degree(n) > 0])
-        
-        oldouts = simple_node_iter([n[0] for n,d in wfgraph.nodes_iter(data=True)
-                                     if 'comp' not in d and wfgraph.in_degree(n) > 0]) 
-        
-        if set(inputs) - set(oldins):
-            return True
-
-        if set(outputs) - set(oldouts):
-            return True
-                       
-        return False
-        
     def calc_gradient(self, inputs=None, outputs=None, mode='auto',
                       return_format='array', force_regen=False, options=None):
         """Returns the Jacobian of derivatives between inputs and outputs.
@@ -266,7 +237,7 @@ class Workflow(object):
             if not inputs:
                 msg = "No inputs given for derivatives."
                 self.scope.raise_exception(msg, RuntimeError)
-                
+
         # If outputs aren't specified, use the objectives and constraints
         if outputs is None:
             outputs = []
@@ -280,13 +251,11 @@ class Workflow(object):
 
         inputs  = [_fix_tups(x) for x in inputs]
         outputs = [_fix_tups(x) for x in outputs]
-                
-        reset = self._system_reset_needed(inputs, outputs, force_regen)
 
         self._calc_gradient_inputs = inputs[:]
         self._calc_gradient_outputs = outputs[:]
 
-        if reset:
+        if force_regen is True:
             # recreate system hierarchy from the top
 
             top = self.scope
@@ -355,8 +324,6 @@ class Workflow(object):
         """Compare the OpenMDAO-calculated gradient with one calculated
         by straight finite-difference. This provides the user with a way
         to validate his derivative functions (apply_deriv and provideJ.)
-        Note that fake finite difference is turned off so that we are
-        doing a straight comparison.
 
         inputs: (optional) iter of str or None
             Names of input variables. The calculated gradient will be
@@ -400,8 +367,9 @@ class Workflow(object):
             if stream is None:
                 stream = StringIO()
 
-        J = self.calc_gradient(inputs, outputs, mode=mode)
-        Jbase = self.calc_gradient(inputs, outputs, mode='fd')
+        J = self.calc_gradient(inputs, outputs, mode=mode, force_regen=True)
+        Jbase = self.calc_gradient(inputs, outputs, mode='fd',
+                                   force_regen=True)
 
         print >> stream, 24*'-'
         print >> stream, 'Calculated Gradient'
@@ -650,7 +618,7 @@ class Workflow(object):
                 continue
             path = prefix+src
             if src not in inputs and src not in outputs and \
-               (save_problem_formulation or self._check_path(path, includes, excludes)):
+               self._check_path(path, includes, excludes):
                 self._rec_outputs.append(src)
                 #qqq outputs.append(src)
 
@@ -829,7 +797,6 @@ class Workflow(object):
         """Get the subsystem for this workflow. Each
         subsystem contains a subgraph of this workflow's component
         graph, which contains components and/or other subsystems.
-        Returns the names of any added systems.
         """
 
         scope = self.scope
@@ -840,13 +807,13 @@ class Workflow(object):
         self._reduced_graph = reduced
 
         # remove our driver from the reduced graph
-        #if self.parent.name in parent_graph:
-        reduced.remove_node(drvname)
+        if drvname in parent_graph:
+            reduced.remove_node(drvname)
 
-        params = []
+        params = set()
         for s in parent_graph.successors(drvname):
             if parent_graph[drvname][s].get('drv_conn') == drvname:
-                params.append(s)
+                params.add(s)
 
         # we need to connect a param comp node to all param nodes
         for node in params:
@@ -855,12 +822,12 @@ class Workflow(object):
             reduced.add_edge(param, node)
             reduced.node[param]['system'] = \
                        ParamSystem(scope, reduced, param)
-            
+
         outs = []
         for p in parent_graph.predecessors(drvname):
             if parent_graph[p][drvname].get('drv_conn') == drvname:
                 outs.append(p)
-            
+
         if outs:
             for out in outs:
                 vname = out[1][0]
@@ -885,10 +852,10 @@ class Workflow(object):
         # collapse driver iteration sets into a single node for
         # the driver, except for nodes from their iteration set
         # that are in the iteration set of their parent driver.
-        collapse_subdrivers(reduced, self.get_names(full=True),
-                            self.subdrivers())
+        reduced.collapse_subdrivers(self.get_names(full=True),
+                                    self.subdrivers())
 
-        cgraph = reduced2component(reduced)
+        cgraph = reduced.component_graph()
 
         opaque_map = {} # map of all internal comps to collapsed
                               # name of opaque system
@@ -906,7 +873,7 @@ class Workflow(object):
             for gtup, system in systems.items():
                 collapse_to_system_node(cgraph, system, gtup)
                 reduced.add_node(gtup, comp=True)
-                collapse_nodes(reduced, gtup, internal_nodes(reduced, gtup))
+                collapse_nodes(reduced, gtup, reduced.internal_nodes(gtup))
                 reduced.node[gtup]['comp'] = True
                 for c in gtup:
                     opaque_map[c] = gtup

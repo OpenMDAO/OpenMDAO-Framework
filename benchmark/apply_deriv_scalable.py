@@ -35,7 +35,7 @@ if __name__ == "__main__":
         import cProfile
         import pstats
         sys.argv.remove('-prof') #unittest doesn't like -prof
-        cProfile.run('J = top.driver.workflow.calc_gradient(inputs=inputs, outputs=outputs, mode = "forward")', 'profout')
+        cProfile.run('J = top.driver.calc_gradient(inputs=inputs, outputs=outputs, mode = "forward")', 'profout')
         p = pstats.Stats('profout')
         p.strip_dirs()
         p.sort_stats('cumulative', 'time')
@@ -46,9 +46,9 @@ if __name__ == "__main__":
         p.print_callees()
     else:
         t0 = time()
-        J = top.driver.workflow.calc_gradient(inputs=inputs,
-                                              outputs=outputs,
-                                              mode = 'forward')
+        J = top.driver.calc_gradient(inputs=inputs,
+                                     outputs=outputs,
+                                     mode = 'forward')
         print 'Time elapsed', time() - t0
 
 

@@ -1,8 +1,6 @@
 """
 Support for files, either as :class:`File` or external files.
 """
-import copy
-import os.path
 import pprint
 import sys
 
@@ -70,6 +68,13 @@ class FileMetadata(object):
             del data['owner']
         return pprint.pformat(data).replace('\n', '')
 
+    def json_encode(self):
+        """ Return sorted, possibly pruned, dictionary data. """
+        data = self.__dict__.copy()
+        if 'owner' in data:
+            del data['owner']
+        return data
+
     def get(self, attr, default):
         """ Return `attr` value, or default if `attr` has not been defined. """
         try:
@@ -118,7 +123,7 @@ class RemoteFile(object):
         """ Return iterator. """
         self.fileobj.__iter__()
         return self
-    
+
     @rbac('owner')
     def next(self):
         """ Return next input line or raise StopIteration. """
@@ -128,7 +133,7 @@ class RemoteFile(object):
     def read(self, size=-1):
         """ Read up to `size` bytes. """
         return self.fileobj.read(size)
-    
+
     @rbac('owner')
     def readline(self, size=-1):
         """ Read one line. """

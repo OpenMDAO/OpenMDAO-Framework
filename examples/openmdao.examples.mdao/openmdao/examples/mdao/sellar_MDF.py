@@ -66,6 +66,7 @@ if __name__ == "__main__": # pragma: no cover
     prob.dis1.z1 = prob.dis2.z1 = 5.0
     prob.dis1.z2 = prob.dis2.z2 = 2.0
     prob.dis1.x1 = 1.0
+    prob.dis2.y1 = 3.16
 
     tt = time.time()
     prob.run()

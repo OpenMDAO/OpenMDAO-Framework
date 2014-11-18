@@ -4,10 +4,7 @@ import networkx as nx
 from openmdao.main.depgraph import DependencyGraph, \
                                     find_all_connecting, \
                                     _get_inner_connections,\
-                                    gsort, \
-                                    collapse_connections, \
-                                    vars2tuples, \
-                                    prune_reduced_graph
+                                    gsort
 from openmdao.util.graph import nodes_matching_all, \
                                 nodes_matching_some, edges_matching_all, \
                                 edges_matching_some, base_var
@@ -183,13 +180,6 @@ class DepGraphTestCase(unittest.TestCase):
                           if out in self.dep])
         self.assertEqual(found, [])
         
-    def test_get_source(self):
-        self.assertEqual(self.dep.get_sources('B.a'), ['A.c[2]'])
-        self.assertEqual(self.dep.get_sources('A.a'), ['a'])
-        self.assertEqual(self.dep.get_sources('c'), ['C.c'])
-        self.assertEqual(self.dep.get_sources('A.c'), [])
-        self.assertEqual(self.dep.get_sources('B.b[4]'), ['A.d.z'])
-        
     def test_base_var(self):
         self.assertEqual(base_var(self.dep, 'B.a'), 'B.a')
         self.assertEqual(base_var(self.dep, 'a'), 'a')
@@ -204,18 +194,6 @@ class DepGraphTestCase(unittest.TestCase):
                               ('A.d.z','B.b[4]'),('B.c','C.a'),('B.d','C.b'),
                               ('C.c','c'),('D.d','d.x')]))
 
-    def test_full_subgraph(self):
-        sub = self.dep.full_subgraph(['A', 'B'])
-        self.assertEqual(set(sub.nodes()), 
-                         set(['A','A.a','A.b','A.c','A.d','A.c[2]','A.d.z',
-                              'B','B.a','B.b','B.c','B.d', 'B.a.x.y', 'B.b[4]']))
-        self.assertEqual(set(sub.edges()),
-                         set([('A.a','A'),('A.b','A'),('A','A.c'),('A','A.d'),
-                              ('B.a','B'),('B.b','B'),('B','B.c'),('B','B.d'),
-                              ('A.c','A.c[2]'),('A.c[2]','B.a.x.y'),
-                              ('B.a.x.y','B.a'),('A.d','A.d.z'),('A.d.z','B.b[4]'),
-                              ('B.b[4]','B.b')]))
-        
     def test_multi_subvar_inputs(self):
         self.dep.connect(self.scope, 'D.c', 'B.b[5]')
     
@@ -371,26 +349,6 @@ class DepGraphTestCase(unittest.TestCase):
                                  outputs=['out1','out2'])
         cgraph = dep.component_graph()
         self.assertEqual(set(cgraph.edges()), set([('A','B')]))
-
-        
-    def test_connections_to(self):
-        self.assertEqual(set(self.dep.connections_to('c')),
-                         set([('C.c', 'c')]))
-        self.assertEqual(set(self.dep.connections_to('a')),
-                         set([('a', 'A.a')]))
-        
-        # unconnected var should return an empty list
-        self.assertEqual(self.dep.connections_to('D.a'),[])
-
-        # now test component connections
-        self.assertEqual(set(self.dep.connections_to('A')),
-                         set([('a', 'A.a'),
-                              ('b[3]', 'A.b'),
-                              ('A.c[2]','B.a.x.y'),
-                              ('A.d.z','B.b[4]')]))
-
-        self.assertEqual(set(self.dep.connections_to('D')),
-                         set([('D.d', 'd.x')]))
         
     def test_find_all_connecting(self):
         self.assertEqual(find_all_connecting(self.dep.component_graph(), 'A','D'), set())
@@ -491,110 +449,6 @@ class DepGraphTestCase(unittest.TestCase):
         dep.connect(scope, 'A.a','C.a')
         self.assertEqual(dep.list_input_outputs('A'), ['A.a'])
 
-    # def test_inner_edges1(self):
-    #     # no subvars, no boundary nodes, no inputs as srcs
-    #     dep, scope = _make_graph(comps=['A','B'], variables=[],
-    #                              connections=[('A.c','B.a')],
-    #                              inputs=['a'],
-    #                              outputs=['c'])
-    #     edict = get_inner_edges(dep, ['A.a'], ['B.c'], Wflow(scope))
-    #     self.assertEqual(edict['@in0'], ['A.a'])
-    #     self.assertEqual(edict['A.c'], ['B.a'])
-    #     self.assertEqual(edict['B.c'], ['@out0'])
-    #     self.assertEqual(len(edict), 3)
-        
-    # def test_inner_edges2(self):
-    #     # comp input (B.a) as src
-    #     dep, scope = _make_graph(comps=['A','B'], variables=[],
-    #                              connections=[('A.c','B.a')],
-    #                              inputs=['a'],
-    #                              outputs=['c'])
-    #     edict = get_inner_edges(dep, ['A.a'], ['B.a'], Wflow(scope))
-    #     self.assertEqual(edict['@in0'], ['A.a'])
-    #     self.assertEqual(set(edict['A.c']), set(['@out0', 'B.a']))
-    #     self.assertEqual(len(edict), 2)
-        
-    # def test_inner_edges3(self):
-    #     # comp input (B.a) as src to a pcomp
-    #     dep, scope = _make_graph(comps=['A','B', 'P0'], variables=[],
-    #                              connections=[('A.c','B.a'), ('B.a', 'P0.a')],
-    #                              inputs=['a'],
-    #                              outputs=['c'])
-    #     edict = get_inner_edges(dep, ['A.a'], ['P0.c'], Wflow(scope))
-    #     self.assertEqual(edict['@in0'], ['A.a'])
-    #     self.assertEqual(set(edict['A.c']), set(['P0.a', 'B.a']))
-    #     self.assertEqual(edict['P0.c'], ['@out0'])
-    #     self.assertEqual(len(edict), 3)
-        
-    # def test_inner_edges4(self):
-    #     # comp input (B.a) as src to a pcomp and subvars feeding B.a
-    #     dep, scope = _make_graph(comps=['A','B', 'P0'], variables=[],
-    #                              connections=[('A.c[1]','B.a[1]'), ('A.c[2]','B.a[2]'),('B.a', 'P0.a')],
-    #                              inputs=['a'],
-    #                              outputs=['c'])
-    #     edict = get_inner_edges(dep, ['A.a'], ['P0.c'], Wflow(scope))
-    #     self.assertEqual(edict['@in0'], ['A.a'])
-    #     self.assertEqual(edict['P0.c'], ['@out0'])
-    #     self.assertEqual(set(edict['A.c[1]']), set(['P0.a[1]', 'B.a[1]']))
-    #     self.assertEqual(set(edict['A.c[2]']), set(['P0.a[2]', 'B.a[2]']))
-    #     self.assertEqual(len(edict), 4)
-        
-    # def test_inner_edges5(self):
-    #     # comp input (B.a[2]) as src to a pcomp and subvars feeding B.a
-    #     dep, scope = _make_graph(comps=['A','B', 'P0'], variables=[],
-    #                              connections=[('A.c[1]','B.a[1]'), ('A.c[2]','B.a[2]'),('B.a[2]', 'P0.a')],
-    #                              inputs=['a'],
-    #                              outputs=['c'])
-    #     edict = get_inner_edges(dep, ['A.a'], ['P0.c'], Wflow(scope))
-    #     self.assertEqual(edict['@in0'], ['A.a'])
-    #     self.assertEqual(edict['P0.c'], ['@out0'])
-    #     self.assertEqual(set(edict['A.c[1]']), set(['B.a[1]']))
-    #     self.assertEqual(set(edict['A.c[2]']), set(['P0.a', 'B.a[2]']))
-    #     self.assertEqual(len(edict), 4)
-        
-    # def test_rewiring1(self):
-    #   # param specified for a subvar of a boundary input that's
-    #   # connected basevar to basevar to a comp input
-    #     dep, scope = _make_graph(comps=['C1'],
-    #                              variables=[('a','in')],
-    #                              connections=[('a', 'C1.a')],
-    #                              inputs=['a'],
-    #                              outputs=['c'])
-    #     edict = get_inner_edges(dep, ['a[2]'], ['C1.c'], Wflow(scope))
-    #     self.assertEqual(edict['@in0'], ['C1.a[2]'])
-    #     self.assertEqual(edict['C1.c'], ['@out0'])
-    #     self.assertEqual(len(edict), 2)
-
-    # def test_rewiring2(self):
-    #   # objective referring to an input basevar that has subvars
-    #     dep, scope = _make_graph(comps=['C1', 'C2', 'P0'],
-    #                              variables=[],
-    #                              connections=[('C1.c', 'C2.a[1]'),
-    #                                           ('C1.d', 'C2.a[2]'),
-    #                                           ('C2.a', 'P0.a')],
-    #                              inputs=['a'],
-    #                              outputs=['c', 'd'])
-    #     edict = get_inner_edges(dep, ['C1.a'], ['P0.d'], Wflow(scope))
-    #     self.assertEqual(edict['@in0'], ['C1.a'])
-    #     self.assertEqual(set(edict['C1.c']), set(['P0.a[1]', 'C2.a[1]']))
-    #     self.assertEqual(set(edict['C1.d']), set(['P0.a[2]', 'C2.a[2]']))
-    #     self.assertEqual(set(edict['P0.d']), set(['@out0']))
-    #     self.assertEqual(len(edict), 4)
-
-    # def test_rewiring3(self):
-    #   # param specified for a subvar of a boundary input that's
-    #   # connected basevar to basevar to a comp input
-    #     dep, scope = _make_graph(comps=['C1', 'P0'],
-    #                              variables=[],
-    #                              connections=[('C1.a', 'P0.a')],
-    #                              inputs=['a'],
-    #                              outputs=['c', 'd'])
-    #     dep.add_subvar('C1.a[2]')
-    #     edict = get_inner_edges(dep, ['C1.a[2]'], ['P0.d'], Wflow(scope))
-    #     self.assertEqual(edict['@in0'], ['P0.a[2]', 'C1.a[2]'])
-    #     self.assertEqual(set(edict['P0.d']), set(['@out0']))
-    #     self.assertEqual(len(edict), 2)
-
     def test_add_subvar(self):
         
         dep, scope = _make_graph(comps=['A','B'],
@@ -665,7 +519,7 @@ class DepGraphStateTestCase1(unittest.TestCase):
 class ReductionTestCase(unittest.TestCase):
 
     def _make_graph(self, comps, invars, outvars):
-        g = nx.DiGraph()
+        g = DependencyGraph()
         g.add_nodes_from(comps, comp=True)
         for n in comps:
             g.add_nodes_from(["%s.%s" % (n, v) for v in invars], iotype='in')
@@ -679,7 +533,7 @@ class ReductionTestCase(unittest.TestCase):
         g = self._make_graph(['C1','C2'], ['in'], ['out'])
         g.add_edge('C1.out','C2.in', conn=True)
 
-        reduced = collapse_connections(g)
+        reduced = g.collapse_connections()
 
         self.assertEqual(set(reduced.nodes()),
                          set(['C1.in','C1','C2','C2.out',('C1.out',('C2.in',))]))
@@ -692,7 +546,7 @@ class ReductionTestCase(unittest.TestCase):
         g.add_edge('C1.out','C2.in', conn=True)
         g.add_edge('C2.in','C3.in', conn=True)
         
-        reduced = collapse_connections(g)
+        reduced = g.collapse_connections()
 
         self.assertEqual(set(reduced.nodes()),
                          set(['C1.in', ('C1.out', ('C3.in', 'C2.in')), 'C3', 'C2', 
@@ -708,7 +562,7 @@ class ReductionTestCase(unittest.TestCase):
         g.add_edge('C2.in','C3.in', conn=True)
         g.add_edge('C3.in','C4.in', conn=True)
         
-        reduced = collapse_connections(g)
+        reduced = g.collapse_connections()
         
         self.assertEqual(set(reduced.nodes()),
                          set([('C1.out', ('C3.in', 'C4.in', 'C2.in')), 
@@ -724,9 +578,9 @@ class ReductionTestCase(unittest.TestCase):
 
     def test_subvar_conns(self):
         g, scope = _make_base_sub_permutations()
-        reduced = collapse_connections(g)
-        vars2tuples(g, reduced)
-        prune_reduced_graph(g, reduced, [])
+        reduced = g.collapse_connections()
+        reduced.vars2tuples(g)
+        reduced.prune([])
         self.assertEqual(set(reduced.nodes()),
                          set([('C1.out4', ('C2.in4[1][:]',)),
                               ('C1.out2[1][:]', ('C2.in2',)),
@@ -734,6 +588,45 @@ class ReductionTestCase(unittest.TestCase):
                               ('C1.out3[1][:]', ('C2.in3[1][:]',)),
                               'C2', 'C1',
                               ]))
+
+class CollapsedGraphTestCase(unittest.TestCase):
+    def setUp(self):
+        self.conns = [
+            ('A.c[2]', 'B.a.x.y'),
+            ('A.d.z', 'B.b[4]'),
+            ('B.c', 'C.a'),
+            ('B.d', 'C.b'),
+        ]
+        self.boundary_conns = [
+            ('a', 'A.a'),
+            ('C.c', 'c'),
+            ('b[3]', 'A.b'),
+            ('D.d', 'd.x'),
+        ]
+        self.comps = ['A','B','C','D']
+        self.bvariables = [('a','in'), ('b','in'),
+                          ('c','out'), ('d','out')]
+        self.dep, self.scope = _make_graph(self.comps,
+                                           self.bvariables,
+                                           self.conns +
+                                           self.boundary_conns +
+                                           [])
+
+        self.reduced = self.dep.collapse_connections()
+
+    def test_full_subgraph(self):
+        sub = self.reduced.full_subgraph(['A', 'B'])
+        self.assertEqual(set(sub.nodes()), 
+                         set([('b[3]', ('A.b', 'b[3]')), ('a', ('A.a', 'a')), ('B.c', ('C.a',)), 
+                              'A.c', 'A.d', 'B', 'A', ('A.c[2]', ('B.a.x.y',)), ('A.d.z', ('B.b[4]',)), 
+                              'B.b', 'B.a', ('B.d', ('C.b',))]))
+        self.assertEqual(set(sub.edges()),
+                         set([(('b[3]', ('A.b', 'b[3]')), 'A'), (('a', ('A.a', 'a')), 'A'), 
+                              ('B', ('B.c', ('C.a',))), ('B', ('B.d', ('C.b',))), ('A', 'A.d'), 
+                              ('A', ('A.c[2]', ('B.a.x.y',))), ('A', ('A.d.z', ('B.b[4]',))), 
+                              ('A', 'A.c'), (('A.c[2]', ('B.a.x.y',)), 'B'), (('A.d.z', ('B.b[4]',)), 'B'), 
+                              ('B.b', 'B'), ('B.a', 'B')]))
+        
 
 if __name__ == "__main__":
     unittest.main()
