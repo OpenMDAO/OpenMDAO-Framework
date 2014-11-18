@@ -32,7 +32,7 @@ class Simulation(Assembly):
 
         # Our component to be meta-modeled
         self.add("sin_calc", Sin())
-        
+
         # Another instance of our component for head-to-head comparison with
         # the metamodel.
         self.add("sin_verify", Sin())
@@ -73,7 +73,7 @@ class Simulation(Assembly):
 
 if __name__ == "__main__":
 
-    sim = Simulation()
+    sim = set_as_top(Simulation())
     sim.run()
 
     #This is how you can access any of the data
