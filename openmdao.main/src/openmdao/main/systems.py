@@ -694,11 +694,11 @@ class System(object):
         """
         if subsystem is None:
             scatter = self.scatter_full
-            if scatter:
+            #if scatter:
                 #print "%s full scatter" % self.name
         else:
             scatter = subsystem.scatter_partial
-            if scatter:
+            #if scatter:
                 #print "%s scatter to %s" % (self.name, subsystem.name)
 
         if scatter is not None:
