@@ -333,6 +333,7 @@ class CONMINdriver(Driver):
     def pre_iteration(self):
         """Checks for RunStopped."""
 
+        #print "%s running" % self.name
         super(CONMINdriver, self).pre_iteration()
         if self._stop:
             self.raise_exception('Stop requested', RunStopped)

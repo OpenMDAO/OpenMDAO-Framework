@@ -1218,6 +1218,10 @@ class CollapsedGraph(DGraphBase):
         for comp in comps:
             outs.update(self.successors_iter(comp))
             ins.update(self.predecessors_iter(comp))
+            # handle inputs that are also srcs
+            for n in self.predecessors_iter(comp):
+                if self.out_degree(n) > 1:
+                    outs.add(n)
 
         inner = outs.intersection(ins)
 

@@ -1110,10 +1110,9 @@ class Assembly(Component):
 
         # copy the reduced graph
         rgraph = rgraph.subgraph(rgraph.nodes_iter())
-
         rgraph.collapse_subdrivers([], [self._top_driver])
-
         cgraph = rgraph.component_graph()
+        #cgraph = self._driver_collapsed_graph.component_graph()
 
         if len(cgraph) > 1:
             for u,v in cgraph.edges():
@@ -1296,6 +1295,10 @@ class Assembly(Component):
 
         # remove all vars that don't connect components
         collapsed_graph.prune(coll_keep)
+
+        #rgraph = collapsed_graph.subgraph(collapsed_graph.nodes_iter())
+        #rgraph.collapse_subdrivers([], [self._top_driver])
+        #self._driver_collapsed_graph = rgraph
 
         collapsed_graph.fix_dangling_vars()
 
