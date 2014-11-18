@@ -57,12 +57,14 @@ def compound_setup_scatters(self):
     # collect all destinations from p vector
     ret = self.vec['p'].get_dests_by_comp()
 
+    #print "scatters for %s" % self.name
     for subsystem in self.all_subsystems():
         src_partial = []
         dest_partial = []
         scatter_conns = set()
         noflat_conns = set()  # non-flattenable vars
         for sub in subsystem.simple_subsystems():
+            #print "sub %s: _in_nodes: %s" % (sub.name, sub._in_nodes)
             for node in self.vector_vars:
                 if node in sub._in_nodes:
                     if node not in self._owned_args or node in scatter_conns:
@@ -107,6 +109,7 @@ def compound_setup_scatters(self):
                             scatter_conns_full.add(node)
 
         if MPI or scatter_conns or noflat_conns:
+            #print "   subsystem %s:\n      %s" % (subsystem.name, str(scatter_conns))
             subsystem.scatter_partial = DataTransfer(self, src_partial,
                                                      dest_partial,
                                                      scatter_conns, noflat_conns)
@@ -160,7 +163,16 @@ class System(object):
 
         # filter out any comps labeled as inputs. this happens when multiple comps
         # output the same variable
-        self._in_nodes = [i for i in ins if 'comp' not in graph.node[i]]
+        #self._in_nodes = [i for i in ins if 'comp' not in graph.node[i]]
+        
+        self._in_nodes = []
+        for i in ins:
+            if 'comp' not in graph.node[i]:
+                self._in_nodes.append(i)
+            elif i in self.scope.name2collapsed and self.scope.name2collapsed[i] in graph:
+                n = self.scope.name2collapsed[i]
+                if i != self.scope.name2collapsed[i] and n not in self._in_nodes:
+                    self._in_nodes.append(n)
 
         self._combined_graph = graph.subgraph(list(all_outs)+list(self._in_nodes))
 
@@ -664,8 +676,12 @@ class System(object):
         """
         if subsystem is None:
             scatter = self.scatter_full
+            #if scatter:
+            #    print "%s full scatter" % self.name
         else:
             scatter = subsystem.scatter_partial
+            #if scatter:
+            #    print "%s scatter to %s" % (self.name, subsystem.name)
 
         if scatter is not None:
             srcvec = self.vec[srcvecname]
@@ -1861,13 +1877,13 @@ class OpaqueSystem(SimpleSystem):
         dests = set()
         nodeset = set()
         internal_comps = set()
-        for name in nodes:
-            obj = getattr(scope, name, None)
+        for n in nodes:
+            obj = getattr(scope, n, None)
             if obj is not None:
                 if has_interface(obj, IDriver):
                     internal_comps.update([c.name for c in obj.iteration_set()])
                 else:
-                    internal_comps.add(name)
+                    internal_comps.add(n)
 
         for node in self._in_nodes:
             for d in node[1]:

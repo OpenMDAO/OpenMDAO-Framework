@@ -459,8 +459,7 @@ class InputVecWrapper(VecWrapperBase):
         else:
             vnames = [n for n in vnames if n in self]
 
-        for name in vnames: #for n in vnames:
-            #for name in self._dest_map.get(n, [n]):
+        for name in vnames:
             array_val, start = self._info.get(name,(None, None))
             if start is not None:
                 if isinstance(name, tuple):
@@ -502,16 +501,11 @@ class DataTransfer(object):
         self.scatter_conns = scatter_conns
         self.noflat_vars = list(noflat_vars)
 
-        #print "noflat: %s" % noflat_vars
-
         var_idxs = idx_merge(var_idxs)
         input_idxs = idx_merge(input_idxs)
 
         if not (MPI or scatter_conns or noflat_vars):
-            #mpiprint("RETURNING (no xfer) for %s" % system.name)
             return  # no data to xfer
-
-        #mpiprint("%s scatter_conns: %s" % (system.name, scatter_conns))
 
         if len(var_idxs) != len(input_idxs):
             raise RuntimeError("ERROR: creating scatter (index size mismatch): (%d != %d) srcs: %s,  dest: %s in %s" %
