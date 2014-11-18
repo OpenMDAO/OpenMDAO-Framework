@@ -21,10 +21,24 @@ dictionary."""
 import copy
 import re
 
+import bson
+
 # This sort of sucks, but seems to be as good as it gets...
 # This is essentially the same as re._pattern_type
 RE_TYPE = type(re.compile(""))
 
+
+try:
+    import uuid
+    _use_uuid = True
+except ImportError:
+    _use_uuid = False
+
+def has_uuid():
+    """Is the uuid module available?
+    .. versionadded:: 2.3
+    """
+    return _use_uuid
 
 class SON(dict):
     """SON data.
@@ -649,40 +663,42 @@ def _json_convert(obj):
         return obj
 
 
-# def object_hook(dct, compile_re=True):
-#     if "$oid" in dct:
-#         return ObjectId(str(dct["$oid"]))
-#     if "$ref" in dct:
-#         return DBRef(dct["$ref"], dct["$id"], dct.get("$db", None))
-#     if "$date" in dct:
-#         secs = float(dct["$date"]) / 1000.0
-#         return EPOCH_AWARE + datetime.timedelta(seconds=secs)
-#     if "$regex" in dct:
-#         flags = 0
-#         # PyMongo always adds $options but some other tools may not.
-#         for opt in dct.get("$options", ""):
-#             flags |= _RE_OPT_TABLE.get(opt, 0)
+def object_hook(dct, compile_re=True):
+    if "$oid" in dct:
+        return ObjectId(str(dct["$oid"]))
+    if "$ref" in dct:
+        return DBRef(dct["$ref"], dct["$id"], dct.get("$db", None))
+    if "$date" in dct:
+        secs = float(dct["$date"]) / 1000.0
+        return EPOCH_AWARE + datetime.timedelta(seconds=secs)
+    if "$regex" in dct:
+        flags = 0
+        # PyMongo always adds $options but some other tools may not.
+        for opt in dct.get("$options", ""):
+            flags |= _RE_OPT_TABLE.get(opt, 0)
 
-#         if compile_re:
-#             return re.compile(dct["$regex"], flags)
-#         else:
-#             return Regex(dct["$regex"], flags)
-#     if "$minKey" in dct:
-#         return MinKey()
-#     if "$maxKey" in dct:
-#         return MaxKey()
-#     if "$binary" in dct:
-#         if isinstance(dct["$type"], int):
-#             dct["$type"] = "%02x" % dct["$type"]
-#         subtype = int(dct["$type"], 16)
-#         if subtype >= 0xffffff80:  # Handle mongoexport values
-#             subtype = int(dct["$type"][6:], 16)
-#         return Binary(base64.b64decode(dct["$binary"].encode()), subtype)
-#     if "$code" in dct:
-#         return Code(dct["$code"], dct.get("$scope"))
-#     if bson.has_uuid() and "$uuid" in dct:
-#         return bson.uuid.UUID(dct["$uuid"])
-#     return dct
+        if compile_re:
+            return re.compile(dct["$regex"], flags)
+        else:
+            return Regex(dct["$regex"], flags)
+    if "$minKey" in dct:
+        return MinKey()
+    if "$maxKey" in dct:
+        return MaxKey()
+    if "$binary" in dct:
+        if isinstance(dct["$type"], int):
+            dct["$type"] = "%02x" % dct["$type"]
+        subtype = int(dct["$type"], 16)
+        if subtype >= 0xffffff80:  # Handle mongoexport values
+            subtype = int(dct["$type"][6:], 16)
+        return Binary(base64.b64decode(dct["$binary"].encode()), subtype)
+    if "$code" in dct:
+        return Code(dct["$code"], dct.get("$scope"))
+    #if bson.has_uuid() and "$uuid" in dct:
+    if has_uuid() and "$uuid" in dct:
+        return uuid.UUID(dct["$uuid"])
+        #return bson.uuid.UUID(dct["$uuid"])
+    return dct
 
 
 def default(obj):

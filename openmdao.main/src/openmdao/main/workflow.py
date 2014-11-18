@@ -574,6 +574,7 @@ class Workflow(object):
                         if not ".in" in n:
                             output_name = n
                             break
+                output_name = prefix + output_name
                 outputs.append(output_name)
                 self._rec_all_outputs.append(output_name)
 
@@ -756,7 +757,7 @@ class Workflow(object):
         ## Other outputs.
         for name in self._rec_all_outputs:
             try:
-                outputs.append(scope.get(name))
+                outputs.append(top.get(name))
             except Exception as exc:
                 scope.raise_exception("Can't get '%s' for recording: %s"
                                       % (name, exc), RuntimeError)

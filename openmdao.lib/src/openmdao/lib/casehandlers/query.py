@@ -9,6 +9,8 @@ from weakref import ref
 
 from openmdao.main.api import Assembly, VariableTree
 
+from  openmdao.lib.casehandlers.pymongodb_bson_binary_util import loads
+
 _GLOBAL_DICT = dict(__builtins__=None)
 
 
@@ -653,7 +655,8 @@ class _JSONReader(_Reader):
         reclen = int(value) - 1
         data = self._inp.readline()  # ', "dictname": {'
         data = '{\n' + self._inp.read(reclen)
-        return json.loads(data)
+        #return json.loads(data)
+        return loads(data)
 
 
 class _BSONReader(_Reader):
