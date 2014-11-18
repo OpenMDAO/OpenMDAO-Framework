@@ -394,15 +394,21 @@ class System(object):
         for system in self.simple_subsystems():
             comps = self._get_comps()
             for tup in system._in_nodes:
-                seen = set() # need this to prevent paramgroup inputs on same comp to be counted more than once
+                # need this to prevent paramgroup inputs on same comp to be
+                # counted more than once
+                seen = set()
                 for dest in tup[1]:
                     comp = dest.split('.', 1)[0]
-                    if comp not in seen and comp in comps:
+                    if comp in comps and comp not in seen:
                         inputs.add(dest)
                         base = base_var(self.scope._depgraph, dest)
                         if base == dest:
                             bases.add(base)
-                        seen.add(comp)
+                        # Since Opaque systems do finite difference on the
+                        # full param groups, we should only include one input
+                        # from each group.
+                        if isinstance(self, OpaqueSystem):
+                            seen.add(comp)
 
         # filter out subvars of included basevars
         inputs = [n for n in inputs if n in bases or base_var(self.scope._depgraph, n) not in bases]

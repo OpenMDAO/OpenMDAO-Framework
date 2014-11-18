@@ -45,8 +45,9 @@ openmdao_packages = [
     ('openmdao.examples.simple',               'examples', 'sdist'),
     ('openmdao.examples.bar3simulation',       'examples', 'bdist_egg'),
     ('openmdao.examples.mdao',                 'examples', 'sdist'),
+    ('openmdao.examples.metamodel_tutorial',   'examples', 'sdist'),
     ('openmdao.examples.expected_improvement', 'examples', 'sdist'),
-    ('openmdao.examples.nozzle_geometry_doe', 'examples', 'sdist')
+    ('openmdao.examples.nozzle_geometry_doe',  'examples', 'sdist')
 ]
 
 
@@ -483,7 +484,7 @@ def after_install(options, home_dir, activated=False):
         except ImportError:
             failed_imports.append(pkg)
 
-        #Hack to make sure scipy is up to date.   
+        #Hack to make sure scipy is up to date.
         try:
             from scipy.optimize import minimize
         except:
