@@ -103,12 +103,12 @@ class SellarBLISS(Assembly):
 
         # Top level is Fixed-Point Iteration
         self.add('driver', FixedPointIterator())
-        self.driver.add_parameter(('dis1.x1', 'dis1lin.x1'), low=0.0, high=10.0, start=1.0)
+        self.driver.add_parameter(('dis1pre.x1', 'dis1.x1', 'dis1lin.x1'), low=0.0, high=10.0, start=1.0)
         self.driver.add_parameter(['dis1pre.z1', 'dis1.z1', 'dis2.z1', 'dis12lin.z1'], low=-10.0, high=10.0)
         self.driver.add_parameter(['dis1pre.z2', 'dis1.z2', 'dis2.z2', 'dis12lin.z2'], low=  0.0, high=10.0)
         self.driver.add_constraint('dis1lin.x1_store = dis1.x1')
-        self.driver.add_constraint('dis12lin.z_store[0] = dis1.z1')
-        self.driver.add_constraint('dis12lin.z_store[1] = dis1.z2')
+        self.driver.add_constraint('dis12lin.z_store[0] = dis1pre.z1')
+        self.driver.add_constraint('dis12lin.z_store[1] = dis1pre.z2')
         self.driver.max_iteration = 50
         self.driver.tolerance = .001
 
