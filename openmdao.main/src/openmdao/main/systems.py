@@ -695,11 +695,11 @@ class System(object):
         if subsystem is None:
             scatter = self.scatter_full
             if scatter:
-                print "%s full scatter" % self.name
+                #print "%s full scatter" % self.name
         else:
             scatter = subsystem.scatter_partial
             if scatter:
-                print "%s scatter to %s" % (self.name, subsystem.name)
+                #print "%s scatter to %s" % (self.name, subsystem.name)
 
         if scatter is not None:
             srcvec = self.vec[srcvecname]
@@ -1917,7 +1917,7 @@ class OpaqueSystem(SimpleSystem):
         dests = sorted(dests)
 
         graph.collapse_subdrivers([], subdrivers)
-        
+
         # need to create invar nodes here else inputs won't exist in
         # internal vectors
         for dest, node in dests:
@@ -1928,7 +1928,7 @@ class OpaqueSystem(SimpleSystem):
                 else:
                     graph.add_node(dest, comp='dumbvar')
                     graph.add_edge(dest, node)
-                    
+
                 cname, _, vname = dest.partition('.')
                 if vname and cname in graph and 'comp' in graph.node[cname] and not graph.has_edge(node, cname):
                     graph.add_edge(node, cname)
