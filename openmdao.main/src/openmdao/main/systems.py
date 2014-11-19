@@ -36,6 +36,7 @@ def compound_setup_scatters(self):
     var_sizes = self.local_var_sizes
     input_sizes = self.input_sizes
     rank = self.mpi.rank
+    varmeta = self.scope._var_meta
 
     if MPI:
         self.app_ordering = self.create_app_ordering()
@@ -48,6 +49,7 @@ def compound_setup_scatters(self):
     noflat_conns_full = set()
     noflats = set([k for k,v in self.variables.items()
                        if v.get('noflat')])
+    noflats.update([v for v in self._in_nodes if varmeta[v].get('noflat')])
 
     start = numpy.sum(input_sizes[:rank])
     varkeys = self.vector_vars.keys()

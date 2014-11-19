@@ -1235,7 +1235,7 @@ class HasVarTreeParameters(HasParameters):
 
     def add_parameter(self, target, low=None, high=None,
                       scaler=None, adder=None, start=None,
-                      fd_step=None, name=None, scope=None):
+                      fd_step=None, name=None, scope=None, case_inputs_iotype='in'):
         """Adds a parameter or group of parameters to the driver."""
 
         super(HasVarTreeParameters, self).add_parameter(
@@ -1258,11 +1258,11 @@ class HasVarTreeParameters(HasParameters):
                 val = obj.get(name)
             else:
                 val = VariableTree()
-                obj.add_trait(name, VarTree(val, iotype='in', deriv_ignore=True))
+                obj.add_trait(name, VarTree(val, iotype=case_inputs_iotype, deriv_ignore=True))
             obj = val
 
         name = names[-1]
-        obj.add_trait(name, List(iotype='in', deriv_ignore=True, noflat=True))
+        obj.add_trait(name, List(iotype=case_inputs_iotype, deriv_ignore=True, noflat=True))
 
     def remove_parameter(self, name):
         """Removes the parameter with the given name."""
