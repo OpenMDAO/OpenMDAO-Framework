@@ -104,6 +104,30 @@ class BadListDerivsComp(Component):
     def provideJ(self):
         return array([[2.0]])
 
+class UndefinedVarListDerivsComp(Component):
+    x = Float(iotype='in')
+    y = Float(iotype='in')
+
+    z = Float(iotype='out')
+
+    def execute(self):
+        pass
+
+    def list_deriv_vars(self):
+        return ('x', 'y', 'w'), ('z')
+
+
+class UnflattenableVarListDerivsComp(Component):
+    x = Int(iotype='in')
+    y = Float(iotype='in')
+
+    z = Float(iotype='out')
+
+    def execute(self):
+        pass
+
+    def list_deriv_vars(self):
+        return ('x', 'y'), ('z')
 
 class Paraboloid(Component):
     """ Evaluates the equation f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3 """
@@ -518,6 +542,34 @@ class Testcase_derivatives(unittest.TestCase):
                              "comp1: The return value of list_deriv_vars() was"
                              " not a tuple of the form (invars, outvars). Value"
                              " returned was ['x', 'y']")
+
+    def test_list_deriv_vars_with_unflattenable_var(self):
+        top = set_as_top(Assembly())
+        top.add('comp', UnflattenableVarListDerivsComp())
+        top.driver.workflow.add(['comp'])
+        top.comp.x = 1
+        top.comp.y = 1.0
+
+        try:
+            J = top.driver.calc_gradient(['comp.x'], ['comp.y'])
+        except Exception as err:
+            self.assertEqual(repr(err),
+                             "comp: variable 'w' returned by 'list_deriv_comps'"\
+                             " is not defined for 'UndefinedVarListDerivsComp'")
+
+    def test_list_deriv_vars_with_undefined_var(self):
+        top = set_as_top(Assembly())
+        top.add('comp', UndefinedVarListDerivsComp())
+        top.driver.workflow.add(['comp'])
+        top.comp.x = 1.0
+        top.comp.y = 1.0
+
+        try:
+            J = top.driver.calc_gradient(['comp.x'], ['comp.y'])
+        except Exception as err:
+            self.assertEqual(str(err),
+                             "comp: variable 'w' returned by 'list_deriv_comps'"
+                             " is not defined for 'UndefinedVarListDerivsComp'")
 
     def test_int_ignore(self):
 
@@ -3256,4 +3308,3 @@ if __name__ == '__main__':
     sys.argv.append('--cover-package=openmdao')
     sys.argv.append('--cover-erase')
     nose.runmodule()
-

@@ -1212,7 +1212,7 @@ class Assembly(Component):
         # figure out the relevant subgraph based on given inputs and outputs
         if not (inputs is None and outputs is None):
             self._derivs_required = True
-            
+
         dsrcs, ddests = self._top_driver.get_expr_var_depends(recurse=True)
         keep.add(self._top_driver.name)
         keep.update([c.name for c in self._top_driver.iteration_set()])
@@ -1337,7 +1337,18 @@ class Assembly(Component):
 
         try:
             # TODO: add checking of local_size metadata...
-            val, idx = get_val_and_index(child, vname)
+
+            try:
+                val, idx = get_val_and_index(child, vname)
+            except AttributeError as err:
+                import pdb;pdb.set_trace()
+                class VariableNotDefined(AttributeError):
+                    def __init__(self, msg):
+                        super(VariableNotDefined, self).__init__(msg)
+                        self.namespace = child
+                        self.var_name = vname
+
+                raise child.raise_exception(err.message, VariableNotDefined)
 
             if hasattr(val, 'shape'):
                 info['shape'] = val.shape
@@ -1405,7 +1416,25 @@ class Assembly(Component):
                 for name in chain(ins,outs):
                     name = '.'.join((node, name))
                     if name not in varmeta:
-                        varmeta[name] = self._get_var_info(name)
+                        try:
+                            varmeta[name] = self._get_var_info(name)
+                        except AttributeError as err:
+                            try:
+
+                                namespace = err.namespace
+                                var_name = err.var_name
+
+                                msg = "variable '{var_name}' returned by 'list_deriv_comps'"\
+                                " is not defined for '{namespace}'"
+
+                                msg = msg.format(var_name=var_name, namespace=namespace.__class__.__name__)
+
+                            except AttributeError:
+                                raise err
+                            else:
+                                namespace.raise_exception(msg, err.__class__)
+
+
 
         return varmeta
 
