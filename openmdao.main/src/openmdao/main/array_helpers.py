@@ -265,7 +265,8 @@ def is_differentiable_val(val):
         return False
     elif isinstance(val, real_types):
         return True
-    elif isinstance(val, ndarray) and str(val.dtype).startswith('float'):
+    elif isinstance(val, ndarray) and (str(val.dtype).startswith('float') or \
+                                       str(val.dtype).startswith('complex')):
         return True
     return False
 
@@ -284,7 +285,8 @@ def flattened_size(name, val, scope=None):
         return 1
 
     # Numpy arrays
-    elif isinstance(val, ndarray) and str(val.dtype).startswith('float'):
+    elif isinstance(val, ndarray) and (str(val.dtype).startswith('float') or \
+                                       str(val.dtype).startswith('complex')):
         return val.size
 
     elif isinstance(val, TraitListObject):
