@@ -921,6 +921,14 @@ class System(object):
                       iterbase='', return_format='array'):
         """ Return the gradient for this system. """
 
+        if options.force_fd or mode == 'fd':
+            self.set_options('fd', options)
+
+            self.vec['df'].array[:] = 0.0
+            self.vec['du'].array[:] = 0.0
+            self.clear_dp()
+            return self.solve_fd(inputs, outputs, iterbase, return_format)
+
         # Mode Precedence
         # -- 1. Direct call argument
         # -- 2. Gradient Options
@@ -938,17 +946,8 @@ class System(object):
             else:
                 mode = options.derivative_direction
 
-        if options.force_fd is True:
-            mode = 'fd'
-
         self.set_options(mode, options)
         self.initialize_gradient_solver()
-
-        if mode == 'fd':
-            self.vec['df'].array[:] = 0.0
-            self.vec['du'].array[:] = 0.0
-            self.clear_dp()
-            return self.solve_fd(inputs, outputs, iterbase, return_format)
 
         self.linearize()
 
@@ -1002,10 +1001,6 @@ class System(object):
         self.sol_buf = self.ln_solver.solve(self.rhs_buf)
         self.sol_vec.array[:] = self.sol_buf[:]
 
-    def applyJ(self, variables):
-        """ Defined in derived classes."""
-        pass
-
     def _compute_derivatives(self, vname, ind):
         """ Solves derivatives of system (direct/adjoint).
         ind must be a global petsc index.
@@ -1045,27 +1040,6 @@ class System(object):
 
         #mpiprint('dx', self.sol_vec.array)
         return self.sol_vec
-
-    # def _get_global_indices(self, var, rank):
-    #     """Returns an iterator over global indices.
-    #     """
-    #     mpiprint("getting global indices for %s" % str(var))
-    #     var_sizes = self.local_var_sizes
-    #     ivar = self.vector_vars.keys().index(var)
-    #     start = numpy.sum(self.local_var_sizes[:, :ivar])
-
-    #     #end = start + numpy.sum(var_sizes[self.mpi.rank, ivar])
-    #     end = start + var_sizes[rank, ivar]
-    #     #end = start + numpy.sum(var_sizes[:, ivar])
-
-    #     idxs = xrange(start, end)
-    #     ind_set = PETSc.IS().createGeneral(idxs, comm=self.mpi.comm)
-    #     if self.app_ordering is not None:
-    #         ind_set = self.app_ordering.app2petsc(ind_set)
-
-    #     mpiprint("global indices: %s" % ind_set.indices)
-
-    #     return ind_set.indices
 
 
 class SimpleSystem(System):
