@@ -8,6 +8,7 @@ from openmdao.examples.mdao.sellar_MDF_solver import SellarMDF as SellarMDF_no_d
 from openmdao.examples.mdao.sellar_IDF import SellarIDF
 from openmdao.examples.mdao.sellar_CO import SellarCO
 from openmdao.examples.mdao.sellar_BLISS import SellarBLISS
+from openmdao.main.test.simpledriver import SimpleDriver
 
 from openmdao.lib.drivers.api import SLSQPdriver
 from openmdao.lib.optproblems import sellar
@@ -348,10 +349,21 @@ class SolverCO2(Assembly):
     x = Array(default_value=[0.0, 0.0], iotype='in', desc='test x')
 
     def configure(self):
-        self.add('driver', SLSQPdriver())
+        self.add('driver', SimpleDriver())
         self.driver.gradient_options.force_fd = True
         self.driver.add_parameter('x', low=array([-10, -10]), high=array([10, 10]))
         self.driver.add_objective('(x[0]-1)**2 + (x[1]-1)**2')
+        
+class SolverCO2scalar(Assembly):
+
+    x = Float(iotype='in', desc='test x')
+
+    def configure(self):
+        self.add('driver', SimpleDriver())
+        self.driver.gradient_options.force_fd = True
+        self.driver.add_parameter('x', low=-10., high=10.)
+        self.driver.add_objective('x**2')
+
 
 
 class TestSubOptInclusion(unittest.TestCase):
@@ -364,13 +376,23 @@ class TestSubOptInclusion(unittest.TestCase):
         sim.run()
 
     def test_SolverCO2(self):
+        raise SkipTest("FIXME: un-skip this after refactor of scattering")
         # Fix for a bug reported on the forum
         sim = set_as_top(SolverCO2())
+        sim.x = [2.0, 2.0]       
         sim.run()
         J = sim.driver.calc_gradient()
 
-        assert_rel_error(self, J[0, 0], -2.0, .001)
-        assert_rel_error(self, J[0, 1], -2.0, .001)
+        assert_rel_error(self, J[0, 0], 2.0, .001)
+        assert_rel_error(self, J[0, 1], 2.0, .001)
+        
+    def test_SolverCO2scalar(self):
+        sim = set_as_top(SolverCO2scalar())
+        sim.x = 1.0
+        sim.run()
+        J = sim.driver.calc_gradient()
+
+        assert_rel_error(self, J[0, 0], 2.0, .001)
 
 
 if __name__ == '__main__':

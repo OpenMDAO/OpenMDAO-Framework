@@ -1208,8 +1208,6 @@ class SimpleSystem(System):
         if self.is_active():
             graph = self.scope._reduced_graph
 
-            self.scatter('u', 'p')
-
             self._comp.set_itername('%s-%s' % (iterbase, self.name))
             self._comp.run(case_uuid=case_uuid)
 
