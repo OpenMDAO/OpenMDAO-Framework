@@ -17,6 +17,7 @@ import weakref
 from traits.trait_base import not_event
 from traits.api import Property
 
+from openmdao.main.array_helpers import flattened_value
 from openmdao.main.container import Container
 from openmdao.main.derivatives import applyJ, applyJT
 from openmdao.main.interfaces import implements, obj_has_interface, \
@@ -294,8 +295,7 @@ class Component(Container):
         if hasattr(self, 'apply_deriv') or hasattr(self, 'apply_derivT'):
             if not hasattr(self, 'provideJ'):
                 self.raise_exception("required method 'provideJ' is missing")
-            if not hasattr(self, 'list_deriv_vars'):
-                self.raise_exception("required method 'list_deriv_vars' is missing")
+            self._check_deriv_vars()
             if not hasattr(self, 'apply_deriv'):
                 self.raise_exception("method 'apply_deriv' must be also specified "
                                      " if 'apply_derivT' is specified")
@@ -303,10 +303,11 @@ class Component(Container):
                 self.raise_exception("method 'apply_derivT' must be also specified "
                                      " if 'apply_deriv' is specified")
 
-        if hasattr(self, 'provideJ') and not hasattr(self, 'list_deriv_vars'):
-            self.raise_exception("required method 'list_deriv_vars' is missing")
+        if hasattr(self, 'provideJ'):
+            self._check_deriv_vars()
 
         visited = set([id(self), id(self.parent)])
+
         for name, trait in self.traits(type=not_event).items():
             obj = getattr(self, name)
             #self._check_req_trait(name, obj, trait)
@@ -314,6 +315,8 @@ class Component(Container):
                 if obj is None:
                     self.raise_exception("required plugin '%s' is not"
                                          " present" % name, RuntimeError)
+
+
             if has_interface(obj, IComponent) and id(obj) not in visited:
                 visited.add(id(obj))
                 obj.check_config(strict=strict)
@@ -323,6 +326,38 @@ class Component(Container):
             if reqs:
                 self.raise_exception("required variables %s were"
                                      " not set" % reqs, RuntimeError)
+
+    def _check_deriv_var(self, var_name):
+        try:
+            val = self.get(var_name)
+        except AttributeError:
+            msg = "derivative variable '{var_name}' returned by 'list_deriv_vars' is "\
+            "undefined for '{comp_name}'"
+
+            msg = msg.format(var_name=var_name, comp_name=self.__class__.__name__)
+            self.raise_exception(msg)
+
+        try:
+            flattened_value(var_name, val)
+        except Exception:
+            msg = "derivative variable '{comp_name}.{var_name}' returned by 'list_deriv_vars'"\
+            "cannot be converted to a 1D float array"
+
+            msg = msg.format(var_name=var_name, comp_name=self.__class__.__name__)
+            self.raise_exception(msg)
+
+
+    def _check_deriv_vars(self):
+        try:
+            inputs, outputs = self.list_deriv_vars()
+        except AttributeError:
+            self.raise_exception("required method 'list_deriv_vars' is missing")
+
+        for var_name in inputs:
+            self._check_deriv_var(var_name)
+
+        for var_name in outputs:
+            self._check_deriv_var(var_name)
 
     @rbac(('owner', 'user'))
     def cpath_updated(self):
@@ -385,6 +420,7 @@ class Component(Container):
 
         Overrides of this function must call this version.
         """
+
         if self._call_cpath_updated:
             self.cpath_updated()
 

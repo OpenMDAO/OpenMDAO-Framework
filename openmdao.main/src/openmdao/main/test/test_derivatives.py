@@ -104,7 +104,7 @@ class BadListDerivsComp(Component):
     def provideJ(self):
         return array([[2.0]])
 
-class UndefinedVarListDerivsComp(Component):
+class UndefinedDerivVarComp(Component):
     x = Float(iotype='in')
     y = Float(iotype='in')
 
@@ -116,8 +116,11 @@ class UndefinedVarListDerivsComp(Component):
     def list_deriv_vars(self):
         return ('x', 'y', 'w'), ('z')
 
+    def provideJ(self):
+        return array([[2.0]])
 
-class UnflattenableVarListDerivsComp(Component):
+
+class UnflattenableDerivVarComp(Component):
     x = Int(iotype='in')
     y = Float(iotype='in')
 
@@ -128,6 +131,9 @@ class UnflattenableVarListDerivsComp(Component):
 
     def list_deriv_vars(self):
         return ('x', 'y'), ('z')
+
+    def provideJ(self):
+        return array([[2.0]])
 
 class Paraboloid(Component):
     """ Evaluates the equation f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3 """
@@ -543,33 +549,35 @@ class Testcase_derivatives(unittest.TestCase):
                              " not a tuple of the form (invars, outvars). Value"
                              " returned was ['x', 'y']")
 
-    def test_list_deriv_vars_with_unflattenable_var(self):
+    def test_unflattenable_deriv_var(self):
         top = set_as_top(Assembly())
-        top.add('comp', UnflattenableVarListDerivsComp())
+        top.add('comp', UnflattenableDerivVarComp())
         top.driver.workflow.add(['comp'])
         top.comp.x = 1
         top.comp.y = 1.0
 
         try:
-            J = top.driver.calc_gradient(['comp.x'], ['comp.y'])
+            top.run()
         except Exception as err:
-            self.assertEqual(repr(err),
-                             "comp: variable 'w' returned by 'list_deriv_comps'"\
-                             " is not defined for 'UndefinedVarListDerivsComp'")
+            msg = "comp: derivative variable 'UnflattenableDerivVarComp.x' returned by 'list_deriv_vars'"\
+            "cannot be converted to a 1D float array"
 
-    def test_list_deriv_vars_with_undefined_var(self):
+            self.assertEqual(str(err), msg)
+
+    def test_undefined_deriv_var(self):
         top = set_as_top(Assembly())
-        top.add('comp', UndefinedVarListDerivsComp())
+        top.add('comp', UndefinedDerivVarComp())
         top.driver.workflow.add(['comp'])
         top.comp.x = 1.0
         top.comp.y = 1.0
 
         try:
-            J = top.driver.calc_gradient(['comp.x'], ['comp.y'])
+            top.run()
         except Exception as err:
-            self.assertEqual(str(err),
-                             "comp: variable 'w' returned by 'list_deriv_comps'"
-                             " is not defined for 'UndefinedVarListDerivsComp'")
+            msg = "comp: derivative variable 'w' returned by 'list_deriv_vars'"\
+            "is undefined for 'UndefinedVarListDerivsComp'"
+            
+            self.assertEqual(str(err), msg)
 
     def test_int_ignore(self):
 
