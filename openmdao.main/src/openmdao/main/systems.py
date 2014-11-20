@@ -21,13 +21,6 @@ from openmdao.main.depgraph import break_cycles, get_node_boundary, gsort, \
 from openmdao.main.derivatives import applyJ, applyJT
 from openmdao.util.graph import base_var
 
-def call_if_found(obj, fname, *args, **kwargs):
-    """If the named function exists in the object, call it
-    with the provided args.
-    """
-    if hasattr(obj, fname):
-        return getattr(obj, fname)(*args, **kwargs)
-
 def compound_setup_scatters(self):
     """ Defines a scatter for args at this system's level """
     if not self.is_active():
@@ -199,12 +192,6 @@ class System(object):
         self.rhs_buf = None
         self._parent_system = None
         self.complex_step = False
-
-    def __getitem__(self, ident):
-        if isinstance(ident, basestring):
-            return self.find(ident)
-        else:
-            return self.subsystems()[ident]
 
     def is_opaque(self):
         return False
