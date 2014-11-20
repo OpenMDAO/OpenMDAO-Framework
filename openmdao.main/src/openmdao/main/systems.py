@@ -34,8 +34,6 @@ def compound_setup_scatters(self):
     if MPI:
         self.app_ordering = self.create_app_ordering()
 
-    # mpiprint("app indices:   %s\npetsc indices: %s" %
-    #           (app_ind_set.getIndices(), petsc_ind_set.getIndices()))
     src_full = []
     dest_full = []
     scatter_conns_full = set()
@@ -69,7 +67,8 @@ def compound_setup_scatters(self):
                     src_idxs = numpy.sum(var_sizes[:, :isrc]) + self.arg_idx[node]
 
                     # FIXME: broadcast var nodes will be scattered
-                    #  more than necessary using this scheme
+                    #  more than necessary using this scheme. switch to a push
+                    #  model with one scatter per source.
                     if node in visited:
                         dest_idxs = visited[node]
                     else:
@@ -676,12 +675,8 @@ class System(object):
         """
         if subsystem is None:
             scatter = self.scatter_full
-            #if scatter:
-                #print "%s full scatter" % self.name
         else:
             scatter = subsystem.scatter_partial
-            #if scatter:
-                #print "%s scatter to %s" % (self.name, subsystem.name)
 
         if scatter is not None:
             srcvec = self.vec[srcvecname]
@@ -714,7 +709,6 @@ class System(object):
         into Systems).  It shows which
         components run on the current processor.
         """
-        #mpiprint("dump: %s" % self.name)
         if stream is None:
             getval = True
             stream = StringIO()
@@ -722,7 +716,6 @@ class System(object):
             getval = False
 
         if not self.is_active():
-            #mpiprint("returning early for %s" % str(self.name))
             return stream.getvalue() if getval else None
 
         if MPI is None:
@@ -989,10 +982,6 @@ class System(object):
             # here to avoid hanging, even though we don't need the IS
             ind_set = PETSc.IS().createGeneral([], comm=self.mpi.comm)
 
-        # if self.mpi.rank == rank:
-        #     mpiprint("set %d index to 1.0" % ind)
-        #     self.rhs_vec.petsc_vec.setValue(ind, 1.0, addv=False)
-
         self.sol_buf.array[:] = self.sol_vec.array[:]
         self.rhs_buf.array[:] = self.rhs_vec.array[:]
 
@@ -1054,8 +1043,6 @@ class SimpleSystem(System):
         yield self
 
     def setup_communicators(self, comm):
-        # if comm is not None:
-        #     mpiprint("setup_comms for %s  (%d of %d)" % (self.name, comm.rank, comm.size))
         self.mpi.comm = comm
 
     def _create_var_dicts(self, resid_state_map):
@@ -1139,9 +1126,6 @@ class SimpleSystem(System):
             vec['f'].array[:] = vec['u'].array[:]
             self.scatter('u', 'p')
 
-            #if IImplicitComponent.providedBy(self._comp) and self._comp.eval_only==False:
-            #    self._comp.evaluate()
-            #else:
             self._comp.set_itername('%s-%s' % (iterbase, self.name))
             self._comp.run(case_uuid=case_uuid)
 
@@ -1254,10 +1238,6 @@ class ParamSystem(VarSystem):
         """ Load param value into u vector. """
         self._get_sys().vec['u'].set_from_scope(self.scope)#, [self.name])
 
-    #def run(self, iterbase, case_label='', case_uuid=None):
-    #    if self.is_active():
-    #        self._get_sys().vec['u'].set_to_scope(self.scope, [self.name])
-
     def _get_sys(self):
         if self._dup_in_subdriver:
             return self._parent_system
@@ -1287,9 +1267,6 @@ class InVarSystem(VarSystem):
         # don't do anything if we are not requesting this invar
         if self.variables and \
            self.scope.name2collapsed.get(self.name) in variables:
-            #mpiprint("invar sys %s: adding %s to %s" %
-                            #(self.name, self.sol_vec[self.name],
-                                #self.rhs_vec[self.name]))
             self.rhs_vec[self.name] += self.sol_vec[self.name]
 
     def pre_run(self):
