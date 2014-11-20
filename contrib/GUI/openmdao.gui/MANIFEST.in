@@ -1,5 +1,0 @@
-recursive-include src *.css *.cur *.gif *.html *.ico *.js *.json *.png *.proj
-recursive-include src/openmdao/gui/test/functional/manual *
-recursive-include src/openmdao/gui/test/functional/files *
-recursive-include src/openmdao/gui/test/js_unit_tests *.js *.jar *.py *.conf 
-

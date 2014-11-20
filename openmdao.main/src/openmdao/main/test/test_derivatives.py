@@ -2667,6 +2667,30 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
                                               mode='adjoint')
         assert_rel_error(self, J[0, 0], 9.0, .001)
 
+    def test_paramgroup_deriv(self):
+
+        top = set_as_top(Assembly())
+        top.add('comp1', Paraboloid())
+        top.add('driver', SimpleDriver())
+        top.driver.workflow.add(['comp1'])
+
+        top.run()
+
+        J = top.driver.calc_gradient(inputs=[('comp1.x', 'comp1.y')],
+                                              outputs=['comp1.f_xy'],
+                                              mode='forward')
+        assert_rel_error(self, J[0, 0], 2.0, .001)
+
+        J = top.driver.calc_gradient(inputs=[('comp1.x', 'comp1.y')],
+                                              outputs=['comp1.f_xy'],
+                                              mode='adjoint')
+        assert_rel_error(self, J[0, 0], 2.0, .001)
+
+        J = top.driver.calc_gradient(inputs=[('comp1.x', 'comp1.y')],
+                                              outputs=['comp1.f_xy'],
+                                              mode='fd')
+        assert_rel_error(self, J[0, 0], 2.0, .001)
+
     def test_paramgroup_with_scaler(self):
 
         top = set_as_top(Assembly())

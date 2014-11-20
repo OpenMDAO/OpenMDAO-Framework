@@ -36,6 +36,7 @@ def compound_setup_scatters(self):
     var_sizes = self.local_var_sizes
     input_sizes = self.input_sizes
     rank = self.mpi.rank
+    varmeta = self.scope._var_meta
 
     if MPI:
         self.app_ordering = self.create_app_ordering()
@@ -48,6 +49,7 @@ def compound_setup_scatters(self):
     noflat_conns_full = set()
     noflats = set([k for k,v in self.variables.items()
                        if v.get('noflat')])
+    noflats.update([v for v in self._in_nodes if varmeta[v].get('noflat')])
 
     start = numpy.sum(input_sizes[:rank])
     varkeys = self.vector_vars.keys()
@@ -57,12 +59,14 @@ def compound_setup_scatters(self):
     # collect all destinations from p vector
     ret = self.vec['p'].get_dests_by_comp()
 
+    #print "scatters for %s" % self.name
     for subsystem in self.all_subsystems():
         src_partial = []
         dest_partial = []
         scatter_conns = set()
         noflat_conns = set()  # non-flattenable vars
         for sub in subsystem.simple_subsystems():
+            #print "sub %s: _in_nodes: %s" % (sub.name, sub._in_nodes)
             for node in self.vector_vars:
                 if node in sub._in_nodes:
                     if node not in self._owned_args or node in scatter_conns:
@@ -107,6 +111,7 @@ def compound_setup_scatters(self):
                             scatter_conns_full.add(node)
 
         if MPI or scatter_conns or noflat_conns:
+            #print "   subsystem %s:\n      %s" % (subsystem.name, str(scatter_conns))
             subsystem.scatter_partial = DataTransfer(self, src_partial,
                                                      dest_partial,
                                                      scatter_conns, noflat_conns)
@@ -160,7 +165,16 @@ class System(object):
 
         # filter out any comps labeled as inputs. this happens when multiple comps
         # output the same variable
-        self._in_nodes = [i for i in ins if 'comp' not in graph.node[i]]
+        #self._in_nodes = [i for i in ins if 'comp' not in graph.node[i]]
+
+        self._in_nodes = []
+        for i in ins:
+            if 'comp' not in graph.node[i]:
+                self._in_nodes.append(i)
+            elif i in self.scope.name2collapsed and self.scope.name2collapsed[i] in graph:
+                n = self.scope.name2collapsed[i]
+                if i != self.scope.name2collapsed[i] and n not in self._in_nodes:
+                    self._in_nodes.append(n)
 
         self._combined_graph = graph.subgraph(list(all_outs)+list(self._in_nodes))
 
@@ -382,15 +396,21 @@ class System(object):
         for system in self.simple_subsystems():
             comps = self._get_comps()
             for tup in system._in_nodes:
-                seen = set() # need this to prevent paramgroup inputs on same comp to be counted more than once
+                # need this to prevent paramgroup inputs on same comp to be
+                # counted more than once
+                seen = set()
                 for dest in tup[1]:
                     comp = dest.split('.', 1)[0]
-                    if comp not in seen and comp in comps:
+                    if comp in comps and comp not in seen:
                         inputs.add(dest)
                         base = base_var(self.scope._depgraph, dest)
                         if base == dest:
                             bases.add(base)
-                        seen.add(comp)
+                        # Since Opaque systems do finite difference on the
+                        # full param groups, we should only include one input
+                        # from each group.
+                        if isinstance(self, OpaqueSystem):
+                            seen.add(comp)
 
         # filter out subvars of included basevars
         inputs = [n for n in inputs if n in bases or base_var(self.scope._depgraph, n) not in bases]
@@ -645,6 +665,18 @@ class System(object):
             if end-start > arrays['u'][start:end].size:
                 msg = "size mismatch: passing [%d,%d] view of size %d array from %s to %s" % \
                             (start,end,arrays['u'][start:end].size,self.name,sub.name)
+                dups = {}
+                for s in self.local_subsystems():
+                    for k in s.vector_vars.keys():
+                        dups.setdefault(k, set()).add(s.name)
+
+                multis = [(k,list(v)) for k,v in dups.items() if len(v) > 1]
+                if multis:
+                    msg += " The following var nodes are duplicated in subsystems: "
+                    for i, (v,s) in enumerate(multis):
+                        msg += "%s duplicated in %s" % (v,s)
+                        if i:
+                            msg += ", "
                 raise RuntimeError(msg)
 
             subarrays = {}
@@ -664,8 +696,12 @@ class System(object):
         """
         if subsystem is None:
             scatter = self.scatter_full
+            #if scatter:
+                #print "%s full scatter" % self.name
         else:
             scatter = subsystem.scatter_partial
+            #if scatter:
+                #print "%s scatter to %s" % (self.name, subsystem.name)
 
         if scatter is not None:
             srcvec = self.vec[srcvecname]
@@ -1843,41 +1879,46 @@ class OpaqueSystem(SimpleSystem):
     of a simple system, but encapsulating a compound
     system.
     """
-    def __init__(self, scope, graph, subg, name):
+    def __init__(self, scope, pgraph, subg, name):
         nodes = set(subg.nodes())
 
         # take the graph we're given, collapse our nodes into a single
         # node, and create a simple system for that
-        ograph = graph.subgraph(graph.nodes_iter())
-        int_nodes = ograph.internal_nodes(nodes, shared=False)
-        shared_int_nodes = ograph.internal_nodes(nodes, shared=True)
+        ograph = pgraph.subgraph(pgraph.nodes_iter())
+        full = get_full_nodeset(scope, nodes)
+        int_nodes = ograph.internal_nodes(full, shared=False)
+        shared_int_nodes = ograph.internal_nodes(full, shared=True)
         ograph.add_node(tuple(nodes), comp='opaque')
         collapse_nodes(ograph, tuple(nodes), int_nodes)
 
         super(OpaqueSystem, self).__init__(scope, ograph, tuple(nodes))
 
-        graph = graph.subgraph(shared_int_nodes)
+        graph = pgraph.subgraph(shared_int_nodes)
 
         dests = set()
         nodeset = set()
         internal_comps = set()
-        for name in nodes:
-            obj = getattr(scope, name, None)
+        subdrivers = []
+        for n in nodes:
+            obj = getattr(scope, n, None)
             if obj is not None:
                 if has_interface(obj, IDriver):
                     internal_comps.update([c.name for c in obj.iteration_set()])
+                    subdrivers.append(obj)
                 else:
-                    internal_comps.add(name)
+                    internal_comps.add(n)
 
         for node in self._in_nodes:
             for d in node[1]:
                 cname, _, vname = d.partition('.')
-                if vname and cname in internal_comps and node not in nodeset:
+                if vname and cname in internal_comps and node not in nodeset:# and pgraph.node[node].get('iotype') not in ('out','residual'):
                     dests.add((d, node))
                     nodeset.add(node)
 
         # sort so that base vars will be before subvars
         dests = sorted(dests)
+
+        graph.collapse_subdrivers([], subdrivers)
 
         # need to create invar nodes here else inputs won't exist in
         # internal vectors
@@ -1890,11 +1931,15 @@ class OpaqueSystem(SimpleSystem):
                     graph.add_node(dest, comp='dumbvar')
                     graph.add_edge(dest, node)
 
+                cname, _, vname = dest.partition('.')
+                if vname and cname in graph and 'comp' in graph.node[cname] and not graph.has_edge(node, cname):
+                    graph.add_edge(node, cname)
+
             if dest in graph:
                 graph.node[dest]['system'] = _create_simple_sys(scope, graph, dest)
 
         self._inner_system = SerialSystem(scope, graph,
-                                          graph.component_graph(),
+                                          graph.component_graph(),#.subgraph(nodes),
                                           name = "FD_" + str(name))
 
         self._inner_system._provideJ_bounds = None
@@ -2361,7 +2406,7 @@ def get_full_nodeset(scope, group):
     names = set()
     for name in simple_node_iter(group):
         obj = getattr(scope, name, None)
-        if obj is not None and hasattr(obj, 'get_full_nodeset'):
+        if hasattr(obj, 'get_full_nodeset'):
             names.update(obj.get_full_nodeset())
         else:
             names.add(name)

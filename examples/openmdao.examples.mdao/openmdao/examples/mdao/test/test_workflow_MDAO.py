@@ -4,6 +4,7 @@ from nose import SkipTest
 from numpy import array
 
 from openmdao.examples.mdao.sellar_MDF import SellarMDF
+from openmdao.examples.mdao.sellar_MDF_solver import SellarMDF as SellarMDF_no_deriv
 from openmdao.examples.mdao.sellar_IDF import SellarIDF
 from openmdao.examples.mdao.sellar_CO import SellarCO
 from openmdao.examples.mdao.sellar_BLISS import SellarBLISS
@@ -184,6 +185,18 @@ class TestCase(unittest.TestCase):
 
     def test_MDF(self):
         prob = SellarMDF()
+        set_as_top(prob)
+        prob.dis1.z1 = prob.dis2.z1 = 5.0
+        prob.dis1.z2 = prob.dis2.z2 = 2.0
+        prob.dis1.x1 = 1.0
+
+        prob.run()
+        assert_rel_error(self, prob.dis1.z1, 1.977, 0.01)
+        assert_rel_error(self, 1.0-prob.dis1.z2, 1.0, 0.01)
+        assert_rel_error(self, 1.0-prob.dis1.x1, 1.0, 0.1)
+
+    def test_MDF_no_deriv(self):
+        prob = SellarMDF_no_deriv()
         set_as_top(prob)
         prob.dis1.z1 = prob.dis2.z1 = 5.0
         prob.dis1.z2 = prob.dis2.z2 = 2.0

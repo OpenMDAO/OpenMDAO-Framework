@@ -161,7 +161,7 @@ def _update_graph_metadata(G, scope):
 
 def _map_systems(system, dct):
     """in our dotfile, all graph nodes must have unique names,
-    but not all openmdao systems have unique names, so just 
+    but not all openmdao systems have unique names, so just
     create a map where every system is mapped to a unique
     name.
     """
@@ -174,7 +174,7 @@ def _map_systems(system, dct):
 
 def write_system_dot(system, dotfile):
     # first, create a mapping of unique names to each system
-    
+
     sysmap = _map_systems(system, {})
 
     with open(dotfile, 'w') as f:
@@ -202,9 +202,9 @@ def _dot_shape(system):
     elif isinstance(system, SolverSystem):
         return "house"
     elif isinstance(system, SerialSystem):
-        return "octagon"
+        return "rectangle"
     elif isinstance(system, ParallelSystem):
-        return "doubleoctagon"
+        return "parallelogram"
     elif isinstance(system, InVarSystem):
         return "ellipse"
     elif isinstance(system, OutVarSystem):
@@ -295,7 +295,7 @@ def plot_graph(G, outfile=None, fmt='pdf', pseudos=True, workflow=False, scope=N
 
     os.remove(dotfile)
 
-def _driver_plots(obj, recurse=True, fmt='pdf', pseudos=True, 
+def _driver_plots(obj, recurse=True, fmt='pdf', pseudos=True,
                   workflow=False, sysdone=False, prefix=''):
     # driver graph
     try:
@@ -303,7 +303,7 @@ def _driver_plots(obj, recurse=True, fmt='pdf', pseudos=True,
                    outfile=prefix+obj.get_pathname()+'_reduced'+'.'+fmt, pseudos=pseudos)
     except Exception as err:
         print "Can't plot reduced graph of '%s': %s" % (obj.get_pathname(), str(err))
-    
+
     # workflow graph
     try:
         plot_graph(obj.workflow._reduced_graph, fmt=fmt,
@@ -314,13 +314,13 @@ def _driver_plots(obj, recurse=True, fmt='pdf', pseudos=True,
     if recurse:
         for comp in obj.workflow:
             if IAssembly.providedBy(comp):
-                plot_graphs(comp, recurse, fmt=fmt, pseudos=pseudos, 
+                plot_graphs(comp, recurse, fmt=fmt, pseudos=pseudos,
                             workflow=workflow, sysdone=True, prefix=prefix)
             elif IDriver.providedBy(comp):
-                _driver_plots(comp, recurse, fmt=fmt, pseudos=pseudos, 
+                _driver_plots(comp, recurse, fmt=fmt, pseudos=pseudos,
                               workflow=workflow, sysdone=True, prefix=prefix)
 
-def plot_graphs(obj, recurse=True, fmt='pdf', pseudos=True, 
+def plot_graphs(obj, recurse=True, fmt='pdf', pseudos=True,
                 workflow=False, sysdone=False, prefix=''):
     if IAssembly.providedBy(obj):
         name = 'top' if obj.get_pathname()=='' else obj.get_pathname()
@@ -350,10 +350,10 @@ def plot_graphs(obj, recurse=True, fmt='pdf', pseudos=True,
         except Exception as err:
             print "Can't plot component_graph of '%s': %s" % (name, str(err))
 
-        _driver_plots(obj._top_driver, recurse=recurse, fmt=fmt, 
+        _driver_plots(obj._top_driver, recurse=recurse, fmt=fmt,
                       pseudos=pseudos, workflow=workflow, sysdone=True,
                       prefix=prefix)
-                    
+
 
 def main():
     from argparse import ArgumentParser

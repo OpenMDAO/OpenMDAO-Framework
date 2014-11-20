@@ -32,6 +32,17 @@ class SimpleCompArray(Component):
                         [2.0, 5.0, 1.5, 2.0]])
         self.y = self.J.dot(self.x.flatten()).reshape((2, 2))
 
+class ComplexArray(Component):
+
+    x = Array(array([2.0, 4.0], dtype=complex), iotype='in')
+    y = Array(array([0.0, 0.0], dtype=complex), iotype='out')
+
+    def execute(self):
+        y = array([0.0, 0.0], dtype=complex)
+        y[0] = 2.0*self.x[0] + self.x[1]
+        y[1] = 3.0*self.x[0] - 2.0*self.x[1]
+        self.y = y
+
 
 class TreeWithFloat(VariableTree):
 
@@ -304,7 +315,26 @@ class Testcase_ComplexStep_Derivatives(unittest.TestCase):
         diff = abs(J + eye(4) - model.comp.J).max()
         assert_rel_error(self, diff, 0.0, .0001)
         self.assertTrue(J[0, 0] is not complex)
+        
+    def test_complex_array_data_passing(self):
+        
+        model = set_as_top(Assembly())
+        model.add('comp1', ComplexArray())
+        model.add('comp2', ComplexArray())
+        model.driver.workflow.add(['comp1', 'comp2'])
+        model.connect('comp1.y', 'comp2.x')
+        
+        model.driver.gradient_options.fd_form = 'complex_step'
+        model.run()
+        
+        J = model.driver.calc_gradient(inputs=['comp1.x'],
+                                       outputs=['comp2.y'])
 
+        assert_rel_error(self, J[0, 0], 7.0, .0001)
+        assert_rel_error(self, J[0, 1], 0.0, .0001)
+        assert_rel_error(self, J[1, 1], 7.0, .0001)
+        assert_rel_error(self, J[1, 0], 0.0, .0001)
+        
     def test_mixed_CS_FD(self):
 
         model = set_as_top(Assembly())
