@@ -1998,21 +1998,40 @@ class OpaqueSystem(SimpleSystem):
     def get_req_cpus(self):
         return self._inner_system.get_req_cpus()
 
-class FiniteDiffDriverSystem(SimpleSystem):
-    """A System for a Driver component that is not a Solver."""
+class DriverSystem(SimpleSystem):
+    """Base System class for all Drivers."""
 
     def __init__(self, graph, driver):
         scope = driver.parent
-        super(FiniteDiffDriverSystem, self).__init__(scope, graph, driver.name)
+        super(DriverSystem, self).__init__(scope, graph, driver.name)
         driver._system = self
 
+    def local_subsystems(self):
+        return [s for s in self.all_subsystems() if s.is_active()]
+
+    def all_subsystems(self):
+        return (self._comp.workflow._system,)
+
+    def simple_subsystems(self):
+        yield self
+        for sub in self._comp.workflow._system.simple_subsystems():
+            yield sub
+
+    def pre_run(self):
+        for s in self.local_subsystems():
+            s.pre_run()
+
     def setup_communicators(self, comm):
-        super(FiniteDiffDriverSystem, self).setup_communicators(comm)
+        super(DriverSystem, self).setup_communicators(comm)
         self._comp.setup_communicators(self.mpi.comm)
 
     def setup_scatters(self):
         compound_setup_scatters(self)
         self._comp.setup_scatters()
+
+
+class FiniteDiffDriverSystem(DriverSystem):
+    """A System for a Driver component that is not a Solver."""
 
     def is_differentiable(self):
         """Return True if analytical derivatives can be
@@ -2020,63 +2039,20 @@ class FiniteDiffDriverSystem(SimpleSystem):
         """
         return False
 
-    def local_subsystems(self):
-        return [s for s in self.all_subsystems() if s.is_active()]
 
-    def all_subsystems(self):
-        return (self._comp.workflow._system,)
-
-    def simple_subsystems(self):
-        yield self
-        for sub in self._comp.workflow._system.simple_subsystems():
-            yield sub
-
-    def pre_run(self):
-        for s in self.local_subsystems():
-            s.pre_run()
-
-
-class TransparentDriverSystem(SimpleSystem):
+class TransparentDriverSystem(DriverSystem):
     """A system for an driver that allows derivative calculation across its
     boundary."""
-
-    def __init__(self, graph, driver):
-        scope = driver.parent
-        super(TransparentDriverSystem, self).__init__(scope, graph, driver.name)
-        driver._system = self
 
     def _get_resid_state_map(self):
         """ Essentially, this system behaves like a solver system, except it
         has no states or residuals.
         """
-        return dict()
-
-    def setup_communicators(self, comm):
-        super(TransparentDriverSystem, self).setup_communicators(comm)
-        self._comp.setup_communicators(self.mpi.comm)
+        return {}
 
     def setup_variables(self, resid_state_map=None):
         # pass our resid_state_map to our children
         super(TransparentDriverSystem, self).setup_variables(self._get_resid_state_map())
-
-    def setup_scatters(self):
-        compound_setup_scatters(self)
-        self._comp.setup_scatters()
-
-    def local_subsystems(self):
-        return [s for s in self.all_subsystems() if s.is_active()]
-
-    def all_subsystems(self):
-        return (self._comp.workflow._system,)
-
-    def simple_subsystems(self):
-        yield self
-        for sub in self._comp.workflow._system.simple_subsystems():
-            yield sub
-
-    def pre_run(self):
-        for s in self.local_subsystems():
-            s.pre_run()
 
     def evaluate(self, iterbase, case_label='', case_uuid=None):
         """ Evalutes a component's residuals without invoking its
