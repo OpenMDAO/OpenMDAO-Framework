@@ -582,14 +582,10 @@ def idx_merge(idxs):
 
 def petsc_linspace(start, end):
     """ Return a linspace vector of the right int type for PETSc """
-    # TODO: I think numpy.arange is a better choice here...
-    #return numpy.arange(start, end, dtype=PETSc.IntType)
     if MPI:
-        dtype = PETSc.IntType
+        return numpy.arange(start, end, dtype=PETSc.IntType)
     else:
-        dtype = 'i'
-    return numpy.array(numpy.linspace(start, end-1, end-start),
-                       dtype=dtype)
+        return numpy.arange(start, end, dtype='i')
 
 
 class SerialScatter(object):
@@ -600,10 +596,6 @@ class SerialScatter(object):
         self.dvec = destvec
 
     def scatter(self, srcvec, destvec, addv, mode):
-        assert(len(self.dest_idxs) <= destvec.size)
-        assert(len(self.src_idxs) <= srcvec.size)
-        assert(len(self.src_idxs) <= len(self.dest_idxs))
-
         if addv is True:
             destvec[self.src_idxs] += srcvec[self.dest_idxs]
         else:
