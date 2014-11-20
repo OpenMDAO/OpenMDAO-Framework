@@ -419,16 +419,6 @@ class InputVecWrapper(VecWrapperBase):
                                          list(self.bounds(name)),
                                          sub_idx,self.array[sub_idx].size))
 
-        ## now create a mapping from srcs to all of their dests, so we
-        ## don't miss dests of subvars that are subviews of basevars
-        #self._dest_map = {}
-        #for node in self._info.keys():
-        #    if isinstance(node, tuple) and len(node) > 1:
-        #        base = node[0].split('[',1)[0]
-        #        if base != node[0]:
-        #            self._dest_map.setdefault(base, set()).add(node)
-        #        self._dest_map.setdefault(node, set()).add(node)
-
     def _map_resids_to_states(self, system):
         pass
 

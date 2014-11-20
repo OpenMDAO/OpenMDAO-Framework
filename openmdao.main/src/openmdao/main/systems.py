@@ -392,7 +392,8 @@ class System(object):
         children.
         """
         inputs = set()
-        bases = set()
+        is_opaque = isinstance(self, OpaqueSystem)
+
         for system in self.simple_subsystems():
             comps = self._get_comps()
             for tup in system._in_nodes:
@@ -403,17 +404,11 @@ class System(object):
                     comp = dest.split('.', 1)[0]
                     if comp in comps and comp not in seen:
                         inputs.add(dest)
-                        base = base_var(self.scope._depgraph, dest)
-                        if base == dest:
-                            bases.add(base)
                         # Since Opaque systems do finite difference on the
                         # full param groups, we should only include one input
                         # from each group.
-                        if isinstance(self, OpaqueSystem):
+                        if is_opaque:
                             seen.add(comp)
-
-        # filter out subvars of included basevars
-        inputs = [n for n in inputs if n in bases or base_var(self.scope._depgraph, n) not in bases]
 
         return _filter(self.scope, inputs)
 
@@ -833,28 +828,10 @@ class System(object):
         use a subview of the view corresponding to their base var)
         """
         vector_vars = OrderedDict()
-        all_srcs = set([n[0] for n in vardict])
-
-        # all bases that actually are found in the vardict
-        bases = set([s for s in all_srcs if '[' not in s])
-
-        # use these to find any subs that don't have a full base in the
-        # vector. we have to make sure these don't overlap with other
-        # baseless subs
-        sub_bases = set([s.split('[',1)[0]
-                          for s in all_srcs
-                             if '[' in s and s.split('[',1)[0] not in bases])
-
-        for name in vardict:
-            src = name[0]
-
-            if src in bases:
+        keep_srcs = set(_filter_subs([n[0] for n in vardict]))
+        for name, val in vardict.items():
+            if name[0] in keep_srcs:
                 vector_vars[name] = vardict[name]
-            else:
-                base = src.split('[', 1)[0]
-                if base in sub_bases: # this sub's base is not in vardict
-                    # overlapping will be checked later when we create VecWrappers
-                    vector_vars[name] = vardict[name]
 
         return vector_vars
 
@@ -2422,13 +2399,4 @@ def _filter_ignored(scope, lst):
     return unignored
 
 def _filter_flat(scope, lst):
-    keep = []
-
-    for name in lst:
-        collapsed_name = scope.name2collapsed[name]
-
-        # ignore non-float-flattenable vars
-        if not scope._var_meta[collapsed_name].get('noflat'):
-            keep.append(name)
-
-    return keep
+    return [n for n in lst if not scope._var_meta[n].get('noflat')]
