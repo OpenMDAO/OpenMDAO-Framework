@@ -1112,34 +1112,7 @@ class SimpleSystem(System):
         super(SimpleSystem, self)._create_var_dicts(resid_state_map)
 
     def setup_scatters(self):
-        if not self.is_active():
-            return
-        #mpiprint("setup_scatters: %s  (%d of %d)" % (self.name,self.mpi.rank,self.mpi.size))
-        rank = self.mpi.rank
-        start = numpy.sum(self.input_sizes[:rank])
-        end = numpy.sum(self.input_sizes[:rank+1])
-        dest_idxs = [petsc_linspace(start, end)]
-        src_idxs = []
-        ukeys = self.vec['u'].keys()
-        scatter_conns = []
-        other_conns = []
-
-        flat_args = self.flat(self._owned_args)
-
-        for dest in flat_args:
-            ivar = ukeys.index(dest)
-            scatter_conns.append(dest)
-            # FIXME: currently just using the local var size for input size
-            src_idxs.append(numpy.sum(self.local_var_sizes[:, :ivar]) + self.arg_idx[dest])# - user really needs to be able to define size for multi-proc comps
-        if len(idx_merge(src_idxs)) != len(idx_merge(dest_idxs)):
-            raise RuntimeError("ERROR: setting up scatter: (%d != %d) srcs: %s,  dest: %s in %s" %
-                                (len(src_idxs), len(dest_idxs), src_idxs, dest_idxs, self.name))
-
-        other_conns = [n for n in self._owned_args if n not in flat_args]
-
-        if MPI or scatter_conns or other_conns:
-            self.scatter_full = DataTransfer(self, src_idxs, dest_idxs,
-                                             scatter_conns, other_conns)
+        pass
 
     def run(self, iterbase, case_label='', case_uuid=None):
         if self.is_active():
@@ -1396,7 +1369,6 @@ class AssemblySystem(SimpleSystem):
         self._comp.setup_vectors(arrays)
 
     def setup_scatters(self):
-        super(AssemblySystem, self).setup_scatters()
         self._comp.setup_scatters()
 
     def set_options(self, mode, options):
@@ -1913,7 +1885,6 @@ class OpaqueSystem(SimpleSystem):
         inner_u.set_from_scope(self.scope)
 
     def setup_scatters(self):
-        super(OpaqueSystem, self).setup_scatters()
         self._inner_system.setup_scatters()
 
     def set_options(self, mode, options):
@@ -2040,7 +2011,6 @@ class FiniteDiffDriverSystem(SimpleSystem):
         self._comp.setup_communicators(self.mpi.comm)
 
     def setup_scatters(self):
-        #super(FiniteDiffDriverSystem, self).setup_scatters()
         compound_setup_scatters(self)
         self._comp.setup_scatters()
 
@@ -2090,7 +2060,6 @@ class TransparentDriverSystem(SimpleSystem):
         super(TransparentDriverSystem, self).setup_variables(self._get_resid_state_map())
 
     def setup_scatters(self):
-        #super(TransparentDriverSystem, self).setup_scatters()
         compound_setup_scatters(self)
         self._comp.setup_scatters()
 
