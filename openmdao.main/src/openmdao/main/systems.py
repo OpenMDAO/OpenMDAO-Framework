@@ -104,8 +104,7 @@ def compound_setup_scatters(self):
                     noflat_conns.add(node)
                     noflat_conns_full.add(node)
                 else:
-                    snames = [c for c in sub._get_comps()]
-                    for sname in snames:
+                    for sname in sub._get_comps():
                         if sname in ret and node in self.vec['p'] and node in ret[sname]:
                             scatter_conns.add(node)
                             scatter_conns_full.add(node)
@@ -137,6 +136,11 @@ class System(object):
         self.noflat_vars = OrderedDict() # all vars that are not flattenable to float arrays (so are not part of vectors)
         self.vector_vars = OrderedDict() # all vars that contribute to the size of vectors
 
+        self._inputs = None
+        self._outputs = None
+        self._states = None
+        self._residuals = None
+        
         self._mapped_resids = {}
 
         self._out_nodes = []
@@ -289,17 +293,13 @@ class System(object):
         myvars = self.vector_vars.keys()
         collname = self.scope.name2collapsed
 
-        all_keys = comm.allgather(vnames)
-
-
         var2proc = {}
-        for proc, names in enumerate(all_keys):
+        for proc, names in enumerate(comm.allgather(vnames)):
             for name in names:
                 if name not in var2proc:
                     try:
                         idx = myvars.index(collname[name])
                     except ValueError:
-                        mpiprint('valerr')
                         continue
 
                     if self.local_var_sizes[proc, idx] > 0:
@@ -354,10 +354,8 @@ class System(object):
         # FIXME: rework some of this using knowledge of local_var_sizes in order
         # to avoid any unnecessary data passing
 
-        # get the combined dict
-        J = comm.bcast(J, root=0)
-
-        return J
+        # return the combined dict
+        return comm.bcast(J, root=0)
 
     def _get_owned_args(self):
         args = set()
@@ -391,85 +389,94 @@ class System(object):
         """Returns names of input variables from this System and all of its
         children.
         """
-        inputs = set()
-        is_opaque = isinstance(self, OpaqueSystem)
+        if self._inputs is None:
+            inputs = set()
+            is_opaque = isinstance(self, OpaqueSystem)
 
-        for system in self.simple_subsystems():
-            comps = self._get_comps()
-            for tup in system._in_nodes:
-                # need this to prevent paramgroup inputs on same comp to be
-                # counted more than once
-                seen = set()
-                for dest in tup[1]:
-                    comp = dest.split('.', 1)[0]
-                    if comp in comps and comp not in seen:
-                        inputs.add(dest)
-                        # Since Opaque systems do finite difference on the
-                        # full param groups, we should only include one input
-                        # from each group.
-                        if is_opaque:
-                            seen.add(comp)
+            for system in self.simple_subsystems():
+                comps = self._get_comps()
+                for tup in system._in_nodes:
+                    # need this to prevent paramgroup inputs on same comp to be
+                    # counted more than once
+                    seen = set()
+                    for dest in tup[1]:
+                        comp = dest.split('.', 1)[0]
+                        if comp in comps and comp not in seen:
+                            inputs.add(dest)
+                            # Since Opaque systems do finite difference on the
+                            # full param groups, we should only include one input
+                            # from each group.
+                            if is_opaque:
+                                seen.add(comp)
 
-        return _filter(self.scope, inputs)
+            self._inputs = _filter(self.scope, inputs)
+
+        return self._inputs
 
     def list_states(self):
         """Returns names of states (not collapsed edges) from this System and
         all of its children.
         """
-        states = set()
-        for system in self.simple_subsystems():
-            try:
-                if system._comp.eval_only is False:
-                    states.update(['.'.join((system.name,s))
-                                      for s in system._comp.list_states()])
-            except AttributeError:
-                pass
+        if self._states is None:
+            states = set()
+            for system in self.simple_subsystems():
+                try:
+                    if system._comp.eval_only is False:
+                        states.update(['.'.join((system.name,s))
+                                          for s in system._comp.list_states()])
+                except AttributeError:
+                    pass
 
-        top = self.scope
-        states = [i for i in states if top.name2collapsed[i] in top._system.vector_vars
-                    and not top._system.vector_vars[top.name2collapsed[i]].get('deriv_ignore')]
+            top = self.scope
+            states = [i for i in states if top.name2collapsed[i] in top._system.vector_vars
+                        and not top._system.vector_vars[top.name2collapsed[i]].get('deriv_ignore')]
+            self._states = states
 
-        #print "%s states: %s" % (self.name, states)
-        return states
+        return self._states
 
     def list_outputs(self):
         """Returns names of output variables (not collapsed edges)
         from this System and all of its children.  This only lists
         outputs that are relevant to derivatives calculations.
         """
-        outputs = []
-        for system in self.simple_subsystems():
-            states = set()
-            try:
-                states.update(['.'.join((system.name,s))
-                                  for s in system._comp.list_states()])
-            except AttributeError:
-                pass
-            out_nodes = [node for node in system._out_nodes \
-                         if node not in self._mapped_resids]
-            comps = self._get_comps()
-            for src, _ in out_nodes:
-                parts = src.split('.', 1)
-                if parts[0] in comps and src not in states:
-                    outputs.append(src)
+        if self._outputs is None:
+            outputs = []
+            for system in self.simple_subsystems():
+                states = set()
+                try:
+                    states.update(['.'.join((system.name,s))
+                                      for s in system._comp.list_states()])
+                except AttributeError:
+                    pass
+                out_nodes = [node for node in system._out_nodes \
+                             if node not in self._mapped_resids]
+                comps = self._get_comps()
+                for src, _ in out_nodes:
+                    parts = src.split('.', 1)
+                    if parts[0] in comps and src not in states:
+                        outputs.append(src)
 
-        return _filter(self.scope, outputs)
+            self._outputs = _filter(self.scope, outputs)
+
+        return self._outputs
 
     def list_residuals(self):
         """Returns names of all residuals.
         """
-        outputs = []
-        for system in self.simple_subsystems():
-            try:
-                outputs.extend(['.'.join((system.name, s))
-                                  for s in system._comp.list_residuals()
-                                  if system._comp.eval_only is False])
-            except AttributeError:
-                pass
+        if self._residuals is None:
+            outputs = []
+            for system in self.simple_subsystems():
+                try:
+                    outputs.extend(['.'.join((system.name, s))
+                                      for s in system._comp.list_residuals()
+                                      if system._comp.eval_only is False])
+                except AttributeError:
+                    pass
 
-        outputs.extend([n for n, m in self._mapped_resids.keys()])
-        #print "%s residuals: %s" % (self.name, outputs)
-        return outputs
+            outputs.extend([n for n, m in self._mapped_resids.keys()])
+            self._residuals = outputs
+
+        return self._residuals
 
     def get_size(self, names):
         """Return the combined size of the variables
@@ -493,11 +500,6 @@ class System(object):
 
             if name in uvec:
                 size += uvec[name].size
-            #elif name.split('[',1)[0] in uvec:
-                #bval = self.scope.get(name.split('[',1)[0])
-                #_, idx = get_val_and_index(self.scope, name)
-                #idxs = get_flattened_index(idx, get_shape(bval))
-                #size += bval[idxs].size
             elif collnames[name] in varkeys:
                 idx = varkeys.index(collnames[name])
                 for proc in procs:
@@ -1936,7 +1938,8 @@ class OpaqueSystem(SimpleSystem):
 
     def set_options(self, mode, options):
         """ Sets all user-configurable options for the inner_system and its
-        children. """
+        children.
+        """
         super(OpaqueSystem, self).set_options(mode, options)
         self._inner_system.set_options(mode, options)
 
@@ -1945,23 +1948,23 @@ class OpaqueSystem(SimpleSystem):
 
     def run(self, iterbase, case_label='', case_uuid=None):
         self_u = self.vec['u']
+        self_du = self.vec['du']
         inner_u = self._inner_system.vec['u']
+        inner_du = self._inner_system.vec['du']
 
         vnames = self._inner_system.list_inputs() + \
                  self._inner_system.list_states()
         inner_u.set_from_scope(self.scope, vnames)
         if self.complex_step is True:
-            self._inner_system.vec['du'].set_from_scope_complex(self.scope, vnames)
+            inner_du.set_from_scope_complex(self.scope, vnames)
 
         self._inner_system.run(iterbase, case_label=case_label, case_uuid=case_uuid)
 
-        #for item in self.list_outputs():
-            #self_u[item][:] = inner_u[item][:]
         for name, val in inner_u.items():
             if name in self_u:
                 self_u[name][:] = val
                 if self.complex_step is True:
-                    self.vec['du'][name][:] = self._inner_system.vec['du'][name]
+                    self_du[name][:] = inner_du[name]
 
     def evaluate(self, iterbase, case_label='', case_uuid=None):
         """ Evalutes a component's residuals without invoking its

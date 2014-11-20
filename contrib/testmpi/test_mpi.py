@@ -178,7 +178,7 @@ class MPITests1(MPITestCase):
 
 class MPITests2(MPITestCase):
 
-    N_PROCS = 4
+    N_PROCS = 6
 
     def test_sellar_cyclic(self):
 
