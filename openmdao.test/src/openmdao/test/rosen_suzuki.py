@@ -98,15 +98,6 @@ class NestedSimulation(Assembly):
 
 if __name__ == '__main__':
     sim = set_as_top(Simulation())
-    flow = sim.get_dataflow()
-    for item in flow['connections']:
-        print 'connection:', item
-    for item in flow['parameters']:
-        print 'parameter:', item
-    for item in flow['constraints']:
-        print 'constraint:', item
-    for item in flow['objectives']:
-        print 'objective:', item
     sim.run()
     print 'objective', sim.comp.opt_objective, sim.driver.eval_objective()
     for i in range(len(sim.preproc.x_in)):
@@ -114,4 +105,3 @@ if __name__ == '__main__':
 
     sim.replace('preproc', ScalingPreProc())
     sim.replace('driver', SLSQPdriver())
-

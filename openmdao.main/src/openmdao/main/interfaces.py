@@ -140,7 +140,7 @@ class IContainer(Interface):
     def set(path, value):
         """Set the value of the Variable specified by the given path, which
         may contain '.' characters. The Variable will be set to the given
-        value, subject to validation and constraints. 
+        value, subject to validation and constraints.
         """
 
     def cpath_updated():
@@ -300,12 +300,6 @@ class IAssembly(IComponent):
     def disconnect(srcpath, destpath):
         """Removes the connection between one source variable and one
         destination variable.
-        """
-
-    def get_dataflow(self):
-        """ Get a dictionary of components and the connections between them
-            that make up the data flow for the assembly;
-            also includes parameter, constraint, and objective flows
         """
 
 
@@ -781,18 +775,6 @@ class IVariable(Interface):
     def validate(obj, name, value):
         """ Validates that the specified value is valid and can be assigned
         to the data value corresponding to this Variable.
-        """
-
-
-class IRepository(Interface):
-    """An Interface to a version control system repository."""
-
-    def commit():
-        """Commit any uncommitted changes to the repo."""
-
-    def revert():
-        """Revert to a previous commit.  Default is to revert to
-        the most recent commit, discarding any uncommitted changes.
         """
 
 class ISystem(Interface):
