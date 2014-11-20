@@ -140,7 +140,7 @@ class System(object):
         self._outputs = None
         self._states = None
         self._residuals = None
-        
+
         self._mapped_resids = {}
 
         self._out_nodes = []
@@ -167,10 +167,6 @@ class System(object):
         # get our input nodes from the depgraph
         ins, _ = get_node_boundary(graph, all_outs)
 
-        # filter out any comps labeled as inputs. this happens when multiple comps
-        # output the same variable
-        #self._in_nodes = [i for i in ins if 'comp' not in graph.node[i]]
-
         self._in_nodes = []
         for i in ins:
             if 'comp' not in graph.node[i]:
@@ -181,9 +177,6 @@ class System(object):
                     self._in_nodes.append(n)
 
         self._combined_graph = graph.subgraph(list(all_outs)+list(self._in_nodes))
-
-        # mpiprint("%s in_nodes: %s" % (self.name, self._in_nodes))
-        # mpiprint("%s out_nodes: %s" % (self.name, self._out_nodes))
 
         self._in_nodes = sorted(self._in_nodes)
         self._out_nodes = sorted(self._out_nodes)
@@ -216,16 +209,20 @@ class System(object):
     def is_opaque(self):
         return False
 
-    def find(self, name):
+    def __getitem__(self, key):
         """A convenience method to allow easy access to descendant
-        Systems.
+        Systems, either by name or by index.
         """
-        for sub in self.subsystems():
-            if name == sub.name:
+        for i, sub in enumerate(self.subsystems()):
+            if key == i or key == sub.name:
                 return sub
-            s = sub.find(name)
-            if s is not None:
-                return s
+
+        if isinstance(key, basestring):
+            for sub in self.subsystems():
+                s = sub[key]
+                if s:
+                    return s
+
         return None
 
     def is_differentiable(self):
@@ -242,6 +239,12 @@ class System(object):
         if local:
             return self.local_subsystems()
         return self.all_subsystems()
+
+    def local_subsystems(self):
+        return ()
+
+    def all_subsystems(self):
+        return ()
 
     def list_subsystems(self, local=False):
         """Returns the names of our subsystems."""
@@ -378,11 +381,11 @@ class System(object):
         for system in self.local_subsystems():
             system.clear_dp()
 
-    def _get_comps(self):
+    def _get_comps(self, local=False):
         """Return a set of comps for this system and all subsystems."""
         comps = set()
-        for s in self.local_subsystems():
-            comps.update(simple_node_iter(s._get_comps()))
+        for s in self.subsystems(local=local):
+            comps.update(s._get_comps(local=local))
         return comps
 
     def list_inputs(self):
@@ -516,12 +519,6 @@ class System(object):
 
     def is_active(self):
         return MPI is None or self.mpi.comm != MPI.COMM_NULL
-
-    def local_subsystems(self):
-        return ()
-
-    def all_subsystems(self):
-        return ()
 
     def get_req_cpus(self):
         return self.mpi.requested_cpus
@@ -1064,8 +1061,8 @@ class SimpleSystem(System):
 
         return True
 
-    def _get_comps(self):
-        return self._nodes
+    def _get_comps(self, local=False):
+        return simple_node_iter(self._nodes)
 
     def simple_subsystems(self):
         yield self
@@ -1902,8 +1899,8 @@ class OpaqueSystem(SimpleSystem):
     def inner(self):
         return self._inner_system
 
-    def _get_comps(self):
-        return self._inner_system._get_comps()
+    def _get_comps(self, local=False):
+        return self._inner_system._get_comps(local=local)
 
     def setup_communicators(self, comm):
         self.mpi.comm = comm
@@ -1926,11 +1923,7 @@ class OpaqueSystem(SimpleSystem):
         # This was needed for the case where you regenerate the system
         # hierarchy on the first calc_gradient call.
         inner_u = self._inner_system.vec['u']
-        inner_u.set_from_scope(self.scope)#,
-                               #self._inner_system.list_inputs() + \
-                               #self._inner_system.list_states() +\
-                               #self._inner_system.list_outputs() +
-                               #self._inner_system.list_residuals())
+        inner_u.set_from_scope(self.scope)
 
     def setup_scatters(self):
         super(OpaqueSystem, self).setup_scatters()
@@ -2040,9 +2033,6 @@ class OpaqueSystem(SimpleSystem):
         in the RHS vector."""
 
         self.sol_vec.array[:] = self.rhs_vec.array[:]
-
-    def simple_subsystems(self):
-        yield self
 
     def set_ordering(self, ordering, opaque_map):
         self._inner_system.set_ordering(ordering, opaque_map)
