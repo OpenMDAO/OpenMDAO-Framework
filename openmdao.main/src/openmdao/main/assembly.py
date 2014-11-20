@@ -1211,7 +1211,7 @@ class Assembly(Component):
         # figure out the relevant subgraph based on given inputs and outputs
         if not (inputs is None and outputs is None):
             self._derivs_required = True
-            
+
         dsrcs, ddests = self._top_driver.get_expr_var_depends(recurse=True)
         keep.add(self._top_driver.name)
         keep.update([c.name for c in self._top_driver.iteration_set()])
@@ -1280,7 +1280,7 @@ class Assembly(Component):
 
         self.name2collapsed = collapsed_graph.map_collapsed_nodes()
 
-        # add InVarSystems and OutVarSystems for boundary vars
+        # add VarSystems for boundary vars
         for node, data in collapsed_graph.nodes_iter(data=True):
             if 'boundary' in data and collapsed_graph.degree(node) > 0:
                 if data.get('iotype') == 'in' and collapsed_graph.in_degree(node) == 0: # input boundary node

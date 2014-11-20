@@ -254,7 +254,6 @@ class System(object):
         if app_idxs:
             app_idxs = numpy.concatenate(app_idxs)
 
-        #mpiprint("app_idxs: %s, petsc_idxs: %s" % (app_idxs, petsc_idxs))
         app_ind_set = PETSc.IS().createGeneral(app_idxs, comm=self.mpi.comm)
         petsc_ind_set = PETSc.IS().createGeneral(petsc_idxs, comm=self.mpi.comm)
 
@@ -734,7 +733,7 @@ class System(object):
         name_map = { 'SerialSystem': 'ser', 'ParallelSystem': 'par',
                      'SimpleSystem': 'simp', 'FiniteDiffDriverSystem': 'drv',
                      'TransparentDriverSystem': 'tdrv', 'OpaqueSystem': 'opaq',
-                     'InVarSystem': 'invar', 'OutVarSystem': 'outvar',
+                     'InVarSystem': 'invar', 'VarSystem': 'outvar',
                      'SolverSystem': 'slv',  'ParamSystem': 'param',
                      'AssemblySystem': 'asm', }
 
@@ -1298,10 +1297,6 @@ class InVarSystem(VarSystem):
         self.vec['u'].set_from_scope(self.scope, [self.name])
 
 
-class OutVarSystem(VarSystem):
-    pass
-
-
 class EqConstraintSystem(SimpleSystem):
     """A special system to handle mapping of states and
     residuals.
@@ -1415,52 +1410,6 @@ class AssemblySystem(SimpleSystem):
         self.complex_step = complex_step
         self._comp._system.set_complex_step(complex_step)
 
-        #print inputs, outputs, self.J
-
-    #def applyJ(self, variables):
-        #""" Call into our assembly's top ApplyJ to get the matrix vector
-        #product across the boundary variables.
-        #"""
-
-        #inner_system = self._comp._system
-        #if self.mode == 'forward':
-            #arg = 'du'
-            #res = 'df'
-        #elif self.mode == 'adjoint':
-            #arg = 'df'
-            #res = 'du'
-
-        #nonzero = False
-        ##needed_vars = flatten_list_of_iters([item[1] for item in variables])
-        ##needed_vars.extend([item[0] for item in variables])
-
-        #for item in self.list_inputs() + self.list_states() + \
-                    #self.list_outputs() + self.list_residuals():
-
-            #var = self.scope._system.vec[arg][item]
-            #if any(var != 0):
-                #nonzero = True
-            #sub_name = item.partition('.')[2:][0]
-            #inner_system.vec[arg][sub_name] = var
-
-            #var = self.scope._system.vec[res][item]
-            #sub_name = item.partition('.')[2:][0]
-            #inner_system.vec[res][sub_name] = var
-
-        ## Speedhack, don't call component's derivatives if incoming vector is zero.
-        #if nonzero is False:
-            #return
-
-        #variables = inner_system.variables.keys()
-        #inner_system.vec['dp'].array[:] = 0.0
-        #inner_system.applyJ(variables)
-
-        #for item in self.list_inputs() + self.list_states()  + \
-                    #self.list_outputs() + self.list_residuals():
-
-            #sub_name = item.partition('.')[2:][0]
-            #self.scope._system.vec[res][item] = inner_system.vec[res][sub_name]
-
     def is_differentiable(self):
         """Return True if analytical derivatives can be
         computed for this System.
@@ -1468,14 +1417,6 @@ class AssemblySystem(SimpleSystem):
         driver = self._comp.driver
         return ISolver.providedBy(self._comp.driver) or \
                driver.__class__.__name__ == 'Driver'
-
-    def solve_linear(self, options=None):
-        """ Single linear solve solution applied to whatever input is sitting
-        in the RHS vector."""
-
-        # Apply into our assembly.
-        for sub in self.local_subsystems():
-            sub.solve_linear()
 
 
 class CompoundSystem(System):
@@ -1526,10 +1467,7 @@ class CompoundSystem(System):
             for subsystem in self.local_subsystems():
                 subsystem.applyJ(variables)
             if self.mode == 'adjoint':
-                #mpiprint('pre scatter df, du, dp', self.vec['df'].array, self.vec['du'].array, self.vec['dp'].array)
                 self.scatter('du', 'dp')
-                #mpiprint('post scatter df, du, dp', self.vec['df'].array, self.vec['du'].array, self.vec['dp'].array)
-                #mpiprint(self.vec['du'].keys())
 
     def stop(self):
         self._stop = True
@@ -1663,7 +1601,6 @@ class ParallelSystem(CompoundSystem):
         return cpus
 
     def run(self, iterbase, case_label='', case_uuid=None):
-        #mpiprint("running parallel system %s: %s" % (self.name, [c.name for c in self.local_subsystems()]))
         # don't scatter unless we contain something that's actually
         # going to run
         if not self.local_subsystems() or not self.is_active():
@@ -1681,7 +1618,6 @@ class ParallelSystem(CompoundSystem):
         self.run(iterbase, case_label=case_label, case_uuid=case_uuid)
 
     def setup_communicators(self, comm):
-        #mpiprint("<Parallel> setup_comms for %s  (%d of %d)" % (self.name, comm.rank, comm.size))
         self.mpi.comm = comm
         size = comm.size
         rank = comm.rank
@@ -1818,7 +1754,7 @@ class OpaqueSystem(SimpleSystem):
         for node in self._in_nodes:
             for d in node[1]:
                 cname, _, vname = d.partition('.')
-                if vname and cname in internal_comps and node not in nodeset:# and pgraph.node[node].get('iotype') not in ('out','residual'):
+                if vname and cname in internal_comps and node not in nodeset:
                     dests.add((d, node))
                     nodeset.add(node)
 
@@ -1846,7 +1782,7 @@ class OpaqueSystem(SimpleSystem):
                 graph.node[dest]['system'] = _create_simple_sys(scope, graph, dest)
 
         self._inner_system = SerialSystem(scope, graph,
-                                          graph.component_graph(),#.subgraph(nodes),
+                                          graph.component_graph(),
                                           name = "FD_" + str(name))
 
         self._inner_system._provideJ_bounds = None
@@ -1986,17 +1922,12 @@ class OpaqueSystem(SimpleSystem):
 
             self.scatter('du', 'dp')
 
-    def solve_linear(self, options=None):
-        """ Single linear solve solution applied to whatever input is sitting
-        in the RHS vector."""
-
-        self.sol_vec.array[:] = self.rhs_vec.array[:]
-
     def set_ordering(self, ordering, opaque_map):
         self._inner_system.set_ordering(ordering, opaque_map)
 
     def get_req_cpus(self):
         return self._inner_system.get_req_cpus()
+
 
 class DriverSystem(SimpleSystem):
     """Base System class for all Drivers."""
@@ -2150,10 +2081,9 @@ class SolverSystem(TransparentDriverSystem):  # Implicit
         for sub in self.local_subsystems():
             sub.solve_linear()
 
-
 def _create_simple_sys(scope, graph, name):
-    """Given a Component, create the appropriate type
-    of simple System.
+    """Given a Component or Variable node, create the
+    appropriate type of simple System.
     """
     comp = getattr(scope, name, None)
 
@@ -2177,7 +2107,7 @@ def _create_simple_sys(scope, graph, name):
     elif graph.node[name].get('comp') == 'invar':
         sub = InVarSystem(scope, graph, name)
     elif graph.node[name].get('comp') == 'outvar':
-        sub = OutVarSystem(scope, graph, name)
+        sub = VarSystem(scope, graph, name)
     elif graph.node[name].get('comp') == 'dumbvar':
         sub = VarSystem(scope, graph, name)
     else:
