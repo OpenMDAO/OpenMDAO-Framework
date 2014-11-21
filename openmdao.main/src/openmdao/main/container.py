@@ -7,7 +7,6 @@ import copy
 import pprint
 import socket
 import sys
-
 import weakref
 # the following is a monkey-patch to correct a problem with
 # copying/deepcopying weakrefs There is an issue in the python issue tracker
@@ -24,6 +23,8 @@ copy._deepcopy_dispatch[weakref.KeyedRef] = copy._deepcopy_atomic
 
 from zope.interface import Interface, implements
 
+from numpy import ndarray
+
 from traits.api import HasTraits, Missing, Python, \
                        push_exception_handler, TraitType, CTrait
 from traits.has_traits import FunctionType, _clone_trait, MetaHasTraits
@@ -35,20 +36,22 @@ from openmdao.main.datatypes.file import FileRef
 from openmdao.main.datatypes.list import List
 from openmdao.main.datatypes.slot import Slot
 from openmdao.main.datatypes.vtree import VarTree
-from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.interfaces import ICaseIterator, IResourceAllocator, \
-                                     IContainer, IParametricGeometry, IComponent
-from openmdao.main.index import get_indexed_value, deep_hasattr, \
-                                INDEX, ATTR, SLICE, _index_functs
-from openmdao.main.mp_support import ObjectManager, OpenMDAO_Proxy, \
+                                     IContainer, \
+                                     IVariableTree, IContainerProxy
+#from openmdao.main.index import get_indexed_value, deep_hasattr, \
+                                #INDEX, ATTR, SLICE, _index_functs
+from openmdao.main.mp_support import ObjectManager, \
                                      is_instance, CLASSES_TO_PROXY, \
                                      has_interface
 from openmdao.main.rbac import rbac
 from openmdao.main.variable import Variable, is_legal_name, _missing
+from openmdao.main.array_helpers import flattened_value, get_index
+
 from openmdao.util.log import Logger, logger
 from openmdao.util import eggloader, eggsaver, eggobserver
 from openmdao.util.eggsaver import SAVE_CPICKLE
-
+from openmdao.util.typegroups import int_types, complex_or_real_types
 
 _copydict = {
     'deep': copy.deepcopy,
@@ -57,37 +60,56 @@ _copydict = {
 
 _iodict = {'out': 'output', 'in': 'input'}
 
+__missing__ = object()
 
-def get_closest_proxy(start_scope, pathname):
-    """Resolve down to the closest in-process parent object
-    of the object indicated by pathname.
-    Returns a tuple containing (proxy_or_parent, rest_of_pathname)
+def get_closest_proxy(obj, pathname):
+    """Returns a tuple of the form (val, restofpath), where val
+    is either the object specified by dotted name 'pathname'
+    within obj, or the closest in-process proxy object that can be
+    resolved.  If val is a proxy, restofpath will contain the 
+    remaining part of pathname needed to resolve the desired attribute
+    within the proxy.  Otherwise, val is the actual desired attribute
+    and restofpath is the empty string.
     """
-    obj = start_scope
     names = pathname.split('.')
-    i = -1
-    for i, name in enumerate(names[:-1]):
-        if isinstance(obj, Container):
+
+    i = 0
+    for name in names:
+        if IContainerProxy.providedBy(obj):
+            return (obj, '.'.join(names[i:]))
+
+        try:
             obj = getattr(obj, name)
-        else:
+        except AttributeError:
             break
-    else:
         i += 1
+
     return (obj, '.'.join(names[i:]))
 
+proxy_get = get_closest_proxy
 
-def build_container_hierarchy(dct):
-    """Create a hierarchy of Containers based on the contents of a nested dict.
-    There will always be a single top level scoping Container regardless of the
-    contents of dct.
+def proxy_parent(obj, pathname):
+    """Returns a tuple of the form (par, restofpath), where par
+    is either the parent of the object specified by dotted name 'pathname'
+    within obj, or the closest in-process proxy object that can be
+    resolved.  restofpath will contain the 
+    remaining part of pathname needed to resolve the desired attribute
+    within the parent or proxy object.
     """
-    top = Container()
-    for key, val in dct.items():
-        if isinstance(val, dict):  # it's a dict, so this is a Container
-            top.add(key, build_container_hierarchy(val))
-        else:
-            setattr(top, key, val)
-    return top
+    names = pathname.split('.')
+
+    i = 0
+    for name in names[:-1]:
+        if IContainerProxy.providedBy(obj):
+            return (obj, '.'.join(names[i:]))
+
+        try:
+            obj = getattr(obj, name)
+        except AttributeError:
+            break
+        i += 1
+
+    return (obj, '.'.join(names[i:]))
 
 
 # this causes any exceptions occurring in trait handlers to be re-raised.
@@ -154,8 +176,10 @@ class Container(SafeHasTraits):
         # for keeping track of dynamically added traits for serialization
         self._added_traits = {}
 
-        # keep track of ExprEvaluators to save some overhead
-        self._exprcache = {}
+        # keep track of compiled expressions to save some overhead
+        self._getcache = {}
+        self._setcache = {}
+        self._copycache = {}
 
         self._cached_traits_ = None
         self._repair_trait_info = None
@@ -288,13 +312,19 @@ class Container(SafeHasTraits):
 
         saved_p = self._parent
         saved_c = self._cached_traits_
+        saved_s = self._setcache
+        saved_g = self._getcache
         self._parent = None
         self._cached_traits_ = None
+        self._getcache = {}
+        self._setcache = {}
         try:
             result = super(Container, self).__deepcopy__(memo)
         finally:
             self._parent = saved_p
             self._cached_traits_ = saved_c
+            self._getcache = saved_g
+            self._setcache = saved_s
 
         # Instance traits are not created properly by deepcopy, so we need
         # to manually recreate them. Note, self._added_traits is the most
@@ -323,6 +353,8 @@ class Container(SafeHasTraits):
 
         state['_added_traits'] = dct
         state['_cached_traits_'] = None
+        state['_getcache'] = {}
+        state['_setcache'] = {}
         return state
 
     def __setstate__(self, state):
@@ -439,8 +471,8 @@ class Container(SafeHasTraits):
             _check_bad_default(name, t)
             break  # just check the first arg in the list
 
-        if name in self._trait_metadata:
-            del self._trait_metadata[name]  # Invalidate.
+        if name in cls._trait_metadata:
+            del cls._trait_metadata[name]  # Invalidate.
 
         return super(Container, cls).add_class_trait(name, *trait)
 
@@ -498,44 +530,26 @@ class Container(SafeHasTraits):
         super(Container, self).remove_trait(name)
 
     @rbac(('owner', 'user'))
-    def get_attr(self, path, index=None):
+    def get_attr_w_copy(self, path):
         """Same as the 'get' method, except that the value will be copied
         if the variable has a 'copy' metadata attribute that is not None.
         Possible values for 'copy' are 'shallow' and 'deep'.
         Raises an exception if the variable cannot be found.
 
         """
-        childname, _, restofpath = path.partition('.')
-        if restofpath:
-            obj = getattr(self, childname, Missing)
-            if obj is Missing or not is_instance(obj, Container):
-                return self._get_failed(path, index)
-            return obj.get_attr(restofpath, index)
+        obj = self.get(path)
 
-        if index is None:
-            obj = getattr(self, path, Missing)
-            if obj is Missing:
-                return self._get_failed(path, index)
+        copy = self._copycache.get(path, _missing)
+        if copy is _missing:
+            copy = self.get_metadata(path.split('[',1)[0], 'copy')
+            self._copycache[path] = copy
 
-            trait = self.get_trait(path)
-            if trait is None:
-                self.raise_exception("trait '%s' does not exist" %
-                                     path, AttributeError)
-            # copy value if 'copy' found in metadata
-            if trait.copy:
-                if isinstance(obj, Container):
-                    obj = obj.copy()
-                else:
-                    obj = _copydict[trait.copy](obj)
-        else:  # index is not None
-            obj = getattr(self, path, Missing)
-            if obj is Missing:
-                return self._get_failed(path, index)
-            for idx in index:
-                if isinstance(idx, tuple):
-                    obj = _index_functs[idx[0]](obj, idx)
-                else:
-                    obj = obj[idx]
+        # copy value if 'copy' found in metadata
+        if copy:
+            if isinstance(obj, Container):
+                obj = obj.copy()
+            else:
+                obj = _copydict[copy](obj)
 
         return obj
 
@@ -563,7 +577,7 @@ class Container(SafeHasTraits):
 
         if has_interface(obj, IContainer):
             self._check_recursion(obj)
-            if isinstance(obj, OpenMDAO_Proxy):
+            if IContainerProxy.providedBy(obj):
                 obj.parent = self._get_proxy(obj)
             else:
                 obj.parent = self
@@ -789,58 +803,6 @@ class Container(SafeHasTraits):
         """Return a list of Variables in this Container."""
         return [k for k, v in self.items(iotype=not_none)]
 
-    def get_attributes(self, io_only=True):
-        """ Get attributes of this container. Includes all variables ('Inputs')
-            and, if *io_only* is not true, attributes for all slots as well.
-
-            Arguments:
-                io_only:  if True then only 'Inputs' are included
-        """
-
-        attrs = {}
-        attrs['type'] = type(self).__name__
-
-        var_attrs = []
-
-        if not io_only:
-            slot_attrs = []
-        else:
-            slot_attrs = None
-
-        #for name in self.list_vars() + self._added_traits.keys():
-        for name in set(self.list_vars()).union(self._added_traits.keys(),
-                                                self._alltraits(type=Slot).keys()):
-
-            trait = self.get_trait(name)
-            meta = self.get_metadata(name)
-            value = getattr(self, name)
-            ttype = trait.trait_type
-
-            # Each variable type provides its own basic attributes
-            attr, slot_attr = ttype.get_attribute(name, value, trait, meta)
-            if 'framework_var' in meta:
-                attr['id'] = '~' + name
-            else:
-                attr['id'] = name
-            attr['indent'] = 0
-
-            # Container variables are not connectable
-            attr['connected'] = ''
-
-            var_attrs.append(attr)
-
-            # Process slots
-            if slot_attrs is not None and slot_attr is not None:
-                # slots can be hidden (e.g. the Workflow slot in drivers)
-                if 'hidden' not in meta or meta['hidden'] is False:
-                    slot_attrs.append(slot_attr)
-
-        attrs['Inputs'] = var_attrs
-
-        if slot_attrs:
-            attrs['Slots'] = slot_attrs
-        return attrs
-
     # Can't use items() since it returns a generator (won't pickle).
     @rbac(('owner', 'user'))
     def _alltraits(self, traits=None, events=False, **metadata):
@@ -945,183 +907,119 @@ class Container(SafeHasTraits):
                                  % (metaname, traitpath), TypeError)
         self.get_metadata(traitpath)[metaname] = value
 
-    def _get_failed(self, path, index=None):
-        """If get() cannot locate the variable specified by the given
-        path, either because the parent object is not a Container or because
-        getattr() fails, raise an exception.  Inherited classes can override
-        this to return the value of the specified variable.
+    @rbac(('owner', 'user'), proxy_types=[FileRef])
+    def get(self, path):
+        """Return the object specified by the given path, which may
+        contain '.' characters.
         """
-        obj = self
+        expr = self._getcache.get(path)
+        if expr is not None:
+            return eval(expr, self.__dict__)
+        
+        obj, restofpath = get_closest_proxy(self, path)
+        # if restofpath is truthy, it means either that path
+        # contains a proxy or it contains some syntax that causes
+        # getattr to fail, e.g., a function eval, array element ref, etc.
+        if restofpath and IContainerProxy.providedBy(obj):
+            return obj.get(restofpath)
+
+        # assume all local.  just compile the expr and cache it if
+        # it can be evaluated
+        expr = compile(path, path, mode='eval')
         try:
-            for name in path.split('.'):
-                obj = getattr(obj, name)
-        except AttributeError as err:
+            val = eval(expr, self.__dict__)
+        except (AttributeError, NameError) as err:
+            if not restofpath: # to get around issue with PassthroughProperty
+                return obj
             self.raise_exception(str(err), AttributeError)
-        return get_indexed_value(obj, '', index)
+        else:
+            self._getcache[path] = expr
+            return val
 
     @rbac(('owner', 'user'), proxy_types=[FileRef])
-    def get(self, path, index=None):
-        """Return the object specified by the given path, which may
-        contain '.' characters.  *index*, if not None,
-        should be either a list of non-tuple hashable objects (at most one
-        for each array dimension of the target value) or a list of tuples of
-        the form (operation_id, stuff).
-
-        The forms of the various tuples are:
-
-        ::
-
-            INDEX:   (0, idx)
-                where idx is some hashable value
-            ATTR:    (1, name)
-                where name is the attribute name
-            CALL:    (2, args, kwargs)
-                where args is a list of values and kwargs is a list of
-                tuples of the form (keyword,value).
-                kwargs can be left out if empty.  args can be left out
-                if empty as long as kwargs are also empty, for example,
-                (2,) and (2,[],[('foo',1)]) are valid but (2,[('foo',1)]) is not.
-            SLICE:   (3, lower, upper, step)
-                All members must be present and should have a value
-                of None if not set.
-
-        If you want to use a tuple as a key into a dict, you'll have to
-        nest your key tuple inside of an INDEX tuple to avoid ambiguity,
-        for example, (0, my_tuple).
+    def get_flattened_value(self, path):
+        """Return the named value, which may include
+        an array index, as a flattened array of floats.  If
+        the value is not flattenable into an array of floats,
+        raise a TypeError.
         """
-        if '.' in path:
-            childname, _, restofpath = path.partition('.')
-            obj = getattr(self, childname, Missing)
-            if obj is Missing or not is_instance(obj, Container):
-                return self._get_failed(path, index)
-            return obj.get(restofpath, index)
+        return flattened_value(path, self.get(path))
 
-        if index is None:
-            obj = getattr(self, path, Missing)
-            if obj is Missing:
-                if '[' in path or '(' in path:
-                    # caller has put indexing in the string instead of
-                    # using the indexing protocol
-                    expr = self._exprcache.get(path)
-                    if expr is None:
-                        expr = ExprEvaluator(path, scope=self)
-                        self._exprcache[path] = expr
-                    return expr.evaluate()
-                else:
-                    return self._get_failed(path, index)
-            return obj
-        else:  # has an index
-            obj = getattr(self, path, Missing)
-            if obj is Missing:
-                return self._get_failed(path, index)
-            for idx in index:
-                if isinstance(idx, tuple):
-                    obj = _index_functs[idx[0]](obj, idx)
-                else:
-                    obj = obj[idx]
-            return obj
+    @rbac(('owner', 'user'))
+    def set_flattened_value(self, path, value):
+        obj, restofpath = proxy_parent(self, path)
+        # if restofpath is truthy, it means either that path
+        # contains a proxy or it contains some syntax that causes
+        # getattr to fail, e.g., a function eval, array element ref, etc.
+        if restofpath and IContainerProxy.providedBy(obj):
+            obj.set_flattened_value(restofpath, value)
+            return
+        
+        # get current value
+        val = self.get(path)
+        if not isinstance(val, int_types) and isinstance(val, complex_or_real_types):
+            self.set(path, value[0])
+            return
+        elif hasattr(val, 'set_flattened_value'):
+            val.set_flattened_value(value)
+            return
+        elif isinstance(val, ndarray):
+            self.set(path, value.reshape(val.shape))
+            return
+        
+        # now get the non-indexed value and the index
+        val = self.get(path.split('[',1)[0])
+        idx = get_index(path)
+        
+        if isinstance(val, int_types):
+            pass  # fall through to exception
+        elif hasattr(val, '__setitem__') and idx is not None:
+            if isinstance(val[idx], complex_or_real_types):
+                val[idx] = value[0]
+            else:
+                val[idx] = value
+            return
+        elif IVariableTree.providedBy(val):
+            raise NotImplementedError("no support for setting flattened values into vartrees")
+        elif hasattr(val, 'set_flattened_value'):
+            val.set_flattened_value(value)
+            return
 
-    def _set_failed(self, path, value, index=None, force=False):
-        """If set() cannot locate the specified variable, raise an exception.
-        Inherited classes can override this to locate the variable elsewhere
-        and set its value.
-        """
-        self.raise_exception("object has no attribute '%s'" % path,
-                             AttributeError)
+        self.raise_exception("Failed to set flattened value to variable %s" % path, TypeError)
 
     def get_iotype(self, name):
         return self.get_trait(name).iotype
 
     @rbac(('owner', 'user'))
-    def set(self, path, value, index=None, force=False):
+    def set(self, path, value):
         """Set the value of the Variable specified by the given path, which
         may contain '.' characters. The Variable will be set to the given
-        value, subject to validation and constraints. *index*, if not None,
-        should be either a list of non-tuple hashable objects, at most one
-        for each array dimension of the target value, or a list of tuples of
-        the form (operation_id, stuff).
-
-        The forms of the various tuples are:
-
-        ::
-
-            INDEX:   (0, idx)
-                where idx is some hashable value
-            ATTR:    (1, name)
-                where name is the attribute name
-            CALL:    (2, args, kwargs)
-                where args is a list of values, and kwargs is a list of
-                tuples of the form (keyword,value).
-                kwargs can be left out if empty.  args can be left out
-                if empty as long as kwargs are also empty, for example,
-                (2,) and (2,[],[('foo',1)]) are valid but (2,[('foo',1)]) is not.
-            SLICE:   (3, lower, upper, step)
-                All members must be present and should have a value
-                of None if not set.
-
-        If you want to use a tuple as a key into a dict, you'll have to
-        nest your key tuple inside of an INDEX tuple to avoid ambiguity,
-        for example, (0, my_tuple)
+        value, subject to validation and constraints. 
         """
-        if '.' in path:
-            childname, _, restofpath = path.partition('.')
-            obj = getattr(self, childname, Missing)
-            if obj is Missing or not is_instance(obj, Container):
-                return self._set_failed(path, value, index, force=force)
-            obj.set(restofpath, value, index, force=force)
-        elif index:  # array index specified
-            self._index_set(path, value, index)
-        else:
-            setattr(self, path, value)
+        _local_setter_ = value
+        expr = self._setcache.get(path)
+        if expr is not None:
+            exec(expr)
+            return
+        
+        obj, restofpath = proxy_parent(self, path)
+        # if restofpath is truthy, it means either that path
+        # contains a proxy or it contains some syntax that causes
+        # getattr to fail, e.g., a function eval, array element ref, etc.
+        if restofpath and IContainerProxy.providedBy(obj):
+            obj.set(restofpath, value)
+            return
 
-    def _index_set(self, name, value, index):
-        if len(index) == 1:
-            obj = getattr(self, name)
-        else:
-            obj = self.get(name, index[:-1])
-        idx = index[-1]
-
+        # assume all local.  just compile the expr and cache it if
+        # it can be evaluated
+        assign = "self.%s=_local_setter_" % path
+        expr = compile(assign, assign, mode='exec')
         try:
-            if isinstance(idx, tuple):
-                old = _index_functs[idx[0]](obj, idx)
-            else:
-                old = obj[idx]
-        except KeyError:
-            old = _missing
-
-        if isinstance(idx, tuple):
-            if idx[0] == INDEX:
-                obj[idx[1]] = value
-            elif idx[0] == ATTR:
-                setattr(obj, idx[1], value)
-            elif idx[0] == SLICE:
-                obj.__setitem__(slice(idx[1][0], idx[1][1], idx[1][2]), value)
+            exec(expr)
+        except Exception as err:
+            self.raise_exception(str(err), err.__class__)
         else:
-            obj[idx] = value
-
-        # setting of individual Array entries or sub attributes doesn't seem to
-        # trigger _input_trait_modified, so do it manually
-        # FIXME: if people register other callbacks on a trait, they won't
-        #        be called if we do it this way
-        eq = (old == value)
-        if not isinstance(eq, bool):
-            try:
-                eq = all(eq)
-            except TypeError:
-                pass
-
-        if not eq:
-            # need to find first item going up the tree that is a Component
-            item = self
-            path = name
-            full = name
-            while item:
-                if has_interface(item, IComponent):
-                    item._input_updated(path, fullpath=full)
-                    break
-                path = item.name
-                full = '.'.join((path, full))
-                item = item.parent
+            self._setcache[path] = expr
 
     def _add_path(self, msg):
         """Adds our pathname to the beginning of the given message."""
@@ -1485,6 +1383,8 @@ class Container(SafeHasTraits):
         """
         self.raise_exception('build_trait()', NotImplementedError)
 
+
+
 # By default we always proxy Containers and FileRefs.
 CLASSES_TO_PROXY.append(Container)
 CLASSES_TO_PROXY.append(FileRef)
@@ -1504,7 +1404,6 @@ def _get_entry_group(obj):
         # Order should be from most-specific to least.
         _get_entry_group.group_map = [
             (Variable,             'openmdao.variable'),
-            (IParametricGeometry,  'openmdao.parametric_geometry'),
             (Driver,               'openmdao.driver'),
             (ICaseIterator,        'openmdao.case_iterator'),
             (IResourceAllocator,   'openmdao.resource_allocator'),

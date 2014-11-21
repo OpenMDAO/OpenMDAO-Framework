@@ -54,6 +54,15 @@ build.out
 ehthumbs.db
 Thumbs.db
 
+# Testing files #
+#################
+test_*.txt
+test_*.png
+pyBspline_pkl
+gui-server
+junk.out
+
+=======
 # Editor generated files #
 ##########################
 *.swp

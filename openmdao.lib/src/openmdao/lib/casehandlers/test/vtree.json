@@ -7,6 +7,7 @@
         "directory": "", 
         "driver.directory": "", 
         "driver.force_fd": false, 
+        "driver.gradient_options.atol": 1e-09, 
         "driver.gradient_options.derivative_direction": "auto", 
         "driver.gradient_options.directional_fd": false, 
         "driver.gradient_options.fd_blocks": [], 
@@ -14,8 +15,9 @@
         "driver.gradient_options.fd_step": 1e-06, 
         "driver.gradient_options.fd_step_type": "absolute", 
         "driver.gradient_options.force_fd": false, 
-        "driver.gradient_options.gmres_maxiter": 100, 
-        "driver.gradient_options.gmres_tolerance": 1e-09, 
+        "driver.gradient_options.lin_solver": "scipy_gmres", 
+        "driver.gradient_options.maxiter": 100, 
+        "driver.gradient_options.rtol": 1e-09, 
         "force_fd": false, 
         "missing_deriv_policy": "assume_zero", 
         "recording_options.excludes": [], 
@@ -29,6 +31,7 @@
         "sub.directory": "", 
         "sub.driver.directory": "", 
         "sub.driver.force_fd": false, 
+        "sub.driver.gradient_options.atol": 1e-09, 
         "sub.driver.gradient_options.derivative_direction": "auto", 
         "sub.driver.gradient_options.directional_fd": false, 
         "sub.driver.gradient_options.fd_blocks": [], 
@@ -36,8 +39,9 @@
         "sub.driver.gradient_options.fd_step": 1e-06, 
         "sub.driver.gradient_options.fd_step_type": "absolute", 
         "sub.driver.gradient_options.force_fd": false, 
-        "sub.driver.gradient_options.gmres_maxiter": 100, 
-        "sub.driver.gradient_options.gmres_tolerance": 1e-09, 
+        "sub.driver.gradient_options.lin_solver": "scipy_gmres", 
+        "sub.driver.gradient_options.maxiter": 100, 
+        "sub.driver.gradient_options.rtol": 1e-09, 
         "sub.force_fd": false, 
         "sub.loads_in.loads": [
             {
@@ -85,6 +89,13 @@
             "deriv_ignore": true, 
             "iotype": "in", 
             "vartypename": "Bool"
+        }, 
+        "driver.gradient_options.atol": {
+            "assumed_default": false, 
+            "high": null, 
+            "iotype": "in", 
+            "low": null, 
+            "vartypename": "Float"
         }, 
         "driver.gradient_options.derivative_direction": {
             "assumed_default": false, 
@@ -139,7 +150,17 @@
             "iotype": "in", 
             "vartypename": "Bool"
         }, 
-        "driver.gradient_options.gmres_maxiter": {
+        "driver.gradient_options.lin_solver": {
+            "assumed_default": false, 
+            "iotype": "in", 
+            "values": [
+                "scipy_gmres", 
+                "petsc_ksp", 
+                "linear_gs"
+            ], 
+            "vartypename": "Enum"
+        }, 
+        "driver.gradient_options.maxiter": {
             "assumed_default": false, 
             "exclude_high": false, 
             "exclude_low": false, 
@@ -148,7 +169,7 @@
             "low": -9223372036854775807, 
             "vartypename": "Int"
         }, 
-        "driver.gradient_options.gmres_tolerance": {
+        "driver.gradient_options.rtol": {
             "assumed_default": false, 
             "high": null, 
             "iotype": "in", 
@@ -267,6 +288,13 @@
             "iotype": "in", 
             "vartypename": "Bool"
         }, 
+        "sub.driver.gradient_options.atol": {
+            "assumed_default": false, 
+            "high": null, 
+            "iotype": "in", 
+            "low": null, 
+            "vartypename": "Float"
+        }, 
         "sub.driver.gradient_options.derivative_direction": {
             "assumed_default": false, 
             "iotype": "in", 
@@ -320,7 +348,17 @@
             "iotype": "in", 
             "vartypename": "Bool"
         }, 
-        "sub.driver.gradient_options.gmres_maxiter": {
+        "sub.driver.gradient_options.lin_solver": {
+            "assumed_default": false, 
+            "iotype": "in", 
+            "values": [
+                "scipy_gmres", 
+                "petsc_ksp", 
+                "linear_gs"
+            ], 
+            "vartypename": "Enum"
+        }, 
+        "sub.driver.gradient_options.maxiter": {
             "assumed_default": false, 
             "exclude_high": false, 
             "exclude_low": false, 
@@ -329,7 +367,7 @@
             "low": -9223372036854775807, 
             "vartypename": "Int"
         }, 
-        "sub.driver.gradient_options.gmres_tolerance": {
+        "sub.driver.gradient_options.rtol": {
             "assumed_default": false, 
             "high": null, 
             "iotype": "in", 

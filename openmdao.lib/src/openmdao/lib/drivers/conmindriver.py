@@ -376,19 +376,13 @@ class CONMINdriver(Driver):
         if self.cnmn1.info == 1:
 
             # Note. CONMIN is driving the finite difference estimation of the
-            # gradient. However, we still take advantage of a component's
-            # user-defined gradients via Fake Finite Difference.
-            # TODO - Fake Finite Difference has been disabled for now.
+            # gradient. 
             if self.cnmn1.igoto == 3:
 
                 # update the parameters in the model
                 self.set_parameters(self.design_vals[:-2])
-
-                # Run model under Fake Finite Difference
-                #self.calc_derivatives(first=True, savebase=True)
-                #self.ffd_order = 1
                 super(CONMINdriver, self).run_iteration()
-                #self.ffd_order = 0
+                
             else:
                 # update the parameters in the model
                 self.set_parameters(self.design_vals[:-2])
@@ -571,3 +565,6 @@ class CONMINdriver(Driver):
         for name, value in consav.__dict__.items():
             setattr(consav, name, type(value)(getattr(conmin.consav, name)))
 
+    def requires_derivs(self):
+        if self.conmin_diff is False:
+            return True

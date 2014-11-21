@@ -49,7 +49,7 @@ setup(name='openmdao.main',
           'argparse',
           'decorator',
           'mock',
-          'networkx',
+          'networkx<1.9.1',
           'openmdao.units',
           'openmdao.util',
           'pycrypto',
@@ -95,6 +95,5 @@ setup(name='openmdao.main',
       openmdao.main.datatypes.uncertaindist.UncertainDistVar = openmdao.main.datatypes.uncertaindist:UncertainDistVar
       openmdao.main.datatypes.vtree.VarTree = openmdao.main.datatypes.vtree:VarTree
       openmdao.main.datatypes.array.Array = openmdao.main.datatypes.array:Array
-
       """,
       )

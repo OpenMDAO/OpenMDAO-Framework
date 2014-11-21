@@ -1,13 +1,18 @@
 # pylint: disable-msg=C0111,C0103
 
+import numpy as np
+
 import unittest
 
 from openmdao.main.api import Assembly, Component, Driver, set_as_top
 from openmdao.main.datatypes.api import Float, Array
 from openmdao.util.decorators import add_delegate
-from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, HasIneqConstraints, Constraint
+from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, \
+     HasIneqConstraints, Constraint, Has2SidedConstraints
+from openmdao.main.interfaces import IHas2SidedConstraints, implements
 from openmdao.test.execcomp import ExecComp
 from openmdao.units.units import PhysicalQuantity
+from openmdao.main.pseudocomp import SimpleEQConPComp, SimpleEQ0PComp
 
 @add_delegate(HasConstraints)
 class MyDriver(Driver):
@@ -20,6 +25,11 @@ class MyEqDriver(Driver):
 @add_delegate(HasIneqConstraints)
 class MyInEqDriver(Driver):
     pass
+
+@add_delegate(HasConstraints, Has2SidedConstraints)
+class My2SDriver(Driver):
+
+    implements(IHas2SidedConstraints)
 
 class SimpleUnits(Component):
     a = Float(iotype='in', units='inch')
@@ -56,6 +66,13 @@ class Simple(Component):
     def execute(self):
         self.c = self.a + self.b
         self.d = self.a - self.b
+
+    def list_deriv_vars(self):
+        return ('a', 'b'), ('c', 'd')
+
+    def provideJ(self):
+        der = 1.0
+        return np.array([[der, der], [der, der]])
 
 
 class HasConstraintsTestCase(unittest.TestCase):
@@ -382,6 +399,131 @@ class HasConstraintsTestCase(unittest.TestCase):
         self.assertEqual(self.asm._pseudo_5.out0, 1.0)
         self.assertEqual(self.asm._pseudo_6.out0, -1.0)
         self.assertEqual(self.asm._pseudo_7.out0, 2.0)
+
+    def test_custom_pseudocomp_creation(self):
+        self.asm.add('driver', MyDriver())
+        arg = {}
+        result = {}
+
+        self.asm.driver.add_constraint('comp1.c = 0')
+        self.assertEqual(self.asm._pseudo_0.__class__, SimpleEQ0PComp)
+        self.asm.run()
+        arg['in0'] = np.array([3.3])
+        result['out0'] = np.array([0.0])
+        self.asm._pseudo_0.apply_deriv(arg, result)
+        self.assertEqual(result['out0'][0], 3.3)
+
+        self.asm.driver.add_constraint('comp1.d = 5.4')
+        self.assertEqual(self.asm._pseudo_1.__class__, SimpleEQ0PComp)
+        self.asm.run()
+        arg['in0'] = np.array([3.3])
+        result['out0'] = np.array([0.0])
+        self.asm._pseudo_1.apply_deriv(arg, result)
+        self.assertEqual(result['out0'][0], 3.3)
+
+        self.asm.driver.add_constraint('comp2.c = comp3.a')
+        self.assertEqual(self.asm._pseudo_2.__class__, SimpleEQConPComp)
+        self.asm.run()
+        arg['in0'] = np.array([7.2])
+        arg['in1'] = np.array([3.1])
+        result['out0'] = np.array([0.0])
+        self.asm._pseudo_2.apply_deriv(arg, result)
+        self.assertEqual(result['out0'][0], 4.1)
+
+        self.asm.driver.clear_constraints()
+        self.asm.driver.add_constraint('comp2.c - comp3.a=0.0')
+        self.assertEqual(self.asm._pseudo_3.__class__, SimpleEQConPComp)
+        self.asm.run()
+        arg['in0'] = np.array([7.2])
+        arg['in1'] = np.array([3.1])
+        result['out0'] = np.array([0.0])
+        self.asm._pseudo_3.apply_deriv(arg, result)
+        self.assertEqual(result['out0'][0], 4.1)
+
+        self.asm.driver.clear_constraints()
+        self.asm.driver.add_constraint('0=comp2.c - comp3.a')
+        self.assertEqual(self.asm._pseudo_4.__class__, SimpleEQConPComp)
+        self.asm.run()
+        arg['in0'] = np.array([7.2])
+        arg['in1'] = np.array([3.1])
+        result['out0'] = np.array([0.0])
+        self.asm._pseudo_4.apply_deriv(arg, result)
+        self.assertEqual(result['out0'][0], 4.1)
+
+class Has2SidedConstraintsTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.asm = set_as_top(Assembly())
+        self.asm.add('comp1', Simple())
+        self.asm.add('comp2', Simple())
+        self.asm.add('comp3', SimpleUnits())
+        self.asm.add('comp4', SimpleUnits())
+
+    def test_unsupported(self):
+        drv = self.asm.add('driver', MyDriver())
+        self.asm.run()
+        try:
+            drv.add_constraint('-98 < comp1.a < 101')
+        except AttributeError as err:
+            self.assertEqual(str(err), "driver: Double-sided constraints are not supported on this driver.")
+        else:
+            self.fail("Exception expected")
+
+    def test_get_2sided_constraints(self):
+        drv = self.asm.add('driver', My2SDriver())
+        drv.add_constraint('-44.1 < comp1.a < 13.0')
+        drv.add_constraint('77.0 < comp1.c < 79.0')
+        self.asm.run()
+
+        cons = drv.get_2sided_constraints()
+        self.assertTrue(len(cons) == 2)
+        con1 = cons['-44.1<comp1.a<13.0']
+        self.assertEqual(self.asm.comp1.a, con1.evaluate(self.asm)[0])
+        self.assertEqual(con1.low, -44.1)
+        self.assertEqual(con1.high, 13.0)
+        con1 = cons['77.0<comp1.c<79.0']
+        self.assertEqual(self.asm.comp1.c, con1.evaluate(self.asm)[0])
+        self.assertEqual(con1.low, 77.0)
+        self.assertEqual(con1.high, 79.0)
+
+        cons = drv.get_constraints()
+        self.assertTrue(len(cons) == 0)
+
+    def test_list_constraints(self):
+        drv = self.asm.add('driver', My2SDriver())
+        drv.add_constraint('-44.1 < comp1.a < 13.0')
+        drv.add_constraint('77.0 < comp1.c')
+        self.asm.run()
+
+        cons = drv.list_constraints()
+        self.assertTrue('-44.1<comp1.a<13.0' in cons)
+        self.assertTrue('77.0<comp1.c' in cons)
+
+    def test_gradient(self):
+        drv = self.asm.add('driver', My2SDriver())
+        drv.add_constraint('-44.1 < comp1.a < 13.0')
+        drv.add_constraint('77.0 < -2.5*comp1.a')
+        drv.add_constraint('55.0 > comp1.a > 52.0')
+        drv.add_constraint('0.1 < 3.0*comp1.a < 1.5')
+        self.asm.run()
+
+        J = drv.calc_gradient(inputs=['comp1.a'])
+
+        # ineq
+        self.assertEqual(J[0], 2.5)
+
+        # double sided (in order)
+        self.assertEqual(J[1], 1.0)
+        self.assertEqual(J[2], 1.0)
+        self.assertEqual(J[3], 3.0)
+
+    def test_replace(self):
+        drv = self.asm.add('driver', My2SDriver())
+        drv.add_constraint('-44.1 < comp1.a < 13.0')
+        drv.add_constraint('77.0 < comp1.c < 79.0')
+        self.asm.run()
+
+        self.asm.replace('driver', My2SDriver())
 
 if __name__ == "__main__":
     unittest.main()

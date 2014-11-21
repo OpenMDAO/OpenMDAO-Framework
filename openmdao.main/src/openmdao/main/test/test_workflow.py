@@ -52,7 +52,7 @@ class Model(Assembly):
         self.connect('comp_b.total_executions', 'comp_c.dummy_input')
 
 class LazyModel(Assembly):
-    
+
     def configure(self):
         self.add('driver', NTimes(1))
 
@@ -62,7 +62,7 @@ class LazyModel(Assembly):
         self.add('C2', Simple())
         self.add('C3', Simple())
         self.add('C4', Simple())
-        
+
         # C1 --> C2 --> C3 --> C4
         self.connect('C1.c', 'C2.a')
         self.connect('C2.c', 'C3.a')
@@ -79,7 +79,7 @@ class NTimes(Driver):
         for i in range(self.max_iterations):
             super(NTimes, self).execute()
 
-            
+
 @add_delegate(HasParameters, HasObjective)
 class CaseDriver(Driver):
 
@@ -89,7 +89,7 @@ class CaseDriver(Driver):
 
     def execute(self):
         for i in range(self.max_iterations):
-            self.set_parameters([i])
+            self.set_parameters([float(i)])
             super(CaseDriver, self).execute()
             self.eval_objective()
 
@@ -281,7 +281,7 @@ class TestCase(unittest.TestCase):
     def test_lazy_auto_top(self):
         # lazy evaluation with auto determination of top level workflow
         top = set_as_top(LazyModel())
-        top.driver.add_parameter('C2.a', low=-99, high=99)
+        top.driver.add_parameter('C2.b', low=-99, high=99)
         top.driver.add_objective('C3.d')
 
         top.run()
@@ -298,12 +298,12 @@ class TestCase(unittest.TestCase):
         else:
             self.fail("Exception expected")
 
-        
+
     def test_lazy_auto_nested(self):
         # lazy evaluation with auto determination of D2 workflow
         top = set_as_top(LazyModel())
         top.driver.workflow.add(['D2', 'C1'])
-        top.D2.add_parameter('C2.a', low=-99, high=99)
+        top.D2.add_parameter('C2.b', low=-99, high=99)
         top.D2.add_objective('C3.d')
 
         top.run()
@@ -311,7 +311,7 @@ class TestCase(unittest.TestCase):
         self.assertEqual(top.C2.exec_count, 1)
         self.assertEqual(top.C3.exec_count, 1)
         self.assertEqual(top.C1.exec_count, 1)
-        
+
         # now test strict mode
         try:
             top.check_config(strict=True)
@@ -323,14 +323,14 @@ class TestCase(unittest.TestCase):
     def test_lazy_manual_top(self):
         # manual top level workflow
         top = set_as_top(LazyModel())
-        top.driver.add_parameter('C2.a', low=-99, high=99)
+        top.driver.add_parameter('C2.b', low=-99, high=99)
         top.driver.add_objective('C3.d')
         top.driver.workflow.add(['C2', 'C3'])
         top.run()
         self.assertEqual(top.C2.exec_count, 1)
         self.assertEqual(top.C3.exec_count, 1)
         self.assertEqual(top.C1.exec_count, 1)
-        
+
         # now test strict mode
         try:
             top.check_config(strict=True)

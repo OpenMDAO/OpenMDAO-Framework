@@ -101,41 +101,6 @@ class HasEventsTestCase(unittest.TestCase):
         self.asm.driver.clear_events()
         events = self.asm.driver.get_events()
         self.assertEqual(events, [])
-        
-    def test_get_attributes(self):
-        
-        attr = self.asm.comp1.get_attributes()
-        
-        event_attr = attr['Events']
-        self.assertTrue( { 'desc' : 'Do It!',
-                           'name' : 'doit',
-                           'transient' : True,
-                           'vartypename' : 'Event',
-                           'type' : 'event'} in event_attr)          
-        self.assertTrue( { 'desc' : 'Do It Again!',
-                           'name' : 'doit2',
-                           'transient' : True,
-                           'vartypename' : 'Event',
-                           'type' : 'event'} in event_attr)
-        
-        event_list = self.asm.driver.list_available_events()
-        self.assertEqual(['comp1.doit', 'comp1.doit2'],
-                         event_list)
-
-        self.asm.driver.add_event('comp1.doit')
-        self.asm.driver.add_event('comp1.doit2')
-
-        # Already linked events should not show up.
-        event_list = self.asm.driver.list_available_events()
-        self.assertEqual([],
-                         event_list)
-
-        attr = self.asm.driver.get_attributes(io_only=False)
-        
-        event_attr = attr['Triggers']
-        self.assertEqual([{'target': 'comp1.doit'},
-                          {'target': 'comp1.doit2'}],
-                         event_attr)
 
 
 if __name__ == "__main__":

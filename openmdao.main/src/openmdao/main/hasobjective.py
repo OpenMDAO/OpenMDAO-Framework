@@ -4,6 +4,7 @@ import weakref
 
 from openmdao.main.expreval import ConnectedExprEvaluator
 from openmdao.main.pseudocomp import PseudoComponent, _remove_spaces
+from openmdao.main.interfaces import IDriver
 
 
 class Objective(ConnectedExprEvaluator):
@@ -11,7 +12,7 @@ class Objective(ConnectedExprEvaluator):
         super(Objective, self).__init__(*args, **kwargs)
         self.pcomp_name = None
 
-    def activate(self):
+    def activate(self, driver):
         """Make this constraint active by creating the appropriate
         connections in the dependency graph.
         """
@@ -19,7 +20,7 @@ class Objective(ConnectedExprEvaluator):
             pseudo = PseudoComponent(self.scope, self, pseudo_type='objective')
             self.pcomp_name = pseudo.name
             self.scope.add(pseudo.name, pseudo)
-        getattr(self.scope, self.pcomp_name).make_connections(self.scope)
+        getattr(self.scope, self.pcomp_name).make_connections(self.scope, driver)
 
     def deactivate(self):
         """Remove this objective from the dependency graph and remove
@@ -122,11 +123,12 @@ class HasObjectives(object):
 
         name = expr if name is None else name
 
-        expreval.activate()
+        if IDriver.providedBy(self.parent):
+            expreval.activate(self.parent)
+            self.parent.config_changed()
 
         self._objectives[name] = expreval
 
-        self.parent.config_changed()
 
     def remove_objective(self, expr):
         """Removes the specified objective expression. Spaces within
@@ -241,11 +243,11 @@ class HasObjectives(object):
             lst.extend(obj.get_referenced_compnames())
         return lst
 
-    def get_referenced_varpaths(self):
+    def get_referenced_varpaths(self, refs=False):
         """Returns the names of variables referenced by the objectives."""
         lst = []
         for obj in self._objectives.values():
-            lst.extend(obj.get_referenced_varpaths(copy=False))
+            lst.extend(obj.get_referenced_varpaths(copy=False, refs=refs))
         return lst
 
     def _get_scope(self, scope=None):

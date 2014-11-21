@@ -22,7 +22,6 @@ from openmdao.main.driver import Driver
 from openmdao.main.workflow import Workflow
 from openmdao.main.dataflow import Dataflow
 from openmdao.main.sequentialflow import SequentialWorkflow
-from openmdao.main.cyclicflow import CyclicWorkflow
 from openmdao.main.variable import Variable
 
 from openmdao.main.exceptions import ConstraintError
@@ -40,7 +39,6 @@ from openmdao.util.eggsaver import SAVE_PICKLE, SAVE_CPICKLE #, SAVE_YAML, SAVE_
 
 from openmdao.units import convert_units
 
-from openmdao.main.project import load_project
 
 # TODO: This probably shouldn't be here. Removing it will require edits to some
 # of our plugins

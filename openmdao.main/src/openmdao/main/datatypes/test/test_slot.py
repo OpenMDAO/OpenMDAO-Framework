@@ -130,64 +130,6 @@ class SlotTestCase(unittest.TestCase):
         else:
             self.fail('TypeError expected')
 
-    def test_list_and_dict_slot_attributes(self):
-
-        top = Assembly()
-        top.add('sock', Slot(MyClass, desc='Stuff0'))
-        top.add('list_sock', List(Slot(MyClass), iotype='in', desc='Stuff'))
-        top.add('dict_sock', Dict(key_trait=Str,
-                                  value_trait=Slot(MyClass),
-                                  iotype='in', desc='Stuff2'))
-        attrs = top.get_attributes(io_only=False)
-        slot_attrs = attrs['Slots']
-        self.assertTrue({'name': 'list_sock',
-                         'containertype': 'list',
-                         'filled': [],
-                         'klass': 'MyClass',
-                         'desc': 'Stuff'} in slot_attrs)
-        self.assertTrue({'name': 'dict_sock',
-                         'containertype': 'dict',
-                         'filled': {},
-                         'klass': 'MyClass',
-                         'desc': 'Stuff2'} in slot_attrs)
-        self.assertTrue({'name': 'sock',
-                         'containertype': 'singleton',
-                         'filled': None,
-                         'klass': 'MyClass',
-                         'desc': 'Stuff0'} in slot_attrs)
-
-        # Now fill some slots.
-
-        top.list_sock.append(MyClass())
-        top.list_sock.append(MyClass())
-        top.dict_sock['Testing'] = MyClass()
-
-        top.sock = MyClass()
-        # Note, only tested with one item in the dict because it is not ordered,
-        # and hash order will vary on different platforms.
-
-        attrs = top.get_attributes(io_only=False)
-        slot_attrs = attrs['Slots']
-        self.assertTrue({'name': 'list_sock',
-                         'containertype': 'list',
-                         'filled': ['MyClass', 'MyClass'],
-                         'klass': 'MyClass',
-                         'desc': 'Stuff'} in slot_attrs)
-        # Need some special checking for the dict slot
-        # since we get back a MyClass instance
-        dict_slots = filter(lambda x: x["name"] == "dict_sock", slot_attrs)
-        self.assertEqual(len(dict_slots), 1)
-        dict_slot = dict_slots[0]
-        self.assertEqual(dict_slot["containertype"], "dict")
-        self.assertEqual(dict_slot["klass"], "MyClass")
-        self.assertEqual(dict_slot["desc"], "Stuff2")
-        self.assertEqual(dict_slot["filled"], {'Testing': 'MyClass'})
-        self.assertTrue({'name': 'sock',
-                         'containertype': 'singleton',
-                         'filled': 'MyClass',
-                         'klass': 'MyClass',
-                         'desc': 'Stuff0'} in slot_attrs)
-
     def test_variabletree(self):
         # Ensure VariableTree is rejected.
         msg = 'Slotting of VariableTrees is not supported,' \

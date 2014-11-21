@@ -96,6 +96,8 @@ class VariableTestCase(unittest.TestCase):
         self.top.connect('oneout.ratio3','oneinp.ratio2')      # Bool to  int    
         self.top.connect('oneout.ratio2','oneinp.ratio6')      # Int  to  Enum (int valued)
         self.top.run()
+        #from openmdao.util.dotgraph import plot_graph
+        #plot_graph(self.top.get_depgraph())
         self.assertEqual(11.0,self.top.oneinp.ratio1)
         self.assertEqual(True,self.top.oneinp.ratio2)
         self.assertEqual(11,self.top.oneinp.ratio6)
@@ -227,19 +229,6 @@ class VariableTestCase(unittest.TestCase):
     def _parse_list(self, liststr):
         liststr = liststr[1:len(liststr)-2]
         return set([s.strip("'") for s in liststr.split(', ') if s.strip()])
-        
-    def test_attributes(self):
-        # Check for correct 'connected' information.
-        self.top.connect('oneout.arrout[0]', 'oneinp.arrinp[0]')
-        self.top.connect('oneout.arrout[1]', 'oneinp.arrinp[1]')
-        inputs = self.top.oneinp.get_attributes()['Inputs'] 
-        for item in inputs:
-            if item['name'] == 'arrinp':
-                self.assertEqual(self._parse_list(item['connected']),
-                    self._parse_list("['oneout.arrout[1]', 'oneout.arrout[0]']"))
-                break
-        else:
-            self.fail('No arrinp item!')
 
 
 if __name__ == '__main__':

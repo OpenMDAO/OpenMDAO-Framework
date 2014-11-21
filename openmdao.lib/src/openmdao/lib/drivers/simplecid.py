@@ -7,6 +7,7 @@ from openmdao.main.hasparameters import HasVarTreeParameters
 from openmdao.main.hasresponses import HasVarTreeResponses
 from openmdao.main.interfaces import IHasResponses, IHasParameters, implements
 from openmdao.main.variable import is_legal_name, make_legal_path
+from openmdao.main.array_helpers import flattened_value
 
 from openmdao.util.decorators import add_delegate
 
@@ -59,10 +60,7 @@ class SimpleCaseIterDriver(Driver):
             for j, path in enumerate(inputs):
                 value = values[j][i]
                 expr = exprs.get(path)
-                if expr:
-                    expr.set(value, self.parent)
-                else:
-                    self.parent.set(path, value)
+                self.set_parameter_by_name(path, value)
 
             # Run workflow.
             self.workflow.run()
@@ -75,5 +73,5 @@ class SimpleCaseIterDriver(Driver):
                 else:
                     value = self.parent.get(path)
                 path = case_paths[path]
-                self.set('case_outputs.'+path, value, index=(i,), force=True)
+                self.set('case_outputs.%s[%d]'%(path,i), value)
 

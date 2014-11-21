@@ -11,6 +11,7 @@ import sys
 import time
 import unittest
 import nose
+from nose import SkipTest
 
 import random
 import numpy.random as numpy_random
@@ -53,7 +54,7 @@ class DrivenComponent(Component):
     """ Just something to be driven and compute results. """
 
     x = Array([1., 1., 1., 1.], iotype='in')
-    y = Array([1., 1., 1., 1.], iotype='in')
+    y = Array([1., 1., 1., 1., 1., 1., 1., 1., 1., 1.], iotype='in')
     raise_error = Bool(False, iotype='in')
     sleep = Float(0., iotype='in')
 
@@ -334,33 +335,6 @@ class TestCase(unittest.TestCase):
 
         top.run()
 
-    def test_simplecid(self):
-        logging.debug('')
-        logging.debug('test_simplecid')
-
-        top = Assembly()
-        top.add('generator', Generator())
-        cid = top.add('cid', SimpleCaseIterDriver())
-        top.add('driven', DrivenComponent())
-        top.add('verifier', Verifier())
-
-        top.driver.workflow.add(('generator', 'cid', 'verifier'))
-        cid.workflow.add('driven')
-        cid.add_parameter('driven.x')
-        cid.add_parameter('driven.y')
-        cid.add_response('driven.rosen_suzuki')
-        cid.add_response('driven.sum_y')
-
-        top.connect('generator.x', 'cid.case_inputs.driven.x')
-        top.connect('generator.y', 'cid.case_inputs.driven.y')
-
-        top.connect('generator.x', 'verifier.x')
-        top.connect('generator.y', 'verifier.y')
-        top.connect('cid.case_outputs.driven.rosen_suzuki', 'verifier.rosen_suzuki')
-        top.connect('cid.case_outputs.driven.sum_y', 'verifier.sum_y')
-
-        top.run()
-
     def test_itername(self):
         logging.debug('')
         logging.debug('test_itername')
@@ -484,6 +458,9 @@ class TestCase(unittest.TestCase):
         ]
         self.verify_tree(top, expected)
 
+
+    def test_casetree_concurrent(self):
+        raise SkipTest("There are issues with conncurrent CIDs and CID is going to be re-written, so just skip this test for now")
         # Nested CaseIteratorDrivers have some issues:
         # 1. If the second level is concurrent, the first level's iterator
         #    can't be pickled.
@@ -597,49 +574,51 @@ class A_vt(Assembly):
 
 class Rethore(unittest.TestCase):
 
-    def test_l(self):
-
+    def test_l_sequential(self):
         # Sequential is base.
         logging.debug('')
-        logging.debug('test_l: sequential')
+        logging.debug('test_l_sequential')
         a = set_as_top(A_l())
         cid = a.parallel_driver
         cid.sequential = True
-        a.execute()
+        a.run()
         sequential = [(cid.case_inputs.c1.i[i], cid.case_outputs.c1.val[i])
                       for i in range(len(cid.case_inputs.c1.i))]
 
+    def test_1_concurrent(self):
+        raise SkipTest("concurrent CaseIterDriver execution currently not supported")
         # Now run concurrent and verify.
         logging.debug('')
-        logging.debug('test_l: concurrent')
+        logging.debug('test_l_concurrent')
         a = set_as_top(A_l())
         cid = a.parallel_driver
         cid.sequential = False
-        a.execute()
+        a.run()
         concurrent = [(cid.case_inputs.c1.i[i], cid.case_outputs.c1.val[i])
                       for i in range(len(cid.case_inputs.c1.i))]
 
         self.assertEqual(concurrent, sequential)
 
-    def test_vt(self):
-
+    def test_vt_sequential(self):
         # Sequential is base.
         logging.debug('')
-        logging.debug('test_vt: sequential')
+        logging.debug('test_vt_sequential')
         a = set_as_top(A_vt())
         cid = a.parallel_driver
         cid.sequential = True
-        a.execute()
+        a.run()
         sequential = [(cid.case_inputs.c1.i[i], cid.case_outputs.c1.val[i])
                       for i in range(len(cid.case_inputs.c1.i))]
 
+    def test_vt_concurrent(self):
+        raise SkipTest("concurrent CaseIterDriver execution currently not supported")
         # Now run concurrent and verify.
         logging.debug('')
-        logging.debug('test_vt: concurrent')
+        logging.debug('test_vt_concurrent')
         a = set_as_top(A_vt())
         cid = a.parallel_driver
         cid.sequential = False
-        a.execute()
+        a.run()
         concurrent = [(cid.case_inputs.c1.i[i], cid.case_outputs.c1.val[i])
                       for i in range(len(cid.case_inputs.c1.i))]
 
@@ -648,8 +627,8 @@ class Rethore(unittest.TestCase):
 
 class SimpleComp(Component):
 
-    in1 = Float(6, iotype='in')
-    in2 = Float(7, iotype='in')
+    in1 = Float(6., iotype='in')
+    in2 = Float(7., iotype='in')
 
     out1 = Float(iotype='out')
     out2 = Float(iotype='out')
@@ -704,8 +683,8 @@ class SampleAssembly(Assembly):
         #vtree inputs created on the fly based on parameters given
         #number of multi-point executions given at runtime based on length of
         # inputs, all inputs must be same length
-        self.cid_driver.case_inputs.b.in2 = [1, 2, 3, 4, 5, 6]
-        self.cid_driver.case_inputs.c.in2 = [0, 1, 0, 1, 0, 1]
+        self.cid_driver.case_inputs.b.in2 = [1., 2., 3., 4., 5., 6.]
+        self.cid_driver.case_inputs.c.in2 = [0., 1., 0., 1., 0., 1.]
 
         #d is a component that does mp_aggregation
         #NOTE: d is expecting arrays of equal length
@@ -731,7 +710,7 @@ class SampleAssembly(Assembly):
 class MultiPoint(unittest.TestCase):
 
     def test_multipoint(self):
-        top = SampleAssembly()
+        top = set_as_top(SampleAssembly())
         top.run()
         self.assertEqual(list(top.d.in1), [14., 15., 16., 17., 18., 19.])
         self.assertEqual(list(top.d.in2), [13., 26., 39., 52., 65., 78.])
@@ -768,31 +747,31 @@ class Connections(unittest.TestCase):
 
     def test_connections(self):
         print '---- sequential ----'
-        a1 = ConnectA(True)
-        a1.i1 = range(10)
+        a1 = set_as_top(ConnectA(True))
+        a1.i1 = [float(i) for i in range(10)]
         a1.run()
         print a1.driver.case_inputs.c.i1
         print a1.driver.case_outputs.c.o1
         print a1.o1
-        self.assertEqual(a1.o1, [v**2 for v in range(10)])
+        self.assertEqual(a1.o1, [float(v)**2 for v in range(10)])
 
         print '\n---- par ----'
-        a1.i1 = range(5)
+        a1.i1 = [float(i) for i in range(5)]
         a1.driver.sequential = False
         a1.run()
         print a1.driver.case_inputs.c.i1
         print a1.driver.case_outputs.c.o1
         print a1.o1
-        self.assertEqual(a1.o1, [v**2 for v in range(5)])
+        self.assertEqual(a1.o1, [float(v)**2 for v in range(5)])
 
         print '\n---- seq ----'
-        a1.i1 = range(3)
+        a1.i1 = [float(i) for i in range(3)]
         a1.driver.sequential = True
         a1.run()
         print a1.driver.case_inputs.c.i1
         print a1.driver.case_outputs.c.o1
         print a1.o1
-        self.assertEqual(a1.o1, [v**2 for v in range(3)])
+        self.assertEqual(a1.o1, [float(v)**2 for v in range(3)])
 
 
 # Test bug reported by Frederik Zahle.
@@ -843,8 +822,8 @@ class CIDAssembly(Assembly):
         self.driver.workflow.add('cid')
         cid.workflow.add('p')
 
-        cid.sequential = False
-        cid.reload_model = False
+        #cid.sequential = False
+        #cid.reload_model = False
 
         cid.add_parameter('p.x_in')
         cid.add_parameter('p.y_in')
@@ -875,26 +854,31 @@ class OptAssembly(Assembly):
         self.add('builder', Builder())
         self.driver.workflow.add('builder')
 
-        self.add('cid', CIDAssembly())
-        self.driver.workflow.add('cid')
+        self.add('cidasm', CIDAssembly())
+        self.driver.workflow.add('cidasm')
 
-        self.connect('builder.x', 'cid.x_in')
-        self.connect('builder.y', 'cid.y_in')
+        self.connect('builder.x', 'cidasm.x_in')
+        self.connect('builder.y', 'cidasm.y_in')
 
         self.driver.add_parameter('builder.x0', low=-50, high=50)
         self.driver.add_parameter('builder.y0', low=-50, high=50)
         self.driver.add_constraint('builder.x0-builder.y0 >= 15.0')
-        self.driver.add_objective('cid.f_xy')
+        self.driver.add_objective('cidasm.f_xy')
 
 
-class Optimization(unittest.TestCase):
+class OptimizationTestCase(unittest.TestCase):
 
     def test_optimization(self):
         # Test that CID within an optimization works.
         top = OptAssembly()
         top.run()
-        print 'objective', top.cid.f_xy
-        assert_rel_error(self, top.cid.f_xy, -27.0833328304, 0.001)
+        print 'objective', top.cidasm.f_xy
+        assert_rel_error(self, top.cidasm.f_xy, -27.0833328304, 0.001)
+
+        # Clean up after ourselves
+        outfile = 'slsqp.out'
+        if os.path.exists(outfile):
+            os.remove(outfile)
 
 
 # Test bug reported by Pierre-Elouan Rethore.
@@ -914,7 +898,7 @@ class PTReplacement(PTComp):
     o = Float(iotype='out')
 
     def execute(self):
-        self.o = self.i**4.
+        self.o = self.i**2.+1.
 
 
 class PTAssembly(Assembly):
@@ -925,22 +909,27 @@ class PTAssembly(Assembly):
         self.driver.workflow.add(['c'])
         self.driver.add_parameter('c.i')
         self.driver.add_response('c.o')
-        self.driver.case_inputs.c.i = range(10)
+        self.driver.case_inputs.c.i = [float(i) for i in range(10)]
 
 class ParameterTarget(unittest.TestCase):
 
     def test_parameter_target(self):
         # Test that replacing a parameter target is handled.
-        a1 = PTAssembly()
+        a1 = set_as_top(PTAssembly())
         a1.run()
         self.assertEqual(a1.driver.case_outputs.c.o,
                          [0., 1., 4., 9., 16., 25., 36., 49., 64., 81.])
-        a2 = PTAssembly()
+
+    def test_parameter_target_replace(self):
+        a2 = set_as_top(PTAssembly())
         a2.configure()
         a2.replace('c', PTReplacement())
+        # connecting the replacement 'c' to the driver results in the
+        # case_inputs.c.i being set to [], so we need to recreate the list of inputs
+        a2.driver.case_inputs.c.i = [float(i) for i in range(10)]
         a2.run()
         self.assertEqual(a2.driver.case_outputs.c.o,
-                         [0., 1., 4., 9., 16., 25., 36., 49., 64., 81.])
+                         [1., 2., 5., 10., 17., 26., 37., 50., 65., 82.])
 
 
 # Test bug reported by Frederik Zahle. Sequential version would fail.
@@ -965,7 +954,7 @@ class CaseIter(Assembly):
         self.driver.workflow.add('acomp')
         self.driver.add_parameter('acomp.inp')
         self.driver.add_response('acomp.out')
-        self.driver.case_inputs.acomp.inp = [0, 1, 2]
+        self.driver.case_inputs.acomp.inp = [0., 1., 2.]
 
 class Zahle(unittest.TestCase):
 
@@ -974,7 +963,7 @@ class Zahle(unittest.TestCase):
         top.run()
         out = top.driver.case_outputs.acomp.out
         out = [out[i].a for i in range(len(out))]
-        self.assertEqual(out, [0, 2, 4])
+        self.assertEqual(out, [0., 2., 4.])
 
     def test_concurrent(self):
         top = CaseIter()
@@ -982,7 +971,7 @@ class Zahle(unittest.TestCase):
         top.run()
         out = top.driver.case_outputs.acomp.out
         out = [out[i].a for i in range(len(out))]
-        self.assertEqual(out, [0, 2, 4])
+        self.assertEqual(out, [0., 2., 4.])
 
 
 if __name__ == '__main__':

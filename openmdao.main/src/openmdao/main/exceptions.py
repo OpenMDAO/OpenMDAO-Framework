@@ -22,6 +22,10 @@ class RunStopped(RuntimeError):
     not necessarily reflecting input values."""
     pass
 
+class NoFlatError(TypeError):
+    """Raised when a value is not flattenable to a 1D float array."""
+    pass
+
     
 def traceback_str(exc):
     """Call this to get the traceback string associated with the given exception
