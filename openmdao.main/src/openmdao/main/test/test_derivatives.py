@@ -559,8 +559,23 @@ class Testcase_derivatives(unittest.TestCase):
         try:
             top.run()
         except Exception as err:
-            msg = "comp: derivative variable 'UnflattenableDerivVarComp.x' returned by 'list_deriv_vars'"\
-            "cannot be converted to a 1D float array"
+            msg = "comp: 'x', of type '<type 'int'>', was given in 'list_deriv_vars' but "\
+            "variables must be of a type convertable to a 1D float array"
+
+            self.assertEqual(str(err), msg)
+
+    def test_vartree_deriv_var(self):
+        top = set_as_top(Assembly())
+        top.add('comp', UnflattenableDerivVarComp())
+        top.driver.workflow.add(['comp'])
+        top.comp.x = 1
+        top.comp.y = 1.0
+
+        try:
+            top.run()
+        except Exception as err:
+            msg = "comp: 'x' was given in 'list_deriv_vars' but you must declare"\
+            "sub-vars of a vartree individually"\
 
             self.assertEqual(str(err), msg)
 
@@ -574,9 +589,9 @@ class Testcase_derivatives(unittest.TestCase):
         try:
             top.run()
         except Exception as err:
-            msg = "comp: derivative variable 'w' returned by 'list_deriv_vars'"\
-            "is undefined for 'UndefinedVarListDerivsComp'"
-            
+            msg = "comp: 'w' was given in 'list_deriv_vars'"\
+            "but 'w' is undefined"
+
             self.assertEqual(str(err), msg)
 
     def test_int_ignore(self):

@@ -331,19 +331,19 @@ class Component(Container):
         try:
             val = self.get(var_name)
         except AttributeError:
-            msg = "derivative variable '{var_name}' returned by 'list_deriv_vars' is "\
-            "undefined for '{comp_name}'"
+            msg = "'{var_name}' was given in 'list_deriv_vars'"\
+            "but '{var_name}' is undefined"
 
             msg = msg.format(var_name=var_name, comp_name=self.__class__.__name__)
             self.raise_exception(msg)
-
+        
         try:
             flattened_value(var_name, val)
         except Exception:
-            msg = "derivative variable '{comp_name}.{var_name}' returned by 'list_deriv_vars'"\
-            "cannot be converted to a 1D float array"
+            msg = "'{var_name}', of type '{var_type}', was given in 'list_deriv_vars' "\
+            "but variables must be of a type convertable to a 1D float array"
 
-            msg = msg.format(var_name=var_name, comp_name=self.__class__.__name__)
+            msg = msg.format(var_name=var_name, var_type=type(val), comp_name=self.__class__.__name__)
             self.raise_exception(msg)
 
 
