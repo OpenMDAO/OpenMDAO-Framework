@@ -1,8 +1,7 @@
 import numpy as np
 from openmdao.lib.components.api import MetaModel
 from openmdao.main.interfaces import IMultiFiSurrogate
-from openmdao.main.datatypes.api import List, Bool, Dict, Float, Slot, Str, \
-                                        VarTree
+from openmdao.main.datatypes.api import List, Float, Slot
 
 
 class MultiFiMetaModel(MetaModel):
@@ -39,19 +38,18 @@ class MultiFiMetaModel(MetaModel):
         
     def __init__(self, params=None, responses=None, nfi=1):
         super(MultiFiMetaModel, self).__init__(params, responses)
-        self.nfi=nfi
         
-        if self.nfi>1:
+        self.nfi = nfi
+        
+        if self.nfi > 1:
             self._param_data = [[] for i in np.arange(self.nfi)]
             for name in responses:
                 self._response_data[name] = [[] for i in np.arange(self.nfi)]
             
-            default_surrogate = Slot(IMultiFiSurrogate, allow_none=True,
-                                     desc="This surrogate will be used for all "
-                                     "outputs that don't have a specific surrogate "
-                                     "assigned to them in their sur_<name> slot.")
+            self.add('default_surrogate', Slot(IMultiFiSurrogate, allow_none=True,
+                     desc="This surrogate will be used for all outputs that don't "
+                     "have a specific surrogate assigned to them in their sur_<name> slot.")) 
 
-        
         # Add params.<invar>_fi<n>
         for name in params:
             for n in np.arange(nfi):
@@ -71,13 +69,12 @@ class MultiFiMetaModel(MetaModel):
                     output_tree.add(name_with_fi, List([], desc='training response'))
                     self.surrogates[name] = None
 
-
     def execute(self):
         """If the training flag is set, train the metamodel. Otherwise,
         predict outputs. If **nfi** is equal to 1, it behaves as a :class:`MetaModel`.
         """
 
-        if self.nfi<2:
+        if self.nfi < 2:
             # shortcut: fallback to base class behaviour immediatly
             super(MultiFiMetaModel, self).execute()
             return
@@ -133,4 +130,3 @@ class MultiFiMetaModel(MetaModel):
 
         # Now Predict for current inputs
         super(MultiFiMetaModel, self).execute()
-                
