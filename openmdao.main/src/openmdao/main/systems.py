@@ -143,6 +143,7 @@ class System(object):
         return [s.name for s in self.subsystems(local)]
 
     def create_app_ordering(self):
+        """Creates a PETSc application ordering."""
         rank = self.mpi.rank
 
         start = numpy.sum(self.local_var_sizes[:rank])
@@ -164,35 +165,6 @@ class System(object):
 
         return PETSc.AO().createBasic(app_ind_set, petsc_ind_set,
                                       comm=self.mpi.comm)
-
-    def get_unique_vars(self, vnames):
-        """
-        Returns a dict of variables and which
-        process (lowest rank) is 'responsible' for each
-        variable.
-        """
-
-        # FIXME: this currently doesn't handle distributed vars,
-        #  i.e. variables that have parts located on different
-        #  procs.
-        comm = self.mpi.comm
-
-        myvars = self.vector_vars.keys()
-        collname = self.scope.name2collapsed
-
-        var2proc = {}
-        for proc, names in enumerate(comm.allgather(vnames)):
-            for name in names:
-                if name not in var2proc:
-                    try:
-                        idx = myvars.index(collname[name])
-                    except ValueError:
-                        continue
-
-                    if self.local_var_sizes[proc, idx] > 0:
-                        var2proc[name] = proc
-
-        return var2proc
 
     def get_combined_J(self, J):
         """
@@ -339,8 +311,8 @@ class System(object):
                              if node not in self._mapped_resids]
                 comps = self._all_comp_nodes()
                 for src, _ in out_nodes:
-                    parts = src.split('.', 1)
-                    if parts[0] in comps and src not in states:
+                    cname, _, vname = src.partition('.')
+                    if cname in comps and src not in states:
                         outputs.append(src)
 
             self._outputs = _filter(self.scope, outputs)
@@ -379,7 +351,7 @@ class System(object):
         var_sizes = self.scope._system.local_var_sizes
         varkeys = self.scope._system.vector_vars.keys()
         collnames = self.scope.name2collapsed
-        procs = range(self.mpi.size)
+
         size = 0
         for name in names:
             if isinstance(name, tuple):
@@ -389,7 +361,7 @@ class System(object):
                 size += uvec[name].size
             elif collnames[name] in varkeys:
                 idx = varkeys.index(collnames[name])
-                for proc in procs:
+                for proc in range(self.mpi.size):
                     if var_sizes[proc, idx] > 0:
                         size += var_sizes[proc, idx]
                         break
@@ -990,7 +962,7 @@ class SimpleSystem(System):
                 if out in mapped_states and state not in self.variables:
                     to_remove.add(out)
 
-            if not isinstance(self, (SolverSystem, FiniteDiffDriverSystem)):
+            if not isinstance(self, DriverSystem): #(SolverSystem, FiniteDiffDriverSystem)):
                 for name in to_remove:
                     del self.variables[name]
 
