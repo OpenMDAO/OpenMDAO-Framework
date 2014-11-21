@@ -16,7 +16,7 @@ scripting language, where code execution is generally slower and it is often
 necessary to use a compiled language like C to implement computationally
 intensive functions. To complement Python's native integration ability, the
 Python community has developed some excellent tools, such as `F2PY
-<http://cens.ioc.ee/projects/f2py2e/>`_ (Fortran to Python) and :term:`SWIG`
+<https://sysbio.ioc.ee/projects/f2py2e/>`_ (Fortran to Python) and :term:`SWIG`
 (Simplified Wrapper and Interface Generator), that simplify the process of
 building the wrapper for a code. As the name implies, F2PY is a Python utility
 that takes a Fortran source code file and compiles and generates a wrapped
@@ -33,7 +33,7 @@ variables as inputs.
 
 The intent of this exercise is not to teach you how to write a signature file. More
 information on this topic can be found in :ref:`Creating-an-Extension-with-F2PY`, while more
-extensive details can be found in the `F2PY Users Guide <http://cens.ioc.ee/projects/f2py2e/usersguide/index.html>`_.
+extensive details can be found in the `F2PY Users Guide <https://sysbio.ioc.ee/projects/f2py2e/usersguide/index.html>`_.
 
 The shared object can be generated using the existing signature file and C code by issuing the
 following command at the command prompt:

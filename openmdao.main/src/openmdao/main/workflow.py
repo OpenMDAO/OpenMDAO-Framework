@@ -158,10 +158,18 @@ class Workflow(object):
             # the parts of the tuple.
             raise err[0], err[1], err[2]
 
-    def configure_recording(self, includes, excludes):
+    def configure_recording(self, recording_options=None):
         """Called at start of top-level run to configure case recording.
         Returns set of paths for changing inputs."""
-        if not includes:
+
+        if recording_options:
+            includes = recording_options.includes
+            excludes = recording_options.excludes
+            save_problem_formulation = recording_options.save_problem_formulation
+        else:
+            includes = excludes = save_problem_formulation = None
+
+        if not recording_options or not (save_problem_formulation or includes):
             self._rec_required = False
             return (set(), dict())
 
@@ -180,7 +188,8 @@ class Workflow(object):
                 if isinstance(name, tuple):
                     name = name[0]
                 path = prefix+name
-                if self._check_path(path, includes, excludes):
+                if save_problem_formulation or \
+                   self._check_path(path, includes, excludes):
                     self._rec_parameters.append(param)
                     inputs.append(name)
 
@@ -194,7 +203,8 @@ class Workflow(object):
 
                 #name = objective.pcomp_name
                 path = prefix+name
-                if self._check_path(path, includes, excludes):
+                if save_problem_formulation or \
+                   self._check_path(path, includes, excludes):
                     self._rec_objectives.append(key)
                     outputs.append(name)
 
@@ -204,7 +214,8 @@ class Workflow(object):
             for key, response in driver.get_responses().items():
                 name = response.pcomp_name
                 path = prefix+name
-                if self._check_path(path, includes, excludes):
+                if save_problem_formulation or \
+                   self._check_path(path, includes, excludes):
                     self._rec_responses.append(key)
                     outputs.append(name)
 
@@ -214,14 +225,16 @@ class Workflow(object):
             for con in driver.get_eq_constraints().values():
                 name = con.pcomp_name
                 path = prefix+name
-                if self._check_path(path, includes, excludes):
+                if save_problem_formulation or \
+                   self._check_path(path, includes, excludes):
                     self._rec_constraints.append(con)
                     outputs.append(name)
         if hasattr(driver, 'get_ineq_constraints'):
             for con in driver.get_ineq_constraints().values():
                 name = con.pcomp_name
                 path = prefix+name
-                if self._check_path(path, includes, excludes):
+                if save_problem_formulation or \
+                   self._check_path(path, includes, excludes):
                     self._rec_constraints.append(con)
                     outputs.append(name)
 
@@ -285,16 +298,20 @@ class Workflow(object):
     @staticmethod
     def _check_path(path, includes, excludes):
         """ Return True if `path` should be recorded. """
+        record = False
+
+        # first see if it's included
         for pattern in includes:
             if fnmatch(path, pattern):
-                break
-        else:
-            return False
+                record = True
 
-        for pattern in excludes:
-            if fnmatch(path, pattern):
-                return False
-        return True
+        # if it passes include filter, check exclude filter
+        if record:
+            for pattern in excludes:
+                if fnmatch(path, pattern):
+                    record = False
+
+        return record
 
     def _record_case(self, case_uuid, err):
         """ Record case in all recorders. """

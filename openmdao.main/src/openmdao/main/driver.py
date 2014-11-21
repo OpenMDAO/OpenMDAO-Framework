@@ -79,6 +79,7 @@ class GradientOptions(VariableTree):
                                 "are equal, then forward direction is used.",
                                 framework_var=True)
 
+
 @add_delegate(HasEvents)
 class Driver(Component):
     """ A Driver iterates over a workflow of Components until some condition
@@ -201,9 +202,12 @@ class Driver(Component):
         parameters and those referenced by objectives and/or constraints.
         """
         if self._required_compnames is None:
+            boundary_vars = self.parent.list_vars()
             conns = super(Driver, self).get_expr_depends()
-            getcomps = set([u for u, v in conns if u != self.name])
-            setcomps = set([v for u, v in conns if v != self.name])
+            getcomps = set([u for u, v in conns if u != self.name \
+                            if u not in boundary_vars and v not in boundary_vars])
+            setcomps = set([v for u, v in conns if v != self.name \
+                            if u not in boundary_vars and v not in boundary_vars])
 
             full = set(setcomps)
             full.update(getcomps)
@@ -308,10 +312,10 @@ class Driver(Component):
         super(Driver, self).run(ffd_order, case_uuid)
 
     @rbac(('owner', 'user'))
-    def configure_recording(self, includes, excludes):
+    def configure_recording(self, recording_options=None):
         """Called at start of top-level run to configure case recording.
         Returns set of paths for changing inputs."""
-        return self.workflow.configure_recording(includes, excludes)
+        return self.workflow.configure_recording(recording_options)
 
     def update_parameters(self):
         if hasattr(self, 'get_parameters'):
@@ -428,4 +432,3 @@ class Driver(Component):
                     'interfaces': inames,
                 })
         return ret
-

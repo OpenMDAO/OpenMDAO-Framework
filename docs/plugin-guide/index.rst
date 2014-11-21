@@ -14,6 +14,7 @@ Plugin Developer Guide
    variable_plugin
    extension_plugin
    filewrapper_plugin
+   plugin_install
   
    
 
