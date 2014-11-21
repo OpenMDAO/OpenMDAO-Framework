@@ -575,13 +575,13 @@ class Testcase_implicit(unittest.TestCase):
                                        outputs=['comp.y_out'],
                                        mode='fd')
         #print J
-        assert_rel_error(self, J[0][0], 0.75, 1e-3)
+        assert_rel_error(self, J[0][0], 0.75, 2e-3)
 
         J = model.driver.calc_gradient(inputs=['comp.c'],
                                        outputs=['comp.y_out'],
                                        mode='adjoint')
         #print J
-        assert_rel_error(self, J[0][0], 0.75, 1e-3)
+        assert_rel_error(self, J[0][0], 0.75, 2e-3)
 
     def test_derivative_state_connection_internal_solve_ProvideJ(self):
 
@@ -602,17 +602,17 @@ class Testcase_implicit(unittest.TestCase):
         J = model.driver.calc_gradient(inputs=['comp.c'],
                                        outputs=['comp2.y'],
                                        mode='forward')
-        assert_rel_error(self, J[0][0], -0.1666, 1e-3)
+        assert_rel_error(self, J[0][0], -0.1666, 2e-3)
 
         J = model.driver.calc_gradient(inputs=['comp.c'],
                                        outputs=['comp2.y'],
                                        mode='adjoint')
-        assert_rel_error(self, J[0][0], -0.1666, 1e-3)
+        assert_rel_error(self, J[0][0], -0.1666, 2e-3)
 
         J = model.driver.calc_gradient(inputs=['comp.c'],
                                        outputs=['comp2.y'],
                                        mode='fd')
-        assert_rel_error(self, J[0][0], -0.1666, 1e-3)
+        assert_rel_error(self, J[0][0], -0.1666, 2e-3)
 
     def test_derivative_state_connection_internal_solve_apply_deriv(self):
 
@@ -632,17 +632,17 @@ class Testcase_implicit(unittest.TestCase):
         #print model.comp.x, model.comp.y, model.comp.z, model.comp.res
         J = model.driver.calc_gradient(inputs=['comp.c'],
                                        outputs=['comp2.y'])
-        assert_rel_error(self, J[0][0], -0.1666, 1e-3)
+        assert_rel_error(self, J[0][0], -0.1666, 2e-3)
 
         J = model.driver.calc_gradient(inputs=['comp.c'],
                                        outputs=['comp2.y'],
                                        mode='adjoint')
-        assert_rel_error(self, J[0][0], -0.1666, 1e-3)
+        assert_rel_error(self, J[0][0], -0.1666, 2e-3)
 
         J = model.driver.calc_gradient(inputs=['comp.c'],
                                        outputs=['comp2.y'],
                                        mode='fd')
-        assert_rel_error(self, J[0][0], -0.1666, 1e-3)
+        assert_rel_error(self, J[0][0], -0.1666, 2e-3)
 
     def test_derivative_state_connection_external_solve_ProvideJ(self):
 
@@ -675,17 +675,17 @@ class Testcase_implicit(unittest.TestCase):
         J = model.driver.calc_gradient(inputs=['comp.c'],
                                        outputs=['comp2.y'],
                                        mode='forward')
-        assert_rel_error(self, J[0][0], -0.1666, 1e-3)
+        assert_rel_error(self, J[0][0], -0.1666, 2e-3)
 
         J = model.driver.calc_gradient(inputs=['comp.c'],
                                        outputs=['comp2.y'],
                                        mode='adjoint')
-        assert_rel_error(self, J[0][0], -0.1666, 1e-3)
+        assert_rel_error(self, J[0][0], -0.1666, 2e-3)
 
         J = model.driver.calc_gradient(inputs=['comp.c'],
                                        outputs=['comp2.y'],
                                        mode='fd')
-        assert_rel_error(self, J[0][0], -0.1666, 1e-3)
+        assert_rel_error(self, J[0][0], -0.1666, 2e-3)
 
     def test_derivative_state_connection_external_solve_apply_deriv_not_implicit(self):
 
@@ -715,17 +715,17 @@ class Testcase_implicit(unittest.TestCase):
         #print model.comp.x, model.comp.y, model.comp.z, model.comp.res
         J = model.driver.calc_gradient(inputs=['comp.c'],
                                        outputs=['comp2.y'])
-        assert_rel_error(self, J[0][0], -0.1666, 1e-3)
+        assert_rel_error(self, J[0][0], -0.1666, 2e-3)
 
         J = model.driver.calc_gradient(inputs=['comp.c'],
                                        outputs=['comp2.y'],
                                        mode='adjoint')
-        assert_rel_error(self, J[0][0], -0.1666, 1e-3)
+        assert_rel_error(self, J[0][0], -0.1666, 2e-3)
 
         J = model.driver.calc_gradient(inputs=['comp.c'],
                                        outputs=['comp2.y'],
                                        mode='fd')
-        assert_rel_error(self, J[0][0], -0.1666, 1e-3)
+        assert_rel_error(self, J[0][0], -0.1666, 2e-3)
 
     def test_derivative_no_deriv(self):
 
@@ -741,19 +741,19 @@ class Testcase_implicit(unittest.TestCase):
                                        outputs=['comp.y_out'])
 
         #print J
-        assert_rel_error(self, J[0][0], 0.75, 1e-3)
+        assert_rel_error(self, J[0][0], 0.75, 2e-3)
 
         J = model.driver.calc_gradient(inputs=['comp.c'],
                                        outputs=['comp.y_out'],
                                        mode='fd')
         #print J
-        assert_rel_error(self, J[0][0], 0.75, 1e-3)
+        assert_rel_error(self, J[0][0], 0.75, 2e-3)
 
         J = model.driver.calc_gradient(inputs=['comp.c'],
                                        outputs=['comp.y_out'],
                                        mode='adjoint')
         #print J
-        assert_rel_error(self, J[0][0], 0.75, 1e-3)
+        assert_rel_error(self, J[0][0], 0.75, 2e-3)
 
     def test_derivative_nested_solver(self):
 
