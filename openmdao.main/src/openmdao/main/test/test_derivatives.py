@@ -104,6 +104,21 @@ class BadListDerivsComp(Component):
     def provideJ(self):
         return array([[2.0]])
 
+class VarTreeDerivVarComp(Component):
+    x = VarTree(VariableTree(), iotype='in')
+    y = Float(iotype='in')
+
+    z = Float(iotype='out')
+
+    def execute(self):
+        pass
+
+    def list_deriv_vars(self):
+        return ('x', 'y'), ('z')
+
+    def provideJ(self):
+        return array([[2.0]])
+
 class UndefinedDerivVarComp(Component):
     x = Float(iotype='in')
     y = Float(iotype='in')
@@ -559,22 +574,20 @@ class Testcase_derivatives(unittest.TestCase):
         try:
             top.run()
         except Exception as err:
-            msg = "comp: 'x', of type '<type 'int'>', was given in 'list_deriv_vars' but "\
+            msg = "comp: 'x', of type 'Int', was given in 'list_deriv_vars' but "\
             "variables must be of a type convertable to a 1D float array"
 
             self.assertEqual(str(err), msg)
 
     def test_vartree_deriv_var(self):
         top = set_as_top(Assembly())
-        top.add('comp', UnflattenableDerivVarComp())
+        top.add('comp', VarTreeDerivVarComp())
         top.driver.workflow.add(['comp'])
-        top.comp.x = 1
-        top.comp.y = 1.0
 
         try:
             top.run()
         except Exception as err:
-            msg = "comp: 'x' was given in 'list_deriv_vars' but you must declare"\
+            msg = "comp: 'x', of type 'VarTree', was given in 'list_deriv_vars' but you must declare "\
             "sub-vars of a vartree individually"\
 
             self.assertEqual(str(err), msg)

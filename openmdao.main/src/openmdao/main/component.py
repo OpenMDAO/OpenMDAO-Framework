@@ -336,14 +336,23 @@ class Component(Container):
 
             msg = msg.format(var_name=var_name, comp_name=self.__class__.__name__)
             self.raise_exception(msg)
-        
+
+        var_type_name = self.get_metadata(var_name).get('vartypename')
+
+        if var_type_name == 'VarTree':
+            msg = "'{var_name}', of type '{var_type}', was given in 'list_deriv_vars' but you must declare "\
+            "sub-vars of a vartree individually"
+
+            msg = msg.format(var_name=var_name, var_type=var_type_name)
+            self.raise_exception(msg)
+
         try:
             flattened_value(var_name, val)
         except Exception:
             msg = "'{var_name}', of type '{var_type}', was given in 'list_deriv_vars' "\
             "but variables must be of a type convertable to a 1D float array"
 
-            msg = msg.format(var_name=var_name, var_type=type(val), comp_name=self.__class__.__name__)
+            msg = msg.format(var_name=var_name, var_type=var_type_name)
             self.raise_exception(msg)
 
 
