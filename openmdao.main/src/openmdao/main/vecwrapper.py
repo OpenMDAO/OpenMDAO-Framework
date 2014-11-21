@@ -491,11 +491,11 @@ class DataTransfer(object):
         self.scatter_conns = scatter_conns
         self.noflat_vars = list(noflat_vars)
 
-        var_idxs = idx_merge(var_idxs)
-        input_idxs = idx_merge(input_idxs)
-
         if not (MPI or scatter_conns or noflat_vars):
             return  # no data to xfer
+
+        var_idxs = idx_merge(var_idxs)
+        input_idxs = idx_merge(input_idxs)
 
         if len(var_idxs) != len(input_idxs):
             raise RuntimeError("ERROR: creating scatter (index size mismatch): (%d != %d) srcs: %s,  dest: %s in %s" %
@@ -538,12 +538,9 @@ class DataTransfer(object):
             src = srcvec.array
             dest = destvec.array
 
-        #srcvec.array *= system.vec['u0'].array
         addv = mode = False
-        if system.mode == 'adjoint' and srcvec.name.endswith('du') and \
-           complex_step == False:
-            addv = True
-            mode = True
+        if not complex_step and system.mode == 'adjoint' and srcvec.name.endswith('du'):
+            addv = mode = True
             destvec, srcvec = srcvec, destvec
             dest, src = src, dest
 
