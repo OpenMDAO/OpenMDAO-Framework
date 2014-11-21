@@ -101,9 +101,6 @@ class System(object):
         self._parent_system = None
         self.complex_step = False
 
-    def is_opaque(self):
-        return False
-
     def __getitem__(self, key):
         """A convenience method to allow easy access to descendant
         Systems, either by name or by index.
@@ -1222,9 +1219,6 @@ class AssemblySystem(SimpleSystem):
         super(AssemblySystem, self).__init__(scope, graph, name)
         self._provideJ_bounds = None
 
-    def is_opaque(self):
-        return True
-
     def setup_communicators(self, comm):
         super(AssemblySystem, self).setup_communicators(comm)
         self._comp.setup_communicators(comm)
@@ -1752,9 +1746,6 @@ class OpaqueSystem(SimpleSystem):
 
         self._inner_system._provideJ_bounds = None
         self._comp = None
-
-    def is_opaque(self):
-        return True
 
     def inner(self):
         return self._inner_system
