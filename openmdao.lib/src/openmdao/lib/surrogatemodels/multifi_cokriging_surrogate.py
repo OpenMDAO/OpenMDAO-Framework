@@ -13,7 +13,7 @@ from scikit-learn package here to avoid scikit-learn dependency.
 ISAE/DMSM - ONERA/DCPS
 """
 
-from math  import log, e, sqrt
+from math import sqrt
 
 import numpy as np
 from numpy import atleast_2d as array2d
@@ -804,6 +804,7 @@ MSE : array_like, optional (if eval_MSE is True)
                                  "thetaU.")
 
         return
+
 
 class MultiFiCoKrigingSurrogate(Container):
     """

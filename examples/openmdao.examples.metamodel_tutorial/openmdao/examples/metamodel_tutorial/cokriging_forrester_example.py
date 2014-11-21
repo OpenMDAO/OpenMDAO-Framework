@@ -5,25 +5,25 @@ MultiFiMetaModel and MultiFiCoKrigingSurrogate usage
 
 import numpy as np
 
-from openmdao.main.api import implements, Container, Driver
-from openmdao.main.api import Assembly, Component, SequentialWorkflow
+from openmdao.main.api import Assembly, Component
 
-from openmdao.lib.datatypes.api import Float, Array
+from openmdao.lib.datatypes.api import Float
 from openmdao.lib.drivers.api import CaseIteratorDriver
 from openmdao.lib.components.api import MultiFiMetaModel
 from openmdao.lib.surrogatemodels.api import MultiFiCoKrigingSurrogate, KrigingSurrogate
 
+
 class Model(Component):
-    x   = Float(0, iotype="in")
+    x = Float(0, iotype="in")
     f_x = Float(0.0, iotype="out")
     
     def execute(self):
         x = self.x
         self.f_x = ((6*x-2)**2)*np.sin((6*x-2)*2)
     
-            
+
 class LowFidelityModel(Component): 
-    x   = Float(0.0, iotype="in")
+    x = Float(0.0, iotype="in")
     f_x = Float(0.0, iotype="out")
     
     def execute(self):
@@ -71,22 +71,16 @@ class Simulation(Assembly):
         self.add('lofi_cases', CasesBuilder(LowFidelityModel(), doe_c))
         
         # MetaModel
-        self.add("meta_model", MultiFiMetaModel(params = ('x', ), 
-                                                responses = ('f_x', ), nfi=self.nfi)) 
+        self.add("meta_model", MultiFiMetaModel(params=('x', ), 
+                                                responses=('f_x', ), nfi=self.nfi)) 
         self.meta_model.default_surrogate = self.surrogate
         self.connect('hifi_cases.x'  , 'meta_model.params.x')
         self.connect('hifi_cases.f_x', 'meta_model.responses.f_x')
-        if self.nfi>1:
+        if self.nfi > 1:
             self.connect('lofi_cases.x'  , 'meta_model.params.x_fi2')
             self.connect('lofi_cases.f_x', 'meta_model.responses.f_x_fi2')
           
         # Iteration Hierarchy
-        self.driver.workflow = SequentialWorkflow()
-        
-        self.add('mm_trainer', Driver())
-        self.mm_trainer.workflow.add('hifi_cases')
-        if self.nfi>1:
-            self.mm_trainer.workflow.add('lofi_cases')
             
         self.add('mm_checker', CaseIteratorDriver())
         self.add('model', Model())
@@ -98,7 +92,10 @@ class Simulation(Assembly):
         self.mm_checker.case_inputs.meta_model.x = np.linspace(0,1,ngrid)
         self.mm_checker.case_inputs.model.x = np.linspace(0,1,ngrid)
         
-        self.driver.workflow.add(['mm_trainer', 'mm_checker'])
+        self.driver.workflow.add('hifi_cases')
+        if self.nfi > 1: 
+                self.driver.workflow.add('lofi_cases')
+        self.driver.workflow.add('mm_checker')
     
 if __name__ == "__main__":
             
@@ -112,7 +109,7 @@ if __name__ == "__main__":
     sigma_cok = np.array([d.sigma for d in sim_cok.mm_checker.case_outputs.meta_model.f_x])
     
     # Co-kriging with 1 level of fidelity a.k.a. kriging   
-    # surrogate = KrigingSurrogate()   # uncomment to use the existing Kriging implementation
+    surrogate = KrigingSurrogate()   # uncomment to use the existing Kriging implementation
     sim_k = Simulation(surrogate, nfi=1) 
     sim_k.run()
 
@@ -122,38 +119,37 @@ if __name__ == "__main__":
     actual = sim_k.mm_checker.case_outputs.model.f_x
     check  = sim_k.mm_checker.case_inputs.meta_model.x   
         
-    import pylab as p
+    import pylab as plt
     
-    p.figure(2)
-    p.ioff()
-    p.plot(check, actual, 'k', label='True f')        
-    p.plot(sim_cok.hifi_cases.x, sim_cok.hifi_cases.f_x,'ok',label="High Fi")
-    p.plot(sim_cok.lofi_cases.x, sim_cok.lofi_cases.f_x,'or',label="Low Fi")
-    p.plot(check, predicted_cok, 'g', label='Co-kriging')
-    p.plot(check, predicted_cok + 2*sigma_cok, 'g', alpha=0.5, label='I95%')
-    p.plot(check, predicted_cok - 2*sigma_cok, 'g', alpha=0.5)
-    p.fill_between(check, predicted_cok + 2*sigma_cok,
-                          predicted_cok - 2*sigma_cok, facecolor='g', alpha=0.2)
-    p.plot(check, predicted_k, 'b', label='Krigring')
-    p.plot(check, predicted_k + 2*sigma_k, 'b', alpha=0.5, label='I95%')
-    p.plot(check, predicted_k - 2*sigma_k, 'b', alpha=0.5)
-    p.fill_between(check, predicted_k + 2*sigma_k,
-                          predicted_k - 2*sigma_k, facecolor='b', alpha=0.2)
+    plt.figure(2)
+    plt.ioff()
+    plt.plot(check, actual, 'k', label='True f')        
+    plt.plot(sim_cok.hifi_cases.x, sim_cok.hifi_cases.f_x,'ok',label="High Fi")
+    plt.plot(sim_cok.lofi_cases.x, sim_cok.lofi_cases.f_x,'or',label="Low Fi")
+    plt.plot(check, predicted_cok, 'g', label='Co-kriging')
+    plt.plot(check, predicted_cok + 2*sigma_cok, 'g', alpha=0.5, label='I95%')
+    plt.plot(check, predicted_cok - 2*sigma_cok, 'g', alpha=0.5)
+    plt.fill_between(check, predicted_cok + 2*sigma_cok,
+                            predicted_cok - 2*sigma_cok, facecolor='g', alpha=0.2)
+    plt.plot(check, predicted_k, 'b', label='Krigring')
+    plt.plot(check, predicted_k + 2*sigma_k, 'b', alpha=0.5, label='I95%')
+    plt.plot(check, predicted_k - 2*sigma_k, 'b', alpha=0.5)
+    plt.fill_between(check, predicted_k + 2*sigma_k,
+                            predicted_k - 2*sigma_k, facecolor='b', alpha=0.2)
             
-    p.legend(loc='best')
-    p.show()
+    plt.legend(loc='best')
+    plt.show()
     
-        
     # RMSE CoKriging
-    erreur=0.
+    error = 0.
     for a,p in zip(actual,predicted_cok): 
-        erreur+=(a-p)**2        
-    erreur=(erreur/len(actual))
-    print "RMSE Cokriging = %g" %erreur  
+        error += (a-p)**2        
+    error = (error/len(actual))
+    print "RMSE Cokriging = %g" % error  
     
     # RMSE Kriging
-    erreur=0.
+    error = 0.
     for a,p in zip(actual, predicted_k): 
-        erreur+=(a-p)**2
-    erreur=(erreur/len(actual))
-    print "RMSE Kriging = %g" % erreur  
+        error += (a-p)**2
+    error = (error/len(actual))
+    print "RMSE Kriging = %g" % error  
