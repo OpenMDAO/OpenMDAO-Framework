@@ -1,16 +1,16 @@
-# -*- coding: utf-8 -*-
-
 """
 This module integrates the Multi-Fidelity Co-Kriging method described in
 [LeGratiet2013].
 (Author: Remi Vauclin <vauclin.remi@gmail.com>)
 
-This code was implemented using the base of the package scikit-learn. 
+This code was implemented using the package scikit-learn as basis. 
 (Author: Vincent Dubourg <vincent.dubourg@gmail.com>)
 
 OpenMDAO adaptation. Regression and correlation functions were directly copied 
 from scikit-learn package here to avoid scikit-learn dependency.
 (Author: Remi Lafage <remi.lafage@onera.fr>)
+
+ISAE/DMSM - ONERA/DCPS
 """
 
 from math  import log, e, sqrt
@@ -32,8 +32,12 @@ _logger = logging.getLogger()
 MACHINE_EPSILON = np.finfo(np.double).eps # machine precision
 NUGGET= 10.* MACHINE_EPSILON # nugget for robustness
 
-INITIAL_RANGE = 0.3 # initial range for optimizer
-TOLERANCE = 1e-6    # stopping criterion for MLE optimization
+INITIAL_RANGE_DEFAULT = 0.3 # initial range for optimizer
+TOLERANCE_DEFAULT     = 1e-6    # stopping criterion for MLE optimization
+
+THETA0_DEFAULT = 0.5
+THETAL_DEFAULT = 1e-5
+THETAU_DEFAULT = 50
 
 if hasattr(linalg, 'solve_triangular'):
     # only in scipy since 0.9
@@ -167,12 +171,6 @@ This class integrates the Multi-Fidelity Co-Kriging method described in
 
 Parameters
 ----------
-beta0 : double array_like, optional
-    The regression weight vector to perform Simple Kriging (SK).
-    Default assumes Universal Kriging (UK) so that the vector beta of
-    regression weights is estimated using the maximum likelihood
-    principle.
-   
 regr : string or callable, optional
     A regression function returning an array of outputs of the linear
     regression functional basis for Universal Kriging purpose.
@@ -189,31 +187,38 @@ rho_regr : string or callable, optional
     Default assumes a simple constant regression trend.
     Available built-in regression models are :
     'constant', 'linear'
+
+theta : double, array_like or list, optional
+    Value of correlation parameters if they are known; no optimization is run.
+    Default is None, so that optimization is run.
+    if double: value is replicated for all features and all levels.
+    if array_like: an array with shape (n_features, ) for
+    isotropic calculation. It is replicated for all levels.
+    if list: a list of nlevel arrays specifying value for each level
     
-theta0 : double array_like or list, optional
-    The parameters in the autocorrelation model.
-    If thetaL and thetaU are also specified, theta0 is considered as
-    the starting point for the maximum likelihood estimation of the
+theta0 : double, array_like or list, optional
+    Starting point for the maximum likelihood estimation of the
     best set of parameters.
-    Default assumes isotropic autocorrelation model with theta0 = 1e-1.
-    if array_like: an array with shape (n_features, ) or (1, ). It is replicated
-    for all levels of code.
+    Default is None and meaning use of the default 0.5*np.ones(n_features)
+    if double: value is replicated for all features and all levels.
+    if array_like: an array with shape (n_features, ) for
+    isotropic calculation. It is replicated for all levels.
     if list: a list of nlevel arrays specifying value for each level
 
-thetaL : double array_like or list, optional
+thetaL : double, array_like or list, optional
     Lower bound on the autocorrelation parameters for maximum
-    likelihood estimation.
-    Default is None, so that it skips maximum likelihood estimation and
-    it uses theta0.
+    likelihood estimation. 
+    Default is None meaning use of the default 1e-5*np.ones(n_features).
+    if double: value is replicated for all features and all levels.
     if array_like: An array with shape matching theta0's. It is replicated
     for all levels of code.
     if list: a list of nlevel arrays specifying value for each level
 
-thetaU : double array_like, optional
+thetaU : double, array_like or list, optional
     Upper bound on the autocorrelation parameters for maximum
-    likelihood estimation.
-    Default is None, so that it skips maximum likelihood estimation and
-    it uses theta0.
+    likelihood estimation. 
+    Default is None meaning use of default value 50*np.ones(n_features).
+    if double: value is replicated for all features and all levels.
     if array_like: An array with shape matching theta0's. It is replicated
     for all levels of code.
     if list: a list of nlevel arrays specifying value for each level
@@ -281,24 +286,18 @@ References
         'constant': constant_regression,
         'linear': linear_regression}
 
-    def __init__(self, beta0=None, regr='constant',
-                 rho_regr='constant', theta0=1e-1, thetaL=None, thetaU=None):
+    def __init__(self, regr='constant', rho_regr='constant', 
+                 theta=None, theta0=None, thetaL=None, thetaU=None):
         
-        self.corr = squared_exponential_correlation
-        self.beta0 = beta0
-        self.regr = regr
+        self.corr     = squared_exponential_correlation
+        self.regr     = regr
         self.rho_regr = rho_regr
+        self.theta  = theta
         self.theta0 = theta0
         self.thetaL = thetaL
         self.thetaU = thetaU
         
         self._nfev = 0
-        # If optimizer fails when matrix is ill-conditionned ==> we keep the
-        # best solution after _nbIterOptimMaxIllMatrix iterations
-        self._nbIterOptimMaxIllMatrix = 10
-        self._best_iteration_fail = None
-        self._thetaMemory = None
-
 
     def _build_R(self, lvl, theta):
         """
@@ -316,7 +315,8 @@ References
         return R
 
         
-    def fit(self, X, y, initial_range=INITIAL_RANGE, tol=TOLERANCE):
+    def fit(self, X, y, 
+            initial_range=INITIAL_RANGE_DEFAULT, tol=TOLERANCE_DEFAULT):
         """
 The Multi-Fidelity co-kriging model fitting method.
 
@@ -360,8 +360,6 @@ tol : float
         self.q = nlevel*[0]
         self.G = nlevel*[0]
         self.sigma2 = nlevel*[0]
-        self._best_iteration_fail = nlevel*[None]
-        self._thetaMemory = nlevel*[None]
         self._R_adj = nlevel*[None]
         
         y_best = y[nlevel-1]
@@ -412,13 +410,11 @@ tol : float
         self.X = X
         self.y = y              
 
-        
-        self.theta = nlevel*[None]
         self.rlf_value = np.zeros(nlevel)
         
         for lvl in range(nlevel):
             # Determine Gaussian Process model parameters
-            if self.thetaL[lvl] is not None and self.thetaU[lvl] is not None:
+            if self.theta[lvl] is None:
                 # Maximum Likelihood Estimation of the parameters                             
                 sol = self._max_rlf(lvl=lvl, initial_range=initial_range, tol=tol)
                 self.theta[lvl] = sol['theta']
@@ -428,7 +424,6 @@ tol : float
                     raise Exception("Bad parameter region. "
                                     "Try increasing upper bound")          
             else:
-                self.theta[lvl] = self.theta0[lvl]
                 self.rlf_value[lvl] = self.rlf(lvl=lvl)
                 if np.isinf(self.rlf_value[lvl]):
                     raise Exception("Bad point. Try increasing theta0.")
@@ -502,12 +497,8 @@ rlf_value : double
             Q, G = linalg.qr(Ft, mode='economic')
             pass
 
-        if self.beta0 is None:
-            # Universal Kriging
-            beta = solve_triangular(G, np.dot(Q.T, Yt))
-        else:
-            # Ordinary Kriging
-            beta = self.beta0[lvl]
+        # Universal Kriging
+        beta = solve_triangular(G, np.dot(Q.T, Yt))
             
         err = Yt - np.dot(Ft,beta)
         err2 = np.dot(err.T, err)[0,0]
@@ -524,18 +515,7 @@ rlf_value : double
         self.sigma2[lvl] = sigma2
         self.C[lvl] = C
         self.G[lvl] = G
-        
-        # A particular case when optimizer fails
-        if (self._best_iteration_fail[lvl] is not None) and (not np.isinf(rlf_value)):
-            if (rlf_value < self._best_iteration_fail[lvl]):
-                self._best_iteration_fail[lvl] = rlf_value
-                self._thetaMemory[lvl] = theta
-        elif (self._best_iteration_fail[lvl] is None) and (not np.isinf(rlf_value)):
-            self._best_iteration_fail[lvl] = rlf_value
-            self._thetaMemory[lvl] = theta
-        else:
-            _logger.warning('Failure in optimization.')
-        
+                
         return rlf_value
 
 
@@ -568,22 +548,12 @@ res : dict
     res['theta'] : optimal theta
     res['rlf_value'] : optimal value for likelihood
 """
-        # Initialize output
-        best_optimal_theta = []
-        best_optimal_rlf_value = []
-        
         # Initialize input
         thetaL = self.thetaL[lvl]
         thetaU = self.thetaU[lvl]
-        
-        percent_completed = 0.
                 
         def rlf_transform(x):
             return self.rlf(theta=10.**x, lvl=lvl)
-
-        
-        # Optimization
-        best_optimal_rlf_value = 1e20
 
         # Use specified starting point as first guess
         theta0 = self.theta0[lvl]   
@@ -600,7 +570,7 @@ res : dict
         sol = minimize(rlf_transform, x0, method='COBYLA',
                        constraints=constraints,
                        options={'rhobeg': initial_range,
-                                'tol': tol, 'disp': 1})  
+                                'tol': tol, 'disp': 0})  
         
         log10_optimal_x = sol['x']
         optimal_rlf_value = sol['fun']
@@ -748,7 +718,12 @@ MSE : array_like, optional (if eval_MSE is True)
                 raise ValueError("X and y must have the same number of rows.")             
         
         self.n_features = n_features[0]
-               
+
+        if type(self.theta) is not list:
+            self.theta = nlevel*[self.theta]
+        elif len(self.theta) != nlevel:
+            raise ValueError("theta must be a list of %d element(s)." % nlevel) 
+        
         if type(self.theta0) is not list:
             self.theta0 = nlevel*[self.theta0]
         elif len(self.theta0) != nlevel:
@@ -794,50 +769,59 @@ MSE : array_like, optional (if eval_MSE is True)
                         
         for i in range(self.nlevel):
             # Check correlation parameters
-            self.theta0[i] = array2d(self.theta0[i])
-            lth = self.theta0[i].size
-
-            if self.thetaL[i] is not None and self.thetaU[i] is not None:
-                self.thetaL[i] = array2d(self.thetaL[i])
-                self.thetaU[i] = array2d(self.thetaU[i])
-                if self.thetaL[i].size != lth or self.thetaU[i].size != lth:
-                    raise ValueError("theta0, thetaL and thetaU must have the "
-                                     "same length.")
-                if np.any(self.thetaL[i] <= 0) or np.any(self.thetaU[i] < self.thetaL[i]):
-                    raise ValueError("The bounds must satisfy O < thetaL <= "
-                                     "thetaU.")
-        
-            elif self.thetaL[i] is None and self.thetaU[i] is None:
+            if self.theta[i] is not None:
+                self.theta[i] = array2d(self.theta[i])
+                if np.any(self.theta[i] <= 0):
+                    raise ValueError("theta0 must be strictly positive.")
+            
+            if self.theta0[i] is not None:
+                self.theta0[i] = array2d(self.theta0[i])
                 if np.any(self.theta0[i] <= 0):
                     raise ValueError("theta0 must be strictly positive.")
-        
-            elif self.thetaL[i] is None or self.thetaU[i] is None:
-                raise ValueError("thetaL and thetaU should either be both or "
-                                 "neither specified.")
+            else:
+                self.theta0[i] = array2d(self.n_features*[THETA0_DEFAULT])
+            
+            lth = self.theta0[i].size
+            
+            if self.thetaL[i] is not None:
+                self.thetaL[i] = array2d(self.thetaL[i])
+                if self.thetaL[i].size != lth:
+                    raise ValueError("theta0 and thetaL must have the "
+                                     "same length.")
+            else:
+                self.thetaL[i] = array2d(self.n_features*[THETAL_DEFAULT])
+                                     
+            if self.thetaU[i] is not None:
+                self.thetaU[i] = array2d(self.thetaU[i])
+                if self.thetaU[i].size != lth:
+                    raise ValueError("theta0 and thetaU must have the "
+                                     "same length.")
+            else:
+                self.thetaU[i] = array2d(self.n_features*[THETAU_DEFAULT])
+                                   
+            if np.any(self.thetaL[i] <= 0) or np.any(self.thetaU[i] < self.thetaL[i]):
+                raise ValueError("The bounds must satisfy O < thetaL <= "
+                                 "thetaU.")
 
         return
 
 class MultiFiCoKrigingSurrogate(Container):
     """
     OpenMDAO adapter of multi-fidelity recursive cokriging method described 
-    in [LeGratiet2013]. See MFCoKriging class.
+    in [LeGratiet2013]. See MultiFiCoKriging class.
     """
 
     implements(IMultiFiSurrogate, ISurrogate)
 
-    def __init__(self, beta0=None, regr='constant',
-                 rho_regr='constant', theta0=1e-1, thetaL=None, thetaU=None,
-                 tolerance=TOLERANCE, initial_range=INITIAL_RANGE):
+    def __init__(self, regr='constant', rho_regr='constant', 
+                 theta=None, theta0=None, thetaL=None, thetaU=None,
+                 tolerance=TOLERANCE_DEFAULT, initial_range=INITIAL_RANGE_DEFAULT):
         super(MultiFiCoKrigingSurrogate, self).__init__()
 
         self.tolerance=tolerance
         self.initial_range=initial_range                         
-        self.model = MultiFiCoKriging(beta0=beta0, 
-                                      regr=regr,
-                                      rho_regr=rho_regr, 
-                                      theta0=theta0, 
-                                      thetaL=thetaL, 
-                                      thetaU=thetaU)
+        self.model = MultiFiCoKriging(regr=regr,rho_regr=rho_regr, theta=theta,
+                                      theta0=theta0, thetaL=thetaL, thetaU=thetaU)
 
 
     def get_uncertain_value(self,value):
@@ -882,17 +866,12 @@ class FloatMultiFiCoKrigingSurrogate(MultiFiCoKrigingSurrogate):
     """Predictions are returned as floats, which are the mean of the 
     NormalDistribution predicted by the base class model."""
 
-    def __init__(self, beta0=None, regr='constant',
-                 rho_regr='constant', theta0=1e-1, thetaL=None, thetaU=None,
-                 tolerance=TOLERANCE, initial_range=INITIAL_RANGE):
-        super(FloatMultiFiCoKrigingSurrogate, self).__init__(beta0, 
-                                                             regr,
-                                                             rho_regr, 
-                                                             theta0, 
-                                                             thetaL, 
-                                                             thetaU,
-                                                             tolerance, 
-                                                             initial_range)
+    def __init__(self, regr='constant', rho_regr='constant', 
+                 theta=None, theta0=None, thetaL=None, thetaU=None,
+                 tolerance=TOLERANCE_DEFAULT, initial_range=INITIAL_RANGE_DEFAULT):
+        super(FloatMultiFiCoKrigingSurrogate, self).__init__(regr, rho_regr, theta,
+                                                             theta0, thetaL, thetaU,
+                                                             tolerance, initial_range)
         
     def predict(self, new_x):
         dist = super(FloatMultiFiCoKrigingSurrogate,self).predict(new_x)

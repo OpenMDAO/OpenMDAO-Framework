@@ -11,7 +11,7 @@ from openmdao.main.api import Assembly, Component, SequentialWorkflow
 from openmdao.lib.datatypes.api import Float, Array
 from openmdao.lib.drivers.api import CaseIteratorDriver
 from openmdao.lib.components.api import MultiFiMetaModel
-from openmdao.lib.surrogatemodels.api import MultiFiCoKrigingSurrogate
+from openmdao.lib.surrogatemodels.api import MultiFiCoKrigingSurrogate, KrigingSurrogate
 
 class Model(Component):
     x   = Float(0, iotype="in")
@@ -102,14 +102,7 @@ class Simulation(Assembly):
     
 if __name__ == "__main__":
             
-    ndim=1
-    theta0 = 0.5 * np.ones(ndim)
-    thetaL = 1e-5 * np.ones(ndim)
-    thetaU = 20 * np.ones(ndim)
-    
-    surrogate = MultiFiCoKrigingSurrogate(theta0=theta0, 
-                                          thetaL=thetaL, 
-                                          thetaU=thetaU)
+    surrogate = MultiFiCoKrigingSurrogate()
     
     # Co-kriging with 2 levels of fidelity    
     sim_cok = Simulation(surrogate, nfi=2)    
@@ -119,6 +112,7 @@ if __name__ == "__main__":
     sigma_cok = np.array([d.sigma for d in sim_cok.mm_checker.case_outputs.meta_model.f_x])
     
     # Co-kriging with 1 level of fidelity a.k.a. kriging   
+    # surrogate = KrigingSurrogate()   # uncomment to use the existing Kriging implementation
     sim_k = Simulation(surrogate, nfi=1) 
     sim_k.run()
 

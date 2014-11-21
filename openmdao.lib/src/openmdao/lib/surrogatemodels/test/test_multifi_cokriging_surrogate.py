@@ -23,9 +23,23 @@ class CoKrigingSurrogateTest(unittest.TestCase):
 
         pred2 = krig1.predict(new_x)
         self.assertTrue(isinstance(pred2, NormalDistribution))
-        self.assertAlmostEqual( -1.2719, pred2.mu, places=3)
-        self.assertAlmostEqual(.0439, pred2.sigma, places=3)
+        self.assertAlmostEqual( -2.0279, pred2.mu, places=3)
+        self.assertAlmostEqual(1.3408, pred2.sigma, places=3)
         
+        # Test with theta setting instead of estimation
+        krig2 = MultiFiCoKrigingSurrogate(theta=0.1)
+        krig2.train(x, y)
+        
+        pred1 = krig2.predict(x[0])
+        self.assertTrue(isinstance(pred1, NormalDistribution))
+        self.assertAlmostEqual(y[0] , pred1.mu, places=4)
+        self.assertAlmostEqual(.0, pred1.sigma, places=4)
+
+        pred2 = krig2.predict(new_x)
+        self.assertTrue(isinstance(pred2, NormalDistribution))
+        self.assertAlmostEqual( -1.2719, pred2.mu, places=3)
+        self.assertAlmostEqual(0.0439, pred2.sigma, places=3)
+
     def test_1d_2fi_cokriging(self):     
         # Example from Forrester: Engineering design via surrogate modelling
         def f_expensive(x):
@@ -40,7 +54,7 @@ class CoKrigingSurrogateTest(unittest.TestCase):
         y = array([[f_expensive(v) for v in array(x[0]).ravel()], 
                    [f_cheap(v) for v in array(x[1]).ravel()]])
         
-        cokrig = MultiFiCoKrigingSurrogate(theta0=0.5, thetaL=1e-5, thetaU=20)
+        cokrig = MultiFiCoKrigingSurrogate()
         cokrig.train_multifi(x, y)
         
         new_x = array([0.75])        
@@ -69,8 +83,21 @@ class CoKrigingSurrogateTest(unittest.TestCase):
         self.assertAlmostEqual(0., pred1.sigma, places=5)
         
         pred2 = krig1.predict([5., 5.])
-        self.assertAlmostEqual(34, pred2.mu, delta=1)        
-        self.assertAlmostEqual(40, pred2.sigma, delta=1)
+        self.assertAlmostEqual(22, pred2.mu, delta=1)        
+        self.assertAlmostEqual(13, pred2.sigma, delta=1)
+        
+        # Test with theta setting instead of estimation
+        krig2 = MultiFiCoKrigingSurrogate(theta=[0.1])
+        krig1.train(x, y)
+        
+        pred1 = krig1.predict([-2., 0.])
+        self.assertAlmostEqual(branin(x[0]), pred1.mu, places=5)
+        self.assertAlmostEqual(0., pred1.sigma, places=5)
+        
+        pred2 = krig1.predict([5., 5.])
+        self.assertAlmostEqual(22, pred2.mu, delta=1)        
+        self.assertAlmostEqual(13, pred2.sigma, delta=1)
+ 
         
     def test_2d_2fi_cokriging(self):
         
@@ -117,15 +144,38 @@ class CoKrigingSurrogateTest(unittest.TestCase):
         y = array([[branin(case) for case in x[0]],
                    [branin_low_fidelity(case) for case in x[1]]])
         nfi=2
-        cokrig = MultiFiCoKrigingSurrogate(theta0=0.5*ones(nfi), 
-                                           thetaL=1e-5*ones(nfi), 
-                                           thetaU=20*ones(nfi))
+        cokrig = MultiFiCoKrigingSurrogate()
         cokrig.train_multifi(x, y)
         
         pred = cokrig.predict([2./3., 1/3.])
         self.assertAlmostEqual(26, pred.mu, places=0)        
-        self.assertAlmostEqual(0, pred.sigma, places=0)
+        self.assertAlmostEqual(0.3, pred.sigma, places=0)
         
+        # Test with theta setting instead of theta estimation
+        cokrig2 = MultiFiCoKrigingSurrogate(theta=0.1)
+        cokrig2.train_multifi(x, y)
+        
+        pred = cokrig2.predict([2./3., 1/3.])
+        self.assertAlmostEqual(21.7, pred.mu, places=0)        
+        self.assertAlmostEqual(2.29, pred.sigma, places=0)
+        
+        # Test with theta setting instead of theta estimation
+        cokrig2 = MultiFiCoKrigingSurrogate(theta=[0.1, 10])
+        cokrig2.train_multifi(x, y)
+        
+        pred = cokrig2.predict([2./3., 1/3.])
+        self.assertAlmostEqual(21.01, pred.mu, places=0)        
+        self.assertAlmostEqual(2.29, pred.sigma, places=0)
+        
+        # Test bad theta setting
+        cokrig3 = MultiFiCoKrigingSurrogate(theta=[0.1])
+        try:
+            cokrig3.train_multifi(x, y)
+        except ValueError, err:
+            self.assertEqual(str(err),
+                "theta must be a list of 2 element(s).")
+        else:
+            self.fail("ValueError Expected")
     
     
 if __name__ == "__main__":
