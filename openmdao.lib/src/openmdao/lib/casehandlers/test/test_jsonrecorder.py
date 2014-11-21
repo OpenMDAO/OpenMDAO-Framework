@@ -67,13 +67,14 @@ class TestCase(unittest.TestCase):
     def test_jsonrecorder_norun(self):
         # test ability to get model data from case recorder
         #    before calling run()
-        
+
         sout = StringIO()
         self.top.recorders = [JSONCaseRecorder(sout)]
         self.top.configure_recording()
+        self.top.recorders[0].close()
 
-        # with open('jsonrecorder_norun.new', 'w') as out:
-        #     out.write(sout.getvalue())
+        #with open('jsonrecorder_norun.new', 'w') as out:
+             #out.write(sout.getvalue())
         self.verify(sout, 'jsonrecorder_norun.json')
 
     def test_jsonrecorder(self):
@@ -141,51 +142,41 @@ class TestCase(unittest.TestCase):
         #    out.write(sout.getvalue())
         self.verify(sout, 'nested.json')
 
+    def _dict_iter(self, dct):
+        for k,v in dct.items():
+            if isinstance(v, dict):
+                for kk,vv in self._dict_iter(v):
+                    yield (kk, vv)
+            else:
+                yield (k, v)
+                
     def verify(self, sout, filename):
-        lines = sout.getvalue().split('\n')
-        #lines = [line.rstrip() for line in lines]
-
         directory = os.path.dirname(__file__)
         path = os.path.join(directory, filename)
         with open(path, 'r') as inp:
-            expected = inp.read().split('\n')
+            old_json = json.load(inp)
 
-        for i in range(len(expected)):
-            expect = expected[i]
-            if expect.startswith('"__length_'):
-                self.assertTrue(lines[i].startswith('"__length_'))
-            elif expect.startswith(', "__length_'):
-                self.assertTrue(lines[i].startswith(', "__length_'))
-            elif expect.startswith('    "OpenMDAO_Version": '):
-                expect_fixed = expect[:25] + __version__ + '", '
-                self.assertEqual(lines[i], expect_fixed)
-            elif expect.startswith('    "_driver_id":'):
-                self.assertTrue(lines[i].startswith('    "_driver_id":'))
-            elif expect.startswith('    "_id":'):
-                self.assertTrue(lines[i].startswith('    "_id":'))
-            elif expect.startswith('    "_parent_id":'):
-                self.assertTrue(lines[i].startswith('    "_parent_id":'))
-            elif expect.startswith('    "uuid":'):
-                self.assertTrue(lines[i].startswith('    "uuid":'))
-            elif expect.startswith('    "timestamp":'):
-                self.assertTrue(lines[i].startswith('    "timestamp":'))
-            elif expect.startswith('            "pcomp_name":'):
-                self.assertTrue(lines[i].startswith('            "pcomp_name":'))
-            elif expect.startswith('            "high":'):
-                value = re.match('.*:([^,]*),', lines[i]).group(1)
-                if value != ' null':
-                    self.assertEqual(int(value), sys.maxint)
-            elif expect.startswith('            "low":'):
-                value = re.match('.*:([^,]*),', lines[i]).group(1)
-                if value not in (' null', ' 0'):
-                    self.assertEqual(int(value), -sys.maxint)
-            elif expect.startswith('        "_pseudo_1":'):
-                expect = float(re.match('.*:([^,]*),', expect).group(1))
-                value = float(re.match('.*:([^,]*),', lines[i]).group(1))
-                # Multiple representations of zero...
-                self.assertEqual(value, expect)
+        new_json = json.loads(sout.getvalue())
+        
+        old = list(self._dict_iter(old_json))
+        new = list(self._dict_iter(new_json))
+        
+        if len(old) != len(new):
+            self.fail("Number of items (%d) != number of items expected (%d)" %
+                      (len(old), len(new)))
+
+        ignore = set([u'uuid', u'OpenMDAO_Version', u'_id',
+                      u'_driver_id', u'_parent_id', u'timestamp', u'pcomp_name'])
+        
+        for (oldname, oldval), (newname, newval) in zip(old, new):
+            if oldname.startswith('__length_'):
+                continue
+            if oldname in ignore: # don't care if these match
+                continue
+            if oldname == newname:
+                self.assertAlmostEqual(oldval, newval)
             else:
-                self.assertEqual(lines[i], expect)
+                self.assertEqual(oldname, newname) # just raises an exception
 
     def test_close(self):
         sout = StringIO()
