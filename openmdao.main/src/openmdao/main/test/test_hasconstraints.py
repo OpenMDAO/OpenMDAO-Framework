@@ -510,12 +510,12 @@ class Has2SidedConstraintsTestCase(unittest.TestCase):
         J = drv.calc_gradient(inputs=['comp1.a'])
 
         # ineq
-        self.assertEqual(J[0], 2.5)
+        self.assertEqual(J[0][0], 2.5)
 
         # double sided (in order)
-        self.assertEqual(J[1], 1.0)
-        self.assertEqual(J[2], 1.0)
-        self.assertEqual(J[3], 3.0)
+        self.assertEqual(J[1][0], 1.0)
+        self.assertEqual(J[2][0], 1.0)
+        self.assertEqual(J[3][0], 3.0)
 
     def test_replace(self):
         drv = self.asm.add('driver', My2SDriver())

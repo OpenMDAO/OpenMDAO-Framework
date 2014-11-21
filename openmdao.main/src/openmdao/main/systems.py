@@ -412,7 +412,7 @@ class System(object):
         #  3) non-flattenable vars
 
         # first, get all flattenable variables
-        for name in self._get_flat_vars(self.variables):
+        for name in _filter_flat(self.scope, self.variables.keys()):
             self.flat_vars[name] = self.variables[name]
 
         # now get all flattenable vars that add to vector size
@@ -664,25 +664,14 @@ class System(object):
 
         return stream.getvalue() if getval else None
 
-    def _get_flat_vars(self, vardict):
-        """Return a list of names of vars that represent variables that are
-        flattenable to float arrays.
-        """
-        return [n for n,info in vardict.items() if not info.get('noflat')]
-
     def _get_vector_vars(self, vardict):
         """Return vector_vars, which are vars that actually add to the
         size of the vectors (as opposed to subvars of vars that are in
         the vector, which don't add anything to the vector but just
         use a subview of the view corresponding to their base var)
         """
-        vector_vars = OrderedDict()
         keep_srcs = set(_filter_subs([n[0] for n in vardict]))
-        for name, val in vardict.items():
-            if name[0] in keep_srcs:
-                vector_vars[name] = vardict[name]
-
-        return vector_vars
+        return OrderedDict([(k,v) for k,v in vardict.items() if k[0] in keep_srcs])
 
     def set_options(self, mode, options):
         """ Sets all user-configurable options for this system and all
@@ -730,14 +719,15 @@ class System(object):
                 self.ln_solver = LinearGS(self)
 
     def linearize(self):
-        """ Linearize all subsystems. """
+        """ Linearize local subsystems. """
 
         for subsystem in self.local_subsystems():
             subsystem.linearize()
 
     def set_complex_step(self, complex_step=False):
         """ Toggles complex_step plumbing for this system and all
-        subsystems. """
+        local subsystems.
+        """
 
         self.complex_step = complex_step
         for subsystem in self.local_subsystems():
@@ -787,6 +777,8 @@ class System(object):
         return J
 
     def solve_fd(self, inputs, outputs, iterbase='', return_format='array'):
+        """Finite difference solve."""
+        
         if self.fd_solver is None:
             self.fd_solver = FiniteDifference(self, inputs, outputs,
                                               return_format)
@@ -794,7 +786,8 @@ class System(object):
 
     def calc_newton_direction(self, options=None, iterbase=''):
         """ Solves for the new state in Newton's method and leaves it in the
-        df vector."""
+        df vector.
+        """
 
         self.set_options('forward', options)
 
@@ -811,7 +804,8 @@ class System(object):
 
     def solve_linear(self, options=None):
         """ Single linear solve solution applied to whatever input is sitting
-        in the RHS vector."""
+        in the RHS vector.
+        """
 
         if numpy.linalg.norm(self.rhs_vec.array) < 1e-15:
             self.sol_vec.array[:] = 0.0

@@ -100,9 +100,8 @@ class NewtonSolver(Driver):
                   f_norm > self.ls_atol and \
                   f_norm/f_norm0 > self.ls_rtol:
 
+                alpha *= 0.5 
                 uvec.array -= alpha*dfvec.array
-                alpha = alpha/2.0
-                uvec.array += alpha*dfvec.array
 
                 # Just evaluate the model with the new points
                 self.workflow._system.evaluate(iterbase,
