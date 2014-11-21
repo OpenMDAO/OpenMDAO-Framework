@@ -15,7 +15,9 @@ from openmdao.main.linearsolver import ScipyGMRES, PETSc_KSP, LinearGS
 from openmdao.main.mp_support import has_interface
 from openmdao.main.interfaces import IDriver, IAssembly, IImplicitComponent, \
                                      ISolver, IPseudoComp, IComponent, ISystem
-from openmdao.main.vecwrapper import VecWrapper, InputVecWrapper, DataTransfer, idx_merge, petsc_linspace
+from openmdao.main.vecwrapper import VecWrapper, InputVecWrapper, DataTransfer, \
+                                     idx_merge, petsc_linspace, _filter, _filter_subs, \
+                                     _filter_flat, _filter_ignored
 from openmdao.main.depgraph import break_cycles, get_node_boundary, gsort, \
                                    collapse_nodes, simple_node_iter
 from openmdao.main.derivatives import applyJ, applyJT
@@ -165,13 +167,6 @@ class System(object):
 
         return PETSc.AO().createBasic(app_ind_set, petsc_ind_set,
                                       comm=self.mpi.comm)
-
-    def flat(self, names):
-        """Returns the names from the given list that refer
-        to variables that are flattenable to float arrays.
-        """
-        varmeta = self.scope._var_meta
-        return [n for n in names if not varmeta[n].get('noflat')]
 
     def get_unique_vars(self, vnames):
         """
@@ -498,7 +493,7 @@ class System(object):
         # local inputs
         self.input_sizes = numpy.zeros(size, int)
 
-        for arg in self.flat(self._owned_args):
+        for arg in _filter_flat(self.scope, self._owned_args):
             self.input_sizes[rank] += varmeta[arg]['size']
 
         if MPI:
@@ -509,7 +504,7 @@ class System(object):
         # TODO: determine how we want the user to specify indices
         #       for distributed inputs...
         self.arg_idx = OrderedDict()
-        for name in self.flat(self._owned_args):
+        for name in _filter_flat(self.scope, self._owned_args):
             # FIXME: this needs to use the actual indices for this
             #        process' version of the arg once we have distributed
             #        components...
@@ -2184,43 +2179,3 @@ def get_full_nodeset(scope, group):
         else:
             names.add(name)
     return names
-
-def _filter(scope, lst):
-    filtered = _filter_subs(lst)
-    filtered = _filter_flat(scope, filtered)
-    return _filter_ignored(scope, filtered)
-
-def _filter_subs(lst):
-    """Return a copy of the list with any subvars of basevars in the list
-    removed.
-    """
-    bases = [n.split('[',1)[0] for n in lst]
-
-    return [n for i,n in enumerate(lst)
-               if not (bases[i] in lst and n != bases[i])]
-
-def _filter_ignored(scope, lst):
-    # Remove any vars that the user designates as 'deriv_ignore'
-    unignored = []
-    topvars = scope._system.vector_vars
-
-    for name in lst:
-        collapsed_name = scope.name2collapsed[name]
-        if collapsed_name in topvars and topvars[collapsed_name].get('deriv_ignore'):
-            continue
-
-        # The user sets 'deriv_ignore' in the basevar, so we have to check that for
-        # subvars.
-        base = base_var(scope._depgraph, name)
-        if base != name:
-            collname = scope.name2collapsed.get(base)
-            if collname and collname in topvars and \
-               topvars[collname].get('deriv_ignore'):
-                continue
-
-        unignored.append(name)
-
-    return unignored
-
-def _filter_flat(scope, lst):
-    return [n for n in lst if not scope._var_meta[n].get('noflat')]

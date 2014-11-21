@@ -371,7 +371,7 @@ class InputVecWrapper(VecWrapperBase):
 
         varmeta = system.scope._var_meta
         name2collapsed = system.scope.name2collapsed
-        flat_ins = system.flat(system._owned_args)
+        flat_ins = _filter_flat(system.scope, system._owned_args)
         start, end = 0, 0
         arg_idx = system.arg_idx
 
@@ -563,6 +563,21 @@ class DataTransfer(object):
                             except Exception:
                                 system.scope.reraise_exception("cannot set '%s' from '%s'" % (dest, src))
 
+
+class SerialScatter(object):
+    def __init__(self, srcvec, src_idxs, destvec, dest_idxs):
+        self.src_idxs = src_idxs
+        self.dest_idxs = dest_idxs
+        self.svec = srcvec
+        self.dvec = destvec
+
+    def scatter(self, srcvec, destvec, addv, mode):
+        if addv is True:
+            destvec[self.src_idxs] += srcvec[self.dest_idxs]
+        else:
+            destvec[self.dest_idxs] = srcvec[self.src_idxs]
+
+
 def idx_merge(idxs):
     """Combines a mixed iterator of int and iterator indices into an
     array of int indices.
@@ -587,16 +602,42 @@ def petsc_linspace(start, end):
     else:
         return numpy.arange(start, end, dtype='i')
 
+def _filter(scope, lst):
+    filtered = _filter_subs(lst)
+    filtered = _filter_flat(scope, filtered)
+    return _filter_ignored(scope, filtered)
 
-class SerialScatter(object):
-    def __init__(self, srcvec, src_idxs, destvec, dest_idxs):
-        self.src_idxs = src_idxs
-        self.dest_idxs = dest_idxs
-        self.svec = srcvec
-        self.dvec = destvec
+def _filter_subs(lst):
+    """Return a copy of the list with any subvars of basevars in the list
+    removed.
+    """
+    bases = [n.split('[',1)[0] for n in lst]
 
-    def scatter(self, srcvec, destvec, addv, mode):
-        if addv is True:
-            destvec[self.src_idxs] += srcvec[self.dest_idxs]
-        else:
-            destvec[self.dest_idxs] = srcvec[self.src_idxs]
+    return [n for i,n in enumerate(lst)
+               if not (bases[i] in lst and n != bases[i])]
+
+def _filter_ignored(scope, lst):
+    # Remove any vars that the user designates as 'deriv_ignore'
+    unignored = []
+    topvars = scope._system.vector_vars
+
+    for name in lst:
+        collapsed_name = scope.name2collapsed[name]
+        if collapsed_name in topvars and topvars[collapsed_name].get('deriv_ignore'):
+            continue
+
+        # The user sets 'deriv_ignore' in the basevar, so we have to check that for
+        # subvars.
+        base = base_var(scope._depgraph, name)
+        if base != name:
+            collname = scope.name2collapsed.get(base)
+            if collname and collname in topvars and \
+               topvars[collname].get('deriv_ignore'):
+                continue
+
+        unignored.append(name)
+
+    return unignored
+
+def _filter_flat(scope, lst):
+    return [n for n in lst if not scope._var_meta[n].get('noflat')]
