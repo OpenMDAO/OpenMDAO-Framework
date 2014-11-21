@@ -265,11 +265,11 @@ class System(object):
         for system in self.local_subsystems():
             system.clear_dp()
 
-    def _get_comps(self, local=False):
+    def _all_comp_nodes(self, local=False):
         """Return a set of comps for this system and all subsystems."""
         comps = set()
         for s in self.subsystems(local=local):
-            comps.update(s._get_comps(local=local))
+            comps.update(s._all_comp_nodes(local=local))
         return comps
 
     def list_inputs(self):
@@ -281,7 +281,7 @@ class System(object):
             is_opaque = isinstance(self, OpaqueSystem)
 
             for system in self.simple_subsystems():
-                comps = self._get_comps()
+                comps = self._all_comp_nodes()
                 for tup in system._in_nodes:
                     # need this to prevent paramgroup inputs on same comp to be
                     # counted more than once
@@ -337,7 +337,7 @@ class System(object):
                     pass
                 out_nodes = [node for node in system._out_nodes \
                              if node not in self._mapped_resids]
-                comps = self._get_comps()
+                comps = self._all_comp_nodes()
                 for src, _ in out_nodes:
                     parts = src.split('.', 1)
                     if parts[0] in comps and src not in states:
@@ -935,7 +935,7 @@ class SimpleSystem(System):
 
         return True
 
-    def _get_comps(self, local=False):
+    def _all_comp_nodes(self, local=False):
         return simple_node_iter(self._nodes)
 
     def simple_subsystems(self):
@@ -1399,7 +1399,7 @@ class CompoundSystem(System):
                         noflat_conns.add(node)
                         noflat_conns_full.add(node)
                     else:
-                        for sname in sub._get_comps():
+                        for sname in sub._all_comp_nodes():
                             if sname in ret and node in self.vec['p'] and node in ret[sname]:
                                 scatter_conns.add(node)
                                 scatter_conns_full.add(node)
@@ -1750,8 +1750,8 @@ class OpaqueSystem(SimpleSystem):
     def inner(self):
         return self._inner_system
 
-    def _get_comps(self, local=False):
-        return self._inner_system._get_comps(local=local)
+    def _all_comp_nodes(self, local=False):
+        return self._inner_system._all_comp_nodes(local=local)
 
     def setup_communicators(self, comm):
         self.mpi.comm = comm
