@@ -8,7 +8,7 @@ from openmdao.main.interfaces import IDriver, IAssembly
 from openmdao.main.depgraph import DependencyGraph
 from openmdao.main.problem_formulation import ArchitectureAssembly
 from openmdao.main.systems import AssemblySystem, SerialSystem, ParallelSystem, \
-                                  OutVarSystem, InVarSystem, SolverSystem, \
+                                  VarSystem, SolverSystem, \
                                   FiniteDiffDriverSystem, TransparentDriverSystem, OpaqueSystem
 from openmdao.util.graph import base_var
 
@@ -205,9 +205,7 @@ def _dot_shape(system):
         return "rectangle"
     elif isinstance(system, ParallelSystem):
         return "parallelogram"
-    elif isinstance(system, InVarSystem):
-        return "ellipse"
-    elif isinstance(system, OutVarSystem):
+    elif isinstance(system, VarSystem):
         return "ellipse"
 
     return "box"

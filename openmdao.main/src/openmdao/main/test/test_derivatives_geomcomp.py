@@ -12,6 +12,7 @@ from openmdao.main.api import Component, Assembly, set_as_top
 from openmdao.main.datatypes.api import Array, Float, VarTree
 from openmdao.util.testutil import assert_rel_error
 
+
 class GeomComponent(Component):
 
     x = Float(1.0, iotype='in')
@@ -23,16 +24,16 @@ class GeomComponent(Component):
 
     def provideJ(self):
         self.J = np.array([[2, 0, 1],
-                           [0, 2, 1]])
+                           [0, 2, 1]], dtype=np.float)
 
     def apply_deriv(self, arg, result):
-        result['geom_out'] += self.J[:, 0]*arg['x']
-        return result
+        result['geom_out.points'][0,:] += self.J[0,:]*arg['x']
+        result['geom_out.points'][1,:] += self.J[1,:]*arg['x']
 
     def apply_derivT(self, arg, result):
 
-        result['x'] += self.J[:, 0]*arg['geom_out']
-        return result
+        result['x'] += np.sum(self.J.T[:,0]*arg['geom_out.points'][0,:])
+        result['x'] += np.sum(self.J.T[:,1]*arg['geom_out.points'][1,:])
 
     def execute(self):
         x = self.x
@@ -50,6 +51,7 @@ class GeomRecieve(Component):
     out = Array(np.zeros((2, 3)), iotype='out')
 
     def execute(self):
+
         self.out = self.geom_in.points
 
 
@@ -60,7 +62,8 @@ class GeomRecieveDerivProvideJ(GeomRecieve):
         return self.J
 
     def list_deriv_vars(self):
-        return ('geom_in',), ('out',)
+        return ('geom_in.points',), ('out',)
+
 
 class GeomRecieveDerivApplyDeriv(GeomRecieve):
 
@@ -68,15 +71,16 @@ class GeomRecieveDerivApplyDeriv(GeomRecieve):
         self.J = np.eye(6)
 
     def list_deriv_vars(self):
-        return ('geom_in',), ('out',)
+        return ('geom_in.points',), ('out',)
 
     def apply_deriv(self, arg, result):
-        if 'geom_in' in arg:
-            result['out'] += self.J.dot(arg['geom_in'])
+        if 'geom_in.points' in arg:
+            result['out'] += self.J.dot(arg['geom_in.points'].flatten()).reshape((2,3))
 
     def apply_derivT(self, arg, result):
         if 'out' in arg:
-            result['geom_in'] += self.J.T.dot(arg['out'])
+            result['geom_in.points'] += self.J.T.dot(arg['out'].flatten()).reshape((2,3))
+
 
 class Testcase_deriv_obj(unittest.TestCase):
 
@@ -92,7 +96,7 @@ class Testcase_deriv_obj(unittest.TestCase):
         self.top = set_as_top(Assembly())
         self.top.add('c1', GeomComponent())
         self.top.add('c2', GeomRecieve())
-        self.top.connect('c1.geom_out', 'c2.geom_in')
+        self.top.connect('c1.geom_out.points', 'c2.geom_in.points')
         self.top.driver.workflow.add(['c1', 'c2'])
 
         self.top.c1.x = 4.0
@@ -104,6 +108,7 @@ class Testcase_deriv_obj(unittest.TestCase):
         self.top = None
 
     def _check_derivs(self):
+
         top = self.top
         inputs = self.inputs
         outputs = self.outputs
@@ -117,8 +122,8 @@ class Testcase_deriv_obj(unittest.TestCase):
         J = top.driver.calc_gradient(inputs, outputs, mode='fd')
         self._check_J(J)
 
-    def test_geom_provide_deriv_check_fd_tail(self):
 
+    def test_geom_provide_deriv_check_fd_tail(self):
         self.top.run()
         self._check_derivs()
 

@@ -155,6 +155,7 @@ class Assembly(Component):
         self._pre_driver = None
         self._derivs_required = False
         self._unexecuted = []
+        self._var_meta = {}
 
         # data dependency graph. Includes edges for data
         # connections as well as for all driver parameters and
@@ -1094,7 +1095,7 @@ class Assembly(Component):
         rgraph = self._reduced_graph
 
         # store metadata (size, etc.) for all relevant vars
-        self._var_meta = self._get_all_var_metadata(self._reduced_graph)
+        self._get_all_var_metadata(self._reduced_graph)
 
         # create systems for all simple components
         for node, data in rgraph.nodes_iter(data=True):
@@ -1280,7 +1281,7 @@ class Assembly(Component):
 
         self.name2collapsed = collapsed_graph.map_collapsed_nodes()
 
-        # add InVarSystems and OutVarSystems for boundary vars
+        # add VarSystems for boundary vars
         for node, data in collapsed_graph.nodes_iter(data=True):
             if 'boundary' in data and collapsed_graph.degree(node) > 0:
                 if data.get('iotype') == 'in' and collapsed_graph.in_degree(node) == 0: # input boundary node
@@ -1389,22 +1390,16 @@ class Assembly(Component):
 
         return info
 
-    def _flat(self, lst):
-        return [n for n in lst if not self._get_var_info(n).get('noflat')]
-
     def _get_all_var_metadata(self, graph):
         """Collect size, shape, etc. info for all variables referenced
         in the graph.  This info can then be used by all subsystems
         contained in this Assembly.
         """
-        varmeta = {}
+        varmeta = self._var_meta
         for node, data in graph.nodes_iter(data=True):
-            if 'comp' not in data and node not in varmeta:
+            if node not in varmeta and 'comp' not in data:
                 meta = self._get_var_info(node)
-                varmeta[node] = meta
-                for name in simple_node_iter(node):
-                    if name not in varmeta:
-                        varmeta[name] = meta
+                self._update_varmeta(node, meta)
 
         # there are cases where a component will return names from
         # its list_deriv_vars that are not found in the graph, so add them
@@ -1416,7 +1411,7 @@ class Assembly(Component):
                     ins, outs = comp.list_deriv_vars()
                 except AttributeError:
                     continue
-                for name in chain(ins,outs):
+                for name in chain(ins, outs):
                     name = '.'.join((node, name))
                     if name not in varmeta:
                         try:
@@ -1439,7 +1434,10 @@ class Assembly(Component):
 
 
 
-        return varmeta
+    def _update_varmeta(self, node, meta):
+        self._var_meta[node] = meta
+        for name in simple_node_iter(node):
+            self._var_meta[name] = meta
 
     def get_comps_and_pseudos(self):
         for node, data in self._depgraph.nodes_iter(data=True):
