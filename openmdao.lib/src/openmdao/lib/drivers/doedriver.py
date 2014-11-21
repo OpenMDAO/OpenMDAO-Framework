@@ -58,7 +58,7 @@ class DOEdriver(CaseIteratorDriver):
                       scaler=None, adder=None, start=None,
                       fd_step=None, name=None, scope=None):
         super(DOEdriver, self).add_parameter(target, low, high, scaler, adder,
-            start, fd_step, name, scope)
+            start, fd_step, name, scope, case_inputs_iotype='out')
 
         parameters = self.get_parameters()
 

@@ -94,6 +94,7 @@ Constants:
    directory:
    driver.directory:
    driver.force_fd: False
+   driver.gradient_options.atol: 1e-09
    driver.gradient_options.derivative_direction: auto
    driver.gradient_options.directional_fd: False
    driver.gradient_options.fd_blocks: []
@@ -101,8 +102,9 @@ Constants:
    driver.gradient_options.fd_step: 1e-06
    driver.gradient_options.fd_step_type: absolute
    driver.gradient_options.force_fd: False
-   driver.gradient_options.gmres_maxiter: 100
-   driver.gradient_options.gmres_tolerance: 1e-09
+   driver.gradient_options.lin_solver: scipy_gmres
+   driver.gradient_options.maxiter: 100
+   driver.gradient_options.rtol: 1e-09
    force_fd: False
    missing_deriv_policy: assume_zero
    nested.comp1.directory:
@@ -129,6 +131,7 @@ Constants:
    nested.doublenest.directory:
    nested.doublenest.driver.directory:
    nested.doublenest.driver.force_fd: False
+   nested.doublenest.driver.gradient_options.atol: 1e-09
    nested.doublenest.driver.gradient_options.derivative_direction: auto
    nested.doublenest.driver.gradient_options.directional_fd: False
    nested.doublenest.driver.gradient_options.fd_blocks: []
@@ -136,8 +139,9 @@ Constants:
    nested.doublenest.driver.gradient_options.fd_step: 1e-06
    nested.doublenest.driver.gradient_options.fd_step_type: absolute
    nested.doublenest.driver.gradient_options.force_fd: False
-   nested.doublenest.driver.gradient_options.gmres_maxiter: 100
-   nested.doublenest.driver.gradient_options.gmres_tolerance: 1e-09
+   nested.doublenest.driver.gradient_options.lin_solver: scipy_gmres
+   nested.doublenest.driver.gradient_options.maxiter: 100
+   nested.doublenest.driver.gradient_options.rtol: 1e-09
    nested.doublenest.force_fd: False
    nested.doublenest.missing_deriv_policy: assume_zero
    nested.doublenest.recording_options.excludes: []
@@ -145,6 +149,7 @@ Constants:
    nested.doublenest.recording_options.save_problem_formulation: True
    nested.driver.directory:
    nested.driver.force_fd: False
+   nested.driver.gradient_options.atol: 1e-09
    nested.driver.gradient_options.derivative_direction: auto
    nested.driver.gradient_options.directional_fd: False
    nested.driver.gradient_options.fd_blocks: []
@@ -152,8 +157,9 @@ Constants:
    nested.driver.gradient_options.fd_step: 1e-06
    nested.driver.gradient_options.fd_step_type: absolute
    nested.driver.gradient_options.force_fd: False
-   nested.driver.gradient_options.gmres_maxiter: 100
-   nested.driver.gradient_options.gmres_tolerance: 1e-09
+   nested.driver.gradient_options.lin_solver: scipy_gmres
+   nested.driver.gradient_options.maxiter: 100
+   nested.driver.gradient_options.rtol: 1e-09
    nested.force_fd: False
    nested.missing_deriv_policy: assume_zero
    nested.recording_options.excludes: []
@@ -310,6 +316,7 @@ Constants:
    directory:
    driver.directory:
    driver.force_fd: False
+   driver.gradient_options.atol: 1e-09
    driver.gradient_options.derivative_direction: auto
    driver.gradient_options.directional_fd: False
    driver.gradient_options.fd_blocks: []
@@ -317,8 +324,9 @@ Constants:
    driver.gradient_options.fd_step: 1e-06
    driver.gradient_options.fd_step_type: absolute
    driver.gradient_options.force_fd: False
-   driver.gradient_options.gmres_maxiter: 100
-   driver.gradient_options.gmres_tolerance: 1e-09
+   driver.gradient_options.lin_solver: scipy_gmres
+   driver.gradient_options.maxiter: 100
+   driver.gradient_options.rtol: 1e-09
    force_fd: False
    missing_deriv_policy: assume_zero
    recording_options.excludes: []
@@ -371,6 +379,7 @@ Constants:
    directory:
    driver.directory:
    driver.force_fd: False
+   driver.gradient_options.atol: 1e-09
    driver.gradient_options.derivative_direction: auto
    driver.gradient_options.directional_fd: False
    driver.gradient_options.fd_blocks: []
@@ -378,8 +387,9 @@ Constants:
    driver.gradient_options.fd_step: 1e-06
    driver.gradient_options.fd_step_type: absolute
    driver.gradient_options.force_fd: False
-   driver.gradient_options.gmres_maxiter: 100
-   driver.gradient_options.gmres_tolerance: 1e-09
+   driver.gradient_options.lin_solver: scipy_gmres
+   driver.gradient_options.maxiter: 100
+   driver.gradient_options.rtol: 1e-09
    force_fd: False
    missing_deriv_policy: assume_zero
    recording_options.excludes: []

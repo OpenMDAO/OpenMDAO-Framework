@@ -54,6 +54,7 @@ class TestCase(unittest.TestCase):
         outputs = ['comp1.z', 'comp2.z']
         cases = []
         for i in range(10):
+            i = float(i)
             inputs = [('comp1.x', i), ('comp1.y', i*2)]
             cases.append(Case(inputs=inputs, outputs=outputs))
 
@@ -64,9 +65,9 @@ class TestCase(unittest.TestCase):
         self.top = None
 
     def test_jsonrecorder_norun(self):
-        """ test ability to get model data from case recorder
-            before calling run()
-        """
+        # test ability to get model data from case recorder
+        #    before calling run()
+        
         sout = StringIO()
         self.top.recorders = [JSONCaseRecorder(sout)]
         self.top.configure_recording()
@@ -136,12 +137,13 @@ class TestCase(unittest.TestCase):
         asm1.recorders = [JSONCaseRecorder(sout)]
         asm1.run()
 
-        # with open('nested.new', 'w') as out:
-        #     out.write(sout.getvalue())
+        #with open('nested.new', 'w') as out:
+        #    out.write(sout.getvalue())
         self.verify(sout, 'nested.json')
 
     def verify(self, sout, filename):
         lines = sout.getvalue().split('\n')
+        #lines = [line.rstrip() for line in lines]
 
         directory = os.path.dirname(__file__)
         path = os.path.join(directory, filename)
@@ -154,7 +156,7 @@ class TestCase(unittest.TestCase):
                 self.assertTrue(lines[i].startswith('"__length_'))
             elif expect.startswith(', "__length_'):
                 self.assertTrue(lines[i].startswith(', "__length_'))
-            elif expect.startswith('    "OpenMDAO_Version":'):
+            elif expect.startswith('    "OpenMDAO_Version": '):
                 expect_fixed = expect[:25] + __version__ + '", '
                 self.assertEqual(lines[i], expect_fixed)
             elif expect.startswith('    "_driver_id":'):

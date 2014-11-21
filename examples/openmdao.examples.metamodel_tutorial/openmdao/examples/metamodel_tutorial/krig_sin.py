@@ -10,7 +10,6 @@ from openmdao.lib.drivers.api import DOEdriver
 from openmdao.lib.surrogatemodels.api import FloatKrigingSurrogate
 from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.main.datatypes.api import Float
-from openmdao.main.sequentialflow import SequentialWorkflow
 
 
 class Sin(Component):
@@ -33,6 +32,10 @@ class Simulation(Assembly):
         # Our component to be meta-modeled
         self.add("sin_calc", Sin())
 
+        # Another instance of our component for head-to-head comparison with
+        # the metamodel.
+        self.add("sin_verify", Sin())
+
         # Create meta_model for f_x as the response
         self.add("sin_meta_model", MetaModel(params = ('x', ),
                                              responses = ('f_x', )))
@@ -53,30 +56,29 @@ class Simulation(Assembly):
 
         # Cross-validate the metamodel using random data
         self.add("DOE_Validate", DOEdriver())
-        self.DOE_Validate.workflow = SequentialWorkflow()
         self.DOE_Validate.DOEgenerator = Uniform()
         self.DOE_Validate.DOEgenerator.num_samples = 100
-        self.DOE_Validate.add_parameter(("sin_meta_model.x", "sin_calc.x"),
+        self.DOE_Validate.add_parameter(("sin_meta_model.x", "sin_verify.x"),
                                         low=0, high=20) # , name="combined_input"
-        self.DOE_Validate.add_response("sin_calc.f_x")
+        self.DOE_Validate.add_response("sin_verify.f_x")
         self.DOE_Validate.add_response("sin_meta_model.f_x")
 
         #Iteration Hierarchy
         self.driver.workflow.add(['DOE_Trainer', 'DOE_Validate'])
         self.DOE_Trainer.workflow.add('sin_calc')
-        self.DOE_Validate.workflow.add(['sin_calc', 'sin_meta_model'])
+        self.DOE_Validate.workflow.add(['sin_verify', 'sin_meta_model'])
 
 
 if __name__ == "__main__":
 
-    sim = Simulation()
+    sim = set_as_top(Simulation())
     sim.run()
 
     #This is how you can access any of the data
     train_inputs = sim.DOE_Trainer.case_inputs.sin_calc.x
     train_actual = sim.DOE_Trainer.case_outputs.sin_calc.f_x
     inputs = sim.DOE_Validate.case_inputs.sin_meta_model.x
-    actual = sim.DOE_Validate.case_outputs.sin_calc.f_x
+    actual = sim.DOE_Validate.case_outputs.sin_verify.f_x
     predicted = sim.DOE_Validate.case_outputs.sin_meta_model.f_x
 
     if '--noplot' not in sys.argv:

@@ -1,6 +1,6 @@
 import unittest
 
-from openmdao.main.api import VariableTree, Component, Assembly
+from openmdao.main.api import VariableTree, Component, Assembly, set_as_top
 from openmdao.lib.datatypes.api import VarTree, Float, List
 
 class RegionVT(VariableTree):
@@ -59,6 +59,10 @@ class BladeStructure(Assembly):
         self.add('section0', BladeSection(5))
         self.driver.workflow.add('section0')
         self.st3d.add_section('section0')
+        
+        # Copy vartree before connecting to make sure it matches.
+        self.st3d.section0 = self.section0.section.copy()
+        
         self.connect('section0.section', 'st3d.section0')
 
 class Builder(Component):
@@ -78,11 +82,15 @@ class Blade(Assembly):
         self.add('builder', Builder())
 
         self.driver.workflow.add(['blade_st','builder'])
+        
+        # Copy vartree before connecting to make sure it matches.
+        self.builder.st3d = self.blade_st.st3d.copy()
+        
         self.connect('blade_st.st3d', 'builder.st3d')
 
 class VTreeCopyTestCase(unittest.TestCase):
     def test_copy(self):
-        top = Blade()
+        top = set_as_top(Blade())
         top.run()  # this raised an Exception when the bug was present
 
 if __name__ == '__main__':

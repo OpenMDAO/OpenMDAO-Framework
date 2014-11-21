@@ -26,10 +26,11 @@ class OptProblemSolutionCheck(Architecture):
     def configure(self):
         des_vars = self.parent.get_des_vars_by_comp()
         coupling_indeps = self.parent.get_coupling_indeps_by_comp()
-
-        for k,v in des_vars.iteritems():
-            for param in v:
-                param.set(self.parent.solution[param.name])
+        
+        for k,v in des_vars.iteritems(): 
+            for param in v: 
+                param.set(self.parent.solution[param.name],
+                          self.parent.solution[param.name])
             self.parent.driver.workflow.add(k)
 
         self.parent.init_coupling_vars()

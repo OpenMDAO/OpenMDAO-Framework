@@ -127,7 +127,7 @@ class BoxDriver(Driver):
             for height in range(1, 3):
                 for depth in range(1, 4):
                     self._logger.debug('w,h,d %s, %s, %s', width, height, depth)
-                    self.set_parameters((width, height, depth))
+                    self.set_parameters((float(width), float(height), float(depth)))
                     self.workflow.run()
                     volume, area = self.eval_objectives()
                     self._logger.debug('    v,a %s, %s', volume, area)
@@ -230,9 +230,9 @@ class ProtectedBox(Box):
         return self.protector
 
     @rbac(('owner', 'user'), proxy_types=[FileRef])
-    def get(self, path, index=None):
+    def get(self, path):
         if self.protector.user_attribute(self, path):
-            return super(ProtectedBox, self).get(path, index)
+            return super(ProtectedBox, self).get(path)
         raise RoleError('No get access to %r' % path)
 
     @rbac(('owner', 'user'), proxy_types=[CTrait])
@@ -242,15 +242,15 @@ class ProtectedBox(Box):
         raise RoleError('No get_dyn_trait access to %r' % name)
 
     @rbac(('owner', 'user'))
-    def get_attr(self, name, index=None):
+    def get_attr_w_copy(self, name):
         if self.protector.user_attribute(self, name):
             return super(ProtectedBox, self).get_attr(name)
-        raise RoleError('No get_attr access to %r' % name)
+        raise RoleError('No get_attr_w_copy access to %r' % name)
 
     @rbac(('owner', 'user'))
-    def set(self, path, value, index=None, force=False):
+    def set(self, path, value):
         if self.protector.user_attribute(self, path):
-            return super(ProtectedBox, self).set(path, value, index, force)
+            return super(ProtectedBox, self).set(path, value)
         raise RoleError('No set access to %r' % path)
 
 
@@ -449,12 +449,12 @@ class TestCase(unittest.TestCase):
         self.assertEqual(path, 'subcontainer.subvar')
 
         obj, path = get_closest_proxy(model, 'source.subcontainer.subvar')
-        self.assertEqual(obj, model.source.subcontainer)
-        self.assertEqual(path, 'subvar')
+        self.assertEqual(obj, model.source.subcontainer.subvar)
+        self.assertEqual(path, '')
 
         obj, path = get_closest_proxy(model.source.subcontainer, 'subvar')
-        self.assertEqual(obj, model.source.subcontainer)
-        self.assertEqual(path, 'subvar')
+        self.assertEqual(obj, model.source.subcontainer.subvar)
+        self.assertEqual(path, '')
 
         # Observable proxied type.
         tmp = model.box.open_in_parent('tmp', 'w')

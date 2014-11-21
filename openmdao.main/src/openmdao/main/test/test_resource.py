@@ -614,11 +614,14 @@ max_load: 100
         self.assertEqual(req, expected)
 
         comp3.resources['accounting_id'] = 'xyzzy'
-        assert_raises(self, 'RAM.total_request(assembly)',
-                      globals(), locals(), ValueError,
-                      "Incompatible settings for 'accounting_id':"
-                      " 'xyzzy' vs. 'frobozz'")
-
+        try:
+            RAM.total_request(assembly)
+        except ValueError as err:
+            self.assertTrue("Incompatible settings for 'accounting_id':" in str(err))
+            self.assertTrue("'xyzzy'" in str(err))
+            self.assertTrue("'frobozz'" in str(err))
+        else:
+            self.fail("Exception expected")
 
 if __name__ == '__main__':
     sys.argv.append('--cover-package=openmdao.main')

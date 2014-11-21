@@ -11,8 +11,11 @@ from openmdao.main.pseudocomp import _remove_spaces
 from openmdao.main.variable import make_legal_path
 from openmdao.main.vartree import VariableTree
 
+
 class AdaptiveSampleDriver(DOEdriver):
 
+    # pylint: disable-msg=E1101
+    
     adaptive_inputs = VarTree(VariableTree(), iotype='in')
 
     all_case_inputs = VarTree(VariableTree(), iotype='out')
@@ -89,11 +92,11 @@ class AdaptiveSampleDriver(DOEdriver):
                 doe = 'DOE_inputs.' + path
                 doe_val = []
                 doe_val.extend(src_val)
-                self.set(doe, doe_val, force=True)
+                self.set(doe, doe_val)
             else:
                 target_val = self.get(target)
             target_val.extend(src_val)
-            self.set(target, target_val, force=True)
+            self.set(target, target_val)
 
         for path in self.get_responses():
 
@@ -106,11 +109,11 @@ class AdaptiveSampleDriver(DOEdriver):
                 doe = 'DOE_outputs.' + path
                 doe_val = []
                 doe_val.extend(src_val)
-                self.set(doe, doe_val, force=True)
+                self.set(doe, doe_val)
             else:
                 target_val = self.get(target)
             target_val.extend(src_val)
-            self.set(target, target_val, force=True)
+            self.set(target, target_val)
 
 
     def add_parameter(self, target, low=None, high=None,

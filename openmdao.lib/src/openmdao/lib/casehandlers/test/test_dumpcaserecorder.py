@@ -26,6 +26,7 @@ class DumpCaseRecorderTestCase(unittest.TestCase):
         outputs = ['comp1.z', 'comp2.z']
         cases = []
         for i in range(10):
+            i = float(i)
             inputs = [('comp1.x', i), ('comp1.y', i*2)]
             cases.append(Case(inputs=inputs, outputs=outputs))
 
@@ -56,10 +57,11 @@ Constants:
    comp2.force_fd: False
    comp2.missing_deriv_policy: error
    directory:
-   driver.case_inputs.comp1.x: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-   driver.case_inputs.comp1.y: [0, 2, 4, 6, 8, 10, 12, 14, 16, 18]
+   driver.case_inputs.comp1.x: [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]
+   driver.case_inputs.comp1.y: [0.0, 2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0, 18.0]
    driver.directory:
    driver.force_fd: False
+   driver.gradient_options.atol: 1e-09
    driver.gradient_options.derivative_direction: auto
    driver.gradient_options.directional_fd: False
    driver.gradient_options.fd_blocks: []
@@ -67,8 +69,9 @@ Constants:
    driver.gradient_options.fd_step: 1e-06
    driver.gradient_options.fd_step_type: absolute
    driver.gradient_options.force_fd: False
-   driver.gradient_options.gmres_maxiter: 100
-   driver.gradient_options.gmres_tolerance: 1e-09
+   driver.gradient_options.lin_solver: scipy_gmres
+   driver.gradient_options.maxiter: 100
+   driver.gradient_options.rtol: 1e-09
    force_fd: False
    missing_deriv_policy: assume_zero"""
 
@@ -96,12 +99,14 @@ Case:
         expected = expected_constants.split('\n')
         for sout in [sout1, sout2]:
             lines = sout.getvalue().split('\n')
+            lines = [line.rstrip() for line in lines]
             for i in range(len(expected)):
                 self.assertEqual(lines[i].rstrip(), expected[i])
 
         expected = expected_case.split('\n')
         for sout in [sout1, sout2]:
             lines = sout.getvalue().split('\n')
+            lines = [line.rstrip() for line in lines]
             start = 0
             for i in range(9):
                 index = start + lines[start:].index('Case:')
@@ -137,6 +142,7 @@ Constants:
    directory:
    driver.directory:
    driver.force_fd: False
+   driver.gradient_options.atol: 1e-09
    driver.gradient_options.derivative_direction: auto
    driver.gradient_options.directional_fd: False
    driver.gradient_options.fd_blocks: []
@@ -144,8 +150,9 @@ Constants:
    driver.gradient_options.fd_step: 1e-06
    driver.gradient_options.fd_step_type: absolute
    driver.gradient_options.force_fd: False
-   driver.gradient_options.gmres_maxiter: 100
-   driver.gradient_options.gmres_tolerance: 1e-09
+   driver.gradient_options.lin_solver: scipy_gmres
+   driver.gradient_options.maxiter: 100
+   driver.gradient_options.rtol: 1e-09
    force_fd: False
    missing_deriv_policy: assume_zero
    recording_options.excludes: []
@@ -173,6 +180,7 @@ Case:
         # print sout.getvalue()
         expected = expected.split('\n')
         lines = sout.getvalue().split('\n')
+        lines = [line.rstrip() for line in lines]
         for i in range(len(expected)):
             if expected[i].startswith('   uuid:'):
                 self.assertTrue(lines[i].startswith('   uuid:'))

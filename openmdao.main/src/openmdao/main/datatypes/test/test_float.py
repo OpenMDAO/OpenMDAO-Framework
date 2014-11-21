@@ -166,22 +166,7 @@ class FloatTestCase(unittest.TestCase):
                 "Default value is outside of bounds [3.0, 4.0].")
         else:
             self.fail('ValueError expected')
-            
-    def test_attributes(self):
-        attrs = self.hobj.get_attributes(io_only=False)
-        input_attrs = attrs['Inputs']
-        self.assertEqual(len(input_attrs), 3)
-        self.assertTrue({'name': 'float1',
-                         'id': 'float1',
-                         'indent': 0,
-                         'type': 'float',
-                         'value': 3.1415926,
-                         'high': 99.0,
-                         'connected': '',
-                         'low': 0.0,
-                         'units': 'ft',
-                         'desc': 'Stuff', 
-                         'assumed_default': False} in input_attrs)
+
 
 if __name__ == "__main__":
     unittest.main()

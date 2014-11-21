@@ -8,8 +8,8 @@ SLSQP is a gradient optimizer that can handle both equality and
 inequality constraints.
 """
 
+# pylint: disable=E0611,F0401
 from math import isnan
-
 from numpy import zeros, array
 
 from slsqp.slsqp import slsqp, closeunit, pyflush
@@ -21,7 +21,7 @@ from openmdao.main.hasconstraints import HasConstraints
 from openmdao.main.hasobjective import HasObjective
 from openmdao.main.interfaces import IHasParameters, IHasConstraints, \
                                      IHasObjective, implements, IOptimizer
-from openmdao.util.decorators import add_delegate, stub_if_missing_deps
+from openmdao.util.decorators import add_delegate
 
 
 @add_delegate(HasParameters, HasConstraints, HasObjective)
@@ -38,7 +38,7 @@ class SLSQPdriver(Driver):
 
     implements(IHasParameters, IHasConstraints, IHasObjective, IOptimizer)
 
-    # pylint: disable-msg=E1101
+    # pylint: disable=E1101
     accuracy = Float(1.0e-6, iotype='in',
                      desc='Convergence accuracy')
 
@@ -202,3 +202,6 @@ class SLSQPdriver(Driver):
 
         return df, dg
 
+    def requires_derivs(self):
+        """SLSQP requires derivatives."""
+        return True

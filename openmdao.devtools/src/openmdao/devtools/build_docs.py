@@ -134,10 +134,7 @@ def _pkg_sphinx_info(startdir, pkg, outfile, show_undoc=False,
     #excluding traits now since they need to be sorted separately
     #also excluding gui-related files, in case of non-gui build
     _names = list(_get_resource_files(dist,
-                                    ['*__init__.py', '*setup.py', '*datatypes*.py',
-                                     '*/main/zmq*.py', '*/main/tornado*.py',
-                                     '*/gui/*/views.py', '*/gui/*/models.py',
-                                     '*/gui/*/urls.py', '*/gui/*/admin.py'],
+                                    ['*__init__.py', '*setup.py', '*datatypes*.py'],
                                     ['*.py']))
     names = []
     for n in _names:

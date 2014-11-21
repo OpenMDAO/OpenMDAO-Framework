@@ -3,28 +3,25 @@ Basic unit testing of OpenMDAO's derivative capability.
 """
 
 from cStringIO import StringIO
-import networkx as nx
+from nose import SkipTest
 import re
 import unittest
 from mock import Mock
 
-from numpy import zeros, array, identity, random
+from numpy import zeros, array, random
+import numpy as np
 
 from openmdao.lib.architectures.api import MDF, CO
 from openmdao.lib.optproblems.api import UnitScalableProblem
 
 import openmdao.main.derivatives
-from openmdao.main.api import Component, VariableTree, Driver, Assembly, set_as_top
+from openmdao.main.api import Component, VariableTree, \
+                              ImplicitComponent, Assembly, set_as_top
 from openmdao.main.datatypes.api import Array, Float, VarTree, Int
-from openmdao.main.derivatives import applyJ, applyJT
-from openmdao.main.hasparameters import HasParameters
-from openmdao.main.hasobjective import HasObjective
-from openmdao.main.hasconstraints import HasConstraints
-from openmdao.main.interfaces import IHasParameters, implements
+from openmdao.main.depgraph import simple_node_iter
+from openmdao.main.test.simpledriver import SimpleDriver
 from openmdao.test.execcomp import ExecCompWithDerivatives, ExecComp
-from openmdao.util.decorators import add_delegate
 from openmdao.util.testutil import assert_rel_error
-from openmdao.util.graph import list_deriv_vars
 
 class Tree2(VariableTree):
 
@@ -108,53 +105,6 @@ class BadListDerivsComp(Component):
         return array([[2.0]])
 
 
-class Testcase_provideJ(unittest.TestCase):
-
-    def test_provideJ(self):
-
-        comp = MyComp()
-        J = comp.provideJ()
-
-        inputs = {}
-        outputs = {'xx1': None,
-                   'xx2': None,
-                   'xx3': None,
-                   'xx4': None,
-                   'vvt.a1': None,
-                   'vvt.vt1.d1': None}
-
-        num = 11
-        ident = identity(num)
-
-        for i in range(num):
-
-            inputs['x1'] = ident[i:i+1, 0]
-            inputs['x2'] = ident[i:i+1, 1]
-            inputs['x3'] = ident[i:i+1, 2:4].reshape((2, 1)).flatten()
-            inputs['x4'] = ident[i:i+1, 4:8].reshape((2, 2)).flatten()
-            inputs['vt.a1'] = ident[i:i+1, 8]
-            inputs['vt.vt1.d1'] = ident[i, 9:11].reshape((1, 2)).flatten()
-
-            inputs['xx1'] = zeros((1, ))
-            inputs['xx2'] = zeros((1, ))
-            inputs['xx3'] = zeros((2, 1)).flatten()
-            inputs['xx4'] = zeros((2, 2)).flatten()
-            inputs['vvt.a1'] = zeros((1, ))
-            inputs['vvt.vt1.d1'] = zeros((1, 2)).flatten()
-
-            applyJ(comp, inputs, outputs, [], {}, J)
-
-            self.assertEqual(outputs['xx1'], comp.J[0, i])
-            self.assertEqual(outputs['xx2'], comp.J[1, i])
-            for j in range(2):
-                self.assertEqual(outputs['xx3'][j], comp.J[2+j, i])
-            for j in range(4):
-                self.assertEqual(outputs['xx4'].flat[j], comp.J[4+j, i])
-            self.assertEqual(outputs['vvt.a1'], comp.J[8, i])
-            for j in range(2):
-                self.assertEqual(outputs['vvt.vt1.d1'].flat[j], comp.J[9+j, i])
-
-
 class Paraboloid(Component):
     """ Evaluates the equation f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3 """
 
@@ -209,12 +159,6 @@ class ParaboloidNoDeriv(Component):
 
         self.f_xy = (x-3.0)**2 + x*y + (y+4.0)**2 - 3.0
 
-
-@add_delegate(HasParameters, HasObjective, HasConstraints)
-class SimpleDriver(Driver):
-    """Driver with Parameters"""
-
-    implements(IHasParameters)
 
 class SimpleComp(Component):
 
@@ -499,19 +443,15 @@ class ArrayComp2D_der(Component):
 
     def apply_deriv(self, arg, result):
 
-        result['y'] = result['y'].flatten()
         if 'x' in arg and 'y' in result:
-            result['y'] += self.J.dot(arg['x'].flatten())
-
-        result['y'] = result['y'].reshape(2, 2)
+            dy = self.J.dot(arg['x'].flatten()).reshape(2, 2)
+            result['y'][:] += dy
 
     def apply_derivT(self, arg, result):
 
-        result['x'] = result['x'].flatten()
         if 'y' in arg and 'x' in result:
-            result['x'] += self.J.T.dot(arg['y'].flatten())
-
-        result['x'] = result['x'].reshape(2, 2)
+            dx = self.J.T.dot(arg['y'].flatten()).reshape(2, 2)
+            result['x'][:] = dx
 
 
 class GComp_noD(Component):
@@ -529,7 +469,7 @@ class GComp_noD(Component):
 class ABCDComp(Component):
 
     a = Float(1.0, iotype='in')
-    b = Float(1.0, iotype='in')
+    b = Float(1.0, iotype='in', deriv_ignore=True)
     c = Float(2.0, iotype='out')
     d = Float(0.0, iotype='out')
 
@@ -595,11 +535,6 @@ class Testcase_derivatives(unittest.TestCase):
         J = top.driver.calc_gradient(['comp1.x'], ['comp2.y'])
         assert_rel_error(self, J[0, 0], 4.0, 0.0001)
 
-        self.assertEqual(set(top.driver.workflow._derivative_graph.nodes()),
-                         set(['@in0', '@out0', 'comp1', 'comp2',
-                              'comp1.x', 'comp1.y', 'comp2.x', 'comp2.y']))
-
-
     def test_error_logging1(self):
 
         top = set_as_top(Assembly())
@@ -608,13 +543,14 @@ class Testcase_derivatives(unittest.TestCase):
         top.driver.workflow.add(['comp'])
         top.driver.add_parameter('comp.x', low=-1000, high=1000)
         top.driver.add_parameter('comp.y', low=-1000, high=1000)
+        top.driver.add_objective('comp.f_xy')
 
         top.comp.x = 3
         top.comp.y = 5
-        top.comp.run()
+        top.run()
 
-        orig_gmres = openmdao.main.derivatives.gmres
-        orig_logger = openmdao.main.derivatives.logger
+        orig_gmres = openmdao.main.linearsolver.gmres
+        orig_logger = openmdao.main.linearsolver.logger
 
         # wrap gmres to return an error code
         def my_gmres(A, b, x0=None, tol=1e-05, restart=None,
@@ -623,8 +559,8 @@ class Testcase_derivatives(unittest.TestCase):
                                   xtype, M, callback, restrt)
             return dx, 13
 
-        openmdao.main.derivatives.gmres = my_gmres
-        openmdao.main.derivatives.logger = mocklogger = Mock()
+        openmdao.main.linearsolver.gmres = my_gmres
+        openmdao.main.linearsolver.logger = mocklogger = Mock()
 
         try:
             top.driver.workflow.calc_gradient(outputs=['comp.f_xy'],
@@ -632,20 +568,20 @@ class Testcase_derivatives(unittest.TestCase):
 
             mocklogger.error.assert_called_with(
                 "ERROR in calc_gradient in '%s': gmres failed to converge after"
-                " %d iterations for parameter '%s' at index %d",
-                'driver', 13, 'comp.y', 1)
+                " %d iterations",
+                "('comp', 'comp.y', 'comp.x', '_pseudo_0')", 13)
 
             top.driver.workflow.calc_gradient(outputs=['comp.f_xy'],
                                               mode='adjoint')
 
             mocklogger.error.assert_called_with(
-                "ERROR in calc_gradient_adjoint in '%s': gmres failed to"
-                " converge after %d iterations for output '%s' at index %d",
-                'driver', 13, 'comp.f_xy', 2)
+                "ERROR in calc_gradient in '%s': gmres failed to"
+                " converge after %d iterations",
+                "('comp', 'comp.y', 'comp.x', '_pseudo_0')", 13)
 
         finally:
-            openmdao.main.derivatives.gmres = orig_gmres
-            openmdao.main.derivatives.logger = orig_logger
+            openmdao.main.linearsolver.gmres = orig_gmres
+            openmdao.main.linearsolver.logger = orig_logger
 
     def test_error_logging2(self):
 
@@ -660,8 +596,8 @@ class Testcase_derivatives(unittest.TestCase):
         top.comp.y = 5
         top.comp.run()
 
-        orig_gmres = openmdao.main.derivatives.gmres
-        orig_logger = openmdao.main.derivatives.logger
+        orig_gmres = openmdao.main.linearsolver.gmres
+        orig_logger = openmdao.main.linearsolver.logger
 
         # wrap gmres to return an error code
         def my_gmres(A, b, x0=None, tol=1e-05, restart=None,
@@ -670,25 +606,179 @@ class Testcase_derivatives(unittest.TestCase):
                                   xtype, M, callback, restrt)
             return dx, -13
 
-        openmdao.main.derivatives.gmres = my_gmres
-        openmdao.main.derivatives.logger = mocklogger = Mock()
+        openmdao.main.linearsolver.gmres = my_gmres
+        openmdao.main.linearsolver.logger = mocklogger = Mock()
 
         try:
-            top.driver.workflow.calc_gradient(outputs=['comp.f_xy'],
-                                              mode='forward')
+            top.driver.calc_gradient(outputs=['comp.f_xy'],
+                                     mode='forward')
             mocklogger.error.assert_called_with(
-                "ERROR in calc_gradient in '%s': gmres failed for parameter"
-                " '%s' at index %d", 'driver', 'comp.y', 1)
+                "ERROR in calc_gradient in '%s': gmres failed",
+                "('comp', 'comp.y', 'comp.x')")
 
             top.driver.workflow.calc_gradient(outputs=['comp.f_xy'],
                                               mode='adjoint')
             mocklogger.error.assert_called_with(
-                "ERROR in calc_gradient_adjoint in '%s': gmres failed for"
-                " output '%s' at index %d", 'driver', 'comp.f_xy', 2)
+                "ERROR in calc_gradient in '%s': gmres failed",
+                "('comp', 'comp.y', 'comp.x')")
 
         finally:
             openmdao.main.derivatives.gmres = orig_gmres
             openmdao.main.derivatives.logger = orig_logger
+
+    def test_single_comp(self):
+
+        top = set_as_top(Assembly())
+        top.add('comp', Paraboloid())
+        top.add('driver', SimpleDriver())
+        top.driver.workflow.add(['comp'])
+        top.driver.add_parameter('comp.x', low=-1000, high=1000)
+        top.driver.add_parameter('comp.y', low=-1000, high=1000)
+        top.driver.add_objective('comp.f_xy')
+
+        top.comp.x = 3
+        top.comp.y = 5
+        top.run()
+
+        self.assertEqual(top.comp.f_xy, 93.)
+        self.assertEqual(top._pseudo_0.out0, 93.)
+
+        J = top.driver.workflow.calc_gradient(inputs=['comp.x', 'comp.y'],
+                                              outputs=['comp.f_xy'],
+                                              mode='forward')
+
+        assert_rel_error(self, J[0, 0], 5.0, 0.0001)
+        assert_rel_error(self, J[0, 1], 21.0, 0.0001)
+
+        J = top.driver.workflow.calc_gradient(inputs=['comp.x', 'comp.y'],
+                                              mode='adjoint')
+
+        assert_rel_error(self, J[0, 0], 5.0, 0.0001)
+        assert_rel_error(self, J[0, 1], 21.0, 0.0001)
+
+        J = top.driver.workflow.calc_gradient(inputs=['comp.x', 'comp.y'],
+                                              mode='fd')
+
+        assert_rel_error(self, J[0, 0], 5.0, 0.0001)
+        assert_rel_error(self, J[0, 1], 21.0, 0.0001)
+
+    def test_multi_non_relevant_path(self):
+
+        self.top = set_as_top(Assembly())
+
+        exp1 = ['y1 = 2.0*x1**2']
+        deriv1 = ['dy1_dx1 = 4.0*x1']
+
+        exp2 = ['y1 = 0.5*x1']
+        deriv2 = ['dy1_dx1 = 0.5']
+
+        exp3 = ['y1 = x1 + 2.0*x2',
+                'y2 = 3.0*x1 + x1*x2*2.0']
+        deriv3 = ['dy1_dx1 = 1.0',
+                  'dy1_dx2 = 2.0',
+                  'dy2_dx1 = 3.0 + 2.0*x2',
+                  'dy2_dx2 = 2.0*x1']
+
+        exp4 = ['y1 = 3.5*x1']
+        deriv4 = ['dy1_dx1 = 3.5']
+
+        exp5 = ['y1 = 3.0*x1']
+        deriv5 = ['dy1_dx1 = 3.0']
+
+        self.top.add('comp1', ExecCompWithDerivatives(exp1, deriv1))
+        self.top.add('comp2', ExecCompWithDerivatives(exp2, deriv2))
+        self.top.add('comp3', ExecCompWithDerivatives(exp3, deriv3))
+        self.top.add('comp4', ExecCompWithDerivatives(exp4, deriv4))
+        self.top.add('comp5', ExecCompWithDerivatives(exp5, deriv5))
+
+        self.top.add('driver', SimpleDriver())
+        self.top.driver.workflow.add(['comp1', 'comp2', 'comp3', 'comp4', 'comp5'])
+        self.top.driver.add_parameter('comp1.x1', low=-100, high=100)
+        self.top.driver.add_parameter('comp2.x1', low=-100, high=100)
+        self.top.driver.add_constraint('comp4.y1 < 0')
+        self.top.driver.add_constraint('comp5.y1 < 0')
+
+        self.top.connect('comp1.y1', 'comp3.x1')
+        self.top.connect('comp2.y1', 'comp3.x2')
+        self.top.connect('comp3.y1', 'comp4.x1')
+        self.top.connect('comp3.y2', 'comp5.x1')
+
+        # Case 1 - differentiable (comp4)
+
+        self.top.comp1.x1 = 2.0
+        self.top.comp2.x1 = 1.0
+        self.top.run()
+
+        J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
+                                                   outputs=['comp5.y1'],
+                                                   mode='forward')
+        assert_rel_error(self, J[0, 0], 96.0, .001)
+
+        J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
+                                                   outputs=['comp5.y1'],
+                                                   mode='adjoint')
+        assert_rel_error(self, J[0, 0], 96.0, .001)
+
+        J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
+                                                   outputs=['comp5.y1'],
+                                                   mode='fd')
+        assert_rel_error(self, J[0, 0], 96.0, .001)
+
+    def test_multi_non_relevant_path_no_params_cnsts(self):
+
+        self.top = set_as_top(Assembly())
+
+        exp1 = ['y1 = 2.0*x1**2']
+        deriv1 = ['dy1_dx1 = 4.0*x1']
+
+        exp2 = ['y1 = 0.5*x1']
+        deriv2 = ['dy1_dx1 = 0.5']
+
+        exp3 = ['y1 = x1 + 2.0*x2',
+                'y2 = 3.0*x1 + x1*x2*2.0']
+        deriv3 = ['dy1_dx1 = 1.0',
+                  'dy1_dx2 = 2.0',
+                  'dy2_dx1 = 3.0 + 2.0*x2',
+                  'dy2_dx2 = 2.0*x1']
+
+        exp4 = ['y1 = 3.5*x1']
+        deriv4 = ['dy1_dx1 = 3.5']
+
+        exp5 = ['y1 = 3.0*x1']
+        deriv5 = ['dy1_dx1 = 3.0']
+
+        self.top.add('comp1', ExecCompWithDerivatives(exp1, deriv1))
+        self.top.add('comp2', ExecCompWithDerivatives(exp2, deriv2))
+        self.top.add('comp3', ExecCompWithDerivatives(exp3, deriv3))
+        self.top.add('comp4', ExecCompWithDerivatives(exp4, deriv4))
+        self.top.add('comp5', ExecCompWithDerivatives(exp5, deriv5))
+
+        self.top.add('driver', SimpleDriver())
+        self.top.driver.workflow.add(['comp1', 'comp2', 'comp3', 'comp4', 'comp5'])
+
+        self.top.connect('comp1.y1', 'comp3.x1')
+        self.top.connect('comp2.y1', 'comp3.x2')
+        self.top.connect('comp3.y1', 'comp4.x1')
+        self.top.connect('comp3.y2', 'comp5.x1')
+
+        self.top.comp1.x1 = 2.0
+        self.top.comp2.x1 = 1.0
+        self.top.run()
+
+        J = self.top.driver.calc_gradient(inputs=['comp1.x1'],
+                                          outputs=['comp5.y1'],
+                                          mode='forward')
+        assert_rel_error(self, J[0, 0], 96.0, .001)
+
+        J = self.top.driver.calc_gradient(inputs=['comp1.x1'],
+                                          outputs=['comp5.y1'],
+                                          mode='adjoint')
+        assert_rel_error(self, J[0, 0], 96.0, .001)
+
+        J = self.top.driver.calc_gradient(inputs=['comp1.x1'],
+                                          outputs=['comp5.y1'],
+                                          mode='fd')
+        assert_rel_error(self, J[0, 0], 96.0, .001)
 
     def test_first_derivative(self):
 
@@ -698,10 +788,11 @@ class Testcase_derivatives(unittest.TestCase):
         top.driver.workflow.add(['comp'])
         top.driver.add_parameter('comp.x', low=-1000, high=1000)
         top.driver.add_parameter('comp.y', low=-1000, high=1000)
+        top.driver.add_objective('comp.f_xy')
 
         top.comp.x = 3
         top.comp.y = 5
-        top.comp.run()
+        top.run()
 
         J = top.driver.workflow.calc_gradient(outputs=['comp.f_xy'],
                                               mode='forward')
@@ -709,8 +800,6 @@ class Testcase_derivatives(unittest.TestCase):
         assert_rel_error(self, J[0, 0], 5.0, 0.0001)
         assert_rel_error(self, J[0, 1], 21.0, 0.0001)
 
-        stream = StringIO()
-        top.driver.workflow.check_gradient(outputs=('comp.f_xy',), stream=stream)
         expected = """\
 ------------------------
 Calculated Gradient
@@ -730,6 +819,8 @@ Average RelError: [^\n]+
 Max RelError: [^ ]+ for comp.f_xy / comp.x
 
 """
+        stream = StringIO()
+        top.driver.workflow.check_gradient(outputs=('comp.f_xy',), stream=stream)
         actual = stream.getvalue()
         if re.match(expected, actual) is None:
             print 'Expected:\n%s' % expected
@@ -809,6 +900,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         top.connect('comp1.y', 'comp2.x')
         top.add('driver', SimpleDriver())
         top.driver.workflow.add(['comp1', 'comp2'])
+        #top.driver.add_parameter('comp1.x', low=-100, high=100)
         top.driver.add_objective('comp1.y + comp2.y + 5*comp1.x')
 
         objs = top.driver.get_objectives().values()
@@ -817,52 +909,38 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         top.comp1.x = 1.0
         top.run()
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
-                                              outputs=[obj], mode='forward')
-
-        edges = top.driver.workflow._edges
-        self.assertEqual(set(edges['comp1.y']), set(['_pseudo_0.in0', 'comp2.x']))
-        self.assertEqual(set(edges['comp2.y']), set(['_pseudo_0.in2']))
-        self.assertEqual(set(edges['@in0']), set(['comp1.x', '_pseudo_0.in1']))
-        self.assertEqual(set(edges['_pseudo_0.out0']), set(['@out0']))
-        self.assertEqual(len(edges), 4)
+        J = top.driver.calc_gradient(inputs=['comp1.x'],
+                                     outputs=[obj], mode='forward')
 
         assert_rel_error(self, J[0, 0], 13.0, 0.0001)
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
+        J = top.driver.calc_gradient(inputs=['comp1.x'],
                                               outputs=[obj], mode='fd')
         assert_rel_error(self, J[0, 0], 13.0, 0.0001)
 
         top.driver.run()
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
-                                              outputs=[obj], mode='adjoint')
+        J = top.driver.calc_gradient(inputs=['comp1.x'],
+                                     outputs=[obj], mode='adjoint')
         assert_rel_error(self, J[0, 0], 13.0, 0.0001)
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x', 'comp1.x2'],
-                                              outputs=[obj], mode='forward')
+        J = top.driver.calc_gradient(inputs=['comp1.x', 'comp1.x2'],
+                                     outputs=[obj], mode='forward')
         assert_rel_error(self, J[0, 0], 13.0, 0.0001)
         assert_rel_error(self, J[0, 1], 12.0, 0.0001)
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x', 'comp1.x2'],
-                                              outputs=[obj], mode='adjoint')
+        J = top.driver.calc_gradient(inputs=['comp1.x', 'comp1.x2'],
+                                     outputs=[obj], mode='adjoint')
         assert_rel_error(self, J[0, 0], 13.0, 0.0001)
         assert_rel_error(self, J[0, 1], 12.0, 0.0001)
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=[('comp1.x',), ('comp1.x2',)],
-                                              outputs=[obj], mode='forward')
+        J = top.driver.calc_gradient(inputs=[('comp1.x',), ('comp1.x2',)],
+                                     outputs=[obj], mode='forward')
         assert_rel_error(self, J[0, 0], 13.0, 0.0001)
         assert_rel_error(self, J[0, 1], 12.0, 0.0001)
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=[('comp1.x',), ('comp1.x2',)],
-                                              outputs=[obj], mode='adjoint')
+        J = top.driver.calc_gradient(inputs=[('comp1.x',), ('comp1.x2',)],
+                                     outputs=[obj], mode='adjoint')
         assert_rel_error(self, J[0, 0], 13.0, 0.0001)
         assert_rel_error(self, J[0, 1], 12.0, 0.0001)
 
@@ -882,51 +960,38 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         top.comp1.x = 1.0
         top.run()
 
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
-                                              outputs=[obj], mode='forward')
-
-        edges = top.driver.workflow._edges
-        self.assertEqual(set(edges['~0.comp1|y']), set(['_pseudo_0.in0']))
-        self.assertEqual(set(edges['~0.comp2|y']), set(['_pseudo_0.in2']))
-        self.assertEqual(set(edges['@in0']), set(['~0.comp1|x', '_pseudo_0.in1']))
-        self.assertEqual(set(edges['_pseudo_0.out0']), set(['@out0']))
-        self.assertEqual(len(edges), 4)
+        J = top.driver.calc_gradient(inputs=['comp1.x'],
+                                     outputs=[obj], mode='forward')
 
         assert_rel_error(self, J[0, 0], 13.0, 0.0001)
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
-                                              outputs=[obj], mode='fd')
+        J = top.driver.calc_gradient(inputs=['comp1.x'],
+                                     outputs=[obj], mode='fd')
         assert_rel_error(self, J[0, 0], 13.0, 0.0001)
 
         top.driver.run()
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
-                                              outputs=[obj], mode='adjoint')
+        J = top.driver.calc_gradient(inputs=['comp1.x'],
+                                     outputs=[obj], mode='adjoint')
         assert_rel_error(self, J[0, 0], 13.0, 0.0001)
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x', 'comp1.x2'],
-                                              outputs=[obj], mode='forward')
+        J = top.driver.calc_gradient(inputs=['comp1.x', 'comp1.x2'],
+                                     outputs=[obj], mode='forward')
         assert_rel_error(self, J[0, 0], 13.0, 0.0001)
         assert_rel_error(self, J[0, 1], 12.0, 0.0001)
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x', 'comp1.x2'],
-                                              outputs=[obj], mode='adjoint')
+        J = top.driver.calc_gradient(inputs=['comp1.x', 'comp1.x2'],
+                                     outputs=[obj], mode='adjoint')
         assert_rel_error(self, J[0, 0], 13.0, 0.0001)
         assert_rel_error(self, J[0, 1], 12.0, 0.0001)
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=[('comp1.x'), ('comp1.x2')],
-                                              outputs=[obj], mode='forward')
+        J = top.driver.calc_gradient(inputs=[('comp1.x'), ('comp1.x2')],
+                                     outputs=[obj], mode='forward')
         assert_rel_error(self, J[0, 0], 13.0, 0.0001)
         assert_rel_error(self, J[0, 1], 12.0, 0.0001)
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=[('comp1.x'), ('comp1.x2')],
-                                              outputs=[obj], mode='adjoint')
+        J = top.driver.calc_gradient(inputs=[('comp1.x'), ('comp1.x2')],
+                                     outputs=[obj], mode='adjoint')
         assert_rel_error(self, J[0, 0], 13.0, 0.0001)
         assert_rel_error(self, J[0, 1], 12.0, 0.0001)
 
@@ -946,7 +1011,8 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         sub.driver.workflow.add(['c1', 'c2', 'c3'])
         top.driver.workflow.add('sub')
         top.run()
-        J = top.driver.workflow.calc_gradient(('sub.a',), ('sub.c', 'sub.d'))
+        J = top.driver.calc_gradient(inputs=('sub.a',),
+                                     outputs=('sub.c', 'sub.d'))
         self.assertEqual(J.shape, (2, 1))
         self.assertEqual(J[0, 0], 1.)
         self.assertEqual(J[1, 0], 0.)
@@ -967,7 +1033,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         sub.driver.workflow.add(['c1', 'c2', 'c3'])
         top.driver.workflow.add('sub')
         top.run()
-        J = top.driver.workflow.calc_gradient(('sub.a',), ('sub.c', 'sub.d'))
+        J = top.driver.calc_gradient(('sub.a',), ('sub.c', 'sub.d'))
         self.assertEqual(J.shape, (2, 1))
         self.assertEqual(J[0, 0], 1.)
         self.assertEqual(J[1, 0], 0.)
@@ -985,19 +1051,15 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         top.run()
         J = top.driver.workflow.calc_gradient(mode='forward')
         #print J
+        assert_rel_error(self, J[0, 0], 2., 1e-5)
+        assert_rel_error(self, J[0, 1], 7., 1e-5)
+        assert_rel_error(self, J[1, 0], 1., 1e-5)
+        assert_rel_error(self, J[1, 1], 0., 1e-5)
 
-        edges = top.driver.workflow._edges
-        #print edges
-        self.assertEqual(set(edges['~0.comp|y[0]']), set(['_pseudo_0.in0']))
-        self.assertEqual(set(edges['_pseudo_0.out0']), set(['@out0']))
-        self.assertEqual(set(edges['_pseudo_1.out0']), set(['@out1']))
-        self.assertEqual(set(edges['@in0']), set(['~0.comp|x']))
-        self.assertEqual(set(edges['@in0[0]']), set(['_pseudo_1.in0']))
-        self.assertEqual(len(edges), 5)
 
     def test_nested(self):
 
-        top = Assembly()
+        top = set_as_top(Assembly())
         top.add('nest', Assembly())
         top.nest.add('comp', Paraboloid())
 
@@ -1015,14 +1077,17 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         top.nest.y = 5
         top.run()
 
-        J = top.driver.workflow.calc_gradient(inputs=['nest.x', 'nest.y'],
-                                              outputs=['nest.f_xy'],
-                                              mode='forward')
+        # Now we need to set a deriv policy to prevent squawking
+        # about missing deriatives.
+        top.nest.comp.missing_deriv_policy = 'assume_zero'
+
+        J = top.driver.calc_gradient(inputs=['nest.x', 'nest.y'],
+                                     outputs=['nest.f_xy'],
+                                     mode='forward')
 
         assert_rel_error(self, J[0, 0], 5.0, 0.0001)
         assert_rel_error(self, J[0, 1], 21.0, 0.0001)
 
-        top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(inputs=['nest.x', 'nest.y'],
                                               outputs=['nest.f_xy'],
                                               mode='adjoint')
@@ -1030,39 +1095,24 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[0, 0], 5.0, 0.0001)
         assert_rel_error(self, J[0, 1], 21.0, 0.0001)
 
-        # Test that our assembly doesn't calc derivatives for unconnected vars
-        inkeys, outkeys = list_deriv_vars(top.nest)
-        J = top.nest.provideJ(inkeys, outkeys)
-        self.assertTrue('x' in inkeys)
-        self.assertTrue('y' in inkeys)
-        self.assertEqual(len(inkeys), 2)
-        self.assertTrue('f_xy' in outkeys)
-        self.assertEqual(len(outkeys), 1)
-
         # Now, let's find the derivative of the unconnected. Behaviour depends
         # on deriv policy.
-        top.driver.workflow.config_changed()
         top.nest.add('stuff', Float(1.0, iotype='in'))
         top.nest.add('junk', Float(1.0, iotype='out'))
         top.add('first', Paraboloid())
         top.add('last', Paraboloid())
         top.connect('first.f_xy', 'nest.stuff')
         top.connect('nest.junk', 'last.x')
-        top.run()
+        top.driver.workflow.clear()
+        top.driver.workflow.add(['first', 'nest', 'last'])
 
-        top.nest.missing_deriv_policy = 'error'
-        try:
-            J = top.driver.workflow.calc_gradient(inputs=['nest.x', 'first.x'],
-                                                  outputs=['nest.f_xy', 'last.f_xy'],
-                                                  mode='forward')
-        except RuntimeError as err:
-            msg = "'nest' doesn't provide analytical derivatives ['junk', 'stuff']"
-            self.assertEqual(str(err), msg)
-        else:
-            self.fail("RuntimeError expected")
+        top.nest.comp.missing_deriv_policy = 'assume_zero'
+        top.run()
+        J = top.driver.calc_gradient(inputs=['nest.x', 'first.x'],
+                                     outputs=['nest.f_xy', 'last.f_xy'],
+                                     mode='forward')
 
         top.nest.missing_deriv_policy = 'assume_zero'
-        top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(inputs=['nest.x', 'first.x'],
                                               outputs=['nest.f_xy', 'last.f_xy'],
                                               mode='forward')
@@ -1073,27 +1123,18 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[1, 1], 0.0, .001)
 
         top.nest.missing_deriv_policy = 'error'
-        top.driver.workflow.config_changed()
 
-        try:
-            J = top.driver.workflow.calc_gradient(inputs=['first.x'],
-                                                  outputs=['last.f_xy'],
-                                                  mode='forward')
-        except RuntimeError as err:
-            msg = "'nest' doesn't provide analytical derivatives ['junk', 'stuff']"
-            self.assertEqual(str(err), msg)
-        else:
-            self.fail("RuntimeError expected")
+        J = top.driver.workflow.calc_gradient(inputs=['first.x'],
+                                              outputs=['last.f_xy'],
+                                              mode='forward')
 
         top.nest.missing_deriv_policy = 'assume_zero'
-        top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(inputs=['first.x'],
                                               outputs=['last.f_xy'],
                                               mode='forward')
 
         assert_rel_error(self, J[0, 0], 0.0, .001)
 
-        top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(inputs=['nest.x', 'nest.stuff'],
                                               outputs=['nest.f_xy', 'nest.junk'],
                                               mode='forward')
@@ -1103,7 +1144,6 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[1, 0], 0.0, .001)
         assert_rel_error(self, J[1, 1], 0.0, .001)
 
-        top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(inputs=['nest.stuff', 'nest.x'],
                                               outputs=['nest.junk', 'nest.f_xy', ],
                                               mode='forward')
@@ -1113,7 +1153,6 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[1, 0], 0.0, .001)
         assert_rel_error(self, J[1, 1], 5.0, .001)
 
-        top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(inputs=['nest.stuff', 'nest.x'],
                                               outputs=['nest.junk', 'nest.f_xy', ],
                                               mode='adjoint')
@@ -1123,7 +1162,6 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[1, 0], 0.0, .001)
         assert_rel_error(self, J[1, 1], 5.0, .001)
 
-        top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(inputs=['nest.stuff', 'nest.x'],
                                               outputs=['nest.f_xy', ],
                                               mode='adjoint')
@@ -1131,7 +1169,6 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[0, 0], 0.0, .001)
         assert_rel_error(self, J[0, 1], 5.0, .001)
 
-        top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(inputs=['nest.x', 'nest.stuff'],
                                               outputs=['nest.f_xy', ],
                                               mode='adjoint')
@@ -1139,7 +1176,6 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[0, 0], 5.0, .001)
         assert_rel_error(self, J[0, 1], 0.0, .001)
 
-        top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(inputs=['nest.x', 'nest.stuff'],
                                               outputs=['nest.f_xy', 'nest.junk'],
                                               mode='adjoint')
@@ -1149,7 +1185,6 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[1, 0], 0.0, .001)
         assert_rel_error(self, J[1, 1], 0.0, .001)
 
-        top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(inputs=['nest.stuff'],
                                               outputs=['nest.junk'],
                                               mode='forward')
@@ -1157,20 +1192,15 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[0, 0], 0.0, .001)
 
         top.nest.missing_deriv_policy = 'error'
-        top.driver.workflow.config_changed()
-        try:
-            J = top.driver.workflow.calc_gradient(inputs=['nest.stuff'],
-                                                  outputs=['nest.junk'],
-                                                  mode='forward')
-        except RuntimeError as err:
-            msg = "'nest' doesn't provide analytical derivatives ['junk', 'stuff']"
-            self.assertEqual(str(err), msg)
-        else:
-            self.fail("RuntimeError expected")
+        J = top.driver.workflow.calc_gradient(inputs=['nest.stuff'],
+                                              outputs=['nest.junk'],
+                                              mode='forward')
 
     def test_broadcast_graph(self):
 
         top = set_as_top(Assembly())
+        top.add('driver', SimpleDriver())
+
         equation = ['y = 2.0*x + 3.0*z']
         top.add('comp1', ExecComp(equation))
         top.add('comp2', ExecComp(equation))
@@ -1178,49 +1208,43 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
 
         top.run()
 
-        J = top.driver.workflow.calc_gradient(inputs=[('comp1.x', 'comp2.x')],
-                                              outputs=['comp2.y'],
-                                              mode='forward')
+        J = top.driver.calc_gradient(inputs=[('comp1.x', 'comp2.x')],
+                                     outputs=['comp2.y'],
+                                     mode='forward')
         assert_rel_error(self, J[0, 0], 2.0, .001)
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=[('comp1.x', 'comp2.x')],
-                                              outputs=['comp2.y'],
-                                              mode='adjoint')
+        J = top.driver.calc_gradient(inputs=[('comp1.x', 'comp2.x')],
+                                     outputs=['comp2.y'],
+                                     mode='adjoint')
         assert_rel_error(self, J[0, 0], 2.0, .001)
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=[('comp1.x', 'comp1.z')],
-                                              outputs=['comp2.y'],
-                                              mode='forward')
+        J = top.driver.calc_gradient(inputs=[('comp1.x', 'comp1.z')],
+                                     outputs=['comp2.y'],
+                                     mode='forward')
         assert_rel_error(self, J[0, 0], 0.0, .001)
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=[('comp1.x', 'comp1.z')],
-                                              outputs=['comp2.y'],
-                                              mode='adjoint')
+        J = top.driver.calc_gradient(inputs=[('comp1.x', 'comp1.z')],
+                                     outputs=['comp2.y'],
+                                     mode='adjoint')
         assert_rel_error(self, J[0, 0], 0.0, .001)
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=[('comp1.x', 'comp1.z'), ('comp2.x', 'comp2.z')],
-                                              outputs=['comp2.y'],
-                                              mode='adjoint')
+        J = top.driver.calc_gradient(inputs=[('comp1.x', 'comp1.z'), ('comp2.x', 'comp2.z')],
+                                     outputs=['comp2.y'],
+                                     mode='adjoint')
         #print J
         assert_rel_error(self, J[0, 0], 0.0, .001)
         assert_rel_error(self, J[0, 1], 5.0, .001)
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=[('comp1.x', 'comp1.z'), ('comp2.x', 'comp2.z')],
-                                              outputs=['comp2.y'],
-                                              mode='forward')
+        J = top.driver.calc_gradient(inputs=[('comp1.x', 'comp1.z'), ('comp2.x', 'comp2.z')],
+                                     outputs=['comp2.y'],
+                                     mode='forward')
         #print J
         assert_rel_error(self, J[0, 0], 0.0, .001)
         assert_rel_error(self, J[0, 1], 5.0, .001)
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=[('comp1.x', 'comp1.z'), ('comp2.x', 'comp2.z')],
-                                              outputs=['comp2.y'],
-                                              mode='fd')
+        J = top.driver.calc_gradient(inputs=[('comp1.x', 'comp1.z'), ('comp2.x', 'comp2.z')],
+                                     outputs=['comp2.y'],
+                                     mode='fd')
         #print J
         assert_rel_error(self, J[0, 0], 0.0, .001)
         assert_rel_error(self, J[0, 1], 5.0, .001)
@@ -1240,13 +1264,13 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         self.top.driver.workflow.add(['comp'])
 
         self.top.run()
-        J = self.top.driver.workflow.calc_gradient(inputs=['comp.x1',
-                                                           'comp.x2',
-                                                           'comp.x3',
-                                                           'comp.x4',
-                                                           'comp.x5'],
-                                                   outputs=['comp.y1'],
-                                                   mode='forward')
+        J = self.top.driver.calc_gradient(inputs=['comp.x1',
+                                                  'comp.x2',
+                                                  'comp.x3',
+                                                  'comp.x4',
+                                                  'comp.x5'],
+                                          outputs=['comp.y1'],
+                                          mode='forward')
 
         assert_rel_error(self, J[0, 0], 1.0, .001)
         assert_rel_error(self, J[0, 1], 2.0, .001)
@@ -1287,13 +1311,13 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         self.top.driver.workflow.add(['comp'])
 
         self.top.run()
-        J = self.top.driver.workflow.calc_gradient(inputs=['comp.x1'],
-                                                   outputs=['comp.y1',
-                                                            'comp.y2',
-                                                            'comp.y3',
-                                                            'comp.y4',
-                                                            'comp.y5'],
-                                                   mode='forward')
+        J = self.top.driver.calc_gradient(inputs=['comp.x1'],
+                                          outputs=['comp.y1',
+                                                   'comp.y2',
+                                                   'comp.y3',
+                                                   'comp.y4',
+                                                   'comp.y5'],
+                                          mode='forward')
 
         assert_rel_error(self, J[0, 0], 1.0, .001)
         assert_rel_error(self, J[1, 0], 2.0, .001)
@@ -1322,61 +1346,54 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         top.driver.workflow.add(['comp1'])
 
         top.run()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
-                                              outputs=['comp1.y'],
-                                              mode='forward')
+        J = top.driver.calc_gradient(inputs=['comp1.x'],
+                                     outputs=['comp1.y'],
+                                     mode='forward')
         assert_rel_error(self, J[0, 0], 2.0, .001)
         assert_rel_error(self, J[0, 1], 7.0, .001)
         assert_rel_error(self, J[1, 0], 5.0, .001)
         assert_rel_error(self, J[1, 1], -3.0, .001)
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
-                                              outputs=['comp1.y'],
-                                              mode='adjoint')
+        J = top.driver.calc_gradient(inputs=['comp1.x'],
+                                     outputs=['comp1.y'],
+                                     mode='adjoint')
         assert_rel_error(self, J[0, 0], 2.0, .001)
         assert_rel_error(self, J[0, 1], 7.0, .001)
         assert_rel_error(self, J[1, 0], 5.0, .001)
         assert_rel_error(self, J[1, 1], -3.0, .001)
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
-                                              outputs=['comp1.y'],
-                                              mode='fd')
+        J = top.driver.calc_gradient(inputs=['comp1.x'],
+                                     outputs=['comp1.y'],
+                                     mode='fd')
         assert_rel_error(self, J[0, 0], 2.0, .001)
         assert_rel_error(self, J[0, 1], 7.0, .001)
         assert_rel_error(self, J[1, 0], 5.0, .001)
         assert_rel_error(self, J[1, 1], -3.0, .001)
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x[1]'],
-                                              outputs=['comp1.y[1]'],
-                                              mode='forward')
+        J = top.driver.calc_gradient(inputs=['comp1.x[1]'],
+                                     outputs=['comp1.y[1]'],
+                                     mode='forward')
         assert_rel_error(self, J[0, 0], -3.0, .001)
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x[1]'],
-                                              outputs=['comp1.y[1]'],
-                                              mode='adjoint')
+        J = top.driver.calc_gradient(inputs=['comp1.x[1]'],
+                                     outputs=['comp1.y[1]'],
+                                     mode='adjoint')
         assert_rel_error(self, J[0, 0], -3.0, .001)
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x[1]'],
-                                              outputs=['comp1.y[1]'],
-                                              mode='fd')
+        J = top.driver.calc_gradient(inputs=['comp1.x[1]'],
+                                     outputs=['comp1.y[1]'],
+                                     mode='fd')
         assert_rel_error(self, J[0, 0], -3.0, .001)
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x[-1]'],
-                                              outputs=['comp1.y[-1]'],
-                                              mode='fd')
+        J = top.driver.calc_gradient(inputs=['comp1.x[-1]'],
+                                     outputs=['comp1.y[-1]'],
+                                     mode='fd')
         assert_rel_error(self, J[0, 0], -3.0, .001)
 
         top.run()
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
-                                              outputs=['comp1.y'],
-                                              mode='forward')
+        J = top.driver.calc_gradient(inputs=['comp1.x'],
+                                     outputs=['comp1.y'],
+                                     mode='forward')
         assert_rel_error(self, J[0, 0], 2.0, .001)
         assert_rel_error(self, J[0, 1], 7.0, .001)
         assert_rel_error(self, J[1, 0], 5.0, .001)
@@ -1391,59 +1408,53 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         top.connect('comp1.y', 'comp2.x')
 
         top.run()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
-                                              outputs=['comp2.y'],
-                                              mode='forward')
+        J = top.driver.calc_gradient(inputs=['comp1.x'],
+                                     outputs=['comp2.y'],
+                                     mode='forward')
         assert_rel_error(self, J[0, 0], 39.0, .001)
         assert_rel_error(self, J[0, 1], -7.0, .001)
         assert_rel_error(self, J[1, 0], -5.0, .001)
         assert_rel_error(self, J[1, 1], 44.0, .001)
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
-                                              outputs=['comp2.y'],
-                                              mode='adjoint')
+        J = top.driver.calc_gradient(inputs=['comp1.x'],
+                                     outputs=['comp2.y'],
+                                     mode='adjoint')
         assert_rel_error(self, J[0, 0], 39.0, .001)
         assert_rel_error(self, J[0, 1], -7.0, .001)
         assert_rel_error(self, J[1, 0], -5.0, .001)
         assert_rel_error(self, J[1, 1], 44.0, .001)
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x[0]'],
-                                              outputs=['comp2.y[0]'],
-                                              mode='forward')
+        J = top.driver.calc_gradient(inputs=['comp1.x[0]'],
+                                     outputs=['comp2.y[0]'],
+                                     mode='forward')
 
         assert_rel_error(self, J[0, 0], 39.0, .001)
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x[1]'],
-                                              outputs=['comp2.y[1]'],
-                                              mode='forward')
+        J = top.driver.calc_gradient(inputs=['comp1.x[1]'],
+                                     outputs=['comp2.y[1]'],
+                                     mode='forward')
 
         assert_rel_error(self, J[0, 0], 44.0, .001)
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x[1]'],
-                                              outputs=['comp2.y[-1]'],
-                                              mode='forward')
+        J = top.driver.calc_gradient(inputs=['comp1.x[1]'],
+                                     outputs=['comp2.y[-1]'],
+                                     mode='forward')
 
         assert_rel_error(self, J[0, 0], 44.0, .001)
 
         # this tests the finite difference code.
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
-                                              outputs=['comp2.y'],
-                                              mode='fd')
+        J = top.driver.calc_gradient(inputs=['comp1.x'],
+                                     outputs=['comp2.y'],
+                                     mode='fd')
         assert_rel_error(self, J[0, 0], 39.0, .001)
         assert_rel_error(self, J[0, 1], -7.0, .001)
         assert_rel_error(self, J[1, 0], -5.0, .001)
         assert_rel_error(self, J[1, 1], 44.0, .001)
 
         # this tests a simultaneous full and indexed array conn
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
-                                              outputs=['comp1.y[1]', 'comp2.y'],
-                                              mode='forward')
+        J = top.driver.calc_gradient(inputs=['comp1.x'],
+                                     outputs=['comp1.y[1]', 'comp2.y'],
+                                     mode='forward')
         assert_rel_error(self, J[0, 0], 5.0, .001)
         assert_rel_error(self, J[0, 1], -3.0, .001)
         assert_rel_error(self, J[1, 0], 39.0, .001)
@@ -1451,10 +1462,9 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[2, 0], -5.0, .001)
         assert_rel_error(self, J[2, 1], 44.0, .001)
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
-                                              outputs=['comp1.y[1]', 'comp2.y'],
-                                              mode='adjoint')
+        J = top.driver.calc_gradient(inputs=['comp1.x'],
+                                     outputs=['comp1.y[1]', 'comp2.y'],
+                                     mode='adjoint')
         assert_rel_error(self, J[0, 0], 5.0, .001)
         assert_rel_error(self, J[0, 1], -3.0, .001)
         assert_rel_error(self, J[1, 0], 39.0, .001)
@@ -1462,11 +1472,10 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[2, 0], -5.0, .001)
         assert_rel_error(self, J[2, 1], 44.0, .001)
 
-        top.driver.workflow.config_changed()
         top.run()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
-                                              outputs=['comp1.y[1]', 'comp2.y'],
-                                              mode='fd')
+        J = top.driver.calc_gradient(inputs=['comp1.x'],
+                                     outputs=['comp1.y[1]', 'comp2.y'],
+                                     mode='fd')
         assert_rel_error(self, J[0, 0], 5.0, .001)
         assert_rel_error(self, J[0, 1], -3.0, .001)
         assert_rel_error(self, J[1, 0], 39.0, .001)
@@ -1474,10 +1483,9 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[2, 0], -5.0, .001)
         assert_rel_error(self, J[2, 1], 44.0, .001)
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
-                                              outputs=['comp1.y[-1]', 'comp2.y'],
-                                              mode='forward')
+        J = top.driver.calc_gradient(inputs=['comp1.x'],
+                                     outputs=['comp1.y[-1]', 'comp2.y'],
+                                     mode='forward')
         assert_rel_error(self, J[0, 0], 5.0, .001)
         assert_rel_error(self, J[0, 1], -3.0, .001)
         assert_rel_error(self, J[1, 0], 39.0, .001)
@@ -1485,10 +1493,9 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[2, 0], -5.0, .001)
         assert_rel_error(self, J[2, 1], 44.0, .001)
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
-                                              outputs=['comp1.y[-1]', 'comp2.y'],
-                                              mode='adjoint')
+        J = top.driver.calc_gradient(inputs=['comp1.x'],
+                                     outputs=['comp1.y[-1]', 'comp2.y'],
+                                     mode='adjoint')
         assert_rel_error(self, J[0, 0], 5.0, .001)
         assert_rel_error(self, J[0, 1], -3.0, .001)
         assert_rel_error(self, J[1, 0], 39.0, .001)
@@ -1496,11 +1503,10 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[2, 0], -5.0, .001)
         assert_rel_error(self, J[2, 1], 44.0, .001)
 
-        top.driver.workflow.config_changed()
         top.run()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
-                                              outputs=['comp1.y[-1]', 'comp2.y'],
-                                              mode='fd')
+        J = top.driver.calc_gradient(inputs=['comp1.x'],
+                                     outputs=['comp1.y[-1]', 'comp2.y'],
+                                     mode='fd')
         assert_rel_error(self, J[0, 0], 5.0, .001)
         assert_rel_error(self, J[0, 1], -3.0, .001)
         assert_rel_error(self, J[1, 0], 39.0, .001)
@@ -1517,59 +1523,53 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         top.connect('comp1.y', 'comp2.x')
 
         top.run()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
-                                              outputs=['comp2.y'],
-                                              mode='forward')
+        J = top.driver.calc_gradient(inputs=['comp1.x'],
+                                     outputs=['comp2.y'],
+                                     mode='forward')
         assert_rel_error(self, J[0, 0], 39.0*12, .001)
         assert_rel_error(self, J[0, 1], -7.0*12, .001)
         assert_rel_error(self, J[1, 0], -5.0*12, .001)
         assert_rel_error(self, J[1, 1], 44.0*12, .001)
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
-                                              outputs=['comp2.y'],
-                                              mode='adjoint')
+        J = top.driver.calc_gradient(inputs=['comp1.x'],
+                                     outputs=['comp2.y'],
+                                     mode='adjoint')
         assert_rel_error(self, J[0, 0], 39.0*12, .001)
         assert_rel_error(self, J[0, 1], -7.0*12, .001)
         assert_rel_error(self, J[1, 0], -5.0*12, .001)
         assert_rel_error(self, J[1, 1], 44.0*12, .001)
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x[0]'],
-                                              outputs=['comp2.y[0]'],
-                                              mode='forward')
+        J = top.driver.calc_gradient(inputs=['comp1.x[0]'],
+                                     outputs=['comp2.y[0]'],
+                                     mode='forward')
 
         assert_rel_error(self, J[0, 0], 39.0*12, .001)
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x[1]'],
-                                              outputs=['comp2.y[1]'],
-                                              mode='forward')
+        J = top.driver.calc_gradient(inputs=['comp1.x[1]'],
+                                     outputs=['comp2.y[1]'],
+                                     mode='forward')
 
         assert_rel_error(self, J[0, 0], 44.0*12, .001)
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x[1]'],
-                                              outputs=['comp2.y[-1]'],
-                                              mode='forward')
+        J = top.driver.calc_gradient(inputs=['comp1.x[1]'],
+                                     outputs=['comp2.y[-1]'],
+                                     mode='forward')
 
         assert_rel_error(self, J[0, 0], 44.0*12, .001)
 
         # this tests the finite difference code.
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
-                                              outputs=['comp2.y'],
-                                              mode='fd')
+        J = top.driver.calc_gradient(inputs=['comp1.x'],
+                                     outputs=['comp2.y'],
+                                     mode='fd')
         assert_rel_error(self, J[0, 0], 39.0*12, .001)
         assert_rel_error(self, J[0, 1], -7.0*12, .001)
         assert_rel_error(self, J[1, 0], -5.0*12, .001)
         assert_rel_error(self, J[1, 1], 44.0*12, .001)
 
         # this tests a simultaneous full and indexed array conn
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
-                                              outputs=['comp1.y[1]', 'comp2.y'],
-                                              mode='forward')
+        J = top.driver.calc_gradient(inputs=['comp1.x'],
+                                     outputs=['comp1.y[1]', 'comp2.y'],
+                                     mode='forward')
 
         assert_rel_error(self, J[0, 0], 5.0, .001)
         assert_rel_error(self, J[0, 1], -3.0, .001)
@@ -1578,10 +1578,9 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[2, 0], -5.0*12, .001)
         assert_rel_error(self, J[2, 1], 44.0*12, .001)
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
-                                              outputs=['comp1.y[1]', 'comp2.y'],
-                                              mode='adjoint')
+        J = top.driver.calc_gradient(inputs=['comp1.x'],
+                                     outputs=['comp1.y[1]', 'comp2.y'],
+                                     mode='adjoint')
         assert_rel_error(self, J[0, 0], 5.0, .001)
         assert_rel_error(self, J[0, 1], -3.0, .001)
         assert_rel_error(self, J[1, 0], 39.0*12, .001)
@@ -1589,11 +1588,10 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[2, 0], -5.0*12, .001)
         assert_rel_error(self, J[2, 1], 44.0*12, .001)
 
-        top.driver.workflow.config_changed()
         top.run()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
-                                              outputs=['comp1.y[1]', 'comp2.y'],
-                                              mode='fd')
+        J = top.driver.calc_gradient(inputs=['comp1.x'],
+                                     outputs=['comp1.y[1]', 'comp2.y'],
+                                     mode='fd')
         assert_rel_error(self, J[0, 0], 5.0, .001)
         assert_rel_error(self, J[0, 1], -3.0, .001)
         assert_rel_error(self, J[1, 0], 39.0*12, .001)
@@ -1601,10 +1599,9 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[2, 0], -5.0*12, .001)
         assert_rel_error(self, J[2, 1], 44.0*12, .001)
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
-                                              outputs=['comp1.y[-1]', 'comp2.y'],
-                                              mode='forward')
+        J = top.driver.calc_gradient(inputs=['comp1.x'],
+                                     outputs=['comp1.y[-1]', 'comp2.y'],
+                                     mode='forward')
         assert_rel_error(self, J[0, 0], 5.0, .001)
         assert_rel_error(self, J[0, 1], -3.0, .001)
         assert_rel_error(self, J[1, 0], 39.0*12, .001)
@@ -1612,10 +1609,9 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[2, 0], -5.0*12, .001)
         assert_rel_error(self, J[2, 1], 44.0*12, .001)
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
-                                              outputs=['comp1.y[-1]', 'comp2.y'],
-                                              mode='adjoint')
+        J = top.driver.calc_gradient(inputs=['comp1.x'],
+                                     outputs=['comp1.y[-1]', 'comp2.y'],
+                                     mode='adjoint')
         assert_rel_error(self, J[0, 0], 5.0, .001)
         assert_rel_error(self, J[0, 1], -3.0, .001)
         assert_rel_error(self, J[1, 0], 39.0*12, .001)
@@ -1623,11 +1619,10 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[2, 0], -5.0*12, .001)
         assert_rel_error(self, J[2, 1], 44.0*12, .001)
 
-        top.driver.workflow.config_changed()
         top.run()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
-                                              outputs=['comp1.y[-1]', 'comp2.y'],
-                                              mode='fd')
+        J = top.driver.calc_gradient(inputs=['comp1.x'],
+                                     outputs=['comp1.y[-1]', 'comp2.y'],
+                                     mode='fd')
         assert_rel_error(self, J[0, 0], 5.0, .001)
         assert_rel_error(self, J[0, 1], -3.0, .001)
         assert_rel_error(self, J[1, 0], 39.0*12, .001)
@@ -1644,15 +1639,14 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         top.connect('comp1.y', 'comp2.x')
 
         top.run()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
-                                              outputs=['comp2.y'],
-                                              mode='forward')
+        J = top.driver.calc_gradient(inputs=['comp1.x'],
+                                     outputs=['comp2.y'],
+                                     mode='forward')
         assert_rel_error(self, J[0, 0], 39.0, .001)
         assert_rel_error(self, J[0, 1], -7.0, .001)
         assert_rel_error(self, J[1, 0], -5.0, .001)
         assert_rel_error(self, J[1, 1], 44.0, .001)
 
-        top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
                                               outputs=['comp2.y'],
                                               mode='adjoint')
@@ -1661,34 +1655,30 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[1, 0], -5.0, .001)
         assert_rel_error(self, J[1, 1], 44.0, .001)
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x[0]'],
-                                              outputs=['comp2.y[0]'],
-                                              mode='forward')
+        J = top.driver.calc_gradient(inputs=['comp1.x[0]'],
+                                     outputs=['comp2.y[0]'],
+                                     mode='forward')
 
         assert_rel_error(self, J[0, 0], 39.0, .001)
 
         top.run()
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x[1]'],
-                                              outputs=['comp2.y[1]'],
-                                              mode='forward')
+        J = top.driver.calc_gradient(inputs=['comp1.x[1]'],
+                                     outputs=['comp2.y[1]'],
+                                     mode='forward')
 
         assert_rel_error(self, J[0, 0], 44.0, .001)
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x[1]'],
-                                              outputs=['comp2.y[-1]'],
-                                              mode='forward')
+        J = top.driver.calc_gradient(inputs=['comp1.x[1]'],
+                                     outputs=['comp2.y[-1]'],
+                                     mode='forward')
 
         assert_rel_error(self, J[0, 0], 44.0, .001)
 
         # this tests the finite difference code.
         top.run()
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
-                                              outputs=['comp2.y'],
-                                              mode='fd')
+        J = top.driver.calc_gradient(inputs=['comp1.x'],
+                                     outputs=['comp2.y'],
+                                     mode='fd')
         assert_rel_error(self, J[0, 0], 39.0, .001)
         assert_rel_error(self, J[0, 1], -7.0, .001)
         assert_rel_error(self, J[1, 0], -5.0, .001)
@@ -1703,10 +1693,9 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         top.comp1.x3 = zeros((4, 1))
         top.comp1.x4 = zeros((4, 1))
         top.run()
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x1', 'comp1.x2', ('comp1.x3', 'comp1.x4')],
-                                              outputs=['comp1.xx1'],
-                                              mode='fd')
+        J = top.driver.calc_gradient(inputs=['comp1.x1', 'comp1.x2', ('comp1.x3', 'comp1.x4')],
+                                     outputs=['comp1.xx1'],
+                                     mode='fd')
 
         self.assertEqual(0.0, abs(J).max())
 
@@ -1717,49 +1706,50 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         top.driver.workflow.add(['comp1'])
 
         top.run()
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
-                                              outputs=['comp1.y'],
-                                              mode='forward')
+        J = top.driver.calc_gradient(inputs=['comp1.x'],
+                                     outputs=['comp1.y'],
+                                     mode='forward')
 
         diff = J - top.comp1.J
         assert_rel_error(self, diff.max(), 0.0, .000001)
 
-        top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
                                               outputs=['comp1.y'],
                                               mode='adjoint')
         diff = J - top.comp1.J
         assert_rel_error(self, diff.max(), 0.0, .000001)
 
-        top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
                                               outputs=['comp1.y'],
                                               mode='fd')
         diff = J - top.comp1.J
+        assert_rel_error(self, diff.max(), 0.0, .000001)
+
+        J = top.driver.calc_gradient(inputs=['comp1.x'],
+                                     outputs=['comp1.y'],
+                                     mode='fd',
+                                     return_format='dict')
+        diff = J['comp1.y']['comp1.x'] - top.comp1.J
         assert_rel_error(self, diff.max(), 0.0, .000001)
 
         top.run()
         Jsub = top.comp1.J[2:3, 2:3]
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x[1][:]'],
-                                              outputs=['comp1.y[1][:]'],
-                                              mode='forward')
+        J = top.driver.calc_gradient(inputs=['comp1.x[1][:]'],
+                                     outputs=['comp1.y[1][:]'],
+                                     mode='forward')
 
         diff = J - Jsub
         assert_rel_error(self, diff.max(), 0.0, .000001)
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x[1][:]'],
-                                              outputs=['comp1.y[1][:]'],
-                                              mode='adjoint')
+        J = top.driver.calc_gradient(inputs=['comp1.x[1][:]'],
+                                     outputs=['comp1.y[1][:]'],
+                                     mode='adjoint')
         diff = J - Jsub
         assert_rel_error(self, diff.max(), 0.0, .000001)
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x[1][:]'],
-                                              outputs=['comp1.y[1][:]'],
-                                              mode='fd')
+        J = top.driver.calc_gradient(inputs=['comp1.x[1][:]'],
+                                     outputs=['comp1.y[1][:]'],
+                                     mode='fd')
         diff = J - Jsub
         assert_rel_error(self, diff.max(), 0.0, .000001)
 
@@ -1770,25 +1760,22 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         top.driver.workflow.add(['comp1'])
 
         top.run()
-        top.driver.workflow.config_changed()
         inputs = ['comp1.x[0, 0]', 'comp1.x[0, 1]']
         outputs = ['comp1.y[1, 0]', 'comp1.y[1, 1]']
 
-        J = top.driver.workflow.calc_gradient(inputs=inputs,
-                                              outputs=outputs,
-                                              mode='forward')
+        J = top.driver.calc_gradient(inputs=inputs,
+                                     outputs=outputs,
+                                     mode='forward')
         Jsub = top.comp1.J[2:4, 0:2]
         diff = J - Jsub
         assert_rel_error(self, diff.max(), 0.0, .000001)
 
-        top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(inputs=inputs,
                                               outputs=outputs,
                                               mode='adjoint')
         diff = J - Jsub
         assert_rel_error(self, diff.max(), 0.0, .000001)
 
-        top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(inputs=inputs,
                                               outputs=outputs,
                                               mode='fd')
@@ -1802,25 +1789,23 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         top.driver.workflow.add(['comp1'])
 
         top.run()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x[0::2]'],
-                                              outputs=['comp1.y[0::2]'],
-                                              mode='forward')
+        J = top.driver.calc_gradient(inputs=['comp1.x[0::2]'],
+                                     outputs=['comp1.y[0::2]'],
+                                     mode='forward')
 
         diff = J - top.comp1.J[0::2, 0::2]
         assert_rel_error(self, diff.max(), 0.0, .000001)
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x[0::2]'],
-                                              outputs=['comp1.y[0::2]'],
-                                              mode='adjoint')
+        J = top.driver.calc_gradient(inputs=['comp1.x[0::2]'],
+                                     outputs=['comp1.y[0::2]'],
+                                     mode='adjoint')
 
         diff = J - top.comp1.J[0::2, 0::2]
         assert_rel_error(self, diff.max(), 0.0, .000001)
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x[0::2]'],
-                                              outputs=['comp1.y[0::2]'],
-                                              mode='fd')
+        J = top.driver.calc_gradient(inputs=['comp1.x[0::2]'],
+                                     outputs=['comp1.y[0::2]'],
+                                     mode='fd')
 
         diff = J - top.comp1.J[0::2, 0::2]
         assert_rel_error(self, diff.max(), 0.0, .000001)
@@ -1837,115 +1822,92 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         top.nest.create_passthrough('comp.y')
         top.run()
 
-        J = top.driver.workflow.calc_gradient(inputs=['nest.x',],
-                                              outputs=['nest.y'],
-                                              mode='forward')
+        J = top.driver.calc_gradient(inputs=['nest.x',],
+                                     outputs=['nest.y'],
+                                     mode='forward')
 
         diff = J - top.nest.comp.J
         assert_rel_error(self, diff.max(), 0.0, .000001)
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['nest.x',],
-                                              outputs=['nest.y'],
-                                              mode='adjoint')
+        J = top.driver.calc_gradient(inputs=['nest.x',],
+                                     outputs=['nest.y'],
+                                     mode='adjoint')
         diff = J - top.nest.comp.J
         assert_rel_error(self, diff.max(), 0.0, .000001)
 
-        top.driver.workflow.config_changed()
-        top.nest.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['nest.x[0, 0]',],
-                                              outputs=['nest.y[0, 0]'],
-                                              mode='forward')
+        J = top.driver.calc_gradient(inputs=['nest.x[0, 0]',],
+                                     outputs=['nest.y[0, 0]'],
+                                     mode='forward')
 
         diff = J - top.nest.comp.J[0, 0]
         assert_rel_error(self, diff.max(), 0.0, .000001)
 
-        top.driver.workflow.config_changed()
-        top.nest.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['nest.x[0, 0]',],
-                                              outputs=['nest.y[0, 0]'],
-                                              mode='adjoint')
+        J = top.driver.calc_gradient(inputs=['nest.x[0, 0]',],
+                                     outputs=['nest.y[0, 0]'],
+                                     mode='adjoint')
 
         diff = J - top.nest.comp.J[0, 0]
         assert_rel_error(self, diff.max(), 0.0, .000001)
 
-        top.driver.workflow.config_changed()
-        top.nest.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['nest.x[0, 1]',],
-                                              outputs=['nest.y[1, 0]'],
-                                              mode='forward')
+        J = top.driver.calc_gradient(inputs=['nest.x[0, 1]',],
+                                     outputs=['nest.y[1, 0]'],
+                                     mode='forward')
 
         diff = J - top.nest.comp.J[1, 2]
         assert_rel_error(self, diff.max(), 0.0, .000001)
 
-        top.driver.workflow.config_changed()
-        top.nest.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['nest.x[0, 1]',],
-                                              outputs=['nest.y[1, 0]'],
-                                              mode='adjoint')
+        J = top.driver.calc_gradient(inputs=['nest.x[0, 1]',],
+                                     outputs=['nest.y[1, 0]'],
+                                     mode='adjoint')
 
         diff = J - top.nest.comp.J[1, 2]
         assert_rel_error(self, diff.max(), 0.0, .000001)
 
-        top.driver.workflow.config_changed()
-        top.nest.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['nest.x[0, 1]',],
-                                              outputs=['nest.y[1, 0]'],
-                                              mode='fd')
+        J = top.driver.calc_gradient(inputs=['nest.x[0, 1]',],
+                                     outputs=['nest.y[1, 0]'],
+                                     mode='fd')
 
         diff = J - top.nest.comp.J[1, 2]
         assert_rel_error(self, diff.max(), 0.0, .000001)
 
-        top.driver.workflow.config_changed()
-        top.nest.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['nest.x[0, -1]',],
-                                              outputs=['nest.y[-1, 0]'],
-                                              mode='forward')
+        J = top.driver.calc_gradient(inputs=['nest.x[0, -1]',],
+                                     outputs=['nest.y[-1, 0]'],
+                                     mode='forward')
 
         diff = J - top.nest.comp.J[1, 2]
         assert_rel_error(self, diff.max(), 0.0, .000001)
 
-        top.driver.workflow.config_changed()
-        top.nest.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['nest.x[0, -1]',],
-                                              outputs=['nest.y[-1, 0]'],
-                                              mode='adjoint')
+        J = top.driver.calc_gradient(inputs=['nest.x[0, -1]',],
+                                     outputs=['nest.y[-1, 0]'],
+                                     mode='adjoint')
 
         diff = J - top.nest.comp.J[1, 2]
         assert_rel_error(self, diff.max(), 0.0, .000001)
 
-        top.driver.workflow.config_changed()
-        top.nest.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['nest.x[0, -1]',],
-                                              outputs=['nest.y[-1, 0]'],
-                                              mode='fd')
+        J = top.driver.calc_gradient(inputs=['nest.x[0, -1]',],
+                                     outputs=['nest.y[-1, 0]'],
+                                     mode='fd')
 
         diff = J - top.nest.comp.J[1, 2]
         assert_rel_error(self, diff.max(), 0.0, .000001)
 
-        top.driver.workflow.config_changed()
-        top.nest.driver.workflow.config_changed()
         Jsub = top.nest.comp.J[2:3, 2:3]
-        J = top.driver.workflow.calc_gradient(inputs=['nest.x[1][:]',],
-                                              outputs=['nest.y[1][:]'],
-                                              mode='forward')
+        J = top.driver.calc_gradient(inputs=['nest.x[1][:]',],
+                                     outputs=['nest.y[1][:]'],
+                                     mode='forward')
 
         diff = J - Jsub
 
-        top.driver.workflow.config_changed()
-        top.nest.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['nest.x[1][:]',],
-                                              outputs=['nest.y[1][:]'],
-                                              mode='adjoint')
+        J = top.driver.calc_gradient(inputs=['nest.x[1][:]',],
+                                     outputs=['nest.y[1][:]'],
+                                     mode='adjoint')
 
         diff = J - Jsub
 
         top.run()
-        top.driver.workflow.config_changed()
-        top.nest.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['nest.x[1][:]',],
-                                              outputs=['nest.y[1][:]'],
-                                              mode='fd')
+        J = top.driver.calc_gradient(inputs=['nest.x[1][:]',],
+                                     outputs=['nest.y[1][:]'],
+                                     mode='fd')
         diff = J - Jsub
 
     def test_nested_2Darray_simul_element_and_full_connection(self):
@@ -1967,20 +1929,19 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         top.driver.add_constraint('nest.y[0][1] < 0')
         top.run()
 
-        J = top.driver.workflow.calc_gradient(mode='forward')
+        J = top.driver.calc_gradient(mode='forward')
         assert_rel_error(self, J[0, 0], 24.0, .000001)
         assert_rel_error(self, J[1, 0], 4.0, .000001)
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(mode='adjoint')
+        J = top.driver.calc_gradient(mode='adjoint')
         assert_rel_error(self, J[0, 0], 24.0, .000001)
         assert_rel_error(self, J[1, 0], 4.0, .000001)
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(mode='fd')
+        J = top.driver.calc_gradient(mode='fd')
         assert_rel_error(self, J[0, 0], 24.0, .000001)
         assert_rel_error(self, J[1, 0], 4.0, .000001)
 
+    def test_nested_2Darray_simul_element_and_full_connection2(self):
         # Slightly different config
 
         top = Assembly()
@@ -2006,16 +1967,15 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[0, 0], 24.0, .000001)
         assert_rel_error(self, J[1, 0], 4.0, .000001)
 
-        top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(mode='adjoint')
         assert_rel_error(self, J[0, 0], 24.0, .000001)
         assert_rel_error(self, J[1, 0], 4.0, .000001)
 
-        top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(mode='fd')
         assert_rel_error(self, J[0, 0], 24.0, .000001)
         assert_rel_error(self, J[1, 0], 4.0, .000001)
 
+    def test_nested_2Darray_simul_element_and_full_connection_apply_derivs(self):
         # Do it all over with apply_deriv defined derivatives
 
         top = Assembly()
@@ -2039,16 +1999,15 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[0, 0], 24.0, .000001)
         assert_rel_error(self, J[1, 0], 4.0, .000001)
 
-        top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(mode='adjoint')
         assert_rel_error(self, J[0, 0], 24.0, .000001)
         assert_rel_error(self, J[1, 0], 4.0, .000001)
 
-        top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(mode='fd')
         assert_rel_error(self, J[0, 0], 24.0, .000001)
         assert_rel_error(self, J[1, 0], 4.0, .000001)
 
+    def test_nested_2Darray_simul_element_and_full_connection_apply_derivs2(self):
         # Slightly different config
 
         top = Assembly()
@@ -2074,16 +2033,15 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[0, 0], 24.0, .000001)
         assert_rel_error(self, J[1, 0], 4.0, .000001)
 
-        top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(mode='adjoint')
         assert_rel_error(self, J[0, 0], 24.0, .000001)
         assert_rel_error(self, J[1, 0], 4.0, .000001)
 
-        top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(mode='fd')
         assert_rel_error(self, J[0, 0], 24.0, .000001)
         assert_rel_error(self, J[1, 0], 4.0, .000001)
 
+    def test_nested_2Darray_simul_element_and_full_connection_multi_param(self):
         # Multi param
 
         top = Assembly()
@@ -2113,7 +2071,6 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[1, 1], 6.0, .000001)
         assert_rel_error(self, J[2, 1], 9.0, .000001)
 
-        top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(mode='adjoint')
         assert_rel_error(self, J[0, 0], 24.0, .000001)
         assert_rel_error(self, J[1, 0], 4.0, .000001)
@@ -2122,7 +2079,6 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[1, 1], 6.0, .000001)
         assert_rel_error(self, J[2, 1], 9.0, .000001)
 
-        top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(mode='fd')
         assert_rel_error(self, J[0, 0], 24.0, .000001)
         assert_rel_error(self, J[1, 0], 4.0, .000001)
@@ -2150,9 +2106,9 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
 
         Jbase = top.nest.comp1.provideJ()
 
-        J = top.driver.workflow.calc_gradient(inputs=['nest.x'],
-                                              outputs=['nest.y1', 'nest.y2'],
-                                              mode='fd')
+        J = top.driver.calc_gradient(inputs=['nest.x'],
+                                     outputs=['nest.y1', 'nest.y2'],
+                                     mode='fd')
         diff = abs(J[0:4, :] - Jbase)
         assert_rel_error(self, diff.max(), 0.0, .00001)
         diff = abs(J[0:4, -1] - Jbase[:, -1])
@@ -2160,10 +2116,9 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         diff = abs(J[4:, :-1])
         assert_rel_error(self, diff.max(), 0.0, .00001)
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['nest.x'],
-                                              outputs=['nest.y1', 'nest.y2'],
-                                              mode='forward')
+        J = top.driver.calc_gradient(inputs=['nest.x'],
+                                     outputs=['nest.y1', 'nest.y2'],
+                                     mode='forward')
         diff = abs(J[0:4, :] - Jbase)
         assert_rel_error(self, diff.max(), 0.0, .00001)
         diff = abs(J[0:4, -1] - Jbase[:, -1])
@@ -2171,15 +2126,34 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         diff = abs(J[4:, :-1])
         assert_rel_error(self, diff.max(), 0.0, .00001)
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['nest.x'],
-                                              outputs=['nest.y1', 'nest.y2'],
-                                              mode='adjoint')
+        Jdict = top.driver.calc_gradient(inputs=['nest.x'],
+                                         outputs=['nest.y1', 'nest.y2'],
+                                         mode='forward',
+                                         return_format='dict')
+        diff = Jdict['nest.y1']['nest.x'] - Jbase
+        assert_rel_error(self, diff.max(), 0.0, .00001)
+
+        diff = Jdict['nest.y2']['nest.x'] - J[4:, :]
+        assert_rel_error(self, diff.max(), 0.0, .00001)
+
+        J = top.driver.calc_gradient(inputs=['nest.x'],
+                                     outputs=['nest.y1', 'nest.y2'],
+                                     mode='adjoint')
         diff = abs(J[0:4, :] - Jbase)
         assert_rel_error(self, diff.max(), 0.0, .00001)
         diff = abs(J[0:4, -1] - Jbase[:, -1])
         assert_rel_error(self, diff.max(), 0.0, .00001)
         diff = abs(J[4:, :-1])
+        assert_rel_error(self, diff.max(), 0.0, .00001)
+
+        Jdict = top.driver.calc_gradient(inputs=['nest.x'],
+                                         outputs=['nest.y1', 'nest.y2'],
+                                         mode='adjoint',
+                                         return_format='dict')
+        diff = Jdict['nest.y1']['nest.x'] - Jbase
+        assert_rel_error(self, diff.max(), 0.0, .00001)
+
+        diff = Jdict['nest.y2']['nest.x'] - J[4:, :]
         assert_rel_error(self, diff.max(), 0.0, .00001)
 
     def test_large_dataflow(self):
@@ -2230,16 +2204,15 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
 
         self.top.comp1.x1 = 2.0
         self.top.run()
-        J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
-                                                   outputs=['comp5.y1', 'comp4.y3'],
-                                                   mode='forward')
+        J = self.top.driver.calc_gradient(inputs=['comp1.x1'],
+                                          outputs=['comp5.y1', 'comp4.y3'],
+                                          mode='forward')
         assert_rel_error(self, J[0, 0], 61.0, .001)
         assert_rel_error(self, J[1, 0], 126.0, .001)
 
-        self.top.driver.workflow.config_changed()
-        J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
-                                                   outputs=['comp5.y1', 'comp4.y3'],
-                                                   mode='adjoint')
+        J = self.top.driver.calc_gradient(inputs=['comp1.x1'],
+                                          outputs=['comp5.y1', 'comp4.y3'],
+                                          mode='adjoint')
 
         assert_rel_error(self, J[0, 0], 61.0, .001)
         assert_rel_error(self, J[1, 0], 126.0, .001)
@@ -2261,7 +2234,6 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[0, 0], 24.0, .001)
         assert_rel_error(self, J[1, 0], 2.0, .001)
 
-        self.top.driver.workflow.config_changed()
         J = self.top.driver.workflow.calc_gradient(mode='adjoint')
         assert_rel_error(self, J[0, 0], 24.0, .001)
         assert_rel_error(self, J[1, 0], 2.0, .001)
@@ -2280,11 +2252,9 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         J = self.top.driver.workflow.calc_gradient(mode='forward')
         assert_rel_error(self, J[0, 0], -8.0, .001)
 
-        self.top.driver.workflow.config_changed()
         J = self.top.driver.workflow.calc_gradient(mode='adjoint')
         assert_rel_error(self, J[0, 0], -8.0, .001)
 
-        self.top.driver.workflow.config_changed()
         J = self.top.driver.workflow.calc_gradient(mode='fd')
         assert_rel_error(self, J[0, 0], -8.0, .001)
 
@@ -2316,14 +2286,13 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         self.top.comp1.x1 = 2.0
         self.top.run()
 
-        J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
-                                                   outputs=['comp3.y1'],
-                                                   mode='forward')
+        J = self.top.driver.calc_gradient(inputs=['comp1.x1'],
+                                          outputs=['comp3.y1'],
+                                          mode='forward')
 
-        self.top.driver.workflow.config_changed()
-        Jfd = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
-                                                     outputs=['comp3.y1'],
-                                                     mode='fd')
+        Jfd = self.top.driver.calc_gradient(inputs=['comp1.x1'],
+                                            outputs=['comp3.y1'],
+                                            mode='fd')
 
         diff = Jfd-J
         assert_rel_error(self, diff.max(), 0.0, 0.1)
@@ -2380,22 +2349,27 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         self.top.comp1.x1 = 2.0
         self.top.run()
 
-        J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
-                                                   outputs=['comp5.y1'],
-                                                   mode='forward')
+        J = self.top.driver.calc_gradient(inputs=['comp1.x1'],
+                                          outputs=['comp5.y1'],
+                                          mode='forward')
 
         assert_rel_error(self, J[0, 0], 313.0, .001)
 
-        J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
-                                                   outputs=['comp5.y1'],
-                                                   mode='adjoint')
+        J = self.top.driver.calc_gradient(inputs=['comp1.x1'],
+                                          outputs=['comp5.y1'],
+                                          mode='adjoint')
 
         assert_rel_error(self, J[0, 0], 313.0, .001)
 
-        self.top.driver.workflow._derivative_graph._component_graph = None
-        cgraph = self.top.driver.workflow._derivative_graph.component_graph()
-        iterlist = nx.topological_sort(cgraph)
-        self.assertTrue(['~0', 'comp4', '~1'] == iterlist)
+        self.assertTrue(len(self.top.driver.workflow._system.subsystems()) == 4)
+        comp_list = simple_node_iter(self.top.driver.workflow._system.subsystems()[1]._nodes)
+        self.assertTrue(len(comp_list) == 3)
+        self.assertTrue('comp1' in comp_list)
+        self.assertTrue('comp2' in comp_list)
+        self.assertTrue('comp3' in comp_list)
+        comp_list = simple_node_iter(self.top.driver.workflow._system.subsystems()[3]._nodes)
+        self.assertTrue(len(comp_list) == 1)
+        self.assertTrue('comp5' in comp_list)
 
         # Case 2 - differentiable (none)
 
@@ -2403,23 +2377,26 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
 
         self.top.comp1.x1 = 2.0
         self.top.run()
-        self.top.driver.workflow.config_changed()
-        J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
-                                                   outputs=['comp5.y1'],
-                                                   mode='forward')
+        J = self.top.driver.calc_gradient(inputs=['comp1.x1'],
+                                          outputs=['comp5.y1'],
+                                          mode='forward')
 
         assert_rel_error(self, J[0, 0], 313.0, .001)
 
-        J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
-                                                   outputs=['comp5.y1'],
-                                                   mode='adjoint')
+        J = self.top.driver.calc_gradient(inputs=['comp1.x1'],
+                                          outputs=['comp5.y1'],
+                                          mode='adjoint')
 
         assert_rel_error(self, J[0, 0], 313.0, .001)
 
-        self.top.driver.workflow._derivative_graph._component_graph = None
-        cgraph = self.top.driver.workflow._derivative_graph.component_graph()
-        iterlist = nx.topological_sort(cgraph)
-        self.assertTrue(['~0'] == iterlist)
+        self.assertTrue(len(self.top.driver.workflow._system.subsystems()) == 2)
+        comp_list = simple_node_iter(self.top.driver.workflow._system.subsystems()[1]._nodes)
+        self.assertTrue(len(comp_list) == 5)
+        self.assertTrue('comp1' in comp_list)
+        self.assertTrue('comp2' in comp_list)
+        self.assertTrue('comp3' in comp_list)
+        self.assertTrue('comp4' in comp_list)
+        self.assertTrue('comp5' in comp_list)
 
         # Case 3 - differentiable (comp5)
 
@@ -2427,23 +2404,25 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
 
         self.top.comp1.x1 = 2.0
         self.top.run()
-        self.top.driver.workflow.config_changed()
-        J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
-                                                   outputs=['comp5.y1'],
-                                                   mode='forward')
+        J = self.top.driver.calc_gradient(inputs=['comp1.x1'],
+                                          outputs=['comp5.y1'],
+                                          mode='forward')
 
         assert_rel_error(self, J[0, 0], 313.0, .001)
 
-        J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
-                                                   outputs=['comp5.y1'],
-                                                   mode='adjoint')
+        J = self.top.driver.calc_gradient(inputs=['comp1.x1'],
+                                          outputs=['comp5.y1'],
+                                          mode='adjoint')
 
         assert_rel_error(self, J[0, 0], 313.0, .001)
 
-        self.top.driver.workflow._derivative_graph._component_graph = None
-        cgraph = self.top.driver.workflow._derivative_graph.component_graph()
-        iterlist = nx.topological_sort(cgraph)
-        self.assertTrue(['~0', 'comp5'] == iterlist)
+        self.assertTrue(len(self.top.driver.workflow._system.subsystems()) == 3)
+        comp_list = simple_node_iter(self.top.driver.workflow._system.subsystems()[1]._nodes)
+        self.assertTrue(len(comp_list) == 4)
+        self.assertTrue('comp1' in comp_list)
+        self.assertTrue('comp2' in comp_list)
+        self.assertTrue('comp3' in comp_list)
+        self.assertTrue('comp4' in comp_list)
 
         # Case 4 - differentiable (comp1, comp3, comp5)
 
@@ -2452,34 +2431,33 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
 
         self.top.comp1.x1 = 2.0
         self.top.run()
-        self.top.driver.workflow.config_changed()
-        J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
-                                                   outputs=['comp5.y1'],
-                                                   mode='forward')
+        J = self.top.driver.calc_gradient(inputs=['comp1.x1'],
+                                          outputs=['comp5.y1'],
+                                          mode='forward')
 
         assert_rel_error(self, J[0, 0], 313.0, .001)
 
-        self.top.driver.workflow.config_changed()
-        J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
-                                                   outputs=['comp5.y1'],
-                                                   mode='adjoint')
+        J = self.top.driver.calc_gradient(inputs=['comp1.x1'],
+                                          outputs=['comp5.y1'],
+                                          mode='adjoint')
 
         assert_rel_error(self, J[0, 0], 313.0, .001)
 
-        self.top.driver.workflow._derivative_graph._component_graph = None
-        cgraph = self.top.driver.workflow._derivative_graph.component_graph()
-        iterlist = nx.topological_sort(cgraph)
-        self.assertTrue(['comp1', 'comp3', '~0', 'comp5'] == iterlist)
+        self.assertTrue(len(self.top.driver.workflow._system.subsystems()) == 5)
+        comp_list = simple_node_iter(self.top.driver.workflow._system.subsystems()[3]._nodes)
+        self.assertTrue(len(comp_list) == 2)
+        self.assertTrue('comp2' in comp_list)
+        self.assertTrue('comp4' in comp_list)
 
-        # Put everything in a single pseudo-assy, and run fd with no fake.
-        self.top.driver.workflow.config_changed()
-        J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
-                                                   outputs=['comp5.y1'],
-                                                   mode='fd')
+
+        # Put everything in a single pseudo-assy, and run fd.
+        J = self.top.driver.calc_gradient(inputs=['comp1.x1'],
+                                          outputs=['comp5.y1'],
+                                          mode='fd')
         assert_rel_error(self, J[0, 0], 313.0, .001)
 
 
-    def test_free_floating_variables(self):
+    def test_boundary_variables(self):
 
         top = set_as_top(Assembly())
         top.add('comp', Paraboloid())
@@ -2502,14 +2480,12 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[1, 0], 1.0, .001)
         assert_rel_error(self, J[1, 1], -4.5, .001)
 
-        top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(mode='fd')
         assert_rel_error(self, J[0, 0], 7.0, .001)
         assert_rel_error(self, J[0, 1], -3.5, .001)
         assert_rel_error(self, J[1, 0], 1.0, .001)
         assert_rel_error(self, J[1, 1], -4.5, .001)
 
-        top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(mode='adjoint')
         assert_rel_error(self, J[0, 0], 7.0, .001)
         assert_rel_error(self, J[0, 1], -3.5, .001)
@@ -2539,14 +2515,12 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[1, 0], 1.0, .001)
         assert_rel_error(self, J[1, 1], -4.5, .001)
 
-        top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(mode='fd')
         assert_rel_error(self, J[0, 0], 7.0, .001)
         assert_rel_error(self, J[0, 1], -3.5, .001)
         assert_rel_error(self, J[1, 0], 1.0, .001)
         assert_rel_error(self, J[1, 1], -4.5, .001)
 
-        top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(mode='adjoint')
         assert_rel_error(self, J[0, 0], 7.0, .001)
         assert_rel_error(self, J[0, 1], -3.5, .001)
@@ -2565,7 +2539,6 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[0, 0], -6.0, .001)
         assert_rel_error(self, J[0, 1], 3.9, .001)
 
-        top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(mode='adjoint')
         assert_rel_error(self, J[0, 0], -6.0, .001)
         assert_rel_error(self, J[0, 1], 3.9, .001)
@@ -2591,7 +2564,6 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
                                               mode='forward')
         assert_rel_error(self, J[0, 0], 48.0, .001)
 
-        top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(mode='adjoint')
         assert_rel_error(self, J[0, 0], 48.0, .001)
 
@@ -2604,41 +2576,60 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
 
         top.run()
 
-        J = top.driver.workflow.calc_gradient(inputs=[('comp1.x1', 'comp1.x2')],
+        J = top.driver.calc_gradient(inputs=[('comp1.x1', 'comp1.x2')],
                                               outputs=['comp1.y1'],
                                               mode='forward')
         assert_rel_error(self, J[0, 0], 12.0, .001)
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=[('comp1.x1', 'comp1.x2')],
+        J = top.driver.calc_gradient(inputs=[('comp1.x1', 'comp1.x2')],
                                               outputs=['comp1.y1'],
                                               mode='adjoint')
         assert_rel_error(self, J[0, 0], 12.0, .001)
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=[('comp1.x1', 'comp1.x2')],
+        J = top.driver.calc_gradient(inputs=[('comp1.x1', 'comp1.x2')],
                                               outputs=['comp1.y1'],
                                               mode='fd')
         assert_rel_error(self, J[0, 0], 12.0, .001)
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x1', ('comp1.x2')],
+        J = top.driver.calc_gradient(inputs=['comp1.x1', ('comp1.x2',)],
                                               outputs=['comp1.y1'],
                                               mode='forward')
         assert_rel_error(self, J[0, 0], 5.0, .001)
         assert_rel_error(self, J[0, 1], 7.0, .001)
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=[('comp1.x1', 'comp1.x2', 'comp1.x3')],
+        J = top.driver.calc_gradient(inputs=[('comp1.x1', 'comp1.x2', 'comp1.x3')],
                                               outputs=['comp1.y1'],
                                               mode='forward')
         assert_rel_error(self, J[0, 0], 9.0, .001)
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=[('comp1.x1', 'comp1.x2', 'comp1.x3')],
+        J = top.driver.calc_gradient(inputs=[('comp1.x1', 'comp1.x2', 'comp1.x3')],
                                               outputs=['comp1.y1'],
                                               mode='adjoint')
         assert_rel_error(self, J[0, 0], 9.0, .001)
+
+    def test_paramgroup_deriv(self):
+
+        top = set_as_top(Assembly())
+        top.add('comp1', Paraboloid())
+        top.add('driver', SimpleDriver())
+        top.driver.workflow.add(['comp1'])
+
+        top.run()
+
+        J = top.driver.calc_gradient(inputs=[('comp1.x', 'comp1.y')],
+                                              outputs=['comp1.f_xy'],
+                                              mode='forward')
+        assert_rel_error(self, J[0, 0], 2.0, .001)
+
+        J = top.driver.calc_gradient(inputs=[('comp1.x', 'comp1.y')],
+                                              outputs=['comp1.f_xy'],
+                                              mode='adjoint')
+        assert_rel_error(self, J[0, 0], 2.0, .001)
+
+        J = top.driver.calc_gradient(inputs=[('comp1.x', 'comp1.y')],
+                                              outputs=['comp1.f_xy'],
+                                              mode='fd')
+        assert_rel_error(self, J[0, 0], 2.0, .001)
 
     def test_paramgroup_with_scaler(self):
 
@@ -2651,7 +2642,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         top.driver.add_objective('comp1.y1')
         top.run()
 
-        J = top.driver.workflow.calc_gradient(mode='forward')
+        J = top.driver.calc_gradient(mode='forward')
         assert_rel_error(self, J[0, 0], 12.0*2.0, .001)
 
     def test_missing_derivs_error(self):
@@ -2664,13 +2655,12 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         self.top.driver.add_constraint('dis2.miss_out < 24.0')
 
         self.top.run()
-
         try:
             J = self.top.driver.workflow.calc_gradient(mode='forward')
         except Exception as err:
             self.assertEqual(str(err),
-                             "'dis2' doesn't provide analytical derivatives"
-                             " ['miss_out']")
+                             "'dis2 (1-dis2): does not provide analytical derivatives for"
+                             " miss_out'")
         else:
             self.fail("exception expected")
 
@@ -2680,11 +2670,11 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         self.top.driver.add_parameter('dis2.miss_in', low=-10.0, high=10.0)
 
         try:
-            J = self.top.driver.workflow.calc_gradient(mode='forward')
+            J = self.top.driver.calc_gradient(mode='forward')
         except Exception as err:
             self.assertEqual(str(err),
-                             "'dis2' doesn't provide analytical derivatives"
-                             " ['miss_in']")
+                             "'dis2 (1-dis2): does not provide analytical derivatives for"
+                             " miss_in'")
         else:
             self.fail("exception expected")
 
@@ -2701,7 +2691,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
 
         self.top.run()
 
-        J = self.top.driver.workflow.calc_gradient(mode='forward')
+        J = self.top.driver.calc_gradient(mode='forward')
         assert_rel_error(self, J[0, 0], 24.0, .001)
         assert_rel_error(self, J[1, 0], 0.0, .001)
 
@@ -2710,9 +2700,8 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         self.assertTrue('dis2.y / dis2.x' in derivs[2])
 
         self.top.driver.run_iteration()
-        self.top.driver.workflow.config_changed()
-        J = self.top.driver.workflow.calc_gradient(inputs=['dis2.miss_in'],
-                                                   mode='fd')
+        J = self.top.driver.calc_gradient(inputs=['dis2.miss_in'],
+                                          mode='fd')
         assert_rel_error(self, J[0, 0], 0.0, .001)
         assert_rel_error(self, J[1, 0], 0.0, .001)
 
@@ -2734,6 +2723,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
 
             def execute(self):
                 self.y = 2.0*sum(self.a) + 3.0*sum(self.b)
+                print "Sink", self.a, self.b, self.y
 
         top = set_as_top(Assembly())
         top.add('driver', SimpleDriver())
@@ -2746,35 +2736,32 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
 
         top.run()
 
-        J = top.driver.workflow.calc_gradient(inputs=[('c2.a', 'c2.b')],
+        top.driver.workflow.clear()
+        top.driver.workflow.add('c2')
+        J = top.driver.calc_gradient(inputs=[('c2.a', 'c2.b')],
                                               outputs=['c2.y'], mode='fd')
         assert_rel_error(self, J[0, 0], 5.0, .001)
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=[('c2.a[0:2]', 'c2.b[0:2]')],
+        J = top.driver.calc_gradient(inputs=[('c2.a[0:2]', 'c2.b[0:2]')],
                                               outputs=['c2.y'], mode='fd')
         assert_rel_error(self, J[0, 0], 5.0, .001)
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=[('c2.a[:2]', 'c2.b[:2]')],
+        J = top.driver.calc_gradient(inputs=[('c2.a[:2]', 'c2.b[:2]')],
                                               outputs=['c2.y'], mode='fd')
         assert_rel_error(self, J[0, 0], 5.0, .001)
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=[('c2.a[1]', 'c2.b[1]')],
+        J = top.driver.calc_gradient(inputs=[('c2.a[1]', 'c2.b[1]')],
                                               outputs=['c2.y'], mode='fd')
         assert_rel_error(self, J[0, 0], 5.0, .001)
 
         top.disconnect('c1.y', 'c2.b')
         top.c2.b = array([0.0, 0.0, 0.0, 0.0])
         top.run()
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=[('c2.a[0]', 'c2.a[2]')],
+        J = top.driver.calc_gradient(inputs=[('c2.a[0]', 'c2.a[2]')],
                                               outputs=['c2.y'], mode='fd')
         assert_rel_error(self, J[0, 0], 4.0, .001)
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=[('c2.a[0:2]', 'c2.a[2:4]')],
+        J = top.driver.calc_gradient(inputs=[('c2.a[0:2]', 'c2.a[2:4]')],
                                               outputs=['c2.y'], mode='fd')
         assert_rel_error(self, J[0, 0], 4.0, .001)
         assert_rel_error(self, J[0, 1], 4.0, .001)
@@ -2787,11 +2774,10 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         top.driver.workflow.add(['comp1'])
 
         top.comp1.x = zeros((3, 2))
-        top.driver.workflow.config_changed()
         try:
-            J = top.driver.workflow.calc_gradient(inputs=[('comp1.x')],
-                                                  outputs=['comp1.y'],
-                                                  mode='forward')
+            J = top.driver.calc_gradient(inputs=[('comp1.x')],
+                                         outputs=['comp1.y'],
+                                         mode='forward')
         except RuntimeError as err:
             msg = 'comp1: Jacobian is the wrong size. Expected (4x6) but got (4x4)'
             self.assertEqual(str(err), msg)
@@ -2928,151 +2914,6 @@ class CompAdjoint(CompBase):
 class Testcase_applyJT(unittest.TestCase):
     """ Unit test for conversion of provideJ to applyJT """
 
-    def test_applyJ_and_applyJT(self):
-
-        comp = Comp2()
-        J = comp.provideJ()
-
-        arg = {}
-        arg['x1'] = array([1.0])
-        arg['x2'] = array([1.0])
-        arg['y1'] = array([0.0])
-        arg['y2'] = array([0.0])
-
-        result = {}
-        result['y1'] = array([0.0])
-        result['y2'] = array([0.0])
-
-        applyJ(comp, arg, result, [], {}, J)
-
-        self.assertEqual(result['y1'], 8.0)
-        self.assertEqual(result['y2'], 18.0)
-
-        arg = {}
-        arg['y1'] = array([1.0])
-        arg['y2'] = array([1.0])
-
-        result = {}
-        result['x1'] = array([0.0])
-        result['x2'] = array([0.0])
-        result['y1'] = array([0.0])
-        result['y2'] = array([0.0])
-
-        applyJT(comp, arg, result, [], {}, J)
-
-        self.assertEqual(result['x1'], 10.0)
-        self.assertEqual(result['x2'], 16.0)
-
-    def test_deriv_slices(self):
-
-        comp = Comp2_array()
-        comp.provideJ()
-
-        arg = {}
-        arg['x[0, 1]'] = array([1.0])
-        arg['y[1, 0]'] = array([0.0])
-
-        result = {}
-        result['y[1, 0]'] = array([0.0])
-
-        applyJ(comp, arg, result, [], {})
-
-        self.assertEqual(result['y[1, 0]'], 5.0)
-
-        arg = {}
-        arg['x[0, 1]'] = array([0.0])
-        arg['y[1, 0]'] = array([1.0])
-
-        result = {}
-        result['x[0, 1]'] = array([0.0])
-
-        applyJT(comp, arg, result, [], {})
-
-        self.assertEqual(result['x[0, 1]'], 5.0)
-
-        arg = {}
-        arg['x[0, 1]'] = array([0.0])
-        arg['y[:, 0]'] = array([1.0, 1.0])
-
-        result = {}
-        result['x[0, 1]'] = array([0.0])
-
-        applyJT(comp, arg, result, [], {})
-
-        self.assertEqual(result['x[0, 1]'], 138.0)
-
-    def test_deriv_slices2(self):
-
-        top = set_as_top(Assembly())
-        top.add('comp1', Comp3_array())
-        top.add('driver', SimpleDriver())
-        top.driver.workflow.add(['comp1'])
-
-        top.run()
-
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x[1, 0]'],
-                                              outputs=['comp1.y[:2, 1:]'],
-                                              mode='forward')
-
-        diff = abs(J.flatten() - top.comp1.J[[1, 2, 4, 5], 3].flatten())
-        self.assertAlmostEqual(diff.max(), 0.0, places=8)
-
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x[1, 0]'],
-                                              outputs=['comp1.y[:2, 1:]'],
-                                              mode='adjoint')
-
-        diff = abs(J.flatten() - top.comp1.J[[1, 2, 4, 5], 3].flatten())
-        self.assertAlmostEqual(diff.max(), 0.0, places=8)
-
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x[1:, :2]'],
-                                              outputs=['comp1.y[0, 2]'],
-                                              mode='forward')
-
-        diff = abs(J.flatten() - top.comp1.J[2, [3, 4, 6, 7]].flatten())
-        self.assertAlmostEqual(diff.max(), 0.0, places=8)
-
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x[1:, :2]'],
-                                              outputs=['comp1.y[0, 2]'],
-                                              mode='adjoint')
-
-        diff = abs(J.flatten() - top.comp1.J[2, [3, 4, 6, 7]].flatten())
-        self.assertAlmostEqual(diff.max(), 0.0, places=8)
-
-    def test_matvecREV2(self):
-        # Larger system
-
-        top = set_as_top(Assembly())
-        top.add('comp1', Comp2())
-        top.add('comp2', Comp2())
-        top.connect('comp1.y1', 'comp2.x1')
-
-        top.driver.workflow.add(['comp1', 'comp2'])
-
-        src = ['comp1.x1', 'comp1.x2']
-        resp = ['comp2.y1', 'comp2.y2']
-        J1 = top.driver.workflow.calc_gradient(src, resp, mode='forward')
-        J2 = top.driver.workflow.calc_gradient(src, resp, mode='adjoint')
-        diff = J1 - J2
-        assert_rel_error(self, diff.max(), 0.0, 1e-8)
-
-        J = zeros([5, 5])
-        arg = zeros((5, ))
-        for j in range(5):
-            arg[j] = 1.0
-            J[:, j] = top.driver.workflow.matvecFWD(arg)
-            arg[j] = 0.0
-
-        Jt = zeros([5, 5])
-        for j in range(5):
-            arg[j] = 1.0
-            Jt[:, j] = top.driver.workflow.matvecREV(arg)
-            arg[j] = 0.0
-        diff = J.T - Jt
-        self.assertEqual(diff.max(), 0.0)
-
     def test_forward_adjoint_error(self):
         # Test our error messages for when you have are missing one
         # of (apply_deriv, apply_derivT) and try to run the other
@@ -3080,22 +2921,12 @@ class Testcase_applyJT(unittest.TestCase):
         model = set_as_top(Assembly())
         model.add('comp', CompForward())
         model.driver.workflow.add('comp')
-        model.driver.gradient_options.derivative_direction = 'forward'
 
-        model.run()
-
-        inputs = ['comp.x']
-        outputs = ['comp.y']
-        J = model.driver.workflow.calc_gradient(inputs=inputs, outputs=outputs)
-
-        model.driver.gradient_options.derivative_direction = 'adjoint'
-        model.driver.config_changed()
         try:
-            J = model.driver.workflow.calc_gradient(inputs=inputs, outputs=outputs)
-        except RuntimeError as err:
-            msg = ": Attempting to calculate derivatives in " + \
-                  "adjoint mode, but component %s" % 'comp'
-            msg += " only has forward derivatives defined."
+            model.run()
+        except Exception as err:
+            msg = "comp: method 'apply_derivT' must be also specified " + \
+                  " if 'apply_deriv' is specified"
             self.assertEqual(str(err), msg)
         else:
             self.fail("exception expected")
@@ -3103,22 +2934,12 @@ class Testcase_applyJT(unittest.TestCase):
         model = set_as_top(Assembly())
         model.add('comp', CompAdjoint())
         model.driver.workflow.add('comp')
-        model.driver.gradient_options.derivative_direction = 'adjoint'
 
-        model.run()
-
-        inputs = ['comp.x']
-        outputs = ['comp.y']
-        J = model.driver.workflow.calc_gradient(inputs=inputs, outputs=outputs)
-
-        model.driver.gradient_options.derivative_direction = 'forward'
-        model.driver.config_changed()
         try:
-            J = model.driver.workflow.calc_gradient(inputs=inputs, outputs=outputs)
-        except RuntimeError as err:
-            msg = ": Attempting to calculate derivatives in " + \
-                  "forward mode, but component %s" % 'comp'
-            msg += " only has adjoint derivatives defined."
+            model.run()
+        except Exception as err:
+            msg = "comp: method 'apply_deriv' must be also specified " + \
+                  " if 'apply_derivT' is specified"
             self.assertEqual(str(err), msg)
         else:
             self.fail("exception expected")
@@ -3220,20 +3041,20 @@ class Testcase_preconditioning(unittest.TestCase):
         top.add('comp', PreComp())
         top.driver.workflow.add('comp')
 
-        J = top.driver.workflow.calc_gradient(inputs=['comp.x1', 'comp.x2'],
-                                              outputs=['comp.y1', 'comp.y2'],
-                                              mode='forward')
+        J = top.driver.calc_gradient(inputs=['comp.x1', 'comp.x2'],
+                                     outputs=['comp.y1', 'comp.y2'],
+                                     mode='forward')
 
-        print J
+        #print J
         # TODO: transform back to original coords
         #assert_rel_error(self, J[0, 0], 2.0, 0.0001)
         #assert_rel_error(self, J[0, 1], 7.0, 0.0001)
         #assert_rel_error(self, J[1, 0], 13.0, 0.0001)
         #assert_rel_error(self, J[1, 1], -3.0, 0.0001)
 
-        J = top.driver.workflow.calc_gradient(inputs=['comp.x1', 'comp.x2'],
-                                              outputs=['comp.y1', 'comp.y2'],
-                                              mode='adjoint')
+        J = top.driver.calc_gradient(inputs=['comp.x1', 'comp.x2'],
+                                     outputs=['comp.y1', 'comp.y2'],
+                                     mode='adjoint')
 
         assert_rel_error(self, J[0, 0], 2.0, 0.0001)
         assert_rel_error(self, J[0, 1], 7.0, 0.0001)
@@ -3258,9 +3079,8 @@ class Testcase_preconditioning(unittest.TestCase):
         top.run()
 
         J = top.driver.workflow.calc_gradient(mode='forward')
-        print J
+        #print J
 
-        top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(mode='adjoint')
         assert_rel_error(self, J[0, 0], 82.0, 0.0001)
         assert_rel_error(self, J[0, 1], 93.0, 0.0001)
@@ -3282,9 +3102,8 @@ class Testcase_preconditioning(unittest.TestCase):
         top.run()
 
         J = top.driver.workflow.calc_gradient(mode='forward')
-        print J
+        #print J
 
-        top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(mode='adjoint')
         assert_rel_error(self, J[0, 0], 95.0, 0.0001)
         assert_rel_error(self, J[0, 1], -7.0, 0.0001)
@@ -3301,7 +3120,7 @@ class Testcase_preconditioning(unittest.TestCase):
         top.nest.driver.workflow.add(['comp1', 'comp2', 'comp3'])
         top.nest.create_passthrough('comp1.x')
         top.nest.create_passthrough('comp2.y')
-        top.nest.add('yyy', Array(iotype='out'))
+        top.nest.add('yyy', Array([0.0, 0.0], iotype='out'))
         top.nest.add('dumb', Array(array([2.0, 4.0]), iotype='in'))
         top.nest.connect('comp1.y', 'yyy')
         top.nest.connect('dumb', 'comp3.x')
@@ -3318,12 +3137,10 @@ class Testcase_preconditioning(unittest.TestCase):
         top.run()
 
         J = top.driver.workflow.calc_gradient(mode='forward')
-        print J
+        #print J
 
-        top.driver.workflow.config_changed()
-        top.nest.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(mode='adjoint')
-        print J
+        #print J
 
 
         assert_rel_error(self, J[0, 0], 95.0, 0.0001)
@@ -3360,9 +3177,8 @@ class Testcase_preconditioning(unittest.TestCase):
         top.run()
 
         J = top.driver.workflow.calc_gradient(mode='forward')
-        print J
+        #print J
 
-        top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(mode='adjoint')
         assert_rel_error(self, J[0, 0], 475.0, 0.0001)
         assert_rel_error(self, J[0, 1], -35.0, 0.0001)
@@ -3389,15 +3205,14 @@ class TestMultiDriver(unittest.TestCase):
         top.inner_driver.add_objective('2.0*target + 2.0*comp.x + 2.0*comp.y')
 
         top.run()
-        top.inner_driver.workflow.initialize_residual()
-        #J = top.inner_driver.workflow.calc_gradient()
-        edges = top.inner_driver.workflow._edges
-        #print edges
-        #print top.inner_driver.list_objective_targets()
-        self.assertEqual(set(edges['comp.y']), set(['_pseudo_1.in0']))
-        self.assertEqual(set(edges['@in0']), set(['_pseudo_1.in2', 'comp.x']))
-        self.assertEqual(set(edges['_pseudo_1.out0']), set(['@out0']))
-        self.assertEqual(len(edges), 3)
+
+        self.assertEqual( set(top._system.vec['u'].keys()),
+                          set([('comp.y', ('_pseudo_0.in2', '_pseudo_1.in2')),
+                               ('_pseudo_0.out0', ('_pseudo_0.out0',)),
+                               ('target', ('_pseudo_0.in0', '_pseudo_1.in0', 'target')),
+                               ('_pseudo_1.out0', ('_pseudo_1.out0',)),
+                               ('comp.x', ('_pseudo_1.in1', '_pseudo_0.in1', 'comp.x')),
+                              ]))
 
     def test_PA_subvar_solver_edges(self):
 
@@ -3412,29 +3227,34 @@ class TestMultiDriver(unittest.TestCase):
         # Make sure it runs.
         sp.run()
 
+        # Reconverge inner solver with tight tolerance so FD is accurate.
+        sp.solver.tol = 1e-12
+        sp.run()
+
         # Test gradient
-        sp.driver.gradient_options.fd_form = 'central'
+        #sp.driver.gradient_options.fd_form = 'central'
         J = sp.driver.workflow.calc_gradient()
 
-        sp.driver.workflow.config_changed()
         Jfd = sp.driver.workflow.calc_gradient(mode='fd')
 
         diff = J - Jfd
+
         assert_rel_error(self, diff.max(), 0.0, .001)
 
     def test_PA_subvar_driver_edges(self):
 
-        # Ther was a keyerror here too, resulting from a basevar node
-        # that gor removed somehow on the recursed optimizer graph.
+        raise SkipTest('Cannot specify options on architectures yet.')
+
+        # There was a keyerror here too, resulting from a basevar node
+        # that got removed somehow on the recursed optimizer graph.
 
         sp = set_as_top(UnitScalableProblem())
         sp.architecture = CO()
-        sp.check_config()
 
         # Don't run it forever
         sp.driver.maxiter = 1
-        sp.local_opt_d0.maxiter = 1
-        sp.local_opt_d1.maxiter = 1
+        #sp.local_opt_d0.maxiter = 1
+        #sp.local_opt_d1.maxiter = 1
 
         # Make sure it runs.
         sp.run()
@@ -3443,11 +3263,15 @@ class TestMultiDriver(unittest.TestCase):
         sp.driver.gradient_options.fd_form = 'central'
         J = sp.driver.workflow.calc_gradient()
 
-        sp.driver.workflow.config_changed()
         Jfd = sp.driver.workflow.calc_gradient(mode='fd')
 
         diff = J - Jfd
         assert_rel_error(self, diff.max(), 0.0, .001)
+
+
+
+
+
 
 
 if __name__ == '__main__':

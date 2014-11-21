@@ -40,20 +40,20 @@ class RecordingOptionsTestCase(unittest.TestCase):
                 self.assertEqual(lines[i].rstrip(), expected[i])
 
     def test_no_recorder(self):
-        """ verify recording options are ignored if there are no recorders
-            (i.e. the Assembly runs without errors)
-        """
+        # verify recording options are ignored if there are no recorders
+        #    (i.e. the Assembly runs without errors)
+        
         self.top.recorders = []
         self.top.run()
         self.assertEqual(self.top.comp1.z, 0.0)
         self.assertEqual(self.top.comp2.z, 1.0)
 
     def test_default_options(self):
-        """ verify default options:
-                save_problem_formulation = True
-                includes = ['*']
-                excludes = []
-        """
+        # verify default options:
+        #        save_problem_formulation = True
+        #        includes = ['*']
+        #        excludes = []
+        
         sout = StringIO.StringIO()
         self.top.recorders = [DumpCaseRecorder(sout)]
         self.top.run()
@@ -70,6 +70,7 @@ Constants:
    directory:
    driver.directory:
    driver.force_fd: False
+   driver.gradient_options.atol: 1e-09
    driver.gradient_options.derivative_direction: auto
    driver.gradient_options.directional_fd: False
    driver.gradient_options.fd_blocks: []
@@ -77,8 +78,9 @@ Constants:
    driver.gradient_options.fd_step: 1e-06
    driver.gradient_options.fd_step_type: absolute
    driver.gradient_options.force_fd: False
-   driver.gradient_options.gmres_maxiter: 100
-   driver.gradient_options.gmres_tolerance: 1e-09
+   driver.gradient_options.lin_solver: scipy_gmres
+   driver.gradient_options.maxiter: 100
+   driver.gradient_options.rtol: 1e-09
    force_fd: False
    missing_deriv_policy: assume_zero
    recording_options.excludes: []

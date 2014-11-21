@@ -55,6 +55,16 @@ class Simple4(Component):
     def execute(self):
         self.outvar = self.outvar + self.invar
 
+class Div10(Component):
+    """Testing for iteration counting and stop conditions"""
+
+    invar = Float(1., iotype="in")
+    outvar = Float(0., iotype="out")
+
+    def execute(self):
+        self.outvar = self.invar / 10.
+        print "invar, outvar = %s, %s" % (self.invar, self.outvar)
+
 
 class Multi(Component):
     """Testing for iteration counting and stop conditions"""
@@ -164,11 +174,12 @@ class FixedPointIteratorTestCase(unittest.TestCase):
         self.top.driver.add_parameter('simple.in1')
         self.top.driver.add_parameter('simple.in2')
         self.top.driver.tolerance = .02
+
         self.top.run()
 
         assert_rel_error(self, self.top.simple.in1, .01, .002)
         assert_rel_error(self, self.top.simple.out1, .001, .0002)
-        self.assertEqual(self.top.driver.current_iteration, 2)
+        self.assertEqual(self.top.driver.current_iteration, 3)
 
     def test_multi_swapped(self):
         self.top.add("driver", FixedPointIterator())
@@ -184,7 +195,7 @@ class FixedPointIteratorTestCase(unittest.TestCase):
 
         assert_rel_error(self, self.top.simple.in1, .01, .002)
         assert_rel_error(self, self.top.simple.out1, .001, .0002)
-        self.assertEqual(self.top.driver.current_iteration, 2)
+        self.assertEqual(self.top.driver.current_iteration, 3)
 
     def test_multi_swapped_reversed(self):
         self.top.add("driver", FixedPointIterator())
@@ -200,7 +211,7 @@ class FixedPointIteratorTestCase(unittest.TestCase):
 
         assert_rel_error(self, self.top.simple.in1, .01, .002)
         assert_rel_error(self, self.top.simple.out1, .001, .0002)
-        self.assertEqual(self.top.driver.current_iteration, 2)
+        self.assertEqual(self.top.driver.current_iteration, 3)
 
     def test_array_multi(self):
         self.top.add("driver", FixedPointIterator())
@@ -214,7 +225,21 @@ class FixedPointIteratorTestCase(unittest.TestCase):
 
         assert_rel_error(self, self.top.simple.arr[0], .01, .002)
         assert_rel_error(self, self.top.simple.out[0], .001, .0002)
-        self.assertEqual(self.top.driver.current_iteration, 2)
+        self.assertEqual(self.top.driver.current_iteration, 3)
+
+    def test_simple_div10(self):
+        self.top.add("driver", FixedPointIterator())
+        self.top.add("simple", Div10())
+        self.top.driver.workflow.add('simple')
+
+        self.top.driver.add_constraint('simple.outvar = simple.invar')
+        self.top.driver.add_parameter('simple.invar')
+        self.top.driver.tolerance = .02
+        self.top.run()
+
+        assert_rel_error(self, self.top.simple.invar, .01, .002)
+        assert_rel_error(self, self.top.simple.outvar, .001, .0002)
+        self.assertEqual(self.top.driver.current_iteration, 3)
 
     def test_multi_array_multi(self):
         self.top.add("driver", FixedPointIterator())
@@ -236,10 +261,10 @@ class FixedPointIteratorTestCase(unittest.TestCase):
         assert_rel_error(self, self.top.simple.arr2[1], .01, .002)
         assert_rel_error(self, self.top.simple.out2[0], .001, .0002)
         assert_rel_error(self, self.top.simple.out2[1], .001, .0002)
-        self.assertEqual(self.top.driver.current_iteration, 2)
+        self.assertEqual(self.top.driver.current_iteration, 3)
 
 
-    def test_mixed_scalar_array_multi(self): 
+    def test_mixed_scalar_array_multi(self):
         self.top.add("driver", FixedPointIterator())
         self.top.add("simple", MixedScalarArrayMulti())
 
@@ -257,9 +282,9 @@ class FixedPointIteratorTestCase(unittest.TestCase):
         assert_rel_error(self, self.top.simple.out1[0], .001, .0002)
         assert_rel_error(self, self.top.simple.out1[1], .001, .0002)
         assert_rel_error(self, self.top.simple.in2, .01, .002)
-        self.assertEqual(self.top.driver.current_iteration, 2)
+        self.assertEqual(self.top.driver.current_iteration, 3)
 
-    def test_mixed_scalar_array_multi_swapped(self): 
+    def test_mixed_scalar_array_multi_swapped(self):
         self.top.add("driver", FixedPointIterator())
         self.top.add("simple", MixedScalarArrayMulti())
 
@@ -277,7 +302,7 @@ class FixedPointIteratorTestCase(unittest.TestCase):
         assert_rel_error(self, self.top.simple.out1[0], .001, .0002)
         assert_rel_error(self, self.top.simple.out1[1], .001, .0002)
         assert_rel_error(self, self.top.simple.in2, .01, .002)
-        self.assertEqual(self.top.driver.current_iteration, 2)
+        self.assertEqual(self.top.driver.current_iteration, 3)
 
     def test_maxiteration(self):
         self.top.add("driver", FixedPointIterator())
@@ -288,7 +313,7 @@ class FixedPointIteratorTestCase(unittest.TestCase):
         self.top.driver.max_iteration = 3
 
         self.top.run()
-        self.assertEqual(self.top.driver.current_iteration, 2)
+        self.assertEqual(self.top.driver.current_iteration, 3)
 
     def test_check_config(self):
         self.top.add("driver", FixedPointIterator())
@@ -413,9 +438,9 @@ class FixedPointIterator_with_Cyclic_TestCase(unittest.TestCase):
         self.assertTrue(self.top.d1.exec_count < 10)
 
     def test_gauss_seidel_sub(self):
-        # Note, Fake Finite Difference is active in this test.
 
         self.top = set_as_top(Sellar_MDA_subbed())
+        self.top.subdriver.tolerance = 1.0e-9
         self.top.run()
 
         assert_rel_error(self, self.top.d1.y1,
@@ -428,18 +453,21 @@ class FixedPointIterator_with_Cyclic_TestCase(unittest.TestCase):
 
         inputs = ['d1.z1', 'd1.z2', 'd2.z1', 'd2.z2']
         outputs = ['d1.y1', 'd2.y2']
-        self.top.driver.workflow.config_changed()
-        J1 = self.top.driver.workflow.calc_gradient(inputs=inputs,
-                                                   outputs=outputs)
-        self.top.run()
-        J2 = self.top.driver.workflow.calc_gradient(inputs=inputs,
-                                                   outputs=outputs,
-                                                   mode='fd')
+        J1 = self.top.driver.calc_gradient(inputs=inputs,
+                                           outputs=outputs)
+        J2 = self.top.driver.calc_gradient(inputs=inputs,
+                                           outputs=outputs,
+                                           mode='adjoint')
+        J3 = self.top.driver.calc_gradient(inputs=inputs,
+                                           outputs=outputs,
+                                           mode='fd')
 
-        J = (J1 - J2)
-        #print J.max()
+        J = (J1 - J3)
         self.assertTrue(J.max() < 1.0e-3)
 
+
+        J = (J2 - J3)
+        self.assertTrue(J.max() < 1.0e-3)
 
 class TestIterateUntill(unittest.TestCase):
     """Test case for the IterateUntil Driver"""

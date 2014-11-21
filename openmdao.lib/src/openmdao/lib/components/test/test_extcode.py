@@ -90,6 +90,9 @@ class TestCase(unittest.TestCase):
 
     def setUp(self):
         SimulationRoot.chroot(DIRECTORY)
+        for directory in ('a', 'b'):
+            if os.path.exists(directory):
+                shutil.rmtree(directory, onerror=onerror)
         with open(INP_FILE, 'w') as out:
             out.write(INP_DATA)
         if os.path.exists(ENV_FILE):
@@ -351,16 +354,7 @@ class TestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_unique')
 
-        model = Model()
-        ## This part isn't valid any more because Assemblies now do not configure
-        ## themselves unless they're part of a rooted hierarchy. That means in this
-        ## case that model.a and model.b won't exist until set_as_top is called on model
-        #for comp in (model.a, model.b):
-            #self.assertEqual(comp.create_instance_dir, True)
-        #self.assertNotEqual(model.a.directory, 'a')
-        #self.assertNotEqual(model.b.directory, 'b')
-
-        set_as_top(model)
+        model = set_as_top(Model())
         for comp in (model.a, model.b):
             self.assertEqual(comp.create_instance_dir, False)
             self.assertEqual(comp.return_code, 0)

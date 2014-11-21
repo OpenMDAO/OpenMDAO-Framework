@@ -158,36 +158,6 @@ class CSVCaseIterator(object):
 
         return input_fields, output_fields
 
-    def get_attributes(self, io_only=True):
-        """ We need a custom get_attributes because we aren't using Traits to
-        manage our changeable settings. This is unfortunate and should be
-        changed to something that automates this somehow."""
-
-        attrs = {}
-        attrs['type'] = type(self).__name__
-        variables = []
-
-        attr = {}
-        attr['name'] = "filename"
-        attr['type'] = type(self.filename).__name__
-        attr['value'] = str(self.filename)
-        attr['connected'] = ''
-        attr['desc'] = 'Name of the CSV file to be iterated.'
-        variables.append(attr)
-
-        attr = {}
-        attr['name'] = "headers"
-        attr['type'] = type(self.headers).__name__
-        attr['value'] = str(self.headers)
-        attr['connected'] = ''
-        attr['desc'] = 'Optional dictionary of header labels,'\
-                       ' where the key is the column number.'
-        variables.append(attr)
-
-        attrs["Inputs"] = variables
-        return attrs
-
-
 class CSVCaseRecorder(object):
     """Stores cases in a csv file. Defaults to cases.csv."""
 
@@ -389,52 +359,3 @@ class CSVCaseRecorder(object):
         self.close()
 
         return CSVCaseIterator(self.filename)
-
-    def get_attributes(self, io_only=True):
-        """ We need a custom get_attributes because we aren't using Traits to
-        manage our changeable settings. This is unfortunate and should be
-        changed to something that automates this somehow."""
-
-        attrs = {}
-        attrs['type'] = type(self).__name__
-        variables = []
-
-        attr = {}
-        attr['name'] = "filename"
-        attr['id'] = attr['name']
-        attr['type'] = type(self.filename).__name__
-        attr['value'] = str(self.filename)
-        attr['connected'] = ''
-        attr['desc'] = 'Name of the CSV file to be output.'
-        variables.append(attr)
-
-        attr = {}
-        attr['name'] = "append"
-        attr['id'] = attr['name']
-        attr['type'] = type(self.append).__name__
-        attr['value'] = str(self.append)
-        attr['connected'] = ''
-        attr['desc'] = 'Set to True to append to the existing CSV file.'
-        variables.append(attr)
-
-        attr = {}
-        attr['name'] = "delimiter"
-        attr['id'] = attr['name']
-        attr['type'] = type(self.delimiter).__name__
-        attr['value'] = str(self.delimiter)
-        attr['connected'] = ''
-        attr['desc'] = 'CSV delimiter. Default is ",".'
-        variables.append(attr)
-
-        attr = {}
-        attr['name'] = "num_backups"
-        attr['id'] = attr['name']
-        attr['type'] = "int"
-        attr['value'] = str(self.num_backups)
-        attr['connected'] = ''
-        attr['desc'] = 'Number of csv files to keep from previous runs.'
-        variables.append(attr)
-
-        attrs["Inputs"] = variables
-        return attrs
-

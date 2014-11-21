@@ -73,6 +73,7 @@ class OptRosenSuzukiComponent(Component):
                      2*x[3]**2 - x[3] - 10)
         self.g[2] = (2*x[0]**2 + 2*x[0] + x[1]**2 - x[1] +
                      x[2]**2 - x[3] - 5)
+        #print self.x, self.g
 
 
 class RosenSuzuki2D(Component):
@@ -484,8 +485,9 @@ class TestCase1D(unittest.TestCase):
         self.top.run()
 
         # pylint: disable=E1101
-        assert_rel_error(self, self.top.comp.opt_objective,
-                         self.top.driver.eval_objective(), 0.01)
+        assert_rel_error(self, self.top.driver.eval_objective(),
+                         self.top.comp.opt_objective,
+                         0.01)
         assert_rel_error(self, 1 + self.top.comp.opt_design_vars[0],
                          1 + self.top.comp.x[0], 0.05)
         assert_rel_error(self, self.top.comp.opt_design_vars[1],

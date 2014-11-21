@@ -14,7 +14,7 @@ class Response(ConnectedExprEvaluator):
         super(Response, self).__init__(*args, **kwargs)
         self.pcomp_name = None
 
-    def activate(self):
+    def activate(self, driver):
         """Make this response active by creating the appropriate
         connections in the dependency graph.
         """
@@ -22,7 +22,8 @@ class Response(ConnectedExprEvaluator):
             pseudo = PseudoComponent(self.scope, self, pseudo_type='objective')
             self.pcomp_name = pseudo.name
             self.scope.add(pseudo.name, pseudo)
-        getattr(self.scope, self.pcomp_name).make_connections(self.scope)
+        getattr(self.scope, self.pcomp_name).make_connections(self.scope,
+                                                              driver)
 
     def deactivate(self):
         """Remove this response from the dependency graph and remove
@@ -118,7 +119,7 @@ class HasResponses(object):
 
         name = expr if name is None else name
 
-        expreval.activate()
+        expreval.activate(self.parent)
 
         self._responses[name] = expreval
         self.parent.config_changed()
@@ -286,7 +287,7 @@ class HasVarTreeResponses(HasResponses):
         nans = [float('NaN')] * length
         for path in self._responses:
             path = make_legal_path(path)
-            self.parent.set('case_outputs.'+path, list(nans), force=True)
+            self.parent.set('case_outputs.'+path, list(nans))
 
     def remove_response(self, expr):
         """Removes the specified response expression. Spaces within

@@ -2,7 +2,7 @@ import os
 from jinja2 import Environment, FileSystemLoader
 import networkx as nx
 
-from openmdao.lib.casehandlers.api import CaseDataset
+from openmdao.lib.casehandlers.query import CaseDataset
 
 import StringIO
 import json
@@ -49,7 +49,6 @@ def caseset_query_to_html(query, filename='cases.html'):
     )
     with open(filename, "wb") as fh:
         fh.write(outputText)
-
 
 if __name__ == "__main__":
     import sys

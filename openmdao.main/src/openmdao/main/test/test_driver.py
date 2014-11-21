@@ -58,8 +58,10 @@ class DriverTestCase(unittest.TestCase):
         assert(options.get_metadata("fd_step")["framework_var"])
         assert(options.get_metadata("fd_step_type")["framework_var"])
         assert(options.get_metadata("force_fd")["framework_var"])
-        assert(options.get_metadata("gmres_tolerance")["framework_var"])
-        assert(options.get_metadata("gmres_maxiter")["framework_var"])
+        assert(options.get_metadata("lin_solver")["framework_var"])
+        assert(options.get_metadata("atol")["framework_var"])
+        assert(options.get_metadata("rtol")["framework_var"])
+        assert(options.get_metadata("maxiter")["framework_var"])
 
         assert(Driver().get_metadata("gradient_options")["framework_var"])
 

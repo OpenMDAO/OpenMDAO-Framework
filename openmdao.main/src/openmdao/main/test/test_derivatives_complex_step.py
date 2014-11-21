@@ -9,7 +9,7 @@ from numpy import array, eye
 from openmdao.examples.simple.optimization_constrained import OptimizationConstrained
 from openmdao.main.api import Component, VariableTree, Assembly, set_as_top
 from openmdao.main.datatypes.api import Array, Float, VarTree
-from openmdao.main.test.test_derivatives import SimpleDriver
+from openmdao.main.test.simpledriver import SimpleDriver
 from openmdao.util.testutil import assert_rel_error
 
 class SimpleCompFloat(Component):
@@ -31,6 +31,17 @@ class SimpleCompArray(Component):
                         [4.0, 4.0, 3.0, -3.0],
                         [2.0, 5.0, 1.5, 2.0]])
         self.y = self.J.dot(self.x.flatten()).reshape((2, 2))
+
+class ComplexArray(Component):
+
+    x = Array(array([2.0, 4.0], dtype=complex), iotype='in')
+    y = Array(array([0.0, 0.0], dtype=complex), iotype='out')
+
+    def execute(self):
+        y = array([0.0, 0.0], dtype=complex)
+        y[0] = 2.0*self.x[0] + self.x[1]
+        y[1] = 3.0*self.x[0] - 2.0*self.x[1]
+        self.y = y
 
 
 class TreeWithFloat(VariableTree):
@@ -135,6 +146,11 @@ class Testcase_ComplexStep_Traits(unittest.TestCase):
         model.comp.x = 3+4j
         model.run()
 
+        # Note, this stuff is not meant to be done interactively, so we have to
+        # work around a little.
+        model._system.set_complex_step(True)
+        model.run()
+
         self.assertEqual(model.comp.x, 3+4j)
         self.assertEqual(model.comp2.y, 12+16j)
 
@@ -207,8 +223,8 @@ class Testcase_ComplexStep_Derivatives(unittest.TestCase):
 
         model.run()
 
-        J = model.driver.workflow.calc_gradient(inputs=['comp.x'],
-                                                outputs=['comp.y'])
+        J = model.driver.calc_gradient(inputs=['comp.x'],
+                                       outputs=['comp.y'])
 
         assert_rel_error(self, J[0, 0], 2.0, .000001)
         self.assertTrue(model.comp.x is not complex)
@@ -221,9 +237,8 @@ class Testcase_ComplexStep_Derivatives(unittest.TestCase):
 
         model.run()
 
-        model.driver.workflow.config_changed()
-        J = model.driver.workflow.calc_gradient(inputs=['comp.x'],
-                                                outputs=['comp2.y'])
+        J = model.driver.calc_gradient(inputs=['comp.x'],
+                                       outputs=['comp2.y'])
 
         assert_rel_error(self, J[0, 0], 4.0, .000001)
         self.assertTrue(model.comp.x is not complex)
@@ -248,8 +263,8 @@ class Testcase_ComplexStep_Derivatives(unittest.TestCase):
         model.driver.gradient_options.force_fd = True
         model.run()
 
-        J = model.driver.workflow.calc_gradient(inputs=['sub.x'],
-                                                outputs=['sub.y'])
+        J = model.driver.calc_gradient(inputs=['sub.x'],
+                                       outputs=['sub.y'])
 
         assert_rel_error(self, J[0, 0], 2.0, .000001)
         self.assertTrue(model.sub.subsub.comp.x is not complex)
@@ -264,8 +279,8 @@ class Testcase_ComplexStep_Derivatives(unittest.TestCase):
 
         model.run()
 
-        J = model.driver.workflow.calc_gradient(inputs=['comp.ins.x', 'comp.ins.sub.x'],
-                                                outputs=['comp.outs.x', 'comp.outs.sub.x'])
+        J = model.driver.calc_gradient(inputs=['comp.ins.x', 'comp.ins.sub.x'],
+                                       outputs=['comp.outs.x', 'comp.outs.sub.x'])
 
         assert_rel_error(self, J[0, 0], 2.0, .000001)
         assert_rel_error(self, J[0, 1], 3.0, .000001)
@@ -281,11 +296,11 @@ class Testcase_ComplexStep_Derivatives(unittest.TestCase):
         model = set_as_top(Assembly())
         model.add('comp', SimpleCompArray())
         model.driver.workflow.add('comp')
-        #model.driver.gradient_options.fd_form = 'complex_step'
+        model.driver.gradient_options.fd_form = 'complex_step'
         model.run()
 
-        J = model.driver.workflow.calc_gradient(inputs=['comp.x'],
-                                                outputs=['comp.y'])
+        J = model.driver.calc_gradient(inputs=['comp.x'],
+                                       outputs=['comp.y'])
         diff = abs(J - model.comp.J).max()
         assert_rel_error(self, diff, 0.0, .0001)
         self.assertTrue(J[0, 0] is not complex)
@@ -295,13 +310,31 @@ class Testcase_ComplexStep_Derivatives(unittest.TestCase):
         model.driver.add_objective('comp.y - comp.x')
         model.run()
 
-        model.driver.workflow.config_changed()
-        J = model.driver.workflow.calc_gradient(mode='fd')
+        J = model.driver.calc_gradient(mode='fd')
 
         diff = abs(J + eye(4) - model.comp.J).max()
         assert_rel_error(self, diff, 0.0, .0001)
         self.assertTrue(J[0, 0] is not complex)
+        
+    def test_complex_array_data_passing(self):
+        
+        model = set_as_top(Assembly())
+        model.add('comp1', ComplexArray())
+        model.add('comp2', ComplexArray())
+        model.driver.workflow.add(['comp1', 'comp2'])
+        model.connect('comp1.y', 'comp2.x')
+        
+        model.driver.gradient_options.fd_form = 'complex_step'
+        model.run()
+        
+        J = model.driver.calc_gradient(inputs=['comp1.x'],
+                                       outputs=['comp2.y'])
 
+        assert_rel_error(self, J[0, 0], 7.0, .0001)
+        assert_rel_error(self, J[0, 1], 0.0, .0001)
+        assert_rel_error(self, J[1, 1], 7.0, .0001)
+        assert_rel_error(self, J[1, 0], 0.0, .0001)
+        
     def test_mixed_CS_FD(self):
 
         model = set_as_top(Assembly())
@@ -310,8 +343,8 @@ class Testcase_ComplexStep_Derivatives(unittest.TestCase):
 
         model.run()
 
-        J = model.driver.workflow.calc_gradient(inputs=['comp.x', 'comp.y'],
-                                                outputs=['comp.f_xy'])
+        J = model.driver.calc_gradient(inputs=['comp.x', 'comp.y'],
+                                       outputs=['comp.f_xy'])
 
         assert_rel_error(self, J[0, 0], -6.0, .0001)
         assert_rel_error(self, J[0, 1], 8.0, .0001)

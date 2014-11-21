@@ -14,6 +14,8 @@ from openmdao.main.datatypes.str import Str
 from openmdao.main.datatypes.vtree import VarTree
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import is_instance
+from openmdao.main.array_helpers import flattened_size
+
 
 
 class VariableTree(Container):
@@ -257,91 +259,36 @@ class VariableTree(Container):
 
         return req
 
-    def get_attributes(self, io_only=True, indent=0, parent=''):
-        """ Get attributes for this variable tree. Used by the GUI.
-
-        io_only: bool
-            Set to True if we only want to populate the input and output
-            fields of the attributes dictionary.
-
-        indent: int
-            Recursion level (for collapsing tables).
-
-        parent: str
-            ID name of parent table line.
-
-        valid: str
-            Validity state of the parent table."""
-
-        attrs = {}
-        attrs['type'] = type(self).__name__
-        self_io = self.iotype
-
-        # Connection information found in parent comp's parent assy
-        if not self.parent or not self.parent._parent or \
-           isinstance(self.parent, VariableTree):
-            connected = []
-        else:
-            graph = self.parent._parent._depgraph
-            if self_io == 'in':
-                connected = graph.get_boundary_inputs(connected=True)
+    def list_all_vars(self):
+        """Return a list of all variables in this VarTree (recursive)."""
+        vnames = []
+        for name, obj in self.__dict__.items():
+            if name.startswith('_'):
+                continue
+            if isinstance(obj, VariableTree):
+                vnames.extend(['.'.join((self.name,n)) for n in obj.list_all_vars()])
             else:
-                connected = graph.get_boundary_outputs(connected=True)
+                vnames.append('.'.join((self.name, name)))
+        return vnames
 
-        variables = []
-        for name in self.list_vars():
+    def get_flattened_size(self):
+        """Return the size of a flattened float array containing
+        all values in the vartree that are flattenable to float
+        arrays.  Any values not flattenable to float arrays will
+        raise a NoFlatError. 
+        """
+        size = 0
+        for key in self.list_vars():
+            size += flattened_size(key, getattr(self, key), scope=self)
+        return size
 
-            trait = self.get_trait(name)
-            meta = self.get_metadata(name)
-            value = getattr(self, name)
-            ttype = trait.trait_type
-
-            # Each variable type provides its own basic attributes
-            attr, slot_attr = ttype.get_attribute(name, value, trait, meta)
-
-            # if this var is the top element of a variable tree, add 'vt' attribute
-            if attr.get('ttype') == 'vartree':
-                vartable = self.get(name)
-                if isinstance(vartable, VariableTree):
-                    attr['vt'] = 'vt'
-
-            # Support for expand/collapse
-            attr['indent'] = indent
-            attr['id'] = '%s.%s' % (parent, name)
-
-            if parent:
-                attr['parent'] = parent
-
-            attr['connected'] = ''
-            if name in connected:
-                connections = self.parent._depgraph.connections_to(name)
-
-                if self_io == 'in':
-                    # there can be only one connection to an input
-                    attr['connected'] = str([src for src, dst in
-                                             connections])
-                else:
-                    attr['connected'] = str([dst for src, dst in
-                                             connections])
-            variables.append(attr)
-
-            # For variables trees only: recursively add the inputs and outputs
-            # into this variable list
-            if 'vt' in attr:
-                vt_attrs = vartable.get_attributes(io_only, indent=indent + 1,
-                                                   parent=attr['id'])
-                if self_io == 'in':
-                    variables += vt_attrs['Inputs']
-                else:
-                    variables += vt_attrs['Outputs']
-
-        if self_io == 'in':
-            attrs['Inputs'] = variables
-        else:
-            attrs['Outputs'] = variables
-
-        return attrs
-
+    def get_flattened_index(self, name):
+        """Return the slice within the flattened array of the 
+        current vartree that is occupied by the named 
+        subvar.
+        """
+        raise NotImplementedError('get_flattened_index not implemented for VarTrees yet')  # FIXME
+            
 
 # register a flattener for Cases
 from openmdao.main.case import flatteners, flatten_obj
