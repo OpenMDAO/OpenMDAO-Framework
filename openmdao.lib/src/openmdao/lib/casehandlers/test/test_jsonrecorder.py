@@ -66,15 +66,14 @@ class TestCase(unittest.TestCase):
 
     def test_jsonrecorder_norun(self):
         # test ability to get model data from case recorder
-        #    before calling run()
+        #    without calling run()
 
         sout = StringIO()
         self.top.recorders = [JSONCaseRecorder(sout)]
-        self.top.configure_recording()
-        self.top.recorders[0].close()
+        self.top.record_configuration()
 
-        #with open('jsonrecorder_norun.new', 'w') as out:
-             #out.write(sout.getvalue())
+        # with open('jsonrecorder_norun.new', 'w') as out:
+        #      out.write(sout.getvalue())
         self.verify(sout, 'jsonrecorder_norun.json')
 
     def test_jsonrecorder(self):
@@ -149,7 +148,7 @@ class TestCase(unittest.TestCase):
                     yield (kk, vv)
             else:
                 yield (k, v)
-                
+
     def verify(self, sout, filename):
         directory = os.path.dirname(__file__)
         path = os.path.join(directory, filename)
@@ -157,17 +156,17 @@ class TestCase(unittest.TestCase):
             old_json = json.load(inp)
 
         new_json = json.loads(sout.getvalue())
-        
+
         old = list(self._dict_iter(old_json))
         new = list(self._dict_iter(new_json))
-        
+
         if len(old) != len(new):
             self.fail("Number of items (%d) != number of items expected (%d)" %
                       (len(old), len(new)))
 
         ignore = set([u'uuid', u'OpenMDAO_Version', u'_id',
                       u'_driver_id', u'_parent_id', u'timestamp', u'pcomp_name'])
-        
+
         for (oldname, oldval), (newname, newval) in zip(old, new):
             if oldname.startswith('__length_'):
                 continue
