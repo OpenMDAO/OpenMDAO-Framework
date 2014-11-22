@@ -12,7 +12,10 @@ import json
 import bson
 
 import cPickle
-from pymongodb_bson_binary_util import dumps, Binary
+#from pymongodb_bson_binary_util import dumps, Binary, loads
+
+from openmdao.lib.casehandlers.pymongo_bson.json_util import loads, dumps
+from openmdao.lib.casehandlers.pymongo_bson.binary import Binary
 
 
 from numpy  import ndarray
@@ -258,6 +261,7 @@ class JSONCaseRecorder(_BaseRecorder):
         """ Return JSON data, report any bad keys & values encountered. """
         try:
             return json.dumps(info, indent=self.indent,
+            #return dumps(info, indent=self.indent,
                               sort_keys=self.sort_keys,
                               cls=_Encoder, check_circular=False)
         except Exception as exc:
@@ -266,6 +270,7 @@ class JSONCaseRecorder(_BaseRecorder):
             for key in sorted(info):
                 try:
                     json.dumps(info[key], indent=self.indent,
+                    #dumps(info[key], indent=self.indent,
                                sort_keys=self.sort_keys,
                                cls=_Encoder, check_circular=False)
                 except Exception:
@@ -279,6 +284,7 @@ class JSONCaseRecorder(_BaseRecorder):
                 bad = []
                 for key in sorted(info):
                     try:
+                        #dumps(info[key], indent=self.indent,
                         json.dumps(info[key], indent=self.indent,
                                    sort_keys=self.sort_keys,
                                    cls=_Encoder, check_circular=False)
@@ -338,7 +344,11 @@ def _fixup(value):
         return [_fixup(val) for val in value]
     elif isinstance(value, ndarray):
         #return value.tolist()
+        qqq = dumps(Binary( cPickle.dumps( value, protocol=2) ) )
+        return json.loads(qqq)
         return dumps(Binary( cPickle.dumps( value, protocol=2) ) )
+        #print Binary( cPickle.dumps( value, protocol=2) )
+        #return Binary( cPickle.dumps( value, protocol=2) )
     elif isinstance(value, VariableTree):
         return dict([(name, _fixup(getattr(value, name)))
                      for name in value.list_vars()])

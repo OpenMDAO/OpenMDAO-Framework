@@ -9,7 +9,9 @@ from weakref import ref
 
 from openmdao.main.api import Assembly, VariableTree
 
-from  openmdao.lib.casehandlers.pymongodb_bson_binary_util import loads
+#from  openmdao.lib.casehandlers.pymongodb_bson_binary_util import loads, dumps
+
+#from  bson.json_util import loads, dumps
 
 _GLOBAL_DICT = dict(__builtins__=None)
 
@@ -655,9 +657,22 @@ class _JSONReader(_Reader):
         reclen = int(value) - 1
         data = self._inp.readline()  # ', "dictname": {'
         data = '{\n' + self._inp.read(reclen)
-        #return json.loads(data)
-        return loads(data)
+        return json.loads(data,object_hook=object_hook)
+        #return loads(data)
 
+import cPickle
+def object_hook(dct, compile_re=True):
+    if "$binary" in dct:
+        if isinstance(dct["$type"], int):
+            dct["$type"] = "%02x" % dct["$type"]
+        subtype = int(dct["$type"], 16)
+        if subtype >= 0xffffff80:  # Handle mongoexport values
+            subtype = int(dct["$type"][6:], 16)
+        #return Binary(base64.b64decode(dct["$binary"].encode()), subtype)
+        import base64
+        return cPickle.loads(base64.b64decode(dct["$binary"].encode()))
+        #return cPickle.loads(dct["$binary"].encode('utf-8'))
+    return dct
 
 class _BSONReader(_Reader):
     """ Reads a :class:`BSONCaseRecorder` file. """
@@ -693,7 +708,8 @@ class _JSONWriter(object):
 
     def write(self, category, data):
         """ Write `data` under `category`. """
-        data = json.dumps(data, indent=self._indent, sort_keys=self._sort_keys)
+        data = json.dumps(data, indent=self._indent, sort_keys=self._sort_keys, cls=_Encoder)
+        #data = dumps(data, indent=self._indent, sort_keys=self._sort_keys)
         self._count += 1
         prefix = '{\n' if self._count == 1 else ', '
         self._out.write('%s"__length_%s": %s\n, "%s": '
@@ -709,6 +725,48 @@ class _JSONWriter(object):
             pass
         elif self._out.mode == 'w':
             self._out.close()
+
+class _Encoder(json.JSONEncoder):
+    """ Special encoder to deal with types not handled by default encoder. """
+
+    def default(self, obj):
+        fixed = _fixup(obj)
+        if fixed is obj:
+            super(_Encoder, self).default(obj)
+        return fixed
+
+from numpy import ndarray
+from openmdao.lib.casehandlers.pymongo_bson.json_util import loads, dumps
+from openmdao.lib.casehandlers.pymongo_bson.binary import Binary
+import cPickle
+
+def _fixup(value):
+    """
+    Fix object for json encoder, also bson. Stock bson doesn't handle a lot
+    of types, just skips them.
+    """
+    if isinstance(value, dict):
+        for key, val in value.items():
+            value[key] = _fixup(val)
+        return value
+    elif isinstance(value, (list, tuple, set, frozenset)):
+        return [_fixup(val) for val in value]
+    elif isinstance(value, ndarray):
+        return value.tolist()
+        #qqq = dumps(Binary( cPickle.dumps( value, protocol=2) ) )
+        #return json.loads(qqq)
+        #return dumps(Binary( cPickle.dumps( value, protocol=2) ) )
+        #print Binary( cPickle.dumps( value, protocol=2) )
+        #return Binary( cPickle.dumps( value, protocol=2) )
+    elif isinstance(value, VariableTree):
+        return dict([(name, _fixup(getattr(value, name)))
+                     for name in value.list_vars()])
+    elif hasattr(value, 'json_encode') and callable(value.json_encode):
+        return value.json_encode()
+    elif hasattr(value, '__dict__'):
+        return _fixup(value.__dict__)
+    return value
+
 
 
 class _BSONWriter(object):

@@ -108,7 +108,13 @@ class Case(object):
     def next_uuid():
         """Generate a unique identifier."""
         Case._uuid_seq += 1
-        return str(uuid1(node=Case._uuid_node, clock_seq=Case._uuid_seq))
+        qqq = str(uuid1(node=Case._uuid_node, clock_seq=Case._uuid_seq))
+        print "case uuid", qqq
+        import traceback
+        print "caller", traceback.extract_stack()[-8]
+        
+        return qqq
+        #return str(uuid1(node=Case._uuid_node, clock_seq=Case._uuid_seq))
 
     def __init__(self, inputs=None, outputs=None, exc=None,
                  case_uuid=None, parent_uuid=''):

@@ -20,8 +20,63 @@ dictionary."""
 
 import copy
 import re
-
+import sys
 import bson
+from bson import EPOCH_AWARE, RE_TYPE, SON
+from bson.binary import Binary
+from bson.code import Code
+from bson.dbref import DBRef
+from bson.max_key import MaxKey
+from bson.min_key import MinKey
+from bson.objectid import ObjectId
+from bson.regex import Regex
+from bson.timestamp import Timestamp
+
+PY3 = sys.version_info[0] == 3
+
+if PY3:
+    import codecs
+
+    from io import BytesIO as StringIO
+
+    def b(s):
+        # BSON and socket operations deal in binary data. In
+        # python 3 that means instances of `bytes`. In python
+        # 2.6 and 2.7 you can create an alias for `bytes` using
+        # the b prefix (e.g. b'foo'). Python 2.4 and 2.5 don't
+        # provide this marker so we provide this compat function.
+        # In python 3.x b('foo') results in b'foo'.
+        # See http://python3porting.com/problems.html#nicer-solutions
+        return codecs.latin_1_encode(s)[0]
+
+    def bytes_from_hex(h):
+        return bytes.fromhex(h)
+
+    binary_type = bytes
+    text_type   = str
+    next_item   = "__next__"
+
+else:
+    try:
+        from cStringIO import StringIO
+    except ImportError:
+        from StringIO import StringIO
+
+    def b(s):
+        # See comments above. In python 2.x b('foo') is just 'foo'.
+        return s
+
+    def bytes_from_hex(h):
+        return h.decode('hex')
+
+    binary_type = str
+    # 2to3 will convert this to "str". That's okay
+    # since we won't ever get here under python3.
+    text_type   = unicode
+    next_item   = "next"
+
+string_types = (binary_type, text_type)
+
 
 # This sort of sucks, but seems to be as good as it gets...
 # This is essentially the same as re._pattern_type
@@ -664,6 +719,7 @@ def _json_convert(obj):
 
 
 def object_hook(dct, compile_re=True):
+    print dct.keys()
     if "$oid" in dct:
         return ObjectId(str(dct["$oid"]))
     if "$ref" in dct:
@@ -714,48 +770,48 @@ def default(obj):
         return SON([
             ('$binary', base64.b64encode(obj).decode()),
             ('$type', "%02x" % obj.subtype)])
-    # if isinstance(obj, ObjectId):
-    #     return {"$oid": str(obj)}
-    # if isinstance(obj, DBRef):
-    #     return _json_convert(obj.as_doc())
-    # if isinstance(obj, datetime.datetime):
-    #     # TODO share this code w/ bson.py?
-    #     if obj.utcoffset() is not None:
-    #         obj = obj - obj.utcoffset()
-    #     millis = int(calendar.timegm(obj.timetuple()) * 1000 +
-    #                  obj.microsecond / 1000)
-    #     return {"$date": millis}
-    # if isinstance(obj, (RE_TYPE, Regex)):
-    #     flags = ""
-    #     if obj.flags & re.IGNORECASE:
-    #         flags += "i"
-    #     if obj.flags & re.LOCALE:
-    #         flags += "l"
-    #     if obj.flags & re.MULTILINE:
-    #         flags += "m"
-    #     if obj.flags & re.DOTALL:
-    #         flags += "s"
-    #     if obj.flags & re.UNICODE:
-    #         flags += "u"
-    #     if obj.flags & re.VERBOSE:
-    #         flags += "x"
-    #     if isinstance(obj.pattern, unicode):
-    #         pattern = obj.pattern
-    #     else:
-    #         pattern = obj.pattern.decode('utf-8')
-    #     return SON([("$regex", pattern), ("$options", flags)])
-    # if isinstance(obj, MinKey):
-    #     return {"$minKey": 1}
-    # if isinstance(obj, MaxKey):
-    #     return {"$maxKey": 1}
-    # if isinstance(obj, Timestamp):
-    #     return SON([("t", obj.time), ("i", obj.inc)])
-    # if isinstance(obj, Code):
-    #     return SON([('$code', str(obj)), ('$scope', obj.scope)])
-    # if PY3 and isinstance(obj, binary_type):
-    #     return SON([
-    #         ('$binary', base64.b64encode(obj).decode()),
-    #         ('$type', "00")])
-    # if bson.has_uuid() and isinstance(obj, bson.uuid.UUID):
-    #     return {"$uuid": obj.hex}
-    # raise TypeError("%r is not JSON serializable" % obj)
+    if isinstance(obj, ObjectId):
+        return {"$oid": str(obj)}
+    if isinstance(obj, DBRef):
+        return _json_convert(obj.as_doc())
+    if isinstance(obj, datetime.datetime):
+        # TODO share this code w/ bson.py?
+        if obj.utcoffset() is not None:
+            obj = obj - obj.utcoffset()
+        millis = int(calendar.timegm(obj.timetuple()) * 1000 +
+                     obj.microsecond / 1000)
+        return {"$date": millis}
+    if isinstance(obj, (RE_TYPE, Regex)):
+        flags = ""
+        if obj.flags & re.IGNORECASE:
+            flags += "i"
+        if obj.flags & re.LOCALE:
+            flags += "l"
+        if obj.flags & re.MULTILINE:
+            flags += "m"
+        if obj.flags & re.DOTALL:
+            flags += "s"
+        if obj.flags & re.UNICODE:
+            flags += "u"
+        if obj.flags & re.VERBOSE:
+            flags += "x"
+        if isinstance(obj.pattern, unicode):
+            pattern = obj.pattern
+        else:
+            pattern = obj.pattern.decode('utf-8')
+        return SON([("$regex", pattern), ("$options", flags)])
+    if isinstance(obj, MinKey):
+        return {"$minKey": 1}
+    if isinstance(obj, MaxKey):
+        return {"$maxKey": 1}
+    if isinstance(obj, Timestamp):
+        return SON([("t", obj.time), ("i", obj.inc)])
+    if isinstance(obj, Code):
+        return SON([('$code', str(obj)), ('$scope', obj.scope)])
+    if PY3 and isinstance(obj, binary_type):
+        return SON([
+            ('$binary', base64.b64encode(obj).decode()),
+            ('$type', "00")])
+    if bson.has_uuid() and isinstance(obj, bson.uuid.UUID):
+        return {"$uuid": obj.hex}
+    raise TypeError("%r is not JSON serializable" % obj)
