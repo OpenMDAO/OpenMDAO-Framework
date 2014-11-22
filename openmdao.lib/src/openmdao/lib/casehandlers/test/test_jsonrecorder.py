@@ -173,6 +173,10 @@ class TestCase(unittest.TestCase):
             if oldname in ignore: # don't care if these match
                 continue
             if oldname == newname:
+                if oldname == 'high' and newval == sys.maxint:
+                    continue
+                if oldname == 'low' and newval == -sys.maxint:
+                    continue
                 self.assertAlmostEqual(oldval, newval)
             else:
                 self.assertEqual(oldname, newname) # just raises an exception
