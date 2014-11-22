@@ -66,15 +66,14 @@ class TestCase(unittest.TestCase):
 
     def test_jsonrecorder_norun(self):
         # test ability to get model data from case recorder
-        #    before calling run()
+        #    without calling run()
 
         sout = StringIO()
         self.top.recorders = [JSONCaseRecorder(sout)]
-        self.top.configure_recording()
-        self.top.recorders[0].close()
+        self.top.record_configuration()
 
-        #with open('jsonrecorder_norun.new', 'w') as out:
-             #out.write(sout.getvalue())
+        # with open('jsonrecorder_norun.new', 'w') as out:
+        #      out.write(sout.getvalue())
         self.verify(sout, 'jsonrecorder_norun.json')
 
     def test_jsonrecorder(self):
