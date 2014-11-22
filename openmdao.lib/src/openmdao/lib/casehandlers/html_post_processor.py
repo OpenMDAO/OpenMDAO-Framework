@@ -2,7 +2,7 @@ import os
 from jinja2 import Environment, FileSystemLoader
 import networkx as nx
 
-from openmdao.lib.casehandlers.api import CaseDataset
+from openmdao.lib.casehandlers.query import CaseDataset
 
 import StringIO
 import json

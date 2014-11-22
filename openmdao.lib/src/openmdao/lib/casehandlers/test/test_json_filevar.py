@@ -158,7 +158,8 @@ class TestCase(unittest.TestCase):
                     self.assertEqual(lines[i], expect)
 
     def tearDown(self):
-        # os.remove('x.in')
+        if os.path.exists("x.in"):
+            os.remove('x.in')
         self.top = None
 
 

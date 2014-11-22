@@ -16,6 +16,7 @@ build.out
 *.egg-info
 *.egg
 
+
 # Compiled source #
 ###################
 *.com
@@ -61,7 +62,6 @@ test_*.png
 pyBspline_pkl
 gui-server
 junk.out
-test_report.out
 
 =======
 # Editor generated files #

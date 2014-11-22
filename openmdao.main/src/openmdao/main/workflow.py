@@ -865,7 +865,7 @@ class Workflow(object):
             systems = {}
             for group in get_nondiff_groups(reduced, cgraph, self.scope):
                 gtup = tuple(group)
-                system = OpaqueSystem(scope, reduced,
+                system = OpaqueSystem(scope, self.scope._reduced_graph,
                                       cgraph.subgraph(group),
                                       str(gtup))
                 systems[gtup] = system
@@ -971,13 +971,13 @@ class Workflow(object):
 
         rgraph = self.scope._reduced_graph
 
-        # some drivers don't have parameters but we still may want derivatives
-        # w.r.t. other inputs.  Look for param comps that attach to comps in
-        # our nodeset
-        for node, data in rgraph.nodes_iter(data=True):
-            if data.get('comp') == 'param':
-                if node.split('.', 1)[0] in nodeset:
-                    nodeset.add(node)
+        ## some drivers don't have parameters but we still may want derivatives
+        ## w.r.t. other inputs.  Look for param comps that attach to comps in
+        ## our nodeset
+        #for node, data in rgraph.nodes_iter(data=True):
+            #if data.get('comp') == 'param':
+                #if node.split('.', 1)[0] in nodeset:
+                    #nodeset.add(node)
 
         return nodeset
 
