@@ -72,8 +72,8 @@ class TestCase(unittest.TestCase):
         self.top.recorders = [JSONCaseRecorder(sout)]
         self.top.configure_recording()
 
-        # with open('jsonrecorder_norun.new', 'w') as out:
-        #     out.write(sout.getvalue())
+        with open('jsonrecorder_norun.new', 'w') as out:
+            out.write(sout.getvalue())
         self.verify(sout, 'jsonrecorder_norun.json')
 
     def test_jsonrecorder(self):
@@ -137,8 +137,8 @@ class TestCase(unittest.TestCase):
         asm1.recorders = [JSONCaseRecorder(sout)]
         asm1.run()
 
-        #with open('nested.new', 'w') as out:
-        #    out.write(sout.getvalue())
+        with open('nested.new', 'w') as out:
+            out.write(sout.getvalue())
         self.verify(sout, 'nested.json')
 
     def verify(self, sout, filename):
@@ -274,8 +274,8 @@ class TestCase(unittest.TestCase):
 
         top.run()
 
-        # with open('vtree.new', 'w') as out:
-        #     out.write(sout.getvalue())
+        with open('vtree.new', 'w') as out:
+            out.write(sout.getvalue())
         self.verify(sout, 'vtree.json')
 
 

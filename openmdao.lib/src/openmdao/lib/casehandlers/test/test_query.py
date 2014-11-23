@@ -322,7 +322,7 @@ class TestCase(unittest.TestCase):
     def test_restore(self):
         # Restore from case, run, verify outputs match expected.
         top = set_as_top(SellarMDF())
-        top.name = 'top'
+        #top.name = 'top'
         top.recorders = [JSONCaseRecorder()]
         top.run()
         assert_rel_error(self, top.sub.globals.z1, 1.977639, .0001)

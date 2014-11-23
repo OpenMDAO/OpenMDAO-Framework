@@ -90,15 +90,15 @@ class TestCase(unittest.TestCase):
         self.top.recorders = [JSONCaseRecorder(sout)]
 
         self.top.recording_options.save_problem_formulation=True
-        self.top.recording_options.includes=[
-            'writer.x', 'writer.y', 'c2.f_xy',
-            'writer.file_out', 'c2.file_in'
-        ]
+        #self.top.recording_options.includes=[
+            #'writer.x', 'writer.y', 'c2.f_xy',
+            #'writer.file_out', 'c2.file_in'
+        #]
 
         self.top.run()
 
-        # with open('paraboloid.new', 'w') as out:
-        #     out.write(sout.getvalue())
+        with open('paraboloid.new', 'w') as out:
+            out.write(sout.getvalue())
         self.verify(sout, 'paraboloid.json')
 
     def verify(self, sout, filename):
