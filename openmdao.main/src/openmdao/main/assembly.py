@@ -823,6 +823,13 @@ class Assembly(Component):
 
         return (inputs, constants)
 
+    def record_configuration(self):
+        """ record model configuration without running the model
+        """
+        self.configure_recording()
+        for recorder in self.recorders:
+            recorder.close()
+
     @rbac(('owner', 'user'))
     def connected_inputs(self, name):
         """Helper for :meth:`configure_recording`."""

@@ -495,7 +495,7 @@ class LinearGS(LinearSolver):
                             args = subsystem.vector_vars.keys()
                             subsystem2.applyJ(args)
                             system.scatter('du', 'dp', subsystem=subsystem2)
-                            system.clear_dp()
+                            system.vec['dp'].array[:] = 0.0
                             system.sol_buf[:] -= system.rhs_vec.array[:]
                     system.rhs_vec.array[:] = system.sol_buf[:]
                     subsystem.solve_linear(options)
