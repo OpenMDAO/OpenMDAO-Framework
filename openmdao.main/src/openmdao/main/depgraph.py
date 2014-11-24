@@ -1285,7 +1285,7 @@ class CollapsedGraph(DGraphBase):
             for s in self.successors(n):
                 if n in self.successors(s):
                     to_remove.append((n, s))
-                    
+
         self.remove_edges_from(to_remove)
 
         # now remove any comps that are shared by subdrivers but are not found
@@ -1635,8 +1635,6 @@ def collapse_nodes(g, collapsed_name, nodes, remove=True):
     # create new connections to collapsed node
     for u,v in in_edges:
         if u != collapsed_name:
-            #if g.node[collapsed_name].get('driver') and g.has_edge(collapsed_name, u):
-            #    g.remove_edge(collapsed_name, u)
             g.add_edge(u, collapsed_name)
             # create our own copy of edge metadata
             g[u][collapsed_name] = g[u][v].copy()
@@ -1761,7 +1759,7 @@ def _add_collapsed_node(g, src, dests):
     collapse_nodes(g, newname, set([newname[0]]+list(newname[1])), remove=False)
 
     to_add = []
-    
+
     # and make sure its source, dests are components
     for p in g.predecessors(newname):
         cname = p.split('.', 1)[0]
@@ -1789,7 +1787,7 @@ def _add_collapsed_node(g, src, dests):
         if g.node[cname].get('comp'):
             if s == cname or cname in g[s]:
                 to_add.append((newname, cname, {}))
-                
+
     for u,v, meta in to_add:
         g.add_edge(u, v, **meta)
 

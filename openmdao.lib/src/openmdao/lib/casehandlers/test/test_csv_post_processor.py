@@ -198,7 +198,7 @@ class CSVPostProcessorTestCase(unittest.TestCase):
                     # nan equality check fails by definition
                     if isnan(item1) and isnan(item2):
                         continue
-                    self.assertEqual(item1, item2)
+                    self.assertAlmostEqual(item1, item2)
                 except (ValueError, TypeError):
                     self.assertEqual(item1, item2)
 
