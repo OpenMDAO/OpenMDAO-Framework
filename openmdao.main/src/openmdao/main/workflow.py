@@ -779,13 +779,15 @@ class Workflow(object):
         scope = self.scope
         drvname = self.parent.name
 
-        parent_graph = self.parent.get_reduced_graph()
+        parent_graph = self.scope.get_reduced_graph()
         reduced = parent_graph.subgraph(parent_graph.nodes_iter())
-        self._reduced_graph = reduced
 
-        # remove our driver from the reduced graph
-        if drvname in parent_graph:
-            reduced.remove_node(drvname)
+        # collapse driver iteration sets into a single node for
+        # the driver.
+        reduced.collapse_subdrivers(self.get_names(full=True),
+                                    self.subdrivers())
+
+        reduced = reduced.full_subgraph(self.get_names(full=True))
 
         params = set()
         for s in parent_graph.successors(drvname):
@@ -805,32 +807,13 @@ class Workflow(object):
             if parent_graph[p][drvname].get('drv_conn') == drvname:
                 outs.append(p)
 
-        if outs:
-            for out in outs:
-                vname = out[1][0]
-                if reduced.out_degree(vname) == 0:
-                    reduced.add_node(vname, comp='dumbvar')
-                    reduced.add_edge(out, vname)
-                    reduced.node[out]['system'] = \
-                               VarSystem(scope, reduced, vname)
-
-        ## make sure any subvars of param/input var comps are
-        ## properly connected
-        #for node, data in reduced.nodes(data=True):
-        #    if 'comp' not in data:
-        #        if reduced.in_degree(node) == 0:
-        #            if '.' not in node[0]:
-        #                vcomp = node[0].split('[', 1)[0]
-        #                if vcomp in reduced:
-        #                    reduced.add_edge(vcomp, node)
-        #        elif reduced.out_degree(node) == 0:
-        #            reduced.remove_node(node)
-
-        # collapse driver iteration sets into a single node for
-        # the driver, except for nodes from their iteration set
-        # that are in the iteration set of their parent driver.
-        reduced.collapse_subdrivers(self.get_names(full=True),
-                                    self.subdrivers())
+        for out in outs:
+            vname = out[1][0]
+            if reduced.out_degree(vname) == 0:
+                reduced.add_node(vname, comp='dumbvar')
+                reduced.add_edge(out, vname)
+                reduced.node[out]['system'] = \
+                           VarSystem(scope, reduced, vname)
 
         cgraph = reduced.component_graph()
 
@@ -863,6 +846,8 @@ class Workflow(object):
                     if node in reduced.predecessors(s):
                         to_remove.append((s, node))
             reduced.remove_edges_from(to_remove)
+
+        self._reduced_graph = reduced
 
         if MPI and system_type == 'auto':
             self._auto_setup_systems(scope, reduced, cgraph)

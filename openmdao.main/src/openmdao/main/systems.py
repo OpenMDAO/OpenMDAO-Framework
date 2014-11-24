@@ -1878,6 +1878,16 @@ class DriverSystem(SimpleSystem):
         super(DriverSystem, self).setup_communicators(comm)
         self._comp.setup_communicators(self.mpi.comm)
 
+    def setup_variables(self, resid_state_map=None):
+        super(DriverSystem, self).setup_variables(resid_state_map)
+        # calculate relevant vars for GMRES mult
+        varmeta = self.scope._var_meta
+        vnames = set(self.flat_vars.keys())
+        g = self._comp.get_reduced_graph()
+        vnames.update([n for n,data in g.nodes_iter(data=True)
+                           if 'comp' not in data and not varmeta[n].get('noflat')])
+        self._relevant_vars = vnames
+
     def setup_scatters(self):
         self._comp.setup_scatters()
 
