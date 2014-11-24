@@ -5,7 +5,7 @@ import numpy
 from openmdao.main.mpiwrap import MPI, MPI_STREAM, mpiprint, create_petsc_vec, PETSc
 from openmdao.main.array_helpers import offset_flat_index, \
                                         get_flat_index_start, get_val_and_index, get_shape, \
-                                        get_flattened_index
+                                        get_flattened_index, to_slice
 from openmdao.main.interfaces import IImplicitComponent
 from openmdao.util.typegroups import int_types
 from openmdao.util.graph import base_var
@@ -563,8 +563,8 @@ class DataTransfer(object):
 
 class SerialScatter(object):
     def __init__(self, srcvec, src_idxs, destvec, dest_idxs):
-        self.src_idxs = src_idxs
-        self.dest_idxs = dest_idxs
+        self.src_idxs = to_slice(src_idxs)
+        self.dest_idxs = to_slice(dest_idxs)
         self.svec = srcvec
         self.dvec = destvec
 
