@@ -15,7 +15,7 @@ class GeomData(VariableTree):
     
     points = Array([], desc='nx3 array of point (x,y,z) locations.')
     
-    facets = Array([], desc='nx3 (or nx4) integer array of triangle or quad' + \
+    facets = Array([], desc='nx3 (or nx4) integer array of triangle or quad' + 
                    'connectivities.', dtype='int')
     
     def __init__(self, n_point, n_facet, facet_size=3):
@@ -27,4 +27,3 @@ class GeomData(VariableTree):
         
         self.points = np.zeros((n_point, 3))
         self.facets = np.zeros((n_facet, facet_size), dtype='int')
-    
