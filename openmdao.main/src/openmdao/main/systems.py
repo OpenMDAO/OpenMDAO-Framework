@@ -387,9 +387,7 @@ class System(object):
         variables = {}
         for sub in self.local_subsystems():
             if not isinstance(sub, ParamSystem):
-                print self.name, 'before', resid_state_map
                 sub.setup_variables(resid_state_map)
-                print self.name, 'after', resid_state_map
                 variables.update(sub.variables)
 
         for sub in self.local_subsystems():
