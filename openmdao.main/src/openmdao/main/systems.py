@@ -392,9 +392,7 @@ class System(object):
         variables = {}
         for sub in self.local_subsystems():
             if not isinstance(sub, ParamSystem):
-                print self.name, 'before', resid_state_map
                 sub.setup_variables(resid_state_map)
-                print self.name, 'after', resid_state_map
                 variables.update(sub.variables)
 
         for sub in self.local_subsystems():
@@ -1912,8 +1910,11 @@ class TransparentDriverSystem(DriverSystem):
     def setup_variables(self, resid_state_map=None):
         # pass our resid_state_map to our children
         local_resid_map = self._get_resid_state_map()
-        for key, value in local_resid_map.iteritems():
-            resid_state_map[key] = value
+        if local_resid_map is None or resid_state_map is None:
+            resid_state_map = local_resid_map
+        else:
+            for key, value in local_resid_map.iteritems():
+                resid_state_map[key] = value
         super(TransparentDriverSystem, self).setup_variables(resid_state_map)
 
     def evaluate(self, iterbase, case_label='', case_uuid=None):
@@ -1947,6 +1948,15 @@ class TransparentDriverSystem(DriverSystem):
 
         for subsystem in self.local_subsystems():
             subsystem.linearize()
+
+    def solve_linear(self, options=None):
+        """ Single linear solve solution applied to whatever input is sitting
+        in the RHS vector."""
+
+        # Apply to inner driver system only. No need to pass options since it
+        # has its own.
+        for sub in self.local_subsystems():
+            sub.solve_linear()
 
 
 class SolverSystem(TransparentDriverSystem):  # Implicit

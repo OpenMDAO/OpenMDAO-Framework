@@ -172,12 +172,12 @@ class Testcase_derivatives(unittest.TestCase):
         top.driver.gradient_options.maxiter = 1
         top.run()
         J = top.driver.workflow.calc_gradient(mode='forward')
-        print J
+        
         assert_rel_error(self, J[0, 0], 0.9806145, 0.0001)
         assert_rel_error(self, J[1, 0], 0.0969276, 0.0001)
 
         J = top.driver.workflow.calc_gradient(mode='adjoint')
-        print J
+
         assert_rel_error(self, J[0, 0], 0.9806145, 0.0001)
         assert_rel_error(self, J[1, 0], 0.0969276, 0.0001)
 
