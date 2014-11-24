@@ -70,7 +70,7 @@ class Sellar_MDA_subbed(Assembly):
 
         self.add('driver', SimpleDriver())
         self.add('driver2', Driver())
-        from openmdao.
+        #from openmdao.
         self.add('subdriver', NewtonSolver())
         self.driver.workflow.add(['driver2'])
         self.driver2.workflow.add(['subdriver'])
