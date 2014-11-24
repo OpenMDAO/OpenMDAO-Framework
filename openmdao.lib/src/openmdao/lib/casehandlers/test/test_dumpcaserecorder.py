@@ -77,21 +77,15 @@ Constants:
 
         expected_case = """\
 Case:
-   uuid: ad4c1b76-64fb-11e0-95a8-001e8cf75fe
-   timestamp: 1383239074.309192
+   uuid: f09be2cc-7368-11e4-8013-20c9d0478eff
+   timestamp: 1416785527.851050
    inputs:
       comp1.x: 8.0
       comp1.y: 16.0
    outputs:
-      Response(comp1.z): 24.0
-      Response(comp2.z): 25.0
-      comp1.derivative_exec_count: 0
-      comp1.exec_count: 9
-      comp1.itername: 9-comp1
+      _pseudo_0.out0: 24.0
+      _pseudo_1.out0: 25.0
       comp1.z: 24.0
-      comp2.derivative_exec_count: 0
-      comp2.exec_count: 9
-      comp2.itername: 9-comp2
       comp2.z: 25.0
       driver.workflow.itername: 9"""
 
@@ -159,20 +153,14 @@ Constants:
    recording_options.includes: ['*']
    recording_options.save_problem_formulation: True
 Case:
-   uuid: 766f9b47-5bc0-11e4-803d-080027a1f086
-   timestamp: 1414184290.686166
+   uuid: 2ba9f21e-7369-11e4-800b-20c9d0478eff
+   timestamp: 1416785626.932508
    inputs:
       comp1.x: 0.0
    outputs:
-      Objective(comp1.z): 0.0
-      Objective(comp2.z): 1.0
-      comp1.derivative_exec_count: 0
-      comp1.exec_count: 1
-      comp1.itername: 1-comp1
+      _pseudo_2.out0: 0.0
+      _pseudo_3.out0: 1.0
       comp1.z: 0.0
-      comp2.derivative_exec_count: 0
-      comp2.exec_count: 1
-      comp2.itername: 1-comp2
       comp2.z: 1.0
       driver.workflow.itername: 1
 """

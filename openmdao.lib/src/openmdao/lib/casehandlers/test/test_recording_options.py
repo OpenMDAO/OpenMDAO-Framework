@@ -87,20 +87,14 @@ Constants:
    recording_options.includes: ['*']
    recording_options.save_problem_formulation: True
 Case:
-   uuid: 578b2d91-5b94-11e4-8001-08002764016b
-   timestamp: 1414165341.001852
+   uuid: 8ba21545-737c-11e4-8001-20c9d0478eff
+   timestamp: 1416793956.061592
    inputs:
       comp1.x: 0.0
    outputs:
-      Objective(comp1.z): 0.0
-      Objective(comp2.z): 1.0
-      comp1.derivative_exec_count: 0
-      comp1.exec_count: 1
-      comp1.itername: 1-comp1
+      _pseudo_0.out0: 0.0
+      _pseudo_1.out0: 1.0
       comp1.z: 0.0
-      comp2.derivative_exec_count: 0
-      comp2.exec_count: 1
-      comp2.itername: 1-comp2
       comp2.z: 1.0
       driver.workflow.itername: 1
 """

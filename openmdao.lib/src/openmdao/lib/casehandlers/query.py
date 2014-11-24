@@ -290,6 +290,7 @@ class CaseDataset(object):
             if prefix:
                 prefix += '.'
             driver_info['prefix'] = prefix
+            #driver_info['prefix'] = ''
             self._drivers[_id] = driver_info
             if driver_info['name'] == query.driver_name:
                 self._driver_id = _id
