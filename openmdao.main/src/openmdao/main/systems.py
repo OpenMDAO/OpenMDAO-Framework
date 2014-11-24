@@ -1911,8 +1911,11 @@ class TransparentDriverSystem(DriverSystem):
     def setup_variables(self, resid_state_map=None):
         # pass our resid_state_map to our children
         local_resid_map = self._get_resid_state_map()
-        for key, value in local_resid_map.iteritems():
-            resid_state_map[key] = value
+        if local_resid_map is None or resid_state_map is None:
+            resid_state_map = local_resid_map
+        else:
+            for key, value in local_resid_map.iteritems():
+                resid_state_map[key] = value
         super(TransparentDriverSystem, self).setup_variables(resid_state_map)
 
     def evaluate(self, iterbase, case_label='', case_uuid=None):

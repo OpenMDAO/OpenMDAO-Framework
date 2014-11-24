@@ -199,7 +199,7 @@ class ScipyGMRES(LinearSolver):
         system.applyJ(vnames)
 
         print system.name, 'mult: arg, result', arg, system.rhs_vec.array[:]
-        print system.rhs_vec.keys()
+        #print system.rhs_vec.keys()
         return system.rhs_vec.array[:]
 
 
