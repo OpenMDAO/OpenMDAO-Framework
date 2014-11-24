@@ -1348,18 +1348,7 @@ class Assembly(Component):
 
         try:
             # TODO: add checking of local_size metadata...
-
-            try:
-                val, idx = get_val_and_index(child, vname)
-            except AttributeError as err:
-                import pdb;pdb.set_trace()
-                class VariableNotDefined(AttributeError):
-                    def __init__(self, msg):
-                        super(VariableNotDefined, self).__init__(msg)
-                        self.namespace = child
-                        self.var_name = vname
-
-                raise child.raise_exception(err.message, VariableNotDefined)
+            val, idx = get_val_and_index(child, vname)
 
             if hasattr(val, 'shape'):
                 info['shape'] = val.shape
@@ -1421,25 +1410,7 @@ class Assembly(Component):
                 for name in chain(ins, outs):
                     name = '.'.join((node, name))
                     if name not in varmeta:
-                        try:
-                            varmeta[name] = self._get_var_info(name)
-                        except AttributeError as err:
-                            try:
-
-                                namespace = err.namespace
-                                var_name = err.var_name
-
-                                msg = "variable '{var_name}' returned by 'list_deriv_comps'"\
-                                " is not defined for '{namespace}'"
-
-                                msg = msg.format(var_name=var_name, namespace=namespace.__class__.__name__)
-
-                            except AttributeError:
-                                raise err
-                            else:
-                                namespace.raise_exception(msg, err.__class__)
-
-
+                        varmeta[name] = self._get_var_info(name)
 
     def _update_varmeta(self, node, meta):
         self._var_meta[node] = meta
