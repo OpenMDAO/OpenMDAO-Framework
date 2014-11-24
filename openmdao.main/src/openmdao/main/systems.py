@@ -1950,6 +1950,15 @@ class TransparentDriverSystem(DriverSystem):
         for subsystem in self.local_subsystems():
             subsystem.linearize()
 
+    def solve_linear(self, options=None):
+        """ Single linear solve solution applied to whatever input is sitting
+        in the RHS vector."""
+
+        # Apply to inner driver system only. No need to pass options since it
+        # has its own.
+        for sub in self.local_subsystems():
+            sub.solve_linear()
+
 
 class SolverSystem(TransparentDriverSystem):  # Implicit
     """A System for a Solver component. While it inherits from a SimpleSystem,
