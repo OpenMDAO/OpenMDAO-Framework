@@ -387,7 +387,9 @@ class System(object):
         variables = {}
         for sub in self.local_subsystems():
             if not isinstance(sub, ParamSystem):
+                print self.name, 'before', resid_state_map
                 sub.setup_variables(resid_state_map)
+                print self.name, 'after', resid_state_map
                 variables.update(sub.variables)
 
         for sub in self.local_subsystems():
@@ -1910,7 +1912,10 @@ class TransparentDriverSystem(DriverSystem):
 
     def setup_variables(self, resid_state_map=None):
         # pass our resid_state_map to our children
-        super(TransparentDriverSystem, self).setup_variables(self._get_resid_state_map())
+        local_resid_map = self._get_resid_state_map()
+        for key, value in local_resid_map.iteritems():
+            resid_state_map[key] = value
+        super(TransparentDriverSystem, self).setup_variables(resid_state_map)
 
     def evaluate(self, iterbase, case_label='', case_uuid=None):
         """ Evalutes a component's residuals without invoking its
