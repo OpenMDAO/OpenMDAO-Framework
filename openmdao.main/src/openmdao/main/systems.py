@@ -117,11 +117,6 @@ class System(object):
 
         return None
 
-    def _get_sys_boundary_vars(self, nodes):
-        graph = self.scope._reduced_graph
-        allnodes = graph.internal_nodes(get_full_nodeset(self.scope, nodes))
-        self._boundary_ins, self._boundary_outs = get_node_boundary(graph, allnodes)
-
     def is_differentiable(self):
         """Return True if analytical derivatives can be
         computed for this System.
