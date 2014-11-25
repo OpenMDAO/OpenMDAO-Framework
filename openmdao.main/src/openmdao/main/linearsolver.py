@@ -478,13 +478,13 @@ class LinearGS(LinearSolver):
                 rev_systems = [item for item in reversed(system.subsystems(local=True))]
 
                 for subsystem in rev_systems:
-                    print '1)', system.name, subsystem.name
+                    #print '1)', system.name, subsystem.name
                     #print 'T0', system.vec['df'].array[:], system.vec['du'].array[:], system.vec['dp'].array[:] 
                     system.sol_buf[:] = system.rhs_buf[:]
                     #print 'T1', system.vec['df'].array[:], system.vec['du'].array[:], system.vec['dp'].array[:] 
                     for subsystem2 in rev_systems:
                         if subsystem is not subsystem2:
-                            print '2)', subsystem2.name, subsystem.name
+                            #print '2)', subsystem2.name, subsystem.name
                             system.rhs_vec.array[:] = 0.0
                             args = subsystem.vector_vars.keys()
                             #print 'T2', system.vec['df'].array[:], system.vec['du'].array[:], system.vec['dp'].array[:] 
