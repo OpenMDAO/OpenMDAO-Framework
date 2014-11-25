@@ -1,22 +1,18 @@
 import sys
 from collections import deque
 from itertools import chain
-from ordereddict import OrderedDict
 
 import networkx as nx
 from networkx.algorithms.dag import is_directed_acyclic_graph
 from networkx.algorithms.components import strongly_connected_components
 
 from openmdao.main.mp_support import has_interface
-from openmdao.main.interfaces import IDriver, IVariableTree, \
-                                     IImplicitComponent, \
-                                     IAssembly, IComponent
+from openmdao.main.interfaces import IDriver, IImplicitComponent
 from openmdao.main.exceptions import NoFlatError
 from openmdao.main.expreval import ConnectedExprEvaluator
-from openmdao.main.array_helpers import is_differentiable_var, is_differentiable_val, flattened_size
-from openmdao.main.case import flatteners
+from openmdao.main.array_helpers import is_differentiable_val, flattened_size
 from openmdao.main.vartree import VariableTree
-from openmdao.util.graph import list_deriv_vars, base_var, fix_single_tuple
+from openmdao.util.graph import base_var, fix_single_tuple
 
 # # to use as a quick check for exprs to avoid overhead of constructing an
 # # ExprEvaluator
@@ -1113,7 +1109,6 @@ class DependencyGraph(DGraphBase):
 
             vtconns[(u,v)] = varlist
 
-
         for (u,v), varlist in vtconns.items():
             ucomp = udestcomp = vcomp = None
 
@@ -1354,7 +1349,10 @@ class CollapsedGraph(DGraphBase):
         drivers = []
         for node, data in self.nodes_iter(data=True):
             if 'comp' not in data:
-                dests2node.setdefault(node[1], set()).add(node)
+                if isinstance(node, tuple):
+                    dests2node.setdefault(node[1], set()).add(node)
+                else:
+                    pass  # disconnected variable
             elif is_driver_node(self, node):
                 drivers.append(node)
 
