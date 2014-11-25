@@ -13,6 +13,7 @@ from openmdao.main.interfaces import IHas2SidedConstraints, implements
 from openmdao.test.execcomp import ExecComp
 from openmdao.units.units import PhysicalQuantity
 from openmdao.main.pseudocomp import SimpleEQConPComp, SimpleEQ0PComp
+from openmdao.util.testutil import assert_rel_error
 
 @add_delegate(HasConstraints)
 class MyDriver(Driver):
@@ -510,12 +511,12 @@ class Has2SidedConstraintsTestCase(unittest.TestCase):
         J = drv.calc_gradient(inputs=['comp1.a'])
 
         # ineq
-        self.assertEqual(J[0], 2.5)
+        assert_rel_error(self, J[0][0], 2.5, 1e-5)
 
         # double sided (in order)
-        self.assertEqual(J[1], 1.0)
-        self.assertEqual(J[2], 1.0)
-        self.assertEqual(J[3], 3.0)
+        assert_rel_error(self, J[1][0], 1.0, 1e-5)
+        assert_rel_error(self, J[2][0], 1.0, 1e-5)
+        assert_rel_error(self, J[3][0], 3.0, 1e-5)
 
     def test_replace(self):
         drv = self.asm.add('driver', My2SDriver())

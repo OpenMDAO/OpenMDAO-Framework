@@ -823,6 +823,13 @@ class Assembly(Component):
 
         return (inputs, constants)
 
+    def record_configuration(self):
+        """ record model configuration without running the model
+        """
+        self.configure_recording()
+        for recorder in self.recorders:
+            recorder.close()
+
     @rbac(('owner', 'user'))
     def connected_inputs(self, name):
         """Helper for :meth:`configure_recording`."""
@@ -1112,15 +1119,11 @@ class Assembly(Component):
         # copy the reduced graph
         rgraph = rgraph.subgraph(rgraph.nodes_iter())
         rgraph.collapse_subdrivers([], [self._top_driver])
-        cgraph = rgraph.component_graph()
-        #cgraph = self._driver_collapsed_graph.component_graph()
 
-        if len(cgraph) > 1:
-            for u,v in cgraph.edges():
-                if u == v:  # get rid of self cycles
-                    cgraph.remove_edge(u, v)
-            self._system = SerialSystem(self, rgraph, cgraph, self.name+'._inner_asm')
-            self._system.set_ordering(nx.topological_sort(cgraph), {})
+        if len(rgraph) > 1:
+            self._system = SerialSystem(self, rgraph, rgraph.component_graph(), 
+                                        self.name+'._inner_asm')
+            self._system.set_ordering(nx.topological_sort(rgraph), {})
         else:
             # TODO: if top driver has no params/constraints, possibly
             # remove driver system entirely and just go directly to workflow

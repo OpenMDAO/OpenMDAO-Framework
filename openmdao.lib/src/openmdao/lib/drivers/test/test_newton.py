@@ -291,42 +291,46 @@ class Newton_SolverTestCase(unittest.TestCase):
         assert_rel_error(self, a.comp.x, 2.06720359226, .0001)
         assert_rel_error(self, a.comp.f, 0, .0001)
 
-    def test_initial_run(self):
+    # The following test generates warnings due to nans and infs in u and df
+    # vectors in the newton backtracking.  The test doesn't actually check
+    # anything except apparently that we don't raise an exception, so it's
+    # not really a good test.
+    #def test_initial_run(self):
 
-        class MyComp(Component):
+        #class MyComp(Component):
 
-            x = Float(0.0, iotype='in')
-            xx = Float(0.0, iotype='in', low=-100000, high=100000)
-            f_x = Float(iotype='out')
-            y = Float(iotype='out')
+            #x = Float(0.0, iotype='in')
+            #xx = Float(0.0, iotype='in', low=-100000, high=100000)
+            #f_x = Float(iotype='out')
+            #y = Float(iotype='out')
 
-            def execute(self):
-                if self.xx != 1.0:
-                    self.raise_exception("Lazy", RuntimeError)
-                self.f_x = 2.0*self.x
-                self.y = self.x
+            #def execute(self):
+                #if self.xx != 1.0:
+                    #self.raise_exception("Lazy", RuntimeError)
+                #self.f_x = 2.0*self.x
+                #self.y = self.x
 
-        @add_delegate(HasParameters)
-        class SpecialDriver(Driver):
+        #@add_delegate(HasParameters)
+        #class SpecialDriver(Driver):
 
-            implements(IHasParameters)
+            #implements(IHasParameters)
 
-            def execute(self):
-                self.set_parameters([1.0])
+            #def execute(self):
+                #self.set_parameters([1.0])
 
-        top = set_as_top(Assembly())
-        top.add('comp', MyComp())
-        top.add('driver', NewtonSolver())
-        top.add('subdriver', SpecialDriver())
-        top.driver.workflow.add('subdriver')
-        top.subdriver.workflow.add('comp')
+        #top = set_as_top(Assembly())
+        #top.add('comp', MyComp())
+        #top.add('driver', NewtonSolver())
+        #top.add('subdriver', SpecialDriver())
+        #top.driver.workflow.add('subdriver')
+        #top.subdriver.workflow.add('comp')
 
-        top.subdriver.add_parameter('comp.xx')
-        top.driver.add_parameter('comp.x')
-        top.driver.add_constraint('comp.y = 1.0')
-        top.driver.max_iteration = 2
+        #top.subdriver.add_parameter('comp.xx')
+        #top.driver.add_parameter('comp.x')
+        #top.driver.add_constraint('comp.y = 1.0')
+        #top.driver.max_iteration = 2
 
-        top.run()
+        #top.run()
 
     def test_newton_nested(self):
         # Make sure derivatives across the newton-solved system are correct.

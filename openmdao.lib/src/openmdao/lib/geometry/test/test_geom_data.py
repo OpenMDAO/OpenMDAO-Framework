@@ -17,7 +17,7 @@ class GeomDataTestCase(unittest.TestCase):
         
         self.assertTrue(box.geo.points.shape == (13, 3))
         self.assertTrue(box.geo.facets.shape == (17, 3))
-        self.assertTrue(box.geo.facets.dtype == np.int64)
+        self.assertTrue(issubclass(box.geo.facets.dtype.type,np.int))
 
         box.add('geo2', VarTree(GeomData(13, 17, 4), iotype='out'))
         self.assertTrue(box.geo2.facets.shape == (17, 4))

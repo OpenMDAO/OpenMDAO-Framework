@@ -29,6 +29,7 @@ class System(object):
 
     def __init__(self, scope, graph, nodes, name):
         self.name = str(name)
+        self.node = name
         self.scope = scope
         self._nodes = nodes
 
@@ -41,6 +42,8 @@ class System(object):
         self._outputs = None
         self._states = None
         self._residuals = None
+
+        self._reduced_graph = graph.full_subgraph(nodes)
 
         self._mapped_resids = {}
 
@@ -412,7 +415,7 @@ class System(object):
         #  3) non-flattenable vars
 
         # first, get all flattenable variables
-        for name in self._get_flat_vars(self.variables):
+        for name in _filter_flat(self.scope, self.variables.keys()):
             self.flat_vars[name] = self.variables[name]
 
         # now get all flattenable vars that add to vector size
@@ -664,25 +667,14 @@ class System(object):
 
         return stream.getvalue() if getval else None
 
-    def _get_flat_vars(self, vardict):
-        """Return a list of names of vars that represent variables that are
-        flattenable to float arrays.
-        """
-        return [n for n,info in vardict.items() if not info.get('noflat')]
-
     def _get_vector_vars(self, vardict):
         """Return vector_vars, which are vars that actually add to the
         size of the vectors (as opposed to subvars of vars that are in
         the vector, which don't add anything to the vector but just
         use a subview of the view corresponding to their base var)
         """
-        vector_vars = OrderedDict()
         keep_srcs = set(_filter_subs([n[0] for n in vardict]))
-        for name, val in vardict.items():
-            if name[0] in keep_srcs:
-                vector_vars[name] = vardict[name]
-
-        return vector_vars
+        return OrderedDict([(k,v) for k,v in vardict.items() if k[0] in keep_srcs])
 
     def set_options(self, mode, options):
         """ Sets all user-configurable options for this system and all
@@ -730,14 +722,15 @@ class System(object):
                 self.ln_solver = LinearGS(self)
 
     def linearize(self):
-        """ Linearize all subsystems. """
+        """ Linearize local subsystems. """
 
         for subsystem in self.local_subsystems():
             subsystem.linearize()
 
     def set_complex_step(self, complex_step=False):
         """ Toggles complex_step plumbing for this system and all
-        subsystems. """
+        local subsystems.
+        """
 
         self.complex_step = complex_step
         for subsystem in self.local_subsystems():
@@ -787,6 +780,8 @@ class System(object):
         return J
 
     def solve_fd(self, inputs, outputs, iterbase='', return_format='array'):
+        """Finite difference solve."""
+
         if self.fd_solver is None:
             self.fd_solver = FiniteDifference(self, inputs, outputs,
                                               return_format)
@@ -794,7 +789,8 @@ class System(object):
 
     def calc_newton_direction(self, options=None, iterbase=''):
         """ Solves for the new state in Newton's method and leaves it in the
-        df vector."""
+        df vector.
+        """
 
         self.set_options('forward', options)
 
@@ -811,7 +807,8 @@ class System(object):
 
     def solve_linear(self, options=None):
         """ Single linear solve solution applied to whatever input is sitting
-        in the RHS vector."""
+        in the RHS vector.
+        """
 
         if numpy.linalg.norm(self.rhs_vec.array) < 1e-15:
             self.sol_vec.array[:] = 0.0
@@ -962,7 +959,7 @@ class SimpleSystem(System):
                 if out in mapped_states and state not in self.variables:
                     to_remove.add(out)
 
-            if not isinstance(self, DriverSystem): #(SolverSystem, FiniteDiffDriverSystem)):
+            if not isinstance(self, DriverSystem):
                 for name in to_remove:
                     del self.variables[name]
 
@@ -1268,10 +1265,8 @@ class CompoundSystem(System):
     """A System that has subsystems."""
 
     def __init__(self, scope, graph, subg, name=None):
-        super(CompoundSystem, self).__init__(scope,
-                                             graph,
-                                             subg.nodes(), #get_full_nodeset(scope, subg.nodes()),
-                                             name)
+        super(CompoundSystem, self).__init__(scope, graph,
+                                             subg.nodes(), name)
         self.driver = None
         self.graph = subg
         self._local_subsystems = []  # subsystems in the same process
@@ -1298,7 +1293,7 @@ class CompoundSystem(System):
             s.pre_run()
 
     def setup_scatters(self):
-        """ Defines a scatter for args at this system's level """
+        """ Defines scatters for args at this system's level """
         if not self.is_active():
             return
         var_sizes = self.local_var_sizes
@@ -1325,14 +1320,41 @@ class CompoundSystem(System):
         # collect all destinations from p vector
         ret = self.vec['p'].get_dests_by_comp()
 
-        #print "scatters for %s" % self.name
+        # for subsystem in self.all_subsystems():
+        #     src_partial = []
+        #     dest_partial = []
+        #     scatter_conns = set()
+        #     noflat_conns = set()  # non-flattenable vars
+        #
+        #     for node in self._reduced_graph.successors(subsystem.node):
+        #         if node in noflats:
+        #             noflat_conns.add(node)
+        #
+        #         elif node in self.vector_vars: # basevar or non-duped subvar
+        #             if node not in self._owned_args:
+        #                 continue
+        #             isrc = varkeys.index(node)
+        #             src_idxs = numpy.sum(var_sizes[:, :isrc]) + self.arg_idx[node]
+        #             dest_idxs = start + self.arg_idx[node]
+        #             start += len(dest_idxs)
+        #
+        #         elif node in self.flat_vars:  # duped subvar
+        #             pass
+        #
+        #         else:
+        #             continue
+        #
+        #         scatter_conns.add(node)
+
+
+
+        start = numpy.sum(input_sizes[:rank])
         for subsystem in self.all_subsystems():
             src_partial = []
             dest_partial = []
             scatter_conns = set()
             noflat_conns = set()  # non-flattenable vars
             for sub in subsystem.simple_subsystems():
-                #print "sub %s: _in_nodes: %s" % (sub.name, sub._in_nodes)
                 for node in self.vector_vars:
                     if node in sub._in_nodes:
                         if node not in self._owned_args or node in scatter_conns:
@@ -1377,7 +1399,6 @@ class CompoundSystem(System):
                                 scatter_conns_full.add(node)
 
             if MPI or scatter_conns or noflat_conns:
-                #print "   subsystem %s:\n      %s" % (subsystem.name, str(scatter_conns))
                 subsystem.scatter_partial = DataTransfer(self, src_partial,
                                                          dest_partial,
                                                          scatter_conns, noflat_conns)
@@ -1883,6 +1904,16 @@ class DriverSystem(SimpleSystem):
     def setup_communicators(self, comm):
         super(DriverSystem, self).setup_communicators(comm)
         self._comp.setup_communicators(self.mpi.comm)
+
+    def setup_variables(self, resid_state_map=None):
+        super(DriverSystem, self).setup_variables(resid_state_map)
+        # calculate relevant vars for GMRES mult
+        varmeta = self.scope._var_meta
+        vnames = set(self.flat_vars.keys())
+        g = self._comp.get_reduced_graph()
+        vnames.update([n for n,data in g.nodes_iter(data=True)
+                           if 'comp' not in data and not varmeta[n].get('noflat')])
+        self._relevant_vars = vnames
 
     def setup_scatters(self):
         self._comp.setup_scatters()

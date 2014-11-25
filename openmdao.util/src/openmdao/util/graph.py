@@ -4,10 +4,6 @@ from ordereddict import OrderedDict
 _missing = object()
 
 import networkx as nx
-try:
-    import matplotlib.pyplot as plt
-except (ImportError, RuntimeError):
-    plt = None
 from io import BytesIO
 
 
@@ -15,14 +11,18 @@ def graph_to_svg(g):
     """ return the SVG of a matplotlib figure generated from a graph
         ref: http://pig-in-the-python.blogspot.com/2012/09/
     """
-    if not plt:
+    try:
+        import matplotlib.pyplot as plt
+    except (ImportError, RuntimeError):
         return None
+
     fig = plt.figure(figsize=(8, 8))
     ax = fig.add_subplot(111)
     nx.draw_shell(g, ax=ax)
     output = BytesIO()
     fig.savefig(output, format='svg')
     plt.close(fig)
+    
     return output.getvalue()
 
 

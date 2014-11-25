@@ -5,7 +5,7 @@ import numpy
 from openmdao.main.mpiwrap import MPI, MPI_STREAM, mpiprint, create_petsc_vec, PETSc
 from openmdao.main.array_helpers import offset_flat_index, \
                                         get_flat_index_start, get_val_and_index, get_shape, \
-                                        get_flattened_index
+                                        get_flattened_index, to_slice
 from openmdao.main.interfaces import IImplicitComponent
 from openmdao.util.typegroups import int_types
 from openmdao.util.graph import base_var
@@ -491,11 +491,10 @@ class DataTransfer(object):
         self.scatter_conns = scatter_conns
         self.noflat_vars = list(noflat_vars)
 
-        var_idxs = idx_merge(var_idxs)
-        input_idxs = idx_merge(input_idxs)
-
         if not (MPI or scatter_conns or noflat_vars):
             return  # no data to xfer
+
+        var_idxs, input_idxs = merge_idxs(var_idxs, input_idxs)
 
         if len(var_idxs) != len(input_idxs):
             raise RuntimeError("ERROR: creating scatter (index size mismatch): (%d != %d) srcs: %s,  dest: %s in %s" %
@@ -538,12 +537,9 @@ class DataTransfer(object):
             src = srcvec.array
             dest = destvec.array
 
-        #srcvec.array *= system.vec['u0'].array
         addv = mode = False
-        if system.mode == 'adjoint' and srcvec.name.endswith('du') and \
-           complex_step == False:
-            addv = True
-            mode = True
+        if not complex_step and system.mode == 'adjoint' and srcvec.name.endswith('du'):
+            addv = mode = True
             destvec, srcvec = srcvec, destvec
             dest, src = src, dest
 
@@ -566,8 +562,8 @@ class DataTransfer(object):
 
 class SerialScatter(object):
     def __init__(self, srcvec, src_idxs, destvec, dest_idxs):
-        self.src_idxs = src_idxs
-        self.dest_idxs = dest_idxs
+        self.src_idxs = to_slice(src_idxs)
+        self.dest_idxs = to_slice(dest_idxs)
         self.svec = srcvec
         self.dvec = destvec
 
@@ -577,14 +573,27 @@ class SerialScatter(object):
         else:
             destvec[self.dest_idxs] = srcvec[self.src_idxs]
 
+def merge_idxs(src_idxs, dest_idxs):
+    """Return source and destination index arrays, built up from
+    smaller index arrays and combined in order of ascending source
+    index (to allow us to convert src indices to a slice in some cases).
+    """
+    assert(len(src_idxs) == len(dest_idxs))
+
+    src_tups = list(enumerate(src_idxs))
+
+    src_sorted = sorted(src_tups, key=lambda x: x[1].min())
+
+    new_src = [idxs for i, idxs in src_sorted]
+    new_dest = [dest_idxs[i] for i,_ in src_sorted]
+
+    return idx_merge(new_src), idx_merge(new_dest)
+
 
 def idx_merge(idxs):
     """Combines a mixed iterator of int and iterator indices into an
     array of int indices.
     """
-    # TODO: (for serial at least) convert the collection of indices into
-    #       a slice object (if possible) to avoid any unnecessary copying.  Not sure if petsc
-    #       will allow use of slice objects, but even if it's serial only it may still be worth it.
     if len(idxs) > 0:
         idxs = [i for i in idxs if isinstance(i, int_types) or
                            len(i)>0]

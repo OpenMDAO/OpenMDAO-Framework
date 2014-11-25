@@ -104,6 +104,51 @@ class BadListDerivsComp(Component):
     def provideJ(self):
         return array([[2.0]])
 
+class VarTreeDerivVarComp(Component):
+    x = VarTree(VariableTree(), iotype='in')
+    y = Float(iotype='in')
+
+    z = Float(iotype='out')
+
+    def execute(self):
+        pass
+
+    def list_deriv_vars(self):
+        return ('x', 'y'), ('z')
+
+    def provideJ(self):
+        return array([[2.0]])
+
+class UndefinedDerivVarComp(Component):
+    x = Float(iotype='in')
+    y = Float(iotype='in')
+
+    z = Float(iotype='out')
+
+    def execute(self):
+        pass
+
+    def list_deriv_vars(self):
+        return ('x', 'y', 'w'), ('z')
+
+    def provideJ(self):
+        return array([[2.0]])
+
+
+class UnflattenableDerivVarComp(Component):
+    x = Int(iotype='in')
+    y = Float(iotype='in')
+
+    z = Float(iotype='out')
+
+    def execute(self):
+        pass
+
+    def list_deriv_vars(self):
+        return ('x', 'y'), ('z')
+
+    def provideJ(self):
+        return array([[2.0]])
 
 class Paraboloid(Component):
     """ Evaluates the equation f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3 """
@@ -518,6 +563,49 @@ class Testcase_derivatives(unittest.TestCase):
                              "comp1: The return value of list_deriv_vars() was"
                              " not a tuple of the form (invars, outvars). Value"
                              " returned was ['x', 'y']")
+
+    def test_unflattenable_deriv_var(self):
+        top = set_as_top(Assembly())
+        top.add('comp', UnflattenableDerivVarComp())
+        top.driver.workflow.add(['comp'])
+        top.comp.x = 1
+        top.comp.y = 1.0
+
+        try:
+            top.run()
+        except Exception as err:
+            msg = "comp: 'x', of type 'Int', was given in 'list_deriv_vars' but "\
+            "variables must be of a type convertable to a 1D float array"
+
+            self.assertEqual(str(err), msg)
+
+    def test_vartree_deriv_var(self):
+        top = set_as_top(Assembly())
+        top.add('comp', VarTreeDerivVarComp())
+        top.driver.workflow.add(['comp'])
+
+        try:
+            top.run()
+        except Exception as err:
+            msg = "comp: 'x', of type 'VarTree', was given in 'list_deriv_vars' but you must declare "\
+            "sub-vars of a vartree individually"\
+
+            self.assertEqual(str(err), msg)
+
+    def test_undefined_deriv_var(self):
+        top = set_as_top(Assembly())
+        top.add('comp', UndefinedDerivVarComp())
+        top.driver.workflow.add(['comp'])
+        top.comp.x = 1.0
+        top.comp.y = 1.0
+
+        try:
+            top.run()
+        except Exception as err:
+            msg = "comp: 'w' was given in 'list_deriv_vars'"\
+            "but 'w' is undefined"
+
+            self.assertEqual(str(err), msg)
 
     def test_int_ignore(self):
 
@@ -3280,4 +3368,3 @@ if __name__ == '__main__':
     sys.argv.append('--cover-package=openmdao')
     sys.argv.append('--cover-erase')
     nose.runmodule()
-
