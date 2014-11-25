@@ -177,25 +177,15 @@ class ScipyGMRES(LinearSolver):
 
         system = self._system
         system.sol_vec.array[:] = arg[:]
-        #name2collapsed = system.scope.name2collapsed
 
         # Start with a clean slate
         system.rhs_vec.array[:] = 0.0
         system.clear_dp()
 
-        varmeta = system.scope._var_meta
-        vnames = set(system.flat_vars.keys())
         if system._parent_system:
-            g = system._parent_system._comp._reduced_internal_graph
-            vnames.update([n for n,data in g.nodes_iter(data=True) 
-                               if 'comp' not in data and not varmeta[n].get('noflat')])
-
-        ## add inputs, filtered so that we don't include any inputs from
-        ## outside of this workflow system
-        #ins = [name2collapsed[n] for n in system.list_inputs()]
-        #vnames.update([n for n in ins if n[0].split('.',1)[0] in system._nodes])
-
-        #system.applyJ(system.flat_vars.keys())
+            vnames = system._parent_system._relevant_vars
+        else:
+            vnames = system.flat_vars.keys()
         system.applyJ(vnames)
 
         #print system.name, 'mult: arg, result', arg, system.rhs_vec.array[:]
@@ -488,22 +478,31 @@ class LinearGS(LinearSolver):
                 rev_systems = [item for item in reversed(system.subsystems(local=True))]
 
                 for subsystem in rev_systems:
+                    #print '1)', system.name, subsystem.name
+                    #print 'T0', system.vec['df'].array[:], system.vec['du'].array[:], system.vec['dp'].array[:] 
                     system.sol_buf[:] = system.rhs_buf[:]
+                    #print 'T1', system.vec['df'].array[:], system.vec['du'].array[:], system.vec['dp'].array[:] 
                     for subsystem2 in rev_systems:
                         if subsystem is not subsystem2:
+                            #print '2)', subsystem2.name, subsystem.name
                             system.rhs_vec.array[:] = 0.0
                             args = subsystem.vector_vars.keys()
+                            #print 'T2', system.vec['df'].array[:], system.vec['du'].array[:], system.vec['dp'].array[:] 
                             subsystem2.applyJ(args)
+                            #print 'T3', system.vec['df'].array[:], system.vec['du'].array[:], system.vec['dp'].array[:] 
                             system.scatter('du', 'dp', subsystem=subsystem2)
-                            system.clear_dp()
+                            #print 'T4', system.vec['df'].array[:], system.vec['du'].array[:], system.vec['dp'].array[:] 
+                            system.vec['dp'].array[:] = 0.0
                             system.sol_buf[:] -= system.rhs_vec.array[:]
+                            #print 'T5', system.vec['df'].array[:], system.vec['du'].array[:], system.vec['dp'].array[:] 
                     system.rhs_vec.array[:] = system.sol_buf[:]
+                    #print 'T6', system.vec['df'].array[:], system.vec['du'].array[:], system.vec['dp'].array[:] 
                     subsystem.solve_linear(options)
+                    #print 'T7', system.vec['df'].array[:], system.vec['du'].array[:], system.vec['dp'].array[:] 
 
             norm = self._norm()
             counter += 1
-            #print options.parent.name, "Norm: ", norm, counter
-
+            
         #print 'return', options.parent.name, np.linalg.norm(system.rhs_vec.array), system.rhs_vec.array
         #print 'Linear solution vec', system.sol_vec.array
         return system.sol_vec.array

@@ -35,7 +35,6 @@ from openmdao.main.mpiwrap import MPI_info
 
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.eggobserver import EggObserver
-#from openmdao.main.mpiwrap import mpiprint
 
 import openmdao.util.log as tracing
 

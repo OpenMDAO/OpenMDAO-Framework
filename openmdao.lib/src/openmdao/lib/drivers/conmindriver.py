@@ -376,13 +376,13 @@ class CONMINdriver(Driver):
         if self.cnmn1.info == 1:
 
             # Note. CONMIN is driving the finite difference estimation of the
-            # gradient. 
+            # gradient.
             if self.cnmn1.igoto == 3:
 
                 # update the parameters in the model
                 self.set_parameters(self.design_vals[:-2])
                 super(CONMINdriver, self).run_iteration()
-                
+
             else:
                 # update the parameters in the model
                 self.set_parameters(self.design_vals[:-2])
