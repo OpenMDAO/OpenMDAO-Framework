@@ -494,8 +494,7 @@ class DataTransfer(object):
         if not (MPI or scatter_conns or noflat_vars):
             return  # no data to xfer
 
-        var_idxs = idx_merge(var_idxs)
-        input_idxs = idx_merge(input_idxs)
+        var_idxs, input_idxs = merge_idxs(var_idxs, input_idxs)
 
         if len(var_idxs) != len(input_idxs):
             raise RuntimeError("ERROR: creating scatter (index size mismatch): (%d != %d) srcs: %s,  dest: %s in %s" %
@@ -574,14 +573,27 @@ class SerialScatter(object):
         else:
             destvec[self.dest_idxs] = srcvec[self.src_idxs]
 
+def merge_idxs(src_idxs, dest_idxs):
+    """Return source and destination index arrays, built up from
+    smaller index arrays and combined in order of ascending source
+    index (to allow us to convert src indices to a slice in some cases).
+    """
+    assert(len(src_idxs) == len(dest_idxs))
+
+    src_tups = list(enumerate(src_idxs))
+
+    src_sorted = sorted(src_tups, key=lambda x: x[1].min())
+
+    new_src = [idxs for i, idxs in src_sorted]
+    new_dest = [dest_idxs[i] for i,_ in src_sorted]
+
+    return idx_merge(new_src), idx_merge(new_dest)
+
 
 def idx_merge(idxs):
     """Combines a mixed iterator of int and iterator indices into an
     array of int indices.
     """
-    # TODO: (for serial at least) convert the collection of indices into
-    #       a slice object (if possible) to avoid any unnecessary copying.  Not sure if petsc
-    #       will allow use of slice objects, but even if it's serial only it may still be worth it.
     if len(idxs) > 0:
         idxs = [i for i in idxs if isinstance(i, int_types) or
                            len(i)>0]

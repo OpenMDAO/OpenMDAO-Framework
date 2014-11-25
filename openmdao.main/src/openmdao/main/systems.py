@@ -29,6 +29,7 @@ class System(object):
 
     def __init__(self, scope, graph, nodes, name):
         self.name = str(name)
+        self.node = name
         self.scope = scope
         self._nodes = nodes
 
@@ -41,6 +42,8 @@ class System(object):
         self._outputs = None
         self._states = None
         self._residuals = None
+
+        self._reduced_graph = graph.full_subgraph(nodes)
 
         self._mapped_resids = {}
 
@@ -956,7 +959,7 @@ class SimpleSystem(System):
                 if out in mapped_states and state not in self.variables:
                     to_remove.add(out)
 
-            if not isinstance(self, DriverSystem): #(SolverSystem, FiniteDiffDriverSystem)):
+            if not isinstance(self, DriverSystem):
                 for name in to_remove:
                     del self.variables[name]
 
@@ -1262,10 +1265,8 @@ class CompoundSystem(System):
     """A System that has subsystems."""
 
     def __init__(self, scope, graph, subg, name=None):
-        super(CompoundSystem, self).__init__(scope,
-                                             graph,
-                                             subg.nodes(), #get_full_nodeset(scope, subg.nodes()),
-                                             name)
+        super(CompoundSystem, self).__init__(scope, graph,
+                                             subg.nodes(), name)
         self.driver = None
         self.graph = subg
         self._local_subsystems = []  # subsystems in the same process
@@ -1292,7 +1293,7 @@ class CompoundSystem(System):
             s.pre_run()
 
     def setup_scatters(self):
-        """ Defines a scatter for args at this system's level """
+        """ Defines scatters for args at this system's level """
         if not self.is_active():
             return
         var_sizes = self.local_var_sizes
@@ -1319,14 +1320,41 @@ class CompoundSystem(System):
         # collect all destinations from p vector
         ret = self.vec['p'].get_dests_by_comp()
 
-        #print "scatters for %s" % self.name
+        # for subsystem in self.all_subsystems():
+        #     src_partial = []
+        #     dest_partial = []
+        #     scatter_conns = set()
+        #     noflat_conns = set()  # non-flattenable vars
+        #
+        #     for node in self._reduced_graph.successors(subsystem.node):
+        #         if node in noflats:
+        #             noflat_conns.add(node)
+        #
+        #         elif node in self.vector_vars: # basevar or non-duped subvar
+        #             if node not in self._owned_args:
+        #                 continue
+        #             isrc = varkeys.index(node)
+        #             src_idxs = numpy.sum(var_sizes[:, :isrc]) + self.arg_idx[node]
+        #             dest_idxs = start + self.arg_idx[node]
+        #             start += len(dest_idxs)
+        #
+        #         elif node in self.flat_vars:  # duped subvar
+        #             pass
+        #
+        #         else:
+        #             continue
+        #
+        #         scatter_conns.add(node)
+
+
+
+        start = numpy.sum(input_sizes[:rank])
         for subsystem in self.all_subsystems():
             src_partial = []
             dest_partial = []
             scatter_conns = set()
             noflat_conns = set()  # non-flattenable vars
             for sub in subsystem.simple_subsystems():
-                #print "sub %s: _in_nodes: %s" % (sub.name, sub._in_nodes)
                 for node in self.vector_vars:
                     if node in sub._in_nodes:
                         if node not in self._owned_args or node in scatter_conns:
@@ -1371,7 +1399,6 @@ class CompoundSystem(System):
                                 scatter_conns_full.add(node)
 
             if MPI or scatter_conns or noflat_conns:
-                #print "   subsystem %s:\n      %s" % (subsystem.name, str(scatter_conns))
                 subsystem.scatter_partial = DataTransfer(self, src_partial,
                                                          dest_partial,
                                                          scatter_conns, noflat_conns)

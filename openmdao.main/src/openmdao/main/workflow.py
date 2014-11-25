@@ -847,6 +847,14 @@ class Workflow(object):
                         to_remove.append((s, node))
             reduced.remove_edges_from(to_remove)
 
+            ## attach any dangling subvars to their corresponding VarNode
+            #for node, data in reduced.nodes_iter(data=True):
+            #    if 'comp' not in data and reduced.in_degree(node) == 0:
+            #        if node[0] in reduced:
+            #            reduced.add_edge(node[0], node)
+            #        elif node[0].split('[', 1)[0] in reduced:
+            #            reduced.add_edge(node[0].split('[', 1)[0], node)
+
         self._reduced_graph = reduced
 
         if MPI and system_type == 'auto':
@@ -930,17 +938,7 @@ class Workflow(object):
         belonging to this driver (inlcudes full iteration set).
         """
         nodeset = set([c.name for c in self.parent.iteration_set()])
-
         rgraph = self.scope._reduced_graph
-
-        ## some drivers don't have parameters but we still may want derivatives
-        ## w.r.t. other inputs.  Look for param comps that attach to comps in
-        ## our nodeset
-        #for node, data in rgraph.nodes_iter(data=True):
-            #if data.get('comp') == 'param':
-                #if node.split('.', 1)[0] in nodeset:
-                    #nodeset.add(node)
-
         return nodeset
 
     def subdrivers(self):
