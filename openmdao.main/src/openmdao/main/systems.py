@@ -565,17 +565,16 @@ class System(object):
                             complex_step = True)
 
                 if scatter is self.scatter_full:
-                    self.vec['p'].set_to_scope(self.scope)
+                    destvec.set_to_scope(self.scope)
                     if self.complex_step is True:
                         self.vec['dp'].set_to_scope_complex(self.scope)
                 else:
                     if subsystem._in_nodes:
-                        self.vec['p'].set_to_scope(self.scope, subsystem._in_nodes)
+                        destvec.set_to_scope(self.scope, subsystem._in_nodes)
                         if self.complex_step is True:
                             self.vec['dp'].set_to_scope_complex(self.scope,
                                                                 subsystem._in_nodes)
 
-        return scatter
 
     def dump(self, nest=0, stream=sys.stdout, verbose=False):
         """Prints out a textual representation of the collapsed
@@ -992,7 +991,6 @@ class SimpleSystem(System):
 
             vec = self.vec
             vec['f'].array[:] = vec['u'].array[:]
-            self.scatter('u', 'p')
 
             self._comp.set_itername('%s-%s' % (iterbase, self.name))
             self._comp.run(case_uuid=case_uuid)
@@ -1022,8 +1020,6 @@ class SimpleSystem(System):
         # Forward Mode
         if self.mode == 'forward':
 
-            self.scatter('du', 'dp')
-
             self._comp.applyJ(self, variables)
             vec['df'].array[:] *= -1.0
 
@@ -1050,8 +1046,6 @@ class SimpleSystem(System):
                     continue
 
                 vec['du'][var][:] += vec['df'][var][:]
-
-            self.scatter('du', 'dp')
 
     def solve_linear(self, options=None):
         """ Single linear solve solution applied to whatever input is sitting
@@ -1117,7 +1111,7 @@ class InVarSystem(VarSystem):
     """System wrapper for Assembly input variables (internal perspective)."""
 
     def run(self, iterbase, case_label='', case_uuid=None):
-        if self.is_active():
+        if self.is_active():# and self.name in self.vector_vars:
             self.vec['u'].set_from_scope(self.scope, self._nodes)
 
             if self.complex_step is True:
@@ -1139,6 +1133,7 @@ class InVarSystem(VarSystem):
 
     def pre_run(self):
         """ Load param value into u vector. """
+        #if self.name in self.vector_vars:
         self.vec['u'].set_from_scope(self.scope, [self.name])
 
 
@@ -1844,8 +1839,6 @@ class OpaqueSystem(SimpleSystem):
         # Forward Mode
         if self.mode == 'forward':
 
-            self.scatter('du', 'dp')
-
             applyJ(self, variables)
             dfvec.array[:] *= -1.0
 
@@ -1868,8 +1861,6 @@ class OpaqueSystem(SimpleSystem):
             for var in self.list_outputs():
                 if var in dfvec:
                     vec['du'][var][:] += dfvec[var][:]
-
-            self.scatter('du', 'dp')
 
     def set_ordering(self, ordering, opaque_map):
         self._inner_system.set_ordering(ordering, opaque_map)
@@ -2052,7 +2043,7 @@ class SolverSystem(TransparentDriverSystem):  # Implicit
         sub_options = self._comp.gradient_options
         for sub in self.subsystems():
             sub.solve_linear(sub_options)
-        
+
 
 def _create_simple_sys(scope, graph, name):
     """Given a Component or Variable node, create the

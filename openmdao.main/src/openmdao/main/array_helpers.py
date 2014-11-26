@@ -242,7 +242,7 @@ def get_flat_index_start(idx):
     if isinstance(idx, slice):
         return idx.start
     elif isinstance(idx, ndarray):  # index array
-        return idx[0]
+        return idx.min()
     else:  # simple index
         return idx
 
