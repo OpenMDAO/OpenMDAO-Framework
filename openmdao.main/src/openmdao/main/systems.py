@@ -565,17 +565,16 @@ class System(object):
                             complex_step = True)
 
                 if scatter is self.scatter_full:
-                    self.vec['p'].set_to_scope(self.scope)
+                    destvec.set_to_scope(self.scope)
                     if self.complex_step is True:
                         self.vec['dp'].set_to_scope_complex(self.scope)
                 else:
                     if subsystem._in_nodes:
-                        self.vec['p'].set_to_scope(self.scope, subsystem._in_nodes)
+                        destvec.set_to_scope(self.scope, subsystem._in_nodes)
                         if self.complex_step is True:
                             self.vec['dp'].set_to_scope_complex(self.scope,
                                                                 subsystem._in_nodes)
 
-        return scatter
 
     def dump(self, nest=0, stream=sys.stdout, verbose=False):
         """Prints out a textual representation of the collapsed
