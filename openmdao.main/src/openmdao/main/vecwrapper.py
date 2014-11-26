@@ -134,18 +134,6 @@ class VecWrapperBase(object):
         view, start = self._info[name]
         return petsc_linspace(start, start+view.size)
 
-    def set_to_vecwrapper(self, vec, vnames=None):
-        """Pull values for the given set of names out of our array
-        and set them into the given vecwrapper.
-        """
-        if vnames is None:
-            vnames = self.keys()
-
-        for name in vnames:
-            array_val, start = self._info.get(name,(None,None))
-            if start is not None:
-                vec[name][:] = array_val
-
     def set_to_array(self, arr, vnames=None):
         """Pull values for the given set of names out of our array
         and set them into the given array.
@@ -172,12 +160,12 @@ class VecWrapperBase(object):
 
         start = end = 0
         for name in vnames:
-            array_val = self[name]
-            end += array_val.size
+            size = self[name].size
+            end += size
             if end > asize:
                 raise ValueError("end index %d exceeds size of target array" % (end-1))
-            array_val[:] = arr[start:end]
-            start += array_val.size
+            self[name] = arr[start:end]
+            start += size
 
     def dump(self, verbose=False, stream=MPI_STREAM):
         for name, (array_val, start) in self._info.items():
@@ -192,23 +180,12 @@ class VecWrapperBase(object):
             mpiprint("%s - petsc sizes: %s" % (self.name, self.petsc_vec.sizes),
                      stream=stream)
 
-    def check(self, parent_vec):
-        """Debugging method to check consistency of indexing between a child
-        vecwrapper and its parent.
-        """
-        retval = True
-        for name in self._info.keys():
-            if not all(self[name] == parent_vec[name]):
-                mpiprint("%s not the same in parent (%s) and child (%s)" % (name, parent_vec[name], self[name]))
-                retval = False
-        return retval
-
 
 class VecWrapper(VecWrapperBase):
     def _initialize(self, system):
         scope = system.scope
         name2collapsed = scope.name2collapsed
-        allvars = system.variables
+        flat_vars = system.flat_vars
         vector_vars = system.vector_vars
         self.app_ordering = system.app_ordering
         rank = system.mpi.rank
@@ -256,11 +233,10 @@ class VecWrapper(VecWrapperBase):
                                  (system.name,name, [start,end],self[name].size))
                 start += sz
 
-
         # now add views for subvars that are subviews of their
         # basevars
         if vector_vars:
-            for name, var in allvars.items():
+            for name, var in flat_vars.items():
                 if name not in vector_vars:
                     self._add_subview(scope, name)
 
@@ -313,7 +289,6 @@ class VecWrapper(VecWrapperBase):
                     array_val[:] = scope.get_flattened_value(name[0]).real
                 else:
                     array_val[:] = scope.get_flattened_value(name).real
-                #mpiprint("setting %s from scope (%s)" % (name, array_val))
 
     def set_from_scope_complex(self, scope, vnames=None):
         """Get the named values from the given scope and set flattened
@@ -329,7 +304,6 @@ class VecWrapper(VecWrapperBase):
                     array_val[:] = scope.get_flattened_value(name[0]).imag
                 else:
                     array_val[:] = scope.get_flattened_value(name).imag
-                #mpiprint("getting %s from scope (%s)" % (name, array_val))
 
     def set_to_scope(self, scope, vnames=None):
         """Pull values for the given set of names out of our array
