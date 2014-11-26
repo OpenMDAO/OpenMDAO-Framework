@@ -991,7 +991,6 @@ class SimpleSystem(System):
 
             vec = self.vec
             vec['f'].array[:] = vec['u'].array[:]
-            self.scatter('u', 'p')
 
             self._comp.set_itername('%s-%s' % (iterbase, self.name))
             self._comp.run(case_uuid=case_uuid)
@@ -1021,8 +1020,6 @@ class SimpleSystem(System):
         # Forward Mode
         if self.mode == 'forward':
 
-            self.scatter('du', 'dp')
-
             self._comp.applyJ(self, variables)
             vec['df'].array[:] *= -1.0
 
@@ -1049,8 +1046,6 @@ class SimpleSystem(System):
                     continue
 
                 vec['du'][var][:] += vec['df'][var][:]
-
-            self.scatter('du', 'dp')
 
     def solve_linear(self, options=None):
         """ Single linear solve solution applied to whatever input is sitting
@@ -1843,8 +1838,6 @@ class OpaqueSystem(SimpleSystem):
         # Forward Mode
         if self.mode == 'forward':
 
-            self.scatter('du', 'dp')
-
             applyJ(self, variables)
             dfvec.array[:] *= -1.0
 
@@ -1867,8 +1860,6 @@ class OpaqueSystem(SimpleSystem):
             for var in self.list_outputs():
                 if var in dfvec:
                     vec['du'][var][:] += dfvec[var][:]
-
-            self.scatter('du', 'dp')
 
     def set_ordering(self, ordering, opaque_map):
         self._inner_system.set_ordering(ordering, opaque_map)
