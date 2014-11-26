@@ -184,17 +184,25 @@ class Driver(Component):
     def get_reduced_graph(self):
         if self._reduced_graph is None:
             parent_graph = self.parent.get_reduced_graph()
-            nodes = set([c.name for c in self.iteration_set()])
+
+            # copy parent graph
+            g = parent_graph.subgraph(parent_graph.nodes_iter())
+
+            nodes = set([c.name for c in self.workflow])
+            g.collapse_subdrivers(nodes, [self])
+
             nodes.add(self.name)
 
-            g = parent_graph.subgraph(parent_graph.nodes_iter())
-            g = parent_graph.full_subgraph(nodes)
-            self._reduced_graph = g.subgraph(g.nodes_iter())
+            g = g.full_subgraph(nodes)
 
+            nodes.remove(self.name)
+
+            # create fake edges to/from the driver and each of its
+            # components so we can get everything that's relevant
+            # by getting all nodes that are strongly connected to the
+            # driver in the graph.
             to_add = []
             for name in nodes:
-                if name == self.name:
-                    continue
                 if not g.has_edge(self.name, name):
                     to_add.append((self.name, name))
                 if not g.has_edge(name, self.name):
@@ -203,9 +211,10 @@ class Driver(Component):
             comps = []
             for comps in strongly_connected_components(g):
                 if self.name in comps:
+                    comps.remove(self.name)
                     break
             g.remove_edges_from(to_add)
-            self._reduced_internal_graph = g.subgraph(comps)
+            self._reduced_graph = g.subgraph(comps)
 
         return self._reduced_graph
 

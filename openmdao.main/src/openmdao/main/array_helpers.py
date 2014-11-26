@@ -120,7 +120,14 @@ def to_slice(idxs):
         for i in xrange(len(idxs)):
             if i and idxs[i] - idxs[i-1] != stride:
                 return idxs
-        return slice(imin, imax+1, stride)
+
+
+        if stride < 0:
+            ## negative strides cause some failures, so just do positive for now
+            #return slice(imax+1, imin, stride)
+            return idxs
+        else:
+            return slice(imin, imax+1, stride)
     elif isinstance(idxs, int_types):
         return slice(idxs, idxs+1)
     else:
@@ -398,4 +405,3 @@ def flatten_slice(index, shape, name='flat_index', offset=0):
         istring = '%s:%s+1' % (name, name)
 
     return istring, flat_index
-
