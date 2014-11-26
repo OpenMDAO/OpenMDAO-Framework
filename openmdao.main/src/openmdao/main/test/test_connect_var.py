@@ -83,6 +83,28 @@ class VariableTestCase(unittest.TestCase):
 
             self.assertEqual(str(err), expected)
 
+        try:
+            self.top.add('a', Assembly())
+            self.top.a.add('oneinp', Oneinp())
+            self.top.a.connect('fake', 'oneinp.ratio1')
+        except AttributeError as err:
+            expected = "a: "\
+                       "Can't connect 'fake' to 'oneinp.ratio1': "\
+                       "'a' has no variable 'fake'"
+
+            self.assertEqual(str(err), expected)
+
+        try:
+            self.top.connect('fake', 'oneinp.ratio1')
+        except AttributeError as err:
+            expected = ": "\
+                       "Can't connect 'fake' to 'oneinp.ratio1': "\
+                       "top level assembly has no variable 'fake'"
+
+            self.assertEqual(str(err), expected)
+
+
+
     def test_undefined_destexpr_var(self):
         try:
             self.top.connect('oneout.ratio1', 'oneinp.fake')
@@ -90,6 +112,26 @@ class VariableTestCase(unittest.TestCase):
             expected = ": "\
                        "Can't connect 'oneout.ratio1' to 'oneinp.fake': "\
                        "'oneinp' has no variable 'fake'"
+
+            self.assertEqual(str(err), expected)
+
+        try:
+            self.top.connect('oneout.ratio1', 'fake')
+        except AttributeError as err:
+            expected = ": "\
+                       "Can't connect 'oneout.ratio1' to 'fake': "\
+                       "top level assembly has no variable 'fake'"
+
+            self.assertEqual(str(err), expected)
+
+        try:
+            self.top.add('a', Assembly())
+            self.top.a.add('oneout', Oneout())
+            self.top.a.connect('oneout.ratio1', 'fake')
+        except AttributeError as err:
+            expected = "a: "\
+                       "Can't connect 'oneout.ratio1' to 'fake': "\
+                       "'a' has no variable 'fake'"
 
             self.assertEqual(str(err), expected)
 

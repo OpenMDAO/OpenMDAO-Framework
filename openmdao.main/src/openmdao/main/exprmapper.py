@@ -229,14 +229,14 @@ class ExprMapper(object):
             invalid_vars = srcexpr.get_unresolved() + destexpr.get_unresolved()
             parts = invalid_vars[0].rsplit('.', 1)
 
-            parent = scope.name
-            vname = parts[0]
+            parent = repr(scope.name) if scope.name else 'top level assembly'
+            vname = repr(parts[0])
 
             if len(parts) > 1:
-                parent = parts[0]
-                vname = parts[1]
+                parent = repr(parts[0])
+                vname = repr(parts[1])
 
-            msg = "'{parent}' has no variable '{vname}'"
+            msg = "{parent} has no variable {vname}"
             msg = msg.format(parent=parent, vname=vname)
 
             raise AttributeError, AttributeError(msg), traceback
