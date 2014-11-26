@@ -1352,7 +1352,8 @@ class Assembly(Component):
             if '[' in vname:  # array index into basevar
                 base = vname.split('[',1)[0]
                 flat_idx = get_flattened_index(idx,
-                                        get_var_shape(base, child))
+                                        get_var_shape(base, child),
+                                        cvt_to_slice=False)
             else:
                 base = None
                 flat_idx = None
