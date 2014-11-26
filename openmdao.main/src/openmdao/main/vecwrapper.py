@@ -1,5 +1,5 @@
 
-from collections import OrderedDict
+from collections import OrderedDict, namedtuple
 import numpy
 
 from openmdao.main.mpiwrap import MPI, MPI_STREAM, mpiprint, create_petsc_vec, PETSc
@@ -10,6 +10,7 @@ from openmdao.main.interfaces import IImplicitComponent
 from openmdao.util.typegroups import int_types
 from openmdao.util.graph import base_var
 
+ViewInfo = namedtuple('ViewInfo', 'view, start, idxs, size, hide')
 
 class VecWrapperBase(object):
     """A wrapper object for a local vector, a distributed PETSc vector,
@@ -19,7 +20,7 @@ class VecWrapperBase(object):
     def __init__(self, system, array, name=''):
         self.array = array
         self.name = name
-        self._info = OrderedDict() # dict of (start_idx, view)
+        self._info = OrderedDict() # dict of ViewInfos
         self._subviews = set()  # set of all names representing subviews of other views
 
         # create the PETSc vector
@@ -37,18 +38,14 @@ class VecWrapperBase(object):
         pass
 
     def _add_tuple_members(self, system, tups):
-        # now add all srcs and dests from var tuples so that views for particular openmdao variables
-        # can be accessed.
+        # now add all srcs and dests from var tuples so that views for
+        # particular openmdao variables can be accessed.
         for tup in tups:
             info = self._info[tup]
-            names = set([tup[0]])  # src
-            names.update(tup[1])   # adding dests
+            names = set([tup[0]]+list(tup[1])) # src + dests
             for name in names:
                 self._info[name] = info
                 self._subviews.add(name)
-                # also add 1 item tuple form, since that's used for derivative inputs/outputs
-                self._info[(name,)] = info
-                self._subviews.add((name,))
 
     def _add_subview(self, scope, name):
         var = scope._var_meta[name]
@@ -67,6 +64,13 @@ class VecWrapperBase(object):
             substart = get_flat_index_start(sub_idx)
             self._info[name] = (self.array[sub_idx], substart)
             self._subviews.add(name)
+
+            if self.array[sub_idx].size != sz:
+                raise RuntimeError("size mismatch: in system %s, view for %s is %s, idx=%s, size=%d" %
+                                     (system.name, name,
+                                     list(self.bounds(name)),
+                                     sub_idx,self.array[sub_idx].size))
+
 
     def __getitem__(self, name):
         return self._info[name][0]
@@ -258,25 +262,7 @@ class VecWrapper(VecWrapperBase):
         if vector_vars:
             for name, var in allvars.items():
                 if name not in vector_vars:
-                    sz = var['size']
-                    if sz > 0 and not var.get('noflat'):
-                        idx = var['flat_idx']
-                        try:
-                            basestart = self.start(name2collapsed[var['basevar']])
-                        except KeyError:
-                            mpiprint("name: %s, base: %s, vars: %s" %
-                                     (name, var['basevar'], self._info.keys()))
-                            raise
-                        sub_idx = offset_flat_index(idx, basestart)
-                        substart = get_flat_index_start(sub_idx)
-                        self._info[name] = (self.array[sub_idx], substart)
-                        self._subviews.add(name)
-
-                        if self.array[sub_idx].size != sz:
-                            raise RuntimeError("size mismatch: in system %s, view for %s is %s, idx=%s, size=%d" %
-                                                 (system.name, name,
-                                                 list(self.bounds(name)),
-                                                 sub_idx,self.array[sub_idx].size))
+                    self._add_subview(scope, name)
 
         # TODO: handle cases where we have overlapping subvars but no basevar
 
@@ -368,10 +354,10 @@ class VecWrapper(VecWrapperBase):
 
 class InputVecWrapper(VecWrapperBase):
     def _initialize(self, system):
-
-        varmeta = system.scope._var_meta
-        name2collapsed = system.scope.name2collapsed
-        flat_ins = _filter_flat(system.scope, system._owned_args)
+        scope = system.scope
+        varmeta = scope._var_meta
+        name2collapsed = scope.name2collapsed
+        flat_ins = _filter_flat(scope, system._owned_args)
         start, end = 0, 0
         arg_idx = system.arg_idx
 
@@ -399,25 +385,7 @@ class InputVecWrapper(VecWrapperBase):
             if name in system.vector_vars or name2collapsed.get(var.get('basevar')) not in self:
                 continue
 
-            sz = var['size']
-            if sz > 0 and not var.get('noflat'):
-                idx = var['flat_idx']
-                try:
-                    basestart = self.start(name2collapsed[var['basevar']])
-                except KeyError:
-                    mpiprint("name: %s, base: %s, vars: %s" %
-                             (name, var['basevar'], self._info.keys()))
-                    raise
-                sub_idx = offset_flat_index(idx, basestart)
-                substart = get_flat_index_start(sub_idx)
-                self._info[name] = (self.array[sub_idx], substart)
-                self._subviews.add(name)
-
-                if self.array[sub_idx].size != sz:
-                    raise RuntimeError("size mismatch: in system %s, view for %s is %s, idx=%s, size=%d" %
-                                         (system.name, name,
-                                         list(self.bounds(name)),
-                                         sub_idx,self.array[sub_idx].size))
+            self._add_subview(scope, name)
 
     def _map_resids_to_states(self, system):
         pass
