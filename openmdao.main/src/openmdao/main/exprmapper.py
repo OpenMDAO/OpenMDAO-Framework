@@ -222,7 +222,7 @@ class ExprMapper(object):
                                % (src, dest))
 
         try:
-            return srcexpr, destexpr, self._needs_pseudo(scope, srcexpr, destexpr)
+            return srcexpr, destexpr, self._needs_pseudo(srcexpr, destexpr)
         except AttributeError as err:
             exc_type, value, traceback = sys.exc_info()
 
@@ -242,7 +242,7 @@ class ExprMapper(object):
             raise AttributeError, AttributeError(msg), traceback
 
 
-    def _needs_pseudo(self, parent, srcexpr, destexpr):
+    def _needs_pseudo(self, srcexpr, destexpr):
         """Return a non-None pseudo_type if srcexpr and destexpr require a
         pseudocomp to be created.
         """
