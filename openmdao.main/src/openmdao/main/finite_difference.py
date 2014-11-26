@@ -346,10 +346,10 @@ class FiniteDifference(object):
         if isinstance(srcs, basestring):
             srcs = [srcs]
 
+        uvec = self.system.vec['u']
         for src in srcs:
-            if src in self.system.vec['u']:
-                vec = self.system.vec['u'][src]
-                vec[index] += val
+            if src in uvec:
+                uvec[src][index] += val
 
                 # avoid adding to the same array entry multiple times for
                 # param groups
