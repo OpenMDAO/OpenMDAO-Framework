@@ -532,20 +532,6 @@ class Workflow(object):
                     self._rec_parameters.append(param)
                     inputs.append(name)
 
-        #driver.get_reduced_graph()
-        self._rec_all_outputs = []
-        for comp in driver.workflow: 
-            successors = driver._reduced_graph.successors(comp.name)
-            for output_name, aliases in successors:
-                if '.in' in output_name: # look for something that is not a pseudo input
-                    for n in aliases:
-                        if not ".in" in n:
-                            output_name = n
-                            break
-                output_name = prefix + output_name
-                outputs.append(output_name)
-                self._rec_all_outputs.append(output_name)
-
         # Objectives
         self._rec_objectives = []
         if hasattr(driver, 'eval_objectives'):
@@ -559,7 +545,9 @@ class Workflow(object):
                 if save_problem_formulation or \
                    self._check_path(path, includes, excludes):
                     self._rec_objectives.append(key)
-                    #qqq outputs.append(name)
+                    #outputs.append(name)
+                    outputs.append(path + '.out0')
+
 
         # Responses
         self._rec_responses = []
@@ -570,7 +558,8 @@ class Workflow(object):
                 if save_problem_formulation or \
                    self._check_path(path, includes, excludes):
                     self._rec_responses.append(key)
-                    #qqq outputs.append(name)
+                    #outputs.append(name)
+                    outputs.append(path+'.out0')
 
         # Constraints
         self._rec_constraints = []
@@ -581,7 +570,8 @@ class Workflow(object):
                 if save_problem_formulation or \
                    self._check_path(path, includes, excludes):
                     self._rec_constraints.append(con)
-                    # qqq outputs.append(name)
+                    #outputs.append(name)
+                    outputs.append(path + '.out0')
         if hasattr(driver, 'get_ineq_constraints'):
             for con in driver.get_ineq_constraints().values():
                 name = con.pcomp_name
@@ -589,7 +579,23 @@ class Workflow(object):
                 if save_problem_formulation or \
                    self._check_path(path, includes, excludes):
                     self._rec_constraints.append(con)
-                    #qqq outputs.append(name)
+                    #outputs.append(name)
+                    outputs.append(path+'.out0')
+
+        #driver.get_reduced_graph()
+        self._rec_all_outputs = []
+        for comp in driver.workflow: 
+            successors = driver._reduced_graph.successors(comp.name)
+            for output_name, aliases in successors:
+                if '.in' in output_name: # look for something that is not a pseudo input
+                    for n in aliases:
+                        if not ".in" in n:
+                            output_name = n
+                            break
+                output_name = prefix + output_name
+                if output_name not in outputs:
+                    outputs.append(output_name)
+                    self._rec_all_outputs.append(output_name)
 
         # Other outputs.
         self._rec_outputs = []
@@ -612,15 +618,15 @@ class Workflow(object):
             dsts.extend(constraint.pcomp_name+'.out0'
                         for constraint in driver.get_ineq_constraints().values())
 
-        graph = scope._depgraph
-        for src, dst in _get_inner_connections(graph, srcs, dsts):
-            if scope.get_metadata(src)['iotype'] == 'in':
-                continue
-            path = prefix+src
-            if src not in inputs and src not in outputs and \
-               self._check_path(path, includes, excludes):
-                self._rec_outputs.append(src)
-                #qqq outputs.append(src)
+        # graph = scope._depgraph
+        # for src, dst in _get_inner_connections(graph, srcs, dsts):
+        #     if scope.get_metadata(src)['iotype'] == 'in':
+        #         continue
+        #     path = prefix+src
+        #     if src not in inputs and src not in outputs and \
+        #        self._check_path(path, includes, excludes):
+        #         self._rec_outputs.append(src)
+        #         #qqq outputs.append(src)
 
         for comp in self.get_components():
             for name in comp.list_outputs():
@@ -628,15 +634,20 @@ class Workflow(object):
                 path = prefix+src
                 if src not in outputs and \
                    self._check_path(path, includes, excludes):
-                    self._rec_outputs.append(src)
-                    #qqq outputs.append(src)
+                    if scope.get_metadata(src).has_key('framework_var') and scope.get_metadata(src)['framework_var']:
+                        self._rec_outputs.append(path)
+                        self._rec_all_outputs.append(path)
+                        outputs.append(path)
 
         name = '%s.workflow.itername' % driver.name
         path = prefix+name
         if self._check_path(path, includes, excludes):
-            self._rec_outputs.append(name)
-            self._rec_all_outputs.append(name)
-            outputs.append(name)
+            self._rec_outputs.append(path)
+            self._rec_all_outputs.append(path)
+            outputs.append(path)
+            #self._rec_outputs.append(name)
+            #self._rec_all_outputs.append(name)
+            #outputs.append(name)
 
         # If recording required, register names in recorders.
         self._rec_required = bool(inputs or outputs)
@@ -691,29 +702,29 @@ class Workflow(object):
             inputs.append(value)
 
         ## Objectives.
-        #for key in self._rec_objectives:
-            #try:
-                #outputs.append(driver.eval_named_objective(key))
-            #except Exception as exc:
-                #driver.raise_exception("Can't evaluate '%s' for recording: %s"
-                                       #% (key, exc), RuntimeError)
-        ## Responses.
-        #for key in self._rec_responses:
-            #try:
-                #outputs.append(driver.eval_response(key))
-            #except Exception as exc:
-                #driver.raise_exception("Can't evaluate '%s' for recording: %s"
-                                       #% (key, exc), RuntimeError)
-        ## Constraints.
-        #for con in self._rec_constraints:
-            #try:
-                #value = con.evaluate(scope)
-            #except Exception as exc:
-                #driver.raise_exception("Can't evaluate '%s' for recording: %s"
-                                       #% (con, exc), RuntimeError)
-            #if len(value) == 1:  # evaluate() always returns list.
-                #value = value[0]
-            #outputs.append(value)
+        for key in self._rec_objectives:
+            try:
+                outputs.append(driver.eval_named_objective(key))
+            except Exception as exc:
+                driver.raise_exception("Can't evaluate '%s' for recording: %s"
+                                       % (key, exc), RuntimeError)
+        # Responses.
+        for key in self._rec_responses:
+            try:
+                outputs.append(driver.eval_response(key))
+            except Exception as exc:
+                driver.raise_exception("Can't evaluate '%s' for recording: %s"
+                                       % (key, exc), RuntimeError)
+        # Constraints.
+        for con in self._rec_constraints:
+            try:
+                value = con.evaluate(scope)
+            except Exception as exc:
+                driver.raise_exception("Can't evaluate '%s' for recording: %s"
+                                       % (con, exc), RuntimeError)
+            if len(value) == 1:  # evaluate() always returns list.
+                value = value[0]
+            outputs.append(value)
 
         ## Other outputs.
         #for name in self._rec_outputs:

@@ -7,6 +7,7 @@ import StringIO
 import logging
 import sys
 import time
+import os
 
 import json
 import bson
@@ -17,6 +18,7 @@ import cPickle
 from openmdao.lib.casehandlers.pymongo_bson.json_util import loads, dumps
 from openmdao.lib.casehandlers.pymongo_bson.binary import Binary
 
+from openmdao.lib.casehandlers.util import driver_map
 
 from numpy  import ndarray
 from struct import pack
@@ -45,6 +47,7 @@ class _BaseRecorder(object):
 
     def register(self, driver, inputs, outputs):
         """ Register names for later record call from `driver`. """
+        #self._cfg_map[driver] = driver_map(driver, inputs, outputs)
         self._cfg_map[driver] = (inputs, outputs)
 
     def get_simulation_info(self, constants):
@@ -451,3 +454,48 @@ class BSONCaseRecorder(_BaseRecorder):
     def get_iterator(self):
         """ Just returns None. """
         return None
+
+
+
+
+def dict_iter(dct):
+    for k,v in dct.items():
+        if isinstance(v, dict):
+            for kk,vv in dict_iter(v):
+                yield (kk, vv)
+        else:
+            yield (k, v)
+
+def verify_json(test, sout, filename):
+    import inspect
+
+    directory = os.path.dirname(inspect.getfile(test.__class__))
+    path = os.path.join(directory, filename)
+    with open(path, 'r') as inp:
+        old_json = json.load(inp)
+
+    new_json = json.loads(sout.getvalue())
+
+    old = list(dict_iter(old_json))
+    new = list(dict_iter(new_json))
+
+    if len(old) != len(new):
+        test.fail("Number of items (%d) != number of items expected (%d)" %
+                  (len(old), len(new)))
+
+    ignore = set([u'uuid', u'OpenMDAO_Version', u'_id',
+                  u'_driver_id', u'_parent_id', u'timestamp', u'pcomp_name'])
+
+    for (oldname, oldval), (newname, newval) in zip(old, new):
+        if oldname.startswith('__length_'):
+            continue
+        if oldname in ignore: # don't care if these match
+            continue
+        if oldname == newname:
+            if oldname == 'high' and newval == sys.maxint:
+                continue
+            if oldname == 'low' and newval == -sys.maxint:
+                continue
+            test.assertAlmostEqual(oldval, newval)
+        else:
+            test.assertEqual(oldname, newname) # just raises an exception

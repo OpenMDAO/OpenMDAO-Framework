@@ -352,7 +352,7 @@ class TestCase(unittest.TestCase):
 
         factory = self.start_factory()
 
-        # List available types.
+         # List available types.
         types = factory.get_available_types()
         logging.debug('Available types:')
         for typname, version in types:
@@ -613,7 +613,7 @@ class TestCase(unittest.TestCase):
                 for height in range(1, 3):
                     for depth in range(1, 4):
                         case = model.recorders[0].cases.pop(0)
-                        self.assertEqual(case.get_output('volume'),
+                        self.assertEqual(case.get_output('box.volume'),
                                          width*height*depth)
         finally:
             if factory is not None:

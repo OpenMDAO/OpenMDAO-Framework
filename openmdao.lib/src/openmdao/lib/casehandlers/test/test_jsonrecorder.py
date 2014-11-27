@@ -12,7 +12,8 @@ from openmdao.main import __version__
 from openmdao.main.api import Assembly, Component, Case, VariableTree, set_as_top
 from openmdao.main.datatypes.api import Array, Instance, List, VarTree
 from openmdao.test.execcomp import ExecComp
-from openmdao.lib.casehandlers.api import JSONCaseRecorder, BSONCaseRecorder
+from openmdao.lib.casehandlers.api import JSONCaseRecorder, BSONCaseRecorder, verify_json
+
 from openmdao.lib.drivers.api import SensitivityDriver, CaseIteratorDriver, \
                                      SLSQPdriver
 from openmdao.util.testutil import assert_raises
@@ -137,49 +138,50 @@ class TestCase(unittest.TestCase):
         asm1.recorders = [JSONCaseRecorder(sout)]
         asm1.run()
 
-        #with open('nested.new', 'w') as out:
-        #    out.write(sout.getvalue())
-        self.verify(sout, 'nested.json')
+        with open('nested.new', 'w') as out:
+            out.write(sout.getvalue())
+        verify_json(self, sout, 'nested.json')
+        #self.verify(sout, 'nested.json')
 
-    def _dict_iter(self, dct):
-        for k,v in dct.items():
-            if isinstance(v, dict):
-                for kk,vv in self._dict_iter(v):
-                    yield (kk, vv)
-            else:
-                yield (k, v)
+    #def _dict_iter(self, dct):
+        #for k,v in dct.items():
+            #if isinstance(v, dict):
+                #for kk,vv in self._dict_iter(v):
+                    #yield (kk, vv)
+            #else:
+                #yield (k, v)
 
-    def verify(self, sout, filename):
-        directory = os.path.dirname(__file__)
-        path = os.path.join(directory, filename)
-        with open(path, 'r') as inp:
-            old_json = json.load(inp)
+    #def verify(self, sout, filename):
+        #directory = os.path.dirname(__file__)
+        #path = os.path.join(directory, filename)
+        #with open(path, 'r') as inp:
+            #old_json = json.load(inp)
 
-        new_json = json.loads(sout.getvalue())
+        #new_json = json.loads(sout.getvalue())
 
-        old = list(self._dict_iter(old_json))
-        new = list(self._dict_iter(new_json))
+        #old = list(self._dict_iter(old_json))
+        #new = list(self._dict_iter(new_json))
 
-        if len(old) != len(new):
-            self.fail("Number of items (%d) != number of items expected (%d)" %
-                      (len(old), len(new)))
+        #if len(old) != len(new):
+            #self.fail("Number of items (%d) != number of items expected (%d)" %
+                      #(len(old), len(new)))
 
-        ignore = set([u'uuid', u'OpenMDAO_Version', u'_id',
-                      u'_driver_id', u'_parent_id', u'timestamp', u'pcomp_name'])
+        #ignore = set([u'uuid', u'OpenMDAO_Version', u'_id',
+                      #u'_driver_id', u'_parent_id', u'timestamp', u'pcomp_name'])
 
-        for (oldname, oldval), (newname, newval) in zip(old, new):
-            if oldname.startswith('__length_'):
-                continue
-            if oldname in ignore: # don't care if these match
-                continue
-            if oldname == newname:
-                if oldname == 'high' and newval == sys.maxint:
-                    continue
-                if oldname == 'low' and newval == -sys.maxint:
-                    continue
-                self.assertAlmostEqual(oldval, newval)
-            else:
-                self.assertEqual(oldname, newname) # just raises an exception
+        #for (oldname, oldval), (newname, newval) in zip(old, new):
+            #if oldname.startswith('__length_'):
+                #continue
+            #if oldname in ignore: # don't care if these match
+                #continue
+            #if oldname == newname:
+                #if oldname == 'high' and newval == sys.maxint:
+                    #continue
+                #if oldname == 'low' and newval == -sys.maxint:
+                    #continue
+                #self.assertAlmostEqual(oldval, newval)
+            #else:
+                #self.assertEqual(oldname, newname) # just raises an exception
 
     def test_close(self):
         sout = StringIO()
