@@ -71,20 +71,29 @@ class TestCase(unittest.TestCase):
 
         sout = StringIO()
         self.top.recorders = [JSONCaseRecorder(sout)]
+        #self.top.run() #qqqqqqqqqqqqq
+        #self.top._pre_execute() #qqqqqqqqqqqqq
+        
+        self.top.setup_depgraph()
+        self.top.setup_reduced_graph()
+        self.top.setup_systems()
+        
+        
         self.top.record_configuration()
 
-        # with open('jsonrecorder_norun.new', 'w') as out:
-        #      out.write(sout.getvalue())
-        self.verify(sout, 'jsonrecorder_norun.json')
+        with open('jsonrecorder_norun.new', 'w') as out:
+            out.write(sout.getvalue())
+        verify_json(self, sout, 'jsonrecorder_norun.json')
 
     def test_jsonrecorder(self):
         sout = StringIO()
         self.top.recorders = [JSONCaseRecorder(sout)]
         self.top.run()
 
-        # with open('jsonrecorder.new', 'w') as out:
-        #     out.write(sout.getvalue())
-        self.verify(sout, 'jsonrecorder.json')
+        with open('jsonrecorder.new', 'w') as out:
+            out.write(sout.getvalue())
+        #self.verify(sout, 'jsonrecorder.json')
+        verify_json(self, sout, 'jsonrecorder.json')
 
     def test_multiple_objectives(self):
         sout = StringIO()
@@ -97,9 +106,10 @@ class TestCase(unittest.TestCase):
         self.top.recorders = [JSONCaseRecorder(sout)]
         self.top.run()
 
-        # with open('multiobj.new', 'w') as out:
-        #     out.write(sout.getvalue())
-        self.verify(sout, 'multiobj.json')
+        with open('multiobj.new', 'w') as out:
+            out.write(sout.getvalue())
+        verify_json(self, sout, 'multiobj.json')
+        #self.verify(sout, 'multiobj.json')
 
     def test_nested(self):
         asm3 = Assembly()
@@ -272,7 +282,7 @@ class TestCase(unittest.TestCase):
 
         with open('vtree.new', 'w') as out:
             out.write(sout.getvalue())
-        self.verify(sout, 'vtree.json')
+        verify_json(self, sout, 'vtree.json')
 
 
 if __name__ == '__main__':

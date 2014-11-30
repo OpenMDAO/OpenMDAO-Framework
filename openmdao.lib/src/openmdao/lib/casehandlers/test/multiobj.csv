@@ -1,2 +1,2 @@
-"timestamp","/INPUTS","comp1.x","/OUTPUTS","Objective(comp1.z)","Objective(comp2.z)","comp1.derivative_exec_count","comp1.exec_count","comp1.itername","comp1.z","comp2.derivative_exec_count","comp2.exec_count","comp2.itername","comp2.z","driver.workflow.itername","/METADATA","uuid","parent_uuid","msg"
-1404933144.107449,"",0.0,"",0.0,1.0,0,1,"1-comp1",0.0,0,1,"1-comp2",1.0,"1","","f5619105-079c-11e4-8033-0800279081d0","f5612bbc-079c-11e4-8eb4-0800279081d0",""
+"timestamp","/INPUTS","comp1.x","/OUTPUTS","_pseudo_2.out0","_pseudo_3.out0","comp1.derivative_exec_count","comp1.exec_count","comp1.itername","comp1.z","comp2.derivative_exec_count","comp2.exec_count","comp2.itername","comp2.z","driver.workflow.itername","/METADATA","uuid","parent_uuid","msg"
+1417186096.194851,"",0.0,"",0.0,1.0,0,1,"1-comp1",0.0,0,1,"1-comp2",1.0,"1","","95f20fa8-770d-11e4-800b-20c9d0478eff","95efcbd9-770d-11e4-9b81-20c9d0478eff",""

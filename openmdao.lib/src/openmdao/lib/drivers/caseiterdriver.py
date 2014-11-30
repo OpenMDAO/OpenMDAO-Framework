@@ -350,7 +350,8 @@ class CaseIteratorDriver(Driver):
                 inp_values.append(value)
 
         outputs = self.get_responses().keys()
-        extra_outputs = self.workflow._rec_outputs
+        #extra_outputs = self.workflow._rec_outputs
+        extra_outputs = self.workflow._rec_all_outputs
 
         length = len(inp_values[0]) if inp_values else 0
         cases = []

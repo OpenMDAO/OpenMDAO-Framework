@@ -1,5 +1,5 @@
 {
-"__length_1": 13179
+"__length_1": 13990
 , "simulation_info": {
     "OpenMDAO_Version": "0.10.3.2", 
     "comp_graph": "{\"directed\": true, \"graph\": [], \"nodes\": [{\"comp\": true, \"driver\": true, \"id\": \"driver\"}, {\"comp\": true, \"id\": \"sub\"}], \"links\": [], \"multigraph\": false}", 
@@ -69,7 +69,7 @@
     "expressions": {}, 
     "graph": "{\"directed\": true, \"graph\": [[\"title\", \"unknown\"]], \"nodes\": [{\"short\": \"sub\", \"color_idx\": 1, \"full\": \"sub\", \"title\": \"{}\", \"comp\": true, \"id\": \"sub\"}, {\"full\": \"sub.loads_in\", \"color_idx\": 1, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"loads_in\", \"var\": true, \"iotype\": \"in\", \"id\": \"sub.loads_in\"}, {\"short\": \"driver\", \"color_idx\": 0, \"full\": \"driver\", \"title\": \"{'driver': True}\", \"comp\": true, \"driver\": true, \"id\": \"driver\"}, {\"full\": \"sub.loads_out\", \"color_idx\": 1, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"loads_out\", \"var\": true, \"iotype\": \"out\", \"id\": \"sub.loads_out\"}], \"links\": [{\"source\": 0, \"target\": 3}, {\"source\": 1, \"target\": 0}], \"multigraph\": false}", 
     "name": "", 
-    "uuid": "a019361e-7337-11e4-b366-20c9d0478eff", 
+    "uuid": "eba2b93d-770f-11e4-9d57-20c9d0478eff", 
     "variable_metadata": {
         "directory": {
             "deriv_ignore": true, 
@@ -225,6 +225,16 @@
             ], 
             "vartypename": "Enum"
         }, 
+        "sub.derivative_exec_count": {
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "exclude_high": false, 
+            "exclude_low": false, 
+            "high": 9223372036854775807, 
+            "iotype": "out", 
+            "low": -9223372036854775807, 
+            "vartypename": "Int"
+        }, 
         "sub.directory": {
             "deriv_ignore": true, 
             "iotype": "in", 
@@ -327,11 +337,26 @@
             "low": null, 
             "vartypename": "Float"
         }, 
+        "sub.exec_count": {
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "exclude_high": false, 
+            "exclude_low": false, 
+            "high": 9223372036854775807, 
+            "iotype": "out", 
+            "low": -9223372036854775807, 
+            "vartypename": "Int"
+        }, 
         "sub.force_fd": {
             "assumed_default": false, 
             "deriv_ignore": true, 
             "iotype": "in", 
             "vartypename": "Bool"
+        }, 
+        "sub.itername": {
+            "deriv_ignore": true, 
+            "iotype": "out", 
+            "vartypename": "Str"
         }, 
         "sub.loads_in.loads": {
             "copy": "deep", 
@@ -366,30 +391,38 @@
         }
     }
 }
-, "__length_2": 110
+, "__length_2": 200
 , "driver_info_1": {
-    "_id": 4510850032, 
+    "_id": 4425269520, 
     "name": "driver", 
     "recording": [
+        "sub.derivative_exec_count", 
+        "sub.exec_count", 
+        "sub.itername", 
         "driver.workflow.itername"
     ]
 }
-, "__length_3": 151
+, "__length_3": 260
 , "driver_info_2": {
-    "_id": 4510850416, 
+    "_id": 4425269904, 
     "name": "sub.driver", 
     "recording": [
         "sub.comp.loads_out.loads", 
-        "driver.workflow.itername"
+        "sub.comp.derivative_exec_count", 
+        "sub.comp.exec_count", 
+        "sub.comp.itername", 
+        "sub.driver.workflow.itername"
     ]
 }
-, "__length_4": 1325
+, "__length_4": 1462
 , "iteration_case_1": {
-    "_driver_id": 4510850416, 
-    "_id": "a01d6d75-7337-11e4-800c-20c9d0478eff", 
-    "_parent_id": "a01bbe19-7337-11e4-800b-20c9d0478eff", 
+    "_driver_id": 4425269904, 
+    "_id": "eba68699-770f-11e4-800c-20c9d0478eff", 
+    "_parent_id": "eba527d9-770f-11e4-800b-20c9d0478eff", 
     "data": {
-        "driver.workflow.itername": "1", 
+        "sub.comp.derivative_exec_count": 0, 
+        "sub.comp.exec_count": 1, 
+        "sub.comp.itername": "1-sub.1-comp", 
         "sub.comp.loads_out.loads": [
             {
                 "Fx": {
@@ -405,22 +438,26 @@
                     "$type": "00"
                 }
             }
-        ]
+        ], 
+        "sub.driver.workflow.itername": "1-sub.1"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1416764347.464896
+    "timestamp": 1417187098.974404
 }
-, "__length_5": 295
+, "__length_5": 400
 , "iteration_case_2": {
-    "_driver_id": 4510850032, 
-    "_id": "a01bbe19-7337-11e4-800b-20c9d0478eff", 
-    "_parent_id": "a019361e-7337-11e4-b366-20c9d0478eff", 
+    "_driver_id": 4425269520, 
+    "_id": "eba527d9-770f-11e4-800b-20c9d0478eff", 
+    "_parent_id": "eba2b93d-770f-11e4-9d57-20c9d0478eff", 
     "data": {
-        "driver.workflow.itername": "1"
+        "driver.workflow.itername": "1", 
+        "sub.derivative_exec_count": 0, 
+        "sub.exec_count": 1, 
+        "sub.itername": "1-sub"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1416764347.469402
+    "timestamp": 1417187098.978084
 }
 }

@@ -699,7 +699,7 @@ class TestCase(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    logging.getLogger().setLevel(logging.DEBUG)
+    #logging.getLogger().setLevel(logging.DEBUG)
     #unittest.main()
     #sys.argv.append('--cover-package=openmdao.main')
     #sys.argv.append('--cover-erase')

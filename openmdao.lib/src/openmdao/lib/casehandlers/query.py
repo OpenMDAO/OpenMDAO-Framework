@@ -110,6 +110,7 @@ class CaseDataset(object):
                 all_names = []
                 for driver_info in self._drivers.values():
                     prefix = driver_info['prefix']
+                    #prefix = ''
                     all_names.extend([prefix+name
                                       for name in driver_info['recording']])
             names = sorted(all_names+metadata_names)

@@ -593,30 +593,30 @@ class Workflow(object):
                             output_name = n
                             break
                 output_name = prefix + output_name
-                if output_name not in outputs:
+                if output_name not in outputs and self._check_path(output_name, includes, excludes) :
                     outputs.append(output_name)
                     self._rec_all_outputs.append(output_name)
 
         # Other outputs.
         self._rec_outputs = []
-        srcs = scope.list_inputs()
-        if hasattr(driver, 'get_parameters'):
-            srcs.extend(param.target
-                        for param in driver.get_parameters().values())
-        dsts = scope.list_outputs()
+        # srcs = scope.list_inputs()
+        # if hasattr(driver, 'get_parameters'):
+        #     srcs.extend(param.target
+        #                 for param in driver.get_parameters().values())
+        # dsts = scope.list_outputs()
 
-        if hasattr(driver, 'get_objectives'):
-            dsts.extend(objective.pcomp_name+'.out0'
-                        for objective in driver.get_objectives().values())
-        if hasattr(driver, 'get_responses'):
-            dsts.extend(response.pcomp_name+'.out0'
-                        for response in driver.get_responses().values())
-        if hasattr(driver, 'get_eq_constraints'):
-            dsts.extend(constraint.pcomp_name+'.out0'
-                        for constraint in driver.get_eq_constraints().values())
-        if hasattr(driver, 'get_ineq_constraints'):
-            dsts.extend(constraint.pcomp_name+'.out0'
-                        for constraint in driver.get_ineq_constraints().values())
+        # if hasattr(driver, 'get_objectives'):
+        #     dsts.extend(objective.pcomp_name+'.out0'
+        #                 for objective in driver.get_objectives().values())
+        # if hasattr(driver, 'get_responses'):
+        #     dsts.extend(response.pcomp_name+'.out0'
+        #                 for response in driver.get_responses().values())
+        # if hasattr(driver, 'get_eq_constraints'):
+        #     dsts.extend(constraint.pcomp_name+'.out0'
+        #                 for constraint in driver.get_eq_constraints().values())
+        # if hasattr(driver, 'get_ineq_constraints'):
+        #     dsts.extend(constraint.pcomp_name+'.out0'
+        #                 for constraint in driver.get_ineq_constraints().values())
 
         # graph = scope._depgraph
         # for src, dst in _get_inner_connections(graph, srcs, dsts):

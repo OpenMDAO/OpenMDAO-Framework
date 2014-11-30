@@ -118,7 +118,7 @@ def create_files():
 class TestCase(unittest.TestCase):
 
     def setUp(self):
-        # create_files()  # Uncomment to create 'sellar.new'
+        #create_files()  # Uncomment to create 'sellar.new'
         path = os.path.join(os.path.dirname(__file__), 'sellar.json')
         self.cds = CaseDataset(path, 'json')
 
@@ -334,7 +334,7 @@ class TestCase(unittest.TestCase):
 
         cds = CaseDataset('cases.json', 'json')
         cases = cds.data.fetch()
-        n_orig = len(cases)  # Typically 142
+        n_orig = len(cases)
 
         top = set_as_top(SellarMDF())
         cds.restore(top, cases[-1]['_id'])
