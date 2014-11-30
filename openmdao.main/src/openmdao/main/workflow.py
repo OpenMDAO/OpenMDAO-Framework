@@ -514,7 +514,12 @@ class Workflow(object):
 
         driver = self.parent
         scope = driver.parent
-        prefix = scope.get_pathname()
+        top = scope
+        while top.parent:
+            top = top.parent
+        prefix_drop = len(top.name)+1 if top.name else 0
+        prefix = '' if scope is top else scope.get_pathname()[prefix_drop:]
+        # prefix = scope.get_pathname()
         if prefix:
             prefix += '.'
         inputs = []

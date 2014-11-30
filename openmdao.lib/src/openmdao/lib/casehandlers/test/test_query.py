@@ -115,6 +115,10 @@ def create_files():
     prob.run()
 
 
+
+create_files()
+
+
 class TestCase(unittest.TestCase):
 
     def setUp(self):
@@ -295,6 +299,11 @@ class TestCase(unittest.TestCase):
     def test_bson(self):
         # Simple check of _BSONReader.
         names = ['half.z2a', 'sub.dis1.y1', 'sub.dis2.y2', 'sub.x1']
+        names = ['half.z2a', 'sub.dis1.y1', 'sub.dis2.y2', 'sub.x1']
+        
+        "", 
+        "sub.dis2.y2", 
+        
 
         path = os.path.join(os.path.dirname(__file__), 'sellar.json')
         json_cases = CaseDataset(path, 'json').data.vars(names).fetch()

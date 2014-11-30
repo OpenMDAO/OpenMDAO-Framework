@@ -39,7 +39,7 @@ class _BaseRecorder(object):
         self._uuid = None
         self._cases = None
         
-        self._last_child_case_uuids = {} # keyed by driver id qqq
+        self._last_child_case_uuids = {} # keyed by driver id
 
     def startup(self):
         """ Prepare for new run. """

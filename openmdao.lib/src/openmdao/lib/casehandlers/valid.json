@@ -1,0 +1,1404 @@
+{
+    "__length_1": 83748,
+    "simulation_info": {
+        "OpenMDAO_Version": "0.10.2",
+        "comp_graph": "{\"directed\": true, \"graph\": [], \"nodes\": [{\"comp\": true, \"id\": \"SysMVBspline\"}, {\"comp\": true, \"id\": \"SysCM\"}, {\"comp\": true, \"id\": \"SysHf\"}, {\"comp\": true, \"id\": \"SysSpeed\"}, {\"comp\": true, \"id\": \"SysHi\"}, {\"comp\": true, \"id\": \"SysHBspline\"}, {\"comp\": true, \"id\": \"SysSlopeMin\"}, {\"comp\": true, \"id\": \"SysAeroSurrogate\"}, {\"comp\": true, \"id\": \"SysRho\"}, {\"comp\": true, \"driver\": true, \"id\": \"coupled_solver\"}, {\"comp\": true, \"id\": \"SysXBspline\"}, {\"comp\": true, \"id\": \"SysCTTar\"}, {\"comp\": true, \"id\": \"SysTmax\"}, {\"comp\": true, \"id\": \"SysSlopeMax\"}, {\"comp\": true, \"driver\": true, \"id\": \"driver\"}, {\"comp\": true, \"id\": \"SysTmin\"}, {\"comp\": true, \"id\": \"SysSFC\"}, {\"comp\": true, \"pseudo\": \"constraint\", \"id\": \"_pseudo_1\"}, {\"comp\": true, \"pseudo\": \"constraint\", \"id\": \"_pseudo_0\"}, {\"comp\": true, \"pseudo\": \"constraint\", \"id\": \"_pseudo_3\"}, {\"comp\": true, \"pseudo\": \"objective\", \"id\": \"_pseudo_2\"}, {\"comp\": true, \"pseudo\": \"constraint\", \"id\": \"_pseudo_5\"}, {\"comp\": true, \"pseudo\": \"constraint\", \"id\": \"_pseudo_4\"}, {\"comp\": true, \"pseudo\": \"constraint\", \"id\": \"_pseudo_7\"}, {\"comp\": true, \"pseudo\": \"constraint\", \"id\": \"_pseudo_6\"}, {\"comp\": true, \"id\": \"SysGammaBspline\"}, {\"comp\": true, \"id\": \"SysTau\"}, {\"comp\": true, \"id\": \"SysFuelObj\"}, {\"comp\": true, \"driver\": true, \"id\": \"drag_solver\"}, {\"comp\": true, \"id\": \"SysTemp\"}, {\"comp\": true, \"id\": \"SysFuelWeight\"}, {\"comp\": true, \"id\": \"SysCLTar\"}], \"links\": [{\"source\": 0, \"target\": 3}, {\"source\": 1, \"target\": 17}, {\"source\": 1, \"target\": 7}, {\"source\": 2, \"target\": 22}, {\"source\": 3, \"target\": 26}, {\"source\": 3, \"target\": 30}, {\"source\": 3, \"target\": 31}, {\"source\": 3, \"target\": 11}, {\"source\": 4, \"target\": 19}, {\"source\": 5, \"target\": 26}, {\"source\": 5, \"target\": 16}, {\"source\": 5, \"target\": 2}, {\"source\": 5, \"target\": 8}, {\"source\": 5, \"target\": 29}, {\"source\": 5, \"target\": 4}, {\"source\": 7, \"target\": 18}, {\"source\": 7, \"target\": 31}, {\"source\": 7, \"target\": 1}, {\"source\": 7, \"target\": 11}, {\"source\": 8, \"target\": 26}, {\"source\": 8, \"target\": 30}, {\"source\": 8, \"target\": 11}, {\"source\": 8, \"target\": 31}, {\"source\": 10, \"target\": 30}, {\"source\": 11, \"target\": 26}, {\"source\": 11, \"target\": 30}, {\"source\": 11, \"target\": 31}, {\"source\": 12, \"target\": 24}, {\"source\": 15, \"target\": 21}, {\"source\": 16, \"target\": 30}, {\"source\": 25, \"target\": 13}, {\"source\": 25, \"target\": 6}, {\"source\": 25, \"target\": 11}, {\"source\": 25, \"target\": 30}, {\"source\": 25, \"target\": 23}, {\"source\": 25, \"target\": 31}, {\"source\": 26, \"target\": 12}, {\"source\": 26, \"target\": 15}, {\"source\": 27, \"target\": 20}, {\"source\": 29, \"target\": 8}, {\"source\": 29, \"target\": 3}, {\"source\": 30, \"target\": 27}, {\"source\": 30, \"target\": 11}, {\"source\": 30, \"target\": 31}, {\"source\": 31, \"target\": 18}], \"multigraph\": false}",
+        "constants": {
+            "AR": 8.68,
+            "S": 4.2780000000000005,
+            "SFCSL": 87.80931000000001,
+            "SysAeroSurrogate.directory": "",
+            "SysAeroSurrogate.force_fd": false,
+            "SysAeroSurrogate.missing_deriv_policy": "error",
+            "SysCLTar.directory": "",
+            "SysCLTar.force_fd": false,
+            "SysCLTar.missing_deriv_policy": "error",
+            "SysCM.directory": "",
+            "SysCM.eval_only": true,
+            "SysCM.force_fd": false,
+            "SysCM.missing_deriv_policy": "error",
+            "SysCTTar.directory": "",
+            "SysCTTar.force_fd": false,
+            "SysCTTar.missing_deriv_policy": "error",
+            "SysFuelObj.directory": "",
+            "SysFuelObj.force_fd": false,
+            "SysFuelObj.missing_deriv_policy": "error",
+            "SysFuelWeight.directory": "",
+            "SysFuelWeight.force_fd": false,
+            "SysFuelWeight.missing_deriv_policy": "error",
+            "SysGammaBspline.directory": "",
+            "SysGammaBspline.force_fd": false,
+            "SysGammaBspline.missing_deriv_policy": "error",
+            "SysGammaBspline.x_init": {"$binary": "gAJjbnVtcHkuY29yZS5tdWx0aWFycmF5Cl9yZWNvbnN0cnVjdApxAWNudW1weQpuZGFycmF5CnECSwCFVQFih1JxAyhLAUsKhWNudW1weQpkdHlwZQpxBFUCZjhLAEsBh1JxBShLA1UBPE5OTkr/////Sv////9LAHRiiVVQAAAAAAAAAABTD+vhKfPcP9GkpI6wE/w/p4JRSZ0ADkBpCsfD48oYQHT9bWcrmyFA/iH99nWAJkAO7nw3J34qQC8qQvoDGS1AqoJRSZ0ALkB0Yi4=", "$type": "00"},
+            "SysHBspline.directory": "",
+            "SysHBspline.force_fd": false,
+            "SysHBspline.missing_deriv_policy": "error",
+            "SysHBspline.x_init": "{\"$binary\": \"gAJjbnVtcHkuY29yZS5tdWx0aWFycmF5Cl9yZWNvbnN0cnVjdApxAWNudW1weQpuZGFycmF5CnECSwCFVQFih1JxAyhLAUsKhWNudW1weQpkdHlwZQpxBFUCZjhLAEsBh1JxBShLA1UBPE5OTkr/////Sv////9LAHRiiVVQAAAAAAAAAABTD+vhKfPcP9GkpI6wE/w/p4JRSZ0ADkBpCsfD48oYQHT9bWcrmyFA/iH99nWAJkAO7nw3J34qQC8qQvoDGS1AqoJRSZ0ALkB0Yi4=\", \"$type\": \"00\"}",
+            "SysHf.directory": "",
+            "SysHf.force_fd": false,
+            "SysHf.missing_deriv_policy": "error",
+            "SysHi.directory": "",
+            "SysHi.force_fd": false,
+            "SysHi.missing_deriv_policy": "error",
+            "SysMVBspline.M_pt": "{\"$binary\": \"gAJjbnVtcHkuY29yZS5tdWx0aWFycmF5Cl9yZWNvbnN0cnVjdApxAWNudW1weQpuZGFycmF5CnECSwCFVQFih1JxAyhLAUsKhWNudW1weQpkdHlwZQpxBFUCZjhLAEsBh1JxBShLA1UBPE5OTkr/////Sv////9LAHRiiVVQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB0Yi4=\", \"$type\": \"00\"}",
+            "SysMVBspline.directory": "",
+            "SysMVBspline.force_fd": false,
+            "SysMVBspline.missing_deriv_policy": "error",
+            "SysMVBspline.x_init": "{\"$binary\": \"gAJjbnVtcHkuY29yZS5tdWx0aWFycmF5Cl9yZWNvbnN0cnVjdApxAWNudW1weQpuZGFycmF5CnECSwCFVQFih1JxAyhLAUsKhWNudW1weQpkdHlwZQpxBFUCZjhLAEsBh1JxBShLA1UBPE5OTkr/////Sv////9LAHRiiVVQAAAAAAAAAABTD+vhKfPcP9GkpI6wE/w/p4JRSZ0ADkBpCsfD48oYQHT9bWcrmyFA/iH99nWAJkAO7nw3J34qQC8qQvoDGS1AqoJRSZ0ALkB0Yi4=\", \"$type\": \"00\"}",
+            "SysRho.directory": "",
+            "SysRho.force_fd": false,
+            "SysRho.missing_deriv_policy": "error",
+            "SysSFC.directory": "",
+            "SysSFC.force_fd": false,
+            "SysSFC.missing_deriv_policy": "error",
+            "SysSlopeMax.directory": "",
+            "SysSlopeMax.force_fd": false,
+            "SysSlopeMax.missing_deriv_policy": "error",
+            "SysSlopeMin.directory": "",
+            "SysSlopeMin.force_fd": false,
+            "SysSlopeMin.missing_deriv_policy": "error",
+            "SysSpeed.directory": "",
+            "SysSpeed.force_fd": false,
+            "SysSpeed.missing_deriv_policy": "error",
+            "SysSpeed.v_specified": true,
+            "SysTau.directory": "",
+            "SysTau.force_fd": false,
+            "SysTau.missing_deriv_policy": "error",
+            "SysTemp.directory": "",
+            "SysTemp.force_fd": false,
+            "SysTemp.missing_deriv_policy": "error",
+            "SysTmax.directory": "",
+            "SysTmax.force_fd": false,
+            "SysTmax.missing_deriv_policy": "error",
+            "SysTmin.directory": "",
+            "SysTmin.force_fd": false,
+            "SysTmin.missing_deriv_policy": "error",
+            "SysXBspline.directory": "",
+            "SysXBspline.force_fd": false,
+            "SysXBspline.missing_deriv_policy": "error",
+            "SysXBspline.x_init": "{\"$binary\": \"gAJjbnVtcHkuY29yZS5tdWx0aWFycmF5Cl9yZWNvbnN0cnVjdApxAWNudW1weQpuZGFycmF5CnECSwCFVQFih1JxAyhLAUsKhWNudW1weQpkdHlwZQpxBFUCZjhLAEsBh1JxBShLA1UBPE5OTkr/////Sv////9LAHRiiVVQAAAAAAAAAABTD+vhKfPcP9GkpI6wE/w/p4JRSZ0ADkBpCsfD48oYQHT9bWcrmyFA/iH99nWAJkAO7nw3J34qQC8qQvoDGS1AqoJRSZ0ALkB0Yi4=\", \"$type\": \"00\"}",
+            "SysXBspline.x_pt": "{\"$binary\": \"gAJjbnVtcHkuY29yZS5tdWx0aWFycmF5Cl9yZWNvbnN0cnVjdApxAWNudW1weQpuZGFycmF5CnECSwCFVQFih1JxAyhLAUsKhWNudW1weQpkdHlwZQpxBFUCZjhLAEsBh1JxBShLA1UBPE5OTkr/////Sv////9LAHRiiVVQAAAAAAAAAABTD+vhKfPcP9GkpI6wE/w/p4JRSZ0ADkBpCsfD48oYQHT9bWcrmyFA/iH99nWAJkAO7nw3J34qQC8qQvoDGS1AqoJRSZ0ALkB0Yi4=\", \"$type\": \"00\"}",
+            "ac_w": 2.0601,
+            "coupled_solver.alpha": 1,
+            "coupled_solver.atol": 1e-9,
+            "coupled_solver.directory": "",
+            "coupled_solver.force_fd": false,
+            "coupled_solver.gradient_options.atol": 1e-14,
+            "coupled_solver.gradient_options.derivative_direction": "auto",
+            "coupled_solver.gradient_options.directional_fd": false,
+            "coupled_solver.gradient_options.fd_blocks": [],
+            "coupled_solver.gradient_options.fd_form": "forward",
+            "coupled_solver.gradient_options.fd_step": 0.000001,
+            "coupled_solver.gradient_options.fd_step_type": "absolute",
+            "coupled_solver.gradient_options.force_fd": false,
+            "coupled_solver.gradient_options.lin_solver": "scipy_gmres",
+            "coupled_solver.gradient_options.maxiter": 18,
+            "coupled_solver.gradient_options.rtol": 1e-14,
+            "coupled_solver.iprint": 1,
+            "coupled_solver.ls_atol": 1e-10,
+            "coupled_solver.ls_max_iteration": 10,
+            "coupled_solver.ls_rtol": 0.9,
+            "coupled_solver.max_iteration": 15,
+            "coupled_solver.rtol": 1e-9,
+            "directory": "",
+            "drag_solver.alpha": 1,
+            "drag_solver.atol": 1e-9,
+            "drag_solver.directory": "",
+            "drag_solver.force_fd": false,
+            "drag_solver.gradient_options.atol": 1e-10,
+            "drag_solver.gradient_options.derivative_direction": "auto",
+            "drag_solver.gradient_options.directional_fd": false,
+            "drag_solver.gradient_options.fd_blocks": [],
+            "drag_solver.gradient_options.fd_form": "forward",
+            "drag_solver.gradient_options.fd_step": 0.000001,
+            "drag_solver.gradient_options.fd_step_type": "absolute",
+            "drag_solver.gradient_options.force_fd": false,
+            "drag_solver.gradient_options.lin_solver": "scipy_gmres",
+            "drag_solver.gradient_options.maxiter": 15,
+            "drag_solver.gradient_options.rtol": 1e-10,
+            "drag_solver.iprint": 1,
+            "drag_solver.ls_atol": 1e-10,
+            "drag_solver.ls_max_iteration": 10,
+            "drag_solver.ls_rtol": 0.9,
+            "drag_solver.max_iteration": 15,
+            "drag_solver.rtol": 1e-9,
+            "driver.directory": "",
+            "driver.force_fd": false,
+            "driver.gradient_options.atol": 1e-9,
+            "driver.gradient_options.derivative_direction": "auto",
+            "driver.gradient_options.directional_fd": false,
+            "driver.gradient_options.fd_blocks": [],
+            "driver.gradient_options.fd_form": "forward",
+            "driver.gradient_options.fd_step": 0.000001,
+            "driver.gradient_options.fd_step_type": "absolute",
+            "driver.gradient_options.force_fd": false,
+            "driver.gradient_options.lin_solver": "linear_gs",
+            "driver.gradient_options.maxiter": 1,
+            "driver.gradient_options.rtol": 1e-9,
+            "driver.optimizer": "SNOPT",
+            "driver.options": {},
+            "driver.print_results": true,
+            "driver.pyopt_diff": false,
+            "driver.title": "Optimization using pyOpt",
+            "force_fd": false,
+            "missing_deriv_policy": "assume_zero",
+            "oswald": 0.8,
+            "recording_options.excludes": [],
+            "recording_options.includes": [
+                "*"
+            ],
+            "recording_options.save_problem_formulation": true,
+            "thrust_sl": 1.02,
+            "v_pt": "{\"$binary\": \"gAJjbnVtcHkuY29yZS5tdWx0aWFycmF5Cl9yZWNvbnN0cnVjdApxAWNudW1weQpuZGFycmF5CnECSwCFVQFih1JxAyhLAUsKhWNudW1weQpkdHlwZQpxBFUCZjhLAEsBh1JxBShLA1UBPE5OTkr/////Sv////9LAHRiiVVQAAAAAAAABEAAAAAAAAAEQAAAAAAAAARAAAAAAAAABEAAAAAAAAAEQAAAAAAAAARAAAAAAAAABEAAAAAAAAAEQAAAAAAAAARAAAAAAAAABEB0Yi4=\", \"$type\": \"00\"}"
+        },
+        "expressions": {
+            "SysAeroSurrogate.CL = SysCLTar.CL": {
+                "data_type": "Constraint",
+                "pcomp_name": "_pseudo_0"
+            },
+            "SysCM.eta_res = 0": {
+                "data_type": "Constraint",
+                "pcomp_name": "_pseudo_1"
+            },
+            "SysFuelObj.wf_obj": {
+                "data_type": "Objective",
+                "pcomp_name": "_pseudo_2"
+            },
+            "SysHf.h_f = 0.0": {
+                "data_type": "Constraint",
+                "pcomp_name": "_pseudo_4"
+            },
+            "SysHi.h_i = 0.0": {
+                "data_type": "Constraint",
+                "pcomp_name": "_pseudo_3"
+            },
+            "SysTmax.Tmax < 0.0": {
+                "data_type": "Constraint",
+                "pcomp_name": "_pseudo_6"
+            },
+            "SysTmin.Tmin < 0.0": {
+                "data_type": "Constraint",
+                "pcomp_name": "_pseudo_5"
+            }
+        },
+        "graph": "{\"directed\": true, \"graph\": [[\"title\", \"unknown\"]], \"nodes\": [{\"full\": \"SysSpeed.M\", \"color_idx\": 3, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"SysSpeed.M\", \"short\": \"M\"}, {\"full\": \"SysSFC.h\", \"color_idx\": 16, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"SysSFC.h\", \"short\": \"h\"}, {\"full\": \"SysGammaBspline.Gamma\", \"color_idx\": 25, \"title\": \"{}\", \"var\": true, \"iotype\": \"out\", \"id\": \"SysGammaBspline.Gamma\", \"short\": \"Gamma\"}, {\"full\": \"thrust_sl\", \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"boundary\": true, \"id\": \"thrust_sl\", \"short\": \"thrust_sl\"}, {\"full\": \"SysSpeed.v\", \"color_idx\": 3, \"title\": \"{}\", \"var\": true, \"iotype\": \"out\", \"id\": \"SysSpeed.v\", \"short\": \"v\"}, {\"full\": \"oswald\", \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"boundary\": true, \"id\": \"oswald\", \"short\": \"oswald\"}, {\"full\": \"SysCLTar.fuel_w\", \"color_idx\": 31, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"SysCLTar.fuel_w\", \"short\": \"fuel_w\"}, {\"full\": \"SysCLTar.v\", \"color_idx\": 31, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"SysCLTar.v\", \"short\": \"v\"}, {\"full\": \"Tmin\", \"title\": \"{}\", \"var\": true, \"iotype\": \"out\", \"boundary\": true, \"id\": \"Tmin\", \"short\": \"Tmin\"}, {\"full\": \"drag_solver.iprint\", \"color_idx\": 28, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"iprint\", \"var\": true, \"iotype\": \"in\", \"id\": \"drag_solver.iprint\"}, {\"full\": \"SysRho.rho\", \"color_idx\": 8, \"title\": \"{}\", \"var\": true, \"iotype\": \"out\", \"id\": \"SysRho.rho\", \"short\": \"rho\"}, {\"full\": \"SysCTTar.fuel_w\", \"color_idx\": 11, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"SysCTTar.fuel_w\", \"short\": \"fuel_w\"}, {\"full\": \"SysCLTar.alpha\", \"color_idx\": 31, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"SysCLTar.alpha\", \"short\": \"alpha\"}, {\"full\": \"SysHi.h_i\", \"color_idx\": 4, \"title\": \"{}\", \"var\": true, \"iotype\": \"out\", \"id\": \"SysHi.h_i\", \"short\": \"h_i\"}, {\"full\": \"SysSFC.SFC\", \"color_idx\": 16, \"title\": \"{}\", \"var\": true, \"iotype\": \"out\", \"id\": \"SysSFC.SFC\", \"short\": \"SFC\"}, {\"full\": \"SysCTTar.CT_tar\", \"color_idx\": 11, \"title\": \"{}\", \"var\": true, \"iotype\": \"out\", \"id\": \"SysCTTar.CT_tar\", \"short\": \"CT_tar\"}, {\"full\": \"_pseudo_6.in0\", \"color_idx\": 24, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"_pseudo_6.in0\", \"short\": \"in0\"}, {\"full\": \"SysFuelWeight.S\", \"color_idx\": 30, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"SysFuelWeight.S\", \"short\": \"S\"}, {\"full\": \"Tmax\", \"title\": \"{}\", \"var\": true, \"iotype\": \"out\", \"boundary\": true, \"id\": \"Tmax\", \"short\": \"Tmax\"}, {\"short\": \"SysTmin\", \"color_idx\": 15, \"full\": \"SysTmin\", \"title\": \"{}\", \"comp\": true, \"id\": \"SysTmin\"}, {\"short\": \"SysSFC\", \"color_idx\": 16, \"full\": \"SysSFC\", \"title\": \"{}\", \"comp\": true, \"id\": \"SysSFC\"}, {\"full\": \"SysSpeed.v_specified\", \"color_idx\": 3, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"v_specified\", \"var\": true, \"iotype\": \"in\", \"id\": \"SysSpeed.v_specified\"}, {\"full\": \"SysTmin.tau\", \"color_idx\": 15, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"SysTmin.tau\", \"short\": \"tau\"}, {\"full\": \"coupled_solver.ls_rtol\", \"color_idx\": 9, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"coupled_solver.ls_rtol\", \"short\": \"ls_rtol\"}, {\"short\": \"SysGammaBspline\", \"color_idx\": 25, \"full\": \"SysGammaBspline\", \"title\": \"{}\", \"comp\": true, \"id\": \"SysGammaBspline\"}, {\"short\": \"SysTau\", \"color_idx\": 26, \"full\": \"SysTau\", \"title\": \"{}\", \"comp\": true, \"id\": \"SysTau\"}, {\"full\": \"SysSFC.SFCSL\", \"color_idx\": 16, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"SysSFC.SFCSL\", \"short\": \"SFCSL\"}, {\"full\": \"SysSpeed.v_spline\", \"color_idx\": 3, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"SysSpeed.v_spline\", \"short\": \"v_spline\"}, {\"full\": \"SFCSL\", \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"boundary\": true, \"id\": \"SFCSL\", \"short\": \"SFCSL\"}, {\"full\": \"drag_solver.ls_max_iteration\", \"color_idx\": 28, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"ls_max_iteration\", \"var\": true, \"iotype\": \"in\", \"id\": \"drag_solver.ls_max_iteration\"}, {\"full\": \"SysCTTar.rho\", \"color_idx\": 11, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"SysCTTar.rho\", \"short\": \"rho\"}, {\"short\": \"SysFuelWeight\", \"color_idx\": 30, \"full\": \"SysFuelWeight\", \"title\": \"{}\", \"comp\": true, \"id\": \"SysFuelWeight\"}, {\"full\": \"SysFuelWeight.fuel_w\", \"color_idx\": 30, \"title\": \"{}\", \"var\": true, \"iotype\": \"out\", \"id\": \"SysFuelWeight.fuel_w\", \"short\": \"fuel_w\"}, {\"short\": \"SysMVBspline\", \"color_idx\": 0, \"full\": \"SysMVBspline\", \"title\": \"{}\", \"comp\": true, \"id\": \"SysMVBspline\"}, {\"full\": \"drag_solver.atol\", \"color_idx\": 28, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"drag_solver.atol\", \"short\": \"atol\"}, {\"full\": \"SysTemp.h\", \"color_idx\": 29, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"SysTemp.h\", \"short\": \"h\"}, {\"full\": \"SysAeroSurrogate.eta\", \"color_idx\": 7, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"SysAeroSurrogate.eta\", \"short\": \"eta\"}, {\"short\": \"SysSlopeMax\", \"color_idx\": 13, \"full\": \"SysSlopeMax\", \"title\": \"{}\", \"comp\": true, \"id\": \"SysSlopeMax\"}, {\"full\": \"_pseudo_2.out0\", \"color_idx\": 20, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"out0\", \"var\": true, \"iotype\": \"out\", \"id\": \"_pseudo_2.out0\"}, {\"short\": \"SysHi\", \"color_idx\": 4, \"full\": \"SysHi\", \"title\": \"{}\", \"comp\": true, \"id\": \"SysHi\"}, {\"full\": \"SysSlopeMin.Gamma\", \"color_idx\": 6, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"SysSlopeMin.Gamma\", \"short\": \"Gamma\"}, {\"full\": \"SysCLTar.CL\", \"color_idx\": 31, \"title\": \"{}\", \"var\": true, \"iotype\": \"out\", \"id\": \"SysCLTar.CL\", \"short\": \"CL\"}, {\"full\": \"SysCM.eta\", \"color_idx\": 1, \"title\": \"{}\", \"var\": true, \"iotype\": \"state\", \"id\": \"SysCM.eta\", \"short\": \"eta\"}, {\"short\": \"SysHBspline\", \"color_idx\": 5, \"full\": \"SysHBspline\", \"title\": \"{}\", \"comp\": true, \"id\": \"SysHBspline\"}, {\"short\": \"SysAeroSurrogate\", \"color_idx\": 7, \"full\": \"SysAeroSurrogate\", \"title\": \"{}\", \"comp\": true, \"id\": \"SysAeroSurrogate\"}, {\"full\": \"SysFuelObj.fuel_w\", \"color_idx\": 27, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"SysFuelObj.fuel_w\", \"short\": \"fuel_w\"}, {\"short\": \"drag_solver\", \"color_idx\": 28, \"full\": \"drag_solver\", \"title\": \"{'driver': True}\", \"comp\": true, \"driver\": true, \"id\": \"drag_solver\"}, {\"short\": \"coupled_solver\", \"color_idx\": 9, \"full\": \"coupled_solver\", \"title\": \"{'driver': True}\", \"comp\": true, \"driver\": true, \"id\": \"coupled_solver\"}, {\"short\": \"SysXBspline\", \"color_idx\": 10, \"full\": \"SysXBspline\", \"title\": \"{}\", \"comp\": true, \"id\": \"SysXBspline\"}, {\"full\": \"_pseudo_4.in0\", \"color_idx\": 22, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"_pseudo_4.in0\", \"short\": \"in0\"}, {\"full\": \"SysMVBspline.M_pt\", \"color_idx\": 0, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"SysMVBspline.M_pt\", \"short\": \"M_pt\"}, {\"full\": \"SysFuelWeight.Gamma\", \"color_idx\": 30, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"SysFuelWeight.Gamma\", \"short\": \"Gamma\"}, {\"full\": \"SysCTTar.v\", \"color_idx\": 11, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"SysCTTar.v\", \"short\": \"v\"}, {\"full\": \"_pseudo_6.out0\", \"color_idx\": 24, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"out0\", \"var\": true, \"iotype\": \"out\", \"id\": \"_pseudo_6.out0\"}, {\"full\": \"SysMVBspline.M\", \"color_idx\": 0, \"title\": \"{}\", \"var\": true, \"iotype\": \"out\", \"id\": \"SysMVBspline.M\", \"short\": \"M\"}, {\"full\": \"SysTau.CT_tar\", \"color_idx\": 26, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"SysTau.CT_tar\", \"short\": \"CT_tar\"}, {\"full\": \"SysFuelObj.wf_obj\", \"color_idx\": 27, \"title\": \"{}\", \"var\": true, \"iotype\": \"out\", \"id\": \"SysFuelObj.wf_obj\", \"short\": \"wf_obj\"}, {\"full\": \"SysFuelWeight.CT_tar\", \"color_idx\": 30, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"SysFuelWeight.CT_tar\", \"short\": \"CT_tar\"}, {\"full\": \"SysHBspline.x_init\", \"color_idx\": 5, \"deriv_ignore\": true, \"title\": \"{'deriv_ignore': True}\", \"short\": \"x_init\", \"var\": true, \"iotype\": \"in\", \"id\": \"SysHBspline.x_init\"}, {\"full\": \"S\", \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"boundary\": true, \"id\": \"S\", \"short\": \"S\"}, {\"full\": \"SysXBspline.x_pt\", \"color_idx\": 10, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"SysXBspline.x_pt\", \"short\": \"x_pt\"}, {\"full\": \"SysCLTar.ac_w\", \"color_idx\": 31, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"SysCLTar.ac_w\", \"short\": \"ac_w\"}, {\"short\": \"_pseudo_0\", \"color_idx\": 18, \"full\": \"_pseudo_0\", \"title\": \"{}\", \"comp\": true, \"pseudo\": \"constraint\", \"id\": \"_pseudo_0\"}, {\"short\": \"_pseudo_3\", \"color_idx\": 19, \"full\": \"_pseudo_3\", \"title\": \"{}\", \"comp\": true, \"pseudo\": \"constraint\", \"id\": \"_pseudo_3\"}, {\"short\": \"_pseudo_2\", \"color_idx\": 20, \"full\": \"_pseudo_2\", \"title\": \"{}\", \"comp\": true, \"pseudo\": \"objective\", \"id\": \"_pseudo_2\"}, {\"full\": \"SysHf.h\", \"color_idx\": 2, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"SysHf.h\", \"short\": \"h\"}, {\"short\": \"_pseudo_4\", \"color_idx\": 22, \"full\": \"_pseudo_4\", \"title\": \"{}\", \"comp\": true, \"pseudo\": \"constraint\", \"id\": \"_pseudo_4\"}, {\"short\": \"_pseudo_6\", \"color_idx\": 24, \"full\": \"_pseudo_6\", \"title\": \"{}\", \"comp\": true, \"pseudo\": \"constraint\", \"id\": \"_pseudo_6\"}, {\"full\": \"SysCTTar.S\", \"color_idx\": 11, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"SysCTTar.S\", \"short\": \"S\"}, {\"full\": \"coupled_solver.iprint\", \"color_idx\": 9, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"iprint\", \"var\": true, \"iotype\": \"in\", \"id\": \"coupled_solver.iprint\"}, {\"full\": \"_pseudo_7.out0\", \"color_idx\": 23, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"out0\", \"var\": true, \"iotype\": \"out\", \"id\": \"_pseudo_7.out0\"}, {\"full\": \"SysSlopeMin.gamma_min\", \"color_idx\": 6, \"title\": \"{}\", \"var\": true, \"iotype\": \"out\", \"id\": \"SysSlopeMin.gamma_min\", \"short\": \"gamma_min\"}, {\"full\": \"SysCM.alpha\", \"color_idx\": 1, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"SysCM.alpha\", \"short\": \"alpha\"}, {\"full\": \"driver.title\", \"color_idx\": 14, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"title\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.title\"}, {\"full\": \"SysRho.h\", \"color_idx\": 8, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"SysRho.h\", \"short\": \"h\"}, {\"full\": \"driver.pyopt_diff\", \"color_idx\": 14, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"pyopt_diff\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.pyopt_diff\"}, {\"full\": \"_pseudo_5.out0\", \"color_idx\": 21, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"out0\", \"var\": true, \"iotype\": \"out\", \"id\": \"_pseudo_5.out0\"}, {\"short\": \"_pseudo_7\", \"color_idx\": 23, \"full\": \"_pseudo_7\", \"title\": \"{}\", \"comp\": true, \"pseudo\": \"constraint\", \"id\": \"_pseudo_7\"}, {\"short\": \"SysCLTar\", \"color_idx\": 31, \"full\": \"SysCLTar\", \"title\": \"{}\", \"comp\": true, \"id\": \"SysCLTar\"}, {\"full\": \"_pseudo_3.out0\", \"color_idx\": 19, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"out0\", \"var\": true, \"iotype\": \"out\", \"id\": \"_pseudo_3.out0\"}, {\"full\": \"wf_obj\", \"title\": \"{}\", \"var\": true, \"iotype\": \"out\", \"boundary\": true, \"id\": \"wf_obj\", \"short\": \"wf_obj\"}, {\"short\": \"SysCM\", \"color_idx\": 1, \"full\": \"SysCM\", \"title\": \"{}\", \"comp\": true, \"id\": \"SysCM\"}, {\"full\": \"SysTemp.temp\", \"color_idx\": 29, \"title\": \"{}\", \"var\": true, \"iotype\": \"out\", \"id\": \"SysTemp.temp\", \"short\": \"temp\"}, {\"full\": \"SysTau.S\", \"color_idx\": 26, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"SysTau.S\", \"short\": \"S\"}, {\"full\": \"SysFuelWeight.rho\", \"color_idx\": 30, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"SysFuelWeight.rho\", \"short\": \"rho\"}, {\"short\": \"_pseudo_1\", \"color_idx\": 17, \"full\": \"_pseudo_1\", \"title\": \"{}\", \"comp\": true, \"pseudo\": \"constraint\", \"id\": \"_pseudo_1\"}, {\"full\": \"SysTmax.tau\", \"color_idx\": 12, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"SysTmax.tau\", \"short\": \"tau\"}, {\"full\": \"SysGammaBspline.x_init\", \"color_idx\": 25, \"deriv_ignore\": true, \"title\": \"{'deriv_ignore': True}\", \"short\": \"x_init\", \"var\": true, \"iotype\": \"in\", \"id\": \"SysGammaBspline.x_init\"}, {\"full\": \"ac_w\", \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"boundary\": true, \"id\": \"ac_w\", \"short\": \"ac_w\"}, {\"full\": \"coupled_solver.ls_atol\", \"color_idx\": 9, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"coupled_solver.ls_atol\", \"short\": \"ls_atol\"}, {\"short\": \"SysRho\", \"color_idx\": 8, \"full\": \"SysRho\", \"title\": \"{}\", \"comp\": true, \"id\": \"SysRho\"}, {\"full\": \"_pseudo_2.in0\", \"color_idx\": 20, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"_pseudo_2.in0\", \"short\": \"in0\"}, {\"full\": \"_pseudo_5.in0\", \"color_idx\": 21, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"_pseudo_5.in0\", \"short\": \"in0\"}, {\"full\": \"SysCTTar.CD\", \"color_idx\": 11, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"SysCTTar.CD\", \"short\": \"CD\"}, {\"full\": \"SysFuelWeight.SFC\", \"color_idx\": 30, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"SysFuelWeight.SFC\", \"short\": \"SFC\"}, {\"full\": \"SysSlopeMax.gamma_max\", \"color_idx\": 13, \"title\": \"{}\", \"var\": true, \"iotype\": \"out\", \"id\": \"SysSlopeMax.gamma_max\", \"short\": \"gamma_max\"}, {\"full\": \"SysTau.v\", \"color_idx\": 26, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"SysTau.v\", \"short\": \"v\"}, {\"full\": \"SysTau.h\", \"color_idx\": 26, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"SysTau.h\", \"short\": \"h\"}, {\"full\": \"driver.print_results\", \"color_idx\": 14, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"print_results\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.print_results\"}, {\"full\": \"SysHBspline.h_pt\", \"color_idx\": 5, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"SysHBspline.h_pt\", \"short\": \"h_pt\"}, {\"full\": \"coupled_solver.atol\", \"color_idx\": 9, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"coupled_solver.atol\", \"short\": \"atol\"}, {\"full\": \"h_pt\", \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"boundary\": true, \"id\": \"h_pt\", \"short\": \"h_pt\"}, {\"full\": \"SysCTTar.Gamma\", \"color_idx\": 11, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"SysCTTar.Gamma\", \"short\": \"Gamma\"}, {\"short\": \"SysCTTar\", \"color_idx\": 11, \"full\": \"SysCTTar\", \"title\": \"{}\", \"comp\": true, \"id\": \"SysCTTar\"}, {\"full\": \"SysGammaBspline.h_pt\", \"color_idx\": 25, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"SysGammaBspline.h_pt\", \"short\": \"h_pt\"}, {\"full\": \"driver.optimizer\", \"color_idx\": 14, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"optimizer\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.optimizer\"}, {\"full\": \"SysHi.h\", \"color_idx\": 4, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"SysHi.h\", \"short\": \"h\"}, {\"full\": \"SysCLTar.S\", \"color_idx\": 31, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"SysCLTar.S\", \"short\": \"S\"}, {\"short\": \"_pseudo_5\", \"color_idx\": 21, \"full\": \"_pseudo_5\", \"title\": \"{}\", \"comp\": true, \"pseudo\": \"constraint\", \"id\": \"_pseudo_5\"}, {\"full\": \"SysCLTar.rho\", \"color_idx\": 31, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"SysCLTar.rho\", \"short\": \"rho\"}, {\"full\": \"_pseudo_1.out0\", \"color_idx\": 17, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"out0\", \"var\": true, \"iotype\": \"out\", \"id\": \"_pseudo_1.out0\"}, {\"full\": \"SysCLTar.Gamma\", \"color_idx\": 31, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"SysCLTar.Gamma\", \"short\": \"Gamma\"}, {\"full\": \"drag_solver.ls_atol\", \"color_idx\": 28, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"drag_solver.ls_atol\", \"short\": \"ls_atol\"}, {\"full\": \"drag_solver.alpha\", \"color_idx\": 28, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"drag_solver.alpha\", \"short\": \"alpha\"}, {\"full\": \"SysCTTar.ac_w\", \"color_idx\": 11, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"SysCTTar.ac_w\", \"short\": \"ac_w\"}, {\"short\": \"SysHf\", \"color_idx\": 2, \"full\": \"SysHf\", \"title\": \"{}\", \"comp\": true, \"id\": \"SysHf\"}, {\"full\": \"SysTau.rho\", \"color_idx\": 26, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"SysTau.rho\", \"short\": \"rho\"}, {\"full\": \"drag_solver.max_iteration\", \"color_idx\": 28, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"max_iteration\", \"var\": true, \"iotype\": \"in\", \"id\": \"drag_solver.max_iteration\"}, {\"short\": \"SysFuelObj\", \"color_idx\": 27, \"full\": \"SysFuelObj\", \"title\": \"{}\", \"comp\": true, \"id\": \"SysFuelObj\"}, {\"full\": \"coupled_solver.ls_max_iteration\", \"color_idx\": 9, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"ls_max_iteration\", \"var\": true, \"iotype\": \"in\", \"id\": \"coupled_solver.ls_max_iteration\"}, {\"full\": \"SysAeroSurrogate.AR\", \"color_idx\": 7, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"SysAeroSurrogate.AR\", \"short\": \"AR\"}, {\"full\": \"SysSpeed.temp\", \"color_idx\": 3, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"SysSpeed.temp\", \"short\": \"temp\"}, {\"full\": \"SysAeroSurrogate.CD\", \"color_idx\": 7, \"title\": \"{}\", \"var\": true, \"iotype\": \"out\", \"id\": \"SysAeroSurrogate.CD\", \"short\": \"CD\"}, {\"full\": \"SysXBspline.x_init\", \"color_idx\": 10, \"deriv_ignore\": true, \"title\": \"{'deriv_ignore': True}\", \"short\": \"x_init\", \"var\": true, \"iotype\": \"in\", \"id\": \"SysXBspline.x_init\"}, {\"short\": \"SysTmax\", \"color_idx\": 12, \"full\": \"SysTmax\", \"title\": \"{}\", \"comp\": true, \"id\": \"SysTmax\"}, {\"full\": \"SysHf.h_f\", \"color_idx\": 2, \"title\": \"{}\", \"var\": true, \"iotype\": \"out\", \"id\": \"SysHf.h_f\", \"short\": \"h_f\"}, {\"full\": \"h_f\", \"title\": \"{}\", \"var\": true, \"iotype\": \"out\", \"boundary\": true, \"id\": \"h_f\", \"short\": \"h_f\"}, {\"full\": \"SysFuelWeight.v\", \"color_idx\": 30, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"SysFuelWeight.v\", \"short\": \"v\"}, {\"full\": \"_pseudo_1.in0\", \"color_idx\": 17, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"_pseudo_1.in0\", \"short\": \"in0\"}, {\"full\": \"_pseudo_4.out0\", \"color_idx\": 22, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"out0\", \"var\": true, \"iotype\": \"out\", \"id\": \"_pseudo_4.out0\"}, {\"full\": \"SysTau.tau\", \"color_idx\": 26, \"title\": \"{}\", \"var\": true, \"iotype\": \"out\", \"id\": \"SysTau.tau\", \"short\": \"tau\"}, {\"full\": \"SysFuelWeight.x\", \"color_idx\": 30, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"SysFuelWeight.x\", \"short\": \"x\"}, {\"full\": \"_pseudo_0.in0\", \"color_idx\": 18, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"_pseudo_0.in0\", \"short\": \"in0\"}, {\"full\": \"_pseudo_0.in1\", \"color_idx\": 18, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"_pseudo_0.in1\", \"short\": \"in1\"}, {\"full\": \"SysMVBspline.v_spline\", \"color_idx\": 0, \"title\": \"{}\", \"var\": true, \"iotype\": \"out\", \"id\": \"SysMVBspline.v_spline\", \"short\": \"v_spline\"}, {\"full\": \"SysCTTar.alpha\", \"color_idx\": 11, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"SysCTTar.alpha\", \"short\": \"alpha\"}, {\"full\": \"coupled_solver.rtol\", \"color_idx\": 9, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"coupled_solver.rtol\", \"short\": \"rtol\"}, {\"full\": \"v_pt\", \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"boundary\": true, \"id\": \"v_pt\", \"short\": \"v_pt\"}, {\"full\": \"SysMVBspline.x_init\", \"color_idx\": 0, \"deriv_ignore\": true, \"title\": \"{'deriv_ignore': True}\", \"short\": \"x_init\", \"var\": true, \"iotype\": \"in\", \"id\": \"SysMVBspline.x_init\"}, {\"short\": \"SysSpeed\", \"color_idx\": 3, \"full\": \"SysSpeed\", \"title\": \"{}\", \"comp\": true, \"id\": \"SysSpeed\"}, {\"short\": \"SysSlopeMin\", \"color_idx\": 6, \"full\": \"SysSlopeMin\", \"title\": \"{}\", \"comp\": true, \"id\": \"SysSlopeMin\"}, {\"full\": \"drag_solver.ls_rtol\", \"color_idx\": 28, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"drag_solver.ls_rtol\", \"short\": \"ls_rtol\"}, {\"full\": \"driver.exit_flag\", \"color_idx\": 14, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"exit_flag\", \"var\": true, \"iotype\": \"out\", \"id\": \"driver.exit_flag\"}, {\"full\": \"SysAeroSurrogate.alpha\", \"color_idx\": 7, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"SysAeroSurrogate.alpha\", \"short\": \"alpha\"}, {\"full\": \"SysCLTar.CT_tar\", \"color_idx\": 31, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"SysCLTar.CT_tar\", \"short\": \"CT_tar\"}, {\"full\": \"SysTmax.Tmax\", \"color_idx\": 12, \"title\": \"{}\", \"var\": true, \"iotype\": \"out\", \"id\": \"SysTmax.Tmax\", \"short\": \"Tmax\"}, {\"full\": \"_pseudo_7.in0\", \"color_idx\": 23, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"_pseudo_7.in0\", \"short\": \"in0\"}, {\"full\": \"_pseudo_3.in0\", \"color_idx\": 19, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"_pseudo_3.in0\", \"short\": \"in0\"}, {\"full\": \"drag_solver.rtol\", \"color_idx\": 28, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"drag_solver.rtol\", \"short\": \"rtol\"}, {\"full\": \"coupled_solver.alpha\", \"color_idx\": 9, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"coupled_solver.alpha\", \"short\": \"alpha\"}, {\"full\": \"SysXBspline.x\", \"color_idx\": 10, \"title\": \"{}\", \"var\": true, \"iotype\": \"out\", \"id\": \"SysXBspline.x\", \"short\": \"x\"}, {\"short\": \"driver\", \"color_idx\": 14, \"full\": \"driver\", \"title\": \"{'driver': True}\", \"comp\": true, \"driver\": true, \"id\": \"driver\"}, {\"full\": \"SysSlopeMax.Gamma\", \"color_idx\": 13, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"SysSlopeMax.Gamma\", \"short\": \"Gamma\"}, {\"full\": \"SysTau.thrust_sl\", \"color_idx\": 26, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"SysTau.thrust_sl\", \"short\": \"thrust_sl\"}, {\"full\": \"SysHBspline.h\", \"color_idx\": 5, \"title\": \"{}\", \"var\": true, \"iotype\": \"out\", \"id\": \"SysHBspline.h\", \"short\": \"h\"}, {\"full\": \"AR\", \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"boundary\": true, \"id\": \"AR\", \"short\": \"AR\"}, {\"full\": \"h_i\", \"title\": \"{}\", \"var\": true, \"iotype\": \"out\", \"boundary\": true, \"id\": \"h_i\", \"short\": \"h_i\"}, {\"full\": \"SysAeroSurrogate.oswald\", \"color_idx\": 7, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"SysAeroSurrogate.oswald\", \"short\": \"oswald\"}, {\"full\": \"SysRho.temp\", \"color_idx\": 8, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"SysRho.temp\", \"short\": \"temp\"}, {\"full\": \"driver.options\", \"color_idx\": 14, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"options\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.options\"}, {\"full\": \"_pseudo_0.out0\", \"color_idx\": 18, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"out0\", \"var\": true, \"iotype\": \"out\", \"id\": \"_pseudo_0.out0\"}, {\"full\": \"SysAeroSurrogate.CL\", \"color_idx\": 7, \"title\": \"{}\", \"var\": true, \"iotype\": \"out\", \"id\": \"SysAeroSurrogate.CL\", \"short\": \"CL\"}, {\"short\": \"SysTemp\", \"color_idx\": 29, \"full\": \"SysTemp\", \"title\": \"{}\", \"comp\": true, \"id\": \"SysTemp\"}, {\"full\": \"SysMVBspline.v_pt\", \"color_idx\": 0, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"SysMVBspline.v_pt\", \"short\": \"v_pt\"}, {\"full\": \"SysCM.eta_res\", \"color_idx\": 1, \"title\": \"{}\", \"var\": true, \"iotype\": \"residual\", \"id\": \"SysCM.eta_res\", \"short\": \"eta_res\"}, {\"full\": \"coupled_solver.max_iteration\", \"color_idx\": 9, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"max_iteration\", \"var\": true, \"iotype\": \"in\", \"id\": \"coupled_solver.max_iteration\"}, {\"full\": \"SysTmin.Tmin\", \"color_idx\": 15, \"title\": \"{}\", \"var\": true, \"iotype\": \"out\", \"id\": \"SysTmin.Tmin\", \"short\": \"Tmin\"}], \"links\": [{\"source\": 144, \"target\": 78}, {\"source\": 1, \"target\": 20}, {\"source\": 2, \"target\": 40, \"conn\": true}, {\"source\": 2, \"target\": 51, \"conn\": true}, {\"source\": 2, \"target\": 102, \"conn\": true}, {\"source\": 2, \"target\": 152, \"conn\": true}, {\"source\": 2, \"target\": 111, \"conn\": true}, {\"source\": 2, \"target\": 146, \"conn\": true}, {\"source\": 3, \"target\": 153, \"conn\": true}, {\"source\": 4, \"target\": 127, \"conn\": true}, {\"source\": 4, \"target\": 96, \"conn\": true}, {\"source\": 4, \"target\": 52, \"conn\": true}, {\"source\": 4, \"target\": 7, \"conn\": true}, {\"source\": 5, \"target\": 157, \"conn\": true}, {\"source\": 6, \"target\": 78}, {\"source\": 7, \"target\": 78}, {\"source\": 148, \"target\": 46}, {\"source\": 9, \"target\": 46}, {\"source\": 0, \"target\": 139}, {\"source\": 11, \"target\": 103}, {\"source\": 13, \"target\": 147, \"conn\": true}, {\"source\": 13, \"target\": 156, \"conn\": true}, {\"source\": 14, \"target\": 94, \"conn\": true}, {\"source\": 15, \"target\": 144, \"conn\": true}, {\"source\": 15, \"target\": 57, \"conn\": true}, {\"source\": 15, \"target\": 55, \"conn\": true}, {\"source\": 16, \"target\": 67}, {\"source\": 19, \"target\": 166}, {\"source\": 20, \"target\": 14}, {\"source\": 21, \"target\": 139}, {\"drv_conn\": \"drag_solver\", \"target\": 143, \"source\": 46}, {\"drv_conn\": \"drag_solver\", \"target\": 46, \"source\": 160}, {\"source\": 23, \"target\": 47}, {\"source\": 24, \"target\": 2}, {\"source\": 25, \"target\": 130}, {\"source\": 26, \"target\": 20}, {\"source\": 27, \"target\": 139}, {\"source\": 154, \"target\": 74, \"conn\": true}, {\"source\": 154, \"target\": 1, \"conn\": true}, {\"source\": 154, \"target\": 106, \"conn\": true}, {\"source\": 154, \"target\": 97, \"conn\": true}, {\"source\": 154, \"target\": 35, \"conn\": true}, {\"source\": 154, \"target\": 65, \"conn\": true}, {\"source\": 28, \"target\": 26, \"conn\": true}, {\"source\": 29, \"target\": 46}, {\"source\": 30, \"target\": 103}, {\"source\": 31, \"target\": 32}, {\"source\": 32, \"target\": 6, \"conn\": true}, {\"source\": 32, \"target\": 11, \"conn\": true}, {\"source\": 32, \"target\": 45, \"conn\": true}, {\"source\": 33, \"target\": 134}, {\"source\": 33, \"target\": 54}, {\"source\": 34, \"target\": 46}, {\"source\": 89, \"target\": 47}, {\"source\": 36, \"target\": 44}, {\"drv_conn\": \"driver\", \"target\": 151, \"source\": 38}, {\"source\": 39, \"target\": 13}, {\"source\": 40, \"target\": 140}, {\"source\": 41, \"target\": 133, \"conn\": true}, {\"source\": 42, \"target\": 36, \"conn\": true}, {\"source\": 42, \"target\": 81}, {\"source\": 43, \"target\": 154}, {\"source\": 44, \"target\": 161}, {\"source\": 44, \"target\": 122}, {\"source\": 45, \"target\": 118}, {\"source\": 149, \"target\": 47}, {\"source\": 12, \"target\": 78}, {\"drv_conn\": \"coupled_solver\", \"target\": 42, \"source\": 47}, {\"source\": 48, \"target\": 150}, {\"source\": 50, \"target\": 33}, {\"source\": 51, \"target\": 31}, {\"source\": 52, \"target\": 103}, {\"drv_conn\": \"driver\", \"target\": 151, \"source\": 53}, {\"source\": 54, \"target\": 0, \"conn\": true}, {\"source\": 55, \"target\": 25}, {\"source\": 56, \"target\": 91, \"conn\": true}, {\"source\": 56, \"target\": 80, \"conn\": true}, {\"source\": 57, \"target\": 31}, {\"source\": 58, \"target\": 43}, {\"source\": 59, \"target\": 107, \"conn\": true}, {\"source\": 59, \"target\": 68, \"conn\": true}, {\"source\": 59, \"target\": 83, \"conn\": true}, {\"source\": 59, \"target\": 17, \"conn\": true}, {\"source\": 61, \"target\": 78}, {\"source\": 49, \"target\": 66}, {\"source\": 63, \"target\": 79}, {\"source\": 64, \"target\": 38}, {\"source\": 65, \"target\": 115}, {\"source\": 66, \"target\": 129}, {\"source\": 67, \"target\": 53}, {\"source\": 68, \"target\": 103}, {\"source\": 115, \"target\": 125}, {\"source\": 69, \"target\": 47}, {\"drv_conn\": \"driver\", \"target\": 151, \"source\": 70}, {\"source\": 155, \"target\": 120, \"conn\": true}, {\"source\": 73, \"target\": 151}, {\"source\": 74, \"target\": 90}, {\"source\": 10, \"target\": 109, \"conn\": true}, {\"source\": 10, \"target\": 30, \"conn\": true}, {\"source\": 10, \"target\": 84, \"conn\": true}, {\"source\": 10, \"target\": 116, \"conn\": true}, {\"drv_conn\": \"driver\", \"target\": 151, \"source\": 76}, {\"source\": 78, \"target\": 41}, {\"drv_conn\": \"driver\", \"target\": 151, \"source\": 79}, {\"source\": 82, \"target\": 121, \"conn\": true}, {\"source\": 82, \"target\": 158, \"conn\": true}, {\"source\": 83, \"target\": 25}, {\"source\": 121, \"target\": 139}, {\"source\": 84, \"target\": 31}, {\"source\": 85, \"target\": 110}, {\"source\": 86, \"target\": 124}, {\"source\": 87, \"target\": 24}, {\"source\": 88, \"target\": 61, \"conn\": true}, {\"source\": 88, \"target\": 114, \"conn\": true}, {\"source\": 35, \"target\": 162}, {\"source\": 62, \"target\": 160}, {\"source\": 116, \"target\": 25}, {\"source\": 91, \"target\": 64}, {\"source\": 92, \"target\": 108}, {\"source\": 93, \"target\": 103}, {\"source\": 94, \"target\": 31}, {\"source\": 96, \"target\": 25}, {\"source\": 97, \"target\": 25}, {\"source\": 90, \"target\": 10}, {\"source\": 77, \"target\": 70}, {\"source\": 98, \"target\": 151}, {\"source\": 22, \"target\": 19}, {\"source\": 100, \"target\": 47}, {\"source\": 101, \"target\": 104, \"conn\": true}, {\"source\": 101, \"target\": 99, \"conn\": true}, {\"source\": 157, \"target\": 44}, {\"source\": 103, \"target\": 15}, {\"source\": 104, \"target\": 24}, {\"source\": 105, \"target\": 151}, {\"source\": 106, \"target\": 39}, {\"source\": 107, \"target\": 78}, {\"source\": 81, \"target\": 42}, {\"source\": 81, \"target\": 164}, {\"source\": 108, \"target\": 76}, {\"source\": 139, \"target\": 4}, {\"drv_conn\": \"coupled_solver\", \"target\": 47, \"source\": 110}, {\"source\": 111, \"target\": 78}, {\"source\": 112, \"target\": 46}, {\"source\": 113, \"target\": 46}, {\"source\": 114, \"target\": 103}, {\"source\": 117, \"target\": 46}, {\"source\": 163, \"target\": 33}, {\"source\": 118, \"target\": 56}, {\"source\": 119, \"target\": 47}, {\"source\": 120, \"target\": 44}, {\"source\": 165, \"target\": 47}, {\"source\": 99, \"target\": 43}, {\"source\": 124, \"target\": 145}, {\"source\": 109, \"target\": 78}, {\"source\": 127, \"target\": 31}, {\"drv_conn\": \"driver\", \"target\": 151, \"source\": 129}, {\"source\": 130, \"target\": 22, \"conn\": true}, {\"source\": 130, \"target\": 86, \"conn\": true}, {\"source\": 131, \"target\": 31}, {\"source\": 133, \"target\": 62}, {\"source\": 134, \"target\": 27, \"conn\": true}, {\"source\": 135, \"target\": 103}, {\"source\": 136, \"target\": 47}, {\"source\": 137, \"target\": 163, \"conn\": true}, {\"source\": 140, \"target\": 71}, {\"source\": 141, \"target\": 46}, {\"source\": 125, \"target\": 126, \"conn\": true}, {\"source\": 125, \"target\": 49, \"conn\": true}, {\"source\": 143, \"target\": 72, \"conn\": true}, {\"source\": 143, \"target\": 135, \"conn\": true}, {\"source\": 143, \"target\": 12, \"conn\": true}, {\"source\": 143, \"target\": 44}, {\"source\": 145, \"target\": 18, \"conn\": true}, {\"source\": 145, \"target\": 16, \"conn\": true}, {\"source\": 17, \"target\": 31}, {\"source\": 60, \"target\": 48}, {\"source\": 147, \"target\": 63}, {\"source\": 37, \"target\": 95}, {\"source\": 150, \"target\": 131, \"conn\": true}, {\"source\": 75, \"target\": 151}, {\"source\": 151, \"target\": 142}, {\"drv_conn\": \"driver\", \"target\": 101, \"source\": 151}, {\"source\": 152, \"target\": 37}, {\"source\": 153, \"target\": 25}, {\"source\": 128, \"target\": 85}, {\"source\": 72, \"target\": 81}, {\"source\": 123, \"target\": 48}, {\"source\": 158, \"target\": 90}, {\"source\": 159, \"target\": 151}, {\"source\": 161, \"target\": 132, \"conn\": true}, {\"source\": 102, \"target\": 103}, {\"source\": 162, \"target\": 82}, {\"source\": 146, \"target\": 77}, {\"source\": 164, \"target\": 128, \"conn\": true}, {\"source\": 122, \"target\": 93, \"conn\": true}, {\"source\": 138, \"target\": 33}, {\"source\": 166, \"target\": 8, \"conn\": true}, {\"source\": 166, \"target\": 92, \"conn\": true}, {\"source\": 132, \"target\": 62}], \"multigraph\": false}",
+        "name": "",
+        "uuid": "6966d27a-6f36-11e4-b9b0-20c9d0478eff",
+        "variable_metadata": {
+            "AR": {
+                "assumed_default": false,
+                "high": null,
+                "iotype": "in",
+                "low": null,
+                "vartypename": "Float"
+            },
+            "S": {
+                "assumed_default": false,
+                "high": null,
+                "iotype": "in",
+                "low": null,
+                "vartypename": "Float"
+            },
+            "SFCSL": {
+                "assumed_default": false,
+                "high": null,
+                "iotype": "in",
+                "low": null,
+                "vartypename": "Float"
+            },
+            "SysAeroSurrogate.CD": {
+                "array": true,
+                "assumed_default": false,
+                "comparison_mode": 1,
+                "iotype": "out",
+                "vartypename": "Array"
+            },
+            "SysAeroSurrogate.CL": {
+                "array": true,
+                "assumed_default": false,
+                "comparison_mode": 1,
+                "iotype": "out",
+                "vartypename": "Array"
+            },
+            "SysAeroSurrogate.alpha": {
+                "array": true,
+                "assumed_default": false,
+                "comparison_mode": 1,
+                "iotype": "in",
+                "vartypename": "Array"
+            },
+            "SysAeroSurrogate.directory": {
+                "deriv_ignore": true,
+                "iotype": "in",
+                "vartypename": "Str"
+            },
+            "SysAeroSurrogate.force_fd": {
+                "assumed_default": false,
+                "deriv_ignore": true,
+                "iotype": "in",
+                "vartypename": "Bool"
+            },
+            "SysAeroSurrogate.missing_deriv_policy": {
+                "assumed_default": false,
+                "deriv_ignore": true,
+                "iotype": "in",
+                "values": [
+                    "error",
+                    "assume_zero"
+                ],
+                "vartypename": "Enum"
+            },
+            "SysCLTar.CL": {
+                "array": true,
+                "assumed_default": false,
+                "comparison_mode": 1,
+                "iotype": "out",
+                "vartypename": "Array"
+            },
+            "SysCLTar.directory": {
+                "deriv_ignore": true,
+                "iotype": "in",
+                "vartypename": "Str"
+            },
+            "SysCLTar.force_fd": {
+                "assumed_default": false,
+                "deriv_ignore": true,
+                "iotype": "in",
+                "vartypename": "Bool"
+            },
+            "SysCLTar.missing_deriv_policy": {
+                "assumed_default": false,
+                "deriv_ignore": true,
+                "iotype": "in",
+                "values": [
+                    "error",
+                    "assume_zero"
+                ],
+                "vartypename": "Enum"
+            },
+            "SysCM.directory": {
+                "deriv_ignore": true,
+                "iotype": "in",
+                "vartypename": "Str"
+            },
+            "SysCM.eta": {
+                "array": true,
+                "assumed_default": false,
+                "comparison_mode": 1,
+                "iotype": "state",
+                "vartypename": "Array"
+            },
+            "SysCM.eta_res": {
+                "array": true,
+                "assumed_default": false,
+                "comparison_mode": 1,
+                "iotype": "residual",
+                "vartypename": "Array"
+            },
+            "SysCM.eval_only": {
+                "assumed_default": false,
+                "iotype": "in",
+                "vartypename": "Bool"
+            },
+            "SysCM.force_fd": {
+                "assumed_default": false,
+                "deriv_ignore": true,
+                "iotype": "in",
+                "vartypename": "Bool"
+            },
+            "SysCM.missing_deriv_policy": {
+                "assumed_default": false,
+                "deriv_ignore": true,
+                "iotype": "in",
+                "values": [
+                    "error",
+                    "assume_zero"
+                ],
+                "vartypename": "Enum"
+            },
+            "SysCTTar.CT_tar": {
+                "array": true,
+                "assumed_default": false,
+                "comparison_mode": 1,
+                "iotype": "out",
+                "vartypename": "Array"
+            },
+            "SysCTTar.directory": {
+                "deriv_ignore": true,
+                "iotype": "in",
+                "vartypename": "Str"
+            },
+            "SysCTTar.force_fd": {
+                "assumed_default": false,
+                "deriv_ignore": true,
+                "iotype": "in",
+                "vartypename": "Bool"
+            },
+            "SysCTTar.missing_deriv_policy": {
+                "assumed_default": false,
+                "deriv_ignore": true,
+                "iotype": "in",
+                "values": [
+                    "error",
+                    "assume_zero"
+                ],
+                "vartypename": "Enum"
+            },
+            "SysFuelObj.directory": {
+                "deriv_ignore": true,
+                "iotype": "in",
+                "vartypename": "Str"
+            },
+            "SysFuelObj.force_fd": {
+                "assumed_default": false,
+                "deriv_ignore": true,
+                "iotype": "in",
+                "vartypename": "Bool"
+            },
+            "SysFuelObj.missing_deriv_policy": {
+                "assumed_default": false,
+                "deriv_ignore": true,
+                "iotype": "in",
+                "values": [
+                    "error",
+                    "assume_zero"
+                ],
+                "vartypename": "Enum"
+            },
+            "SysFuelObj.wf_obj": {
+                "assumed_default": false,
+                "default_value": 0,
+                "high": null,
+                "iotype": "out",
+                "low": null,
+                "target": "SysFuelObj.wf_obj",
+                "vartypename": "Float"
+            },
+            "SysFuelWeight.directory": {
+                "deriv_ignore": true,
+                "iotype": "in",
+                "vartypename": "Str"
+            },
+            "SysFuelWeight.force_fd": {
+                "assumed_default": false,
+                "deriv_ignore": true,
+                "iotype": "in",
+                "vartypename": "Bool"
+            },
+            "SysFuelWeight.fuel_w": {
+                "array": true,
+                "assumed_default": false,
+                "comparison_mode": 1,
+                "iotype": "out",
+                "vartypename": "Array"
+            },
+            "SysFuelWeight.missing_deriv_policy": {
+                "assumed_default": false,
+                "deriv_ignore": true,
+                "iotype": "in",
+                "values": [
+                    "error",
+                    "assume_zero"
+                ],
+                "vartypename": "Enum"
+            },
+            "SysGammaBspline.Gamma": {
+                "array": true,
+                "assumed_default": false,
+                "comparison_mode": 1,
+                "iotype": "out",
+                "vartypename": "Array"
+            },
+            "SysGammaBspline.directory": {
+                "deriv_ignore": true,
+                "iotype": "in",
+                "vartypename": "Str"
+            },
+            "SysGammaBspline.force_fd": {
+                "assumed_default": false,
+                "deriv_ignore": true,
+                "iotype": "in",
+                "vartypename": "Bool"
+            },
+            "SysGammaBspline.missing_deriv_policy": {
+                "assumed_default": false,
+                "deriv_ignore": true,
+                "iotype": "in",
+                "values": [
+                    "error",
+                    "assume_zero"
+                ],
+                "vartypename": "Enum"
+            },
+            "SysGammaBspline.x_init": {
+                "array": true,
+                "assumed_default": false,
+                "comparison_mode": 1,
+                "deriv_ignore": true,
+                "iotype": "in",
+                "vartypename": "Array"
+            },
+            "SysHBspline.directory": {
+                "deriv_ignore": true,
+                "iotype": "in",
+                "vartypename": "Str"
+            },
+            "SysHBspline.force_fd": {
+                "assumed_default": false,
+                "deriv_ignore": true,
+                "iotype": "in",
+                "vartypename": "Bool"
+            },
+            "SysHBspline.h": {
+                "array": true,
+                "assumed_default": false,
+                "comparison_mode": 1,
+                "iotype": "out",
+                "vartypename": "Array"
+            },
+            "SysHBspline.missing_deriv_policy": {
+                "assumed_default": false,
+                "deriv_ignore": true,
+                "iotype": "in",
+                "values": [
+                    "error",
+                    "assume_zero"
+                ],
+                "vartypename": "Enum"
+            },
+            "SysHBspline.x_init": {
+                "array": true,
+                "assumed_default": false,
+                "comparison_mode": 1,
+                "deriv_ignore": true,
+                "iotype": "in",
+                "vartypename": "Array"
+            },
+            "SysHf.directory": {
+                "deriv_ignore": true,
+                "iotype": "in",
+                "vartypename": "Str"
+            },
+            "SysHf.force_fd": {
+                "assumed_default": false,
+                "deriv_ignore": true,
+                "iotype": "in",
+                "vartypename": "Bool"
+            },
+            "SysHf.h_f": {
+                "assumed_default": false,
+                "default_value": 0,
+                "high": null,
+                "iotype": "out",
+                "low": null,
+                "target": "SysHf.h_f",
+                "vartypename": "Float"
+            },
+            "SysHf.missing_deriv_policy": {
+                "assumed_default": false,
+                "deriv_ignore": true,
+                "iotype": "in",
+                "values": [
+                    "error",
+                    "assume_zero"
+                ],
+                "vartypename": "Enum"
+            },
+            "SysHi.directory": {
+                "deriv_ignore": true,
+                "iotype": "in",
+                "vartypename": "Str"
+            },
+            "SysHi.force_fd": {
+                "assumed_default": false,
+                "deriv_ignore": true,
+                "iotype": "in",
+                "vartypename": "Bool"
+            },
+            "SysHi.h_i": {
+                "assumed_default": false,
+                "default_value": 0,
+                "high": null,
+                "iotype": "out",
+                "low": null,
+                "target": "SysHi.h_i",
+                "vartypename": "Float"
+            },
+            "SysHi.missing_deriv_policy": {
+                "assumed_default": false,
+                "deriv_ignore": true,
+                "iotype": "in",
+                "values": [
+                    "error",
+                    "assume_zero"
+                ],
+                "vartypename": "Enum"
+            },
+            "SysMVBspline.M": {
+                "array": true,
+                "assumed_default": false,
+                "comparison_mode": 1,
+                "iotype": "out",
+                "vartypename": "Array"
+            },
+            "SysMVBspline.M_pt": {
+                "array": true,
+                "assumed_default": false,
+                "comparison_mode": 1,
+                "iotype": "in",
+                "vartypename": "Array"
+            },
+            "SysMVBspline.directory": {
+                "deriv_ignore": true,
+                "iotype": "in",
+                "vartypename": "Str"
+            },
+            "SysMVBspline.force_fd": {
+                "assumed_default": false,
+                "deriv_ignore": true,
+                "iotype": "in",
+                "vartypename": "Bool"
+            },
+            "SysMVBspline.missing_deriv_policy": {
+                "assumed_default": false,
+                "deriv_ignore": true,
+                "iotype": "in",
+                "values": [
+                    "error",
+                    "assume_zero"
+                ],
+                "vartypename": "Enum"
+            },
+            "SysMVBspline.v_spline": {
+                "array": true,
+                "assumed_default": false,
+                "comparison_mode": 1,
+                "iotype": "out",
+                "vartypename": "Array"
+            },
+            "SysMVBspline.x_init": {
+                "array": true,
+                "assumed_default": false,
+                "comparison_mode": 1,
+                "deriv_ignore": true,
+                "iotype": "in",
+                "vartypename": "Array"
+            },
+            "SysRho.directory": {
+                "deriv_ignore": true,
+                "iotype": "in",
+                "vartypename": "Str"
+            },
+            "SysRho.force_fd": {
+                "assumed_default": false,
+                "deriv_ignore": true,
+                "iotype": "in",
+                "vartypename": "Bool"
+            },
+            "SysRho.missing_deriv_policy": {
+                "assumed_default": false,
+                "deriv_ignore": true,
+                "iotype": "in",
+                "values": [
+                    "error",
+                    "assume_zero"
+                ],
+                "vartypename": "Enum"
+            },
+            "SysRho.rho": {
+                "array": true,
+                "assumed_default": false,
+                "comparison_mode": 1,
+                "iotype": "out",
+                "low": 0.001,
+                "vartypename": "Array"
+            },
+            "SysSFC.SFC": {
+                "array": true,
+                "assumed_default": false,
+                "comparison_mode": 1,
+                "iotype": "out",
+                "vartypename": "Array"
+            },
+            "SysSFC.directory": {
+                "deriv_ignore": true,
+                "iotype": "in",
+                "vartypename": "Str"
+            },
+            "SysSFC.force_fd": {
+                "assumed_default": false,
+                "deriv_ignore": true,
+                "iotype": "in",
+                "vartypename": "Bool"
+            },
+            "SysSFC.missing_deriv_policy": {
+                "assumed_default": false,
+                "deriv_ignore": true,
+                "iotype": "in",
+                "values": [
+                    "error",
+                    "assume_zero"
+                ],
+                "vartypename": "Enum"
+            },
+            "SysSlopeMax.directory": {
+                "deriv_ignore": true,
+                "iotype": "in",
+                "vartypename": "Str"
+            },
+            "SysSlopeMax.force_fd": {
+                "assumed_default": false,
+                "deriv_ignore": true,
+                "iotype": "in",
+                "vartypename": "Bool"
+            },
+            "SysSlopeMax.missing_deriv_policy": {
+                "assumed_default": false,
+                "deriv_ignore": true,
+                "iotype": "in",
+                "values": [
+                    "error",
+                    "assume_zero"
+                ],
+                "vartypename": "Enum"
+            },
+            "SysSlopeMin.directory": {
+                "deriv_ignore": true,
+                "iotype": "in",
+                "vartypename": "Str"
+            },
+            "SysSlopeMin.force_fd": {
+                "assumed_default": false,
+                "deriv_ignore": true,
+                "iotype": "in",
+                "vartypename": "Bool"
+            },
+            "SysSlopeMin.missing_deriv_policy": {
+                "assumed_default": false,
+                "deriv_ignore": true,
+                "iotype": "in",
+                "values": [
+                    "error",
+                    "assume_zero"
+                ],
+                "vartypename": "Enum"
+            },
+            "SysSpeed.directory": {
+                "deriv_ignore": true,
+                "iotype": "in",
+                "vartypename": "Str"
+            },
+            "SysSpeed.force_fd": {
+                "assumed_default": false,
+                "deriv_ignore": true,
+                "iotype": "in",
+                "vartypename": "Bool"
+            },
+            "SysSpeed.missing_deriv_policy": {
+                "assumed_default": false,
+                "deriv_ignore": true,
+                "iotype": "in",
+                "values": [
+                    "error",
+                    "assume_zero"
+                ],
+                "vartypename": "Enum"
+            },
+            "SysSpeed.v": {
+                "array": true,
+                "assumed_default": false,
+                "comparison_mode": 1,
+                "iotype": "out",
+                "vartypename": "Array"
+            },
+            "SysSpeed.v_specified": {
+                "assumed_default": false,
+                "iotype": "in",
+                "vartypename": "Bool"
+            },
+            "SysTau.directory": {
+                "deriv_ignore": true,
+                "iotype": "in",
+                "vartypename": "Str"
+            },
+            "SysTau.force_fd": {
+                "assumed_default": false,
+                "deriv_ignore": true,
+                "iotype": "in",
+                "vartypename": "Bool"
+            },
+            "SysTau.missing_deriv_policy": {
+                "assumed_default": false,
+                "deriv_ignore": true,
+                "iotype": "in",
+                "values": [
+                    "error",
+                    "assume_zero"
+                ],
+                "vartypename": "Enum"
+            },
+            "SysTau.tau": {
+                "array": true,
+                "assumed_default": false,
+                "comparison_mode": 1,
+                "iotype": "out",
+                "vartypename": "Array"
+            },
+            "SysTemp.directory": {
+                "deriv_ignore": true,
+                "iotype": "in",
+                "vartypename": "Str"
+            },
+            "SysTemp.force_fd": {
+                "assumed_default": false,
+                "deriv_ignore": true,
+                "iotype": "in",
+                "vartypename": "Bool"
+            },
+            "SysTemp.missing_deriv_policy": {
+                "assumed_default": false,
+                "deriv_ignore": true,
+                "iotype": "in",
+                "values": [
+                    "error",
+                    "assume_zero"
+                ],
+                "vartypename": "Enum"
+            },
+            "SysTemp.temp": {
+                "array": true,
+                "assumed_default": false,
+                "comparison_mode": 1,
+                "iotype": "out",
+                "low": 0.001,
+                "vartypename": "Array"
+            },
+            "SysTmax.Tmax": {
+                "assumed_default": false,
+                "default_value": 0,
+                "high": null,
+                "iotype": "out",
+                "low": null,
+                "target": "SysTmax.Tmax",
+                "vartypename": "Float"
+            },
+            "SysTmax.directory": {
+                "deriv_ignore": true,
+                "iotype": "in",
+                "vartypename": "Str"
+            },
+            "SysTmax.force_fd": {
+                "assumed_default": false,
+                "deriv_ignore": true,
+                "iotype": "in",
+                "vartypename": "Bool"
+            },
+            "SysTmax.missing_deriv_policy": {
+                "assumed_default": false,
+                "deriv_ignore": true,
+                "iotype": "in",
+                "values": [
+                    "error",
+                    "assume_zero"
+                ],
+                "vartypename": "Enum"
+            },
+            "SysTmin.Tmin": {
+                "assumed_default": false,
+                "default_value": 0,
+                "high": null,
+                "iotype": "out",
+                "low": null,
+                "target": "SysTmin.Tmin",
+                "vartypename": "Float"
+            },
+            "SysTmin.directory": {
+                "deriv_ignore": true,
+                "iotype": "in",
+                "vartypename": "Str"
+            },
+            "SysTmin.force_fd": {
+                "assumed_default": false,
+                "deriv_ignore": true,
+                "iotype": "in",
+                "vartypename": "Bool"
+            },
+            "SysTmin.missing_deriv_policy": {
+                "assumed_default": false,
+                "deriv_ignore": true,
+                "iotype": "in",
+                "values": [
+                    "error",
+                    "assume_zero"
+                ],
+                "vartypename": "Enum"
+            },
+            "SysXBspline.directory": {
+                "deriv_ignore": true,
+                "iotype": "in",
+                "vartypename": "Str"
+            },
+            "SysXBspline.force_fd": {
+                "assumed_default": false,
+                "deriv_ignore": true,
+                "iotype": "in",
+                "vartypename": "Bool"
+            },
+            "SysXBspline.missing_deriv_policy": {
+                "assumed_default": false,
+                "deriv_ignore": true,
+                "iotype": "in",
+                "values": [
+                    "error",
+                    "assume_zero"
+                ],
+                "vartypename": "Enum"
+            },
+            "SysXBspline.x": {
+                "array": true,
+                "assumed_default": false,
+                "comparison_mode": 1,
+                "iotype": "out",
+                "vartypename": "Array"
+            },
+            "SysXBspline.x_init": {
+                "array": true,
+                "assumed_default": false,
+                "comparison_mode": 1,
+                "deriv_ignore": true,
+                "iotype": "in",
+                "vartypename": "Array"
+            },
+            "SysXBspline.x_pt": {
+                "array": true,
+                "assumed_default": false,
+                "comparison_mode": 1,
+                "iotype": "in",
+                "vartypename": "Array"
+            },
+            "ac_w": {
+                "assumed_default": false,
+                "high": null,
+                "iotype": "in",
+                "low": null,
+                "vartypename": "Float"
+            },
+            "coupled_solver.alpha": {
+                "assumed_default": false,
+                "high": 1,
+                "iotype": "in",
+                "low": 0,
+                "vartypename": "Float"
+            },
+            "coupled_solver.atol": {
+                "assumed_default": false,
+                "high": null,
+                "iotype": "in",
+                "low": null,
+                "vartypename": "Float"
+            },
+            "coupled_solver.directory": {
+                "deriv_ignore": true,
+                "iotype": "in",
+                "vartypename": "Str"
+            },
+            "coupled_solver.force_fd": {
+                "assumed_default": false,
+                "deriv_ignore": true,
+                "iotype": "in",
+                "vartypename": "Bool"
+            },
+            "coupled_solver.gradient_options.atol": {
+                "assumed_default": false,
+                "high": null,
+                "iotype": "in",
+                "low": null,
+                "vartypename": "Float"
+            },
+            "coupled_solver.gradient_options.derivative_direction": {
+                "assumed_default": false,
+                "iotype": "in",
+                "values": [
+                    "auto",
+                    "forward",
+                    "adjoint"
+                ],
+                "vartypename": "Enum"
+            },
+            "coupled_solver.gradient_options.directional_fd": {
+                "assumed_default": false,
+                "iotype": "in",
+                "vartypename": "Bool"
+            },
+            "coupled_solver.gradient_options.fd_blocks": {
+                "copy": "deep",
+                "iotype": "in",
+                "vartypename": "List"
+            },
+            "coupled_solver.gradient_options.fd_form": {
+                "assumed_default": false,
+                "iotype": "in",
+                "values": [
+                    "forward",
+                    "backward",
+                    "central",
+                    "complex_step"
+                ],
+                "vartypename": "Enum"
+            },
+            "coupled_solver.gradient_options.fd_step": {
+                "assumed_default": false,
+                "high": null,
+                "iotype": "in",
+                "low": null,
+                "vartypename": "Float"
+            },
+            "coupled_solver.gradient_options.fd_step_type": {
+                "assumed_default": false,
+                "iotype": "in",
+                "values": [
+                    "absolute",
+                    "relative",
+                    "bounds_scaled"
+                ],
+                "vartypename": "Enum"
+            },
+            "coupled_solver.gradient_options.force_fd": {
+                "assumed_default": false,
+                "iotype": "in",
+                "vartypename": "Bool"
+            },
+            "coupled_solver.gradient_options.lin_solver": {
+                "assumed_default": false,
+                "iotype": "in",
+                "values": [
+                    "scipy_gmres",
+                    "petsc_ksp",
+                    "linear_gs"
+                ],
+                "vartypename": "Enum"
+            },
+            "coupled_solver.gradient_options.maxiter": {
+                "assumed_default": false,
+                "exclude_high": false,
+                "exclude_low": false,
+                "high": 9223372036854776000,
+                "iotype": "in",
+                "low": -9223372036854776000,
+                "vartypename": "Int"
+            },
+            "coupled_solver.gradient_options.rtol": {
+                "assumed_default": false,
+                "high": null,
+                "iotype": "in",
+                "low": null,
+                "vartypename": "Float"
+            },
+            "coupled_solver.iprint": {
+                "assumed_default": false,
+                "iotype": "in",
+                "values": [
+                    0,
+                    1
+                ],
+                "vartypename": "Enum"
+            },
+            "coupled_solver.ls_atol": {
+                "assumed_default": false,
+                "high": null,
+                "iotype": "in",
+                "low": null,
+                "vartypename": "Float"
+            },
+            "coupled_solver.ls_max_iteration": {
+                "assumed_default": false,
+                "exclude_high": false,
+                "exclude_low": false,
+                "high": 9223372036854776000,
+                "iotype": "in",
+                "low": -9223372036854776000,
+                "vartypename": "Int"
+            },
+            "coupled_solver.ls_rtol": {
+                "assumed_default": false,
+                "high": null,
+                "iotype": "in",
+                "low": null,
+                "vartypename": "Float"
+            },
+            "coupled_solver.max_iteration": {
+                "assumed_default": false,
+                "exclude_high": false,
+                "exclude_low": false,
+                "high": 9223372036854776000,
+                "iotype": "in",
+                "low": -9223372036854776000,
+                "vartypename": "Int"
+            },
+            "coupled_solver.rtol": {
+                "assumed_default": false,
+                "high": null,
+                "iotype": "in",
+                "low": null,
+                "vartypename": "Float"
+            },
+            "directory": {
+                "deriv_ignore": true,
+                "iotype": "in",
+                "vartypename": "Str"
+            },
+            "drag_solver.alpha": {
+                "assumed_default": false,
+                "high": 1,
+                "iotype": "in",
+                "low": 0,
+                "vartypename": "Float"
+            },
+            "drag_solver.atol": {
+                "assumed_default": false,
+                "high": null,
+                "iotype": "in",
+                "low": null,
+                "vartypename": "Float"
+            },
+            "drag_solver.directory": {
+                "deriv_ignore": true,
+                "iotype": "in",
+                "vartypename": "Str"
+            },
+            "drag_solver.force_fd": {
+                "assumed_default": false,
+                "deriv_ignore": true,
+                "iotype": "in",
+                "vartypename": "Bool"
+            },
+            "drag_solver.gradient_options.atol": {
+                "assumed_default": false,
+                "high": null,
+                "iotype": "in",
+                "low": null,
+                "vartypename": "Float"
+            },
+            "drag_solver.gradient_options.derivative_direction": {
+                "assumed_default": false,
+                "iotype": "in",
+                "values": [
+                    "auto",
+                    "forward",
+                    "adjoint"
+                ],
+                "vartypename": "Enum"
+            },
+            "drag_solver.gradient_options.directional_fd": {
+                "assumed_default": false,
+                "iotype": "in",
+                "vartypename": "Bool"
+            },
+            "drag_solver.gradient_options.fd_blocks": {
+                "copy": "deep",
+                "iotype": "in",
+                "vartypename": "List"
+            },
+            "drag_solver.gradient_options.fd_form": {
+                "assumed_default": false,
+                "iotype": "in",
+                "values": [
+                    "forward",
+                    "backward",
+                    "central",
+                    "complex_step"
+                ],
+                "vartypename": "Enum"
+            },
+            "drag_solver.gradient_options.fd_step": {
+                "assumed_default": false,
+                "high": null,
+                "iotype": "in",
+                "low": null,
+                "vartypename": "Float"
+            },
+            "drag_solver.gradient_options.fd_step_type": {
+                "assumed_default": false,
+                "iotype": "in",
+                "values": [
+                    "absolute",
+                    "relative",
+                    "bounds_scaled"
+                ],
+                "vartypename": "Enum"
+            },
+            "drag_solver.gradient_options.force_fd": {
+                "assumed_default": false,
+                "iotype": "in",
+                "vartypename": "Bool"
+            },
+            "drag_solver.gradient_options.lin_solver": {
+                "assumed_default": false,
+                "iotype": "in",
+                "values": [
+                    "scipy_gmres",
+                    "petsc_ksp",
+                    "linear_gs"
+                ],
+                "vartypename": "Enum"
+            },
+            "drag_solver.gradient_options.maxiter": {
+                "assumed_default": false,
+                "exclude_high": false,
+                "exclude_low": false,
+                "high": 9223372036854776000,
+                "iotype": "in",
+                "low": -9223372036854776000,
+                "vartypename": "Int"
+            },
+            "drag_solver.gradient_options.rtol": {
+                "assumed_default": false,
+                "high": null,
+                "iotype": "in",
+                "low": null,
+                "vartypename": "Float"
+            },
+            "drag_solver.iprint": {
+                "assumed_default": false,
+                "iotype": "in",
+                "values": [
+                    0,
+                    1
+                ],
+                "vartypename": "Enum"
+            },
+            "drag_solver.ls_atol": {
+                "assumed_default": false,
+                "high": null,
+                "iotype": "in",
+                "low": null,
+                "vartypename": "Float"
+            },
+            "drag_solver.ls_max_iteration": {
+                "assumed_default": false,
+                "exclude_high": false,
+                "exclude_low": false,
+                "high": 9223372036854776000,
+                "iotype": "in",
+                "low": -9223372036854776000,
+                "vartypename": "Int"
+            },
+            "drag_solver.ls_rtol": {
+                "assumed_default": false,
+                "high": null,
+                "iotype": "in",
+                "low": null,
+                "vartypename": "Float"
+            },
+            "drag_solver.max_iteration": {
+                "assumed_default": false,
+                "exclude_high": false,
+                "exclude_low": false,
+                "high": 9223372036854776000,
+                "iotype": "in",
+                "low": -9223372036854776000,
+                "vartypename": "Int"
+            },
+            "drag_solver.rtol": {
+                "assumed_default": false,
+                "high": null,
+                "iotype": "in",
+                "low": null,
+                "vartypename": "Float"
+            },
+            "driver.directory": {
+                "deriv_ignore": true,
+                "iotype": "in",
+                "vartypename": "Str"
+            },
+            "driver.force_fd": {
+                "assumed_default": false,
+                "deriv_ignore": true,
+                "iotype": "in",
+                "vartypename": "Bool"
+            },
+            "driver.gradient_options.atol": {
+                "assumed_default": false,
+                "high": null,
+                "iotype": "in",
+                "low": null,
+                "vartypename": "Float"
+            },
+            "driver.gradient_options.derivative_direction": {
+                "assumed_default": false,
+                "iotype": "in",
+                "values": [
+                    "auto",
+                    "forward",
+                    "adjoint"
+                ],
+                "vartypename": "Enum"
+            },
+            "driver.gradient_options.directional_fd": {
+                "assumed_default": false,
+                "iotype": "in",
+                "vartypename": "Bool"
+            },
+            "driver.gradient_options.fd_blocks": {
+                "copy": "deep",
+                "iotype": "in",
+                "vartypename": "List"
+            },
+            "driver.gradient_options.fd_form": {
+                "assumed_default": false,
+                "iotype": "in",
+                "values": [
+                    "forward",
+                    "backward",
+                    "central",
+                    "complex_step"
+                ],
+                "vartypename": "Enum"
+            },
+            "driver.gradient_options.fd_step": {
+                "assumed_default": false,
+                "high": null,
+                "iotype": "in",
+                "low": null,
+                "vartypename": "Float"
+            },
+            "driver.gradient_options.fd_step_type": {
+                "assumed_default": false,
+                "iotype": "in",
+                "values": [
+                    "absolute",
+                    "relative",
+                    "bounds_scaled"
+                ],
+                "vartypename": "Enum"
+            },
+            "driver.gradient_options.force_fd": {
+                "assumed_default": false,
+                "iotype": "in",
+                "vartypename": "Bool"
+            },
+            "driver.gradient_options.lin_solver": {
+                "assumed_default": false,
+                "iotype": "in",
+                "values": [
+                    "scipy_gmres",
+                    "petsc_ksp",
+                    "linear_gs"
+                ],
+                "vartypename": "Enum"
+            },
+            "driver.gradient_options.maxiter": {
+                "assumed_default": false,
+                "exclude_high": false,
+                "exclude_low": false,
+                "high": 9223372036854776000,
+                "iotype": "in",
+                "low": -9223372036854776000,
+                "vartypename": "Int"
+            },
+            "driver.gradient_options.rtol": {
+                "assumed_default": false,
+                "high": null,
+                "iotype": "in",
+                "low": null,
+                "vartypename": "Float"
+            },
+            "driver.optimizer": {
+                "assumed_default": false,
+                "iotype": "in",
+                "values": [
+                    "ALPSO",
+                    "CONMIN",
+                    "FSQP",
+                    "IPOPT",
+                    "NLPQL",
+                    "NLPY_AUGLAG",
+                    "NSGA2",
+                    "PSQP",
+                    "SLSQP",
+                    "SNOPT"
+                ],
+                "vartypename": "Enum"
+            },
+            "driver.options": {
+                "iotype": "in",
+                "vartypename": "Dict"
+            },
+            "driver.print_results": {
+                "assumed_default": false,
+                "iotype": "in",
+                "vartypename": "Bool"
+            },
+            "driver.pyopt_diff": {
+                "assumed_default": false,
+                "iotype": "in",
+                "vartypename": "Bool"
+            },
+            "driver.title": {
+                "iotype": "in",
+                "vartypename": "Str"
+            },
+            "force_fd": {
+                "assumed_default": false,
+                "deriv_ignore": true,
+                "iotype": "in",
+                "vartypename": "Bool"
+            },
+            "h_pt": {
+                "array": true,
+                "assumed_default": false,
+                "comparison_mode": 1,
+                "iotype": "in",
+                "target": "SysHBspline.h_pt",
+                "vartypename": "Array"
+            },
+            "missing_deriv_policy": {
+                "assumed_default": false,
+                "deriv_ignore": true,
+                "iotype": "in",
+                "values": [
+                    "error",
+                    "assume_zero"
+                ],
+                "vartypename": "Enum"
+            },
+            "oswald": {
+                "assumed_default": false,
+                "high": null,
+                "iotype": "in",
+                "low": null,
+                "vartypename": "Float"
+            },
+            "recording_options.excludes": {
+                "copy": "deep",
+                "iotype": "in",
+                "vartypename": "List"
+            },
+            "recording_options.includes": {
+                "copy": "deep",
+                "iotype": "in",
+                "vartypename": "List"
+            },
+            "recording_options.save_problem_formulation": {
+                "assumed_default": false,
+                "iotype": "in",
+                "vartypename": "Bool"
+            },
+            "thrust_sl": {
+                "assumed_default": false,
+                "high": null,
+                "iotype": "in",
+                "low": null,
+                "vartypename": "Float"
+            },
+            "v_pt": {
+                "array": true,
+                "assumed_default": false,
+                "comparison_mode": 1,
+                "iotype": "in",
+                "target": "SysMVBspline.v_pt",
+                "vartypename": "Array"
+            }
+        }
+    }
+}
