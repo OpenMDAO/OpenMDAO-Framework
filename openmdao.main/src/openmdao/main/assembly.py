@@ -1139,15 +1139,11 @@ class Assembly(Component):
         # copy the reduced graph
         rgraph = rgraph.subgraph(rgraph.nodes_iter())
         rgraph.collapse_subdrivers([], [self._top_driver])
-        cgraph = rgraph.component_graph()
-        #cgraph = self._driver_collapsed_graph.component_graph()
 
-        if len(cgraph) > 1:
-            for u,v in cgraph.edges():
-                if u == v:  # get rid of self cycles
-                    cgraph.remove_edge(u, v)
-            self._system = SerialSystem(self, rgraph, cgraph, self.name+'._inner_asm')
-            self._system.set_ordering(nx.topological_sort(cgraph), {})
+        if len(rgraph) > 1:
+            self._system = SerialSystem(self, rgraph, rgraph.component_graph(), 
+                                        self.name+'._inner_asm')
+            self._system.set_ordering(nx.topological_sort(rgraph), {})
         else:
             # TODO: if top driver has no params/constraints, possibly
             # remove driver system entirely and just go directly to workflow
@@ -1376,7 +1372,8 @@ class Assembly(Component):
             if '[' in vname:  # array index into basevar
                 base = vname.split('[',1)[0]
                 flat_idx = get_flattened_index(idx,
-                                        get_var_shape(base, child))
+                                        get_var_shape(base, child),
+                                        cvt_to_slice=False)
             else:
                 base = None
                 flat_idx = None

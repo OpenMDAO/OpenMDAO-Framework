@@ -1,15 +1,16 @@
 
-from collections import OrderedDict
+from collections import OrderedDict, namedtuple
 import numpy
 
 from openmdao.main.mpiwrap import MPI, MPI_STREAM, mpiprint, create_petsc_vec, PETSc
 from openmdao.main.array_helpers import offset_flat_index, \
                                         get_flat_index_start, get_val_and_index, get_shape, \
-                                        get_flattened_index
+                                        get_flattened_index, to_slice, to_indices
 from openmdao.main.interfaces import IImplicitComponent
 from openmdao.util.typegroups import int_types
 from openmdao.util.graph import base_var
 
+ViewInfo = namedtuple('ViewInfo', 'view, start, idxs, size, hide')
 
 class VecWrapperBase(object):
     """A wrapper object for a local vector, a distributed PETSc vector,
@@ -19,17 +20,13 @@ class VecWrapperBase(object):
     def __init__(self, system, array, name=''):
         self.array = array
         self.name = name
-        self._info = OrderedDict() # dict of (start_idx, view)
-        self._subviews = set()  # set of all names representing subviews of other views
+        self._info = OrderedDict() # dict of ViewInfos
 
         # create the PETSc vector
         self.petsc_vec = create_petsc_vec(system.mpi.comm,
                                           self.array)
-
         self._initialize(system)
-
         self._map_resids_to_states(system)
-
         self._add_tuple_members(system, self._info.keys())
         self._add_resid(system)
 
@@ -37,18 +34,21 @@ class VecWrapperBase(object):
         pass
 
     def _add_tuple_members(self, system, tups):
-        # now add all srcs and dests from var tuples so that views for particular openmdao variables
-        # can be accessed.
+        """Add all srcs and dests from var tuples so that views for
+        particular openmdao variables can be accessed.
+        """
         for tup in tups:
-            info = self._info[tup]
-            names = set([tup[0]])  # src
-            names.update(tup[1])   # adding dests
+            names = set([tup[0]]+list(tup[1])) # src + dests
             for name in names:
-                self._info[name] = info
-                self._subviews.add(name)
-                # also add 1 item tuple form, since that's used for derivative inputs/outputs
-                self._info[(name,)] = info
-                self._subviews.add((name,))
+                self._add_aliasview(name, tup)
+
+    def _add_aliasview(self, name, base):
+        """Add a view that just points to an existing view using a different
+        name.
+        """
+        info = self._info[base]
+        newinfo = ViewInfo(info.view, info.start, info.idxs, info.size, True)
+        self._info[name] = newinfo
 
     def _add_subview(self, scope, name):
         var = scope._var_meta[name]
@@ -57,50 +57,43 @@ class VecWrapperBase(object):
         sz = var['size']
         if sz > 0 and not var.get('noflat'):
             idx = var['flat_idx']
-            try:
-                basestart = self.start(name2collapsed[var['basevar']])
-            except KeyError:
-                mpiprint("name: %s, base: %s, vars: %s" %
-                         (name, var['basevar'], self._info.keys()))
-                raise
-            sub_idx = offset_flat_index(idx, basestart)
+            base = self._info[name2collapsed[var['basevar']]]
+            sub_idx = offset_flat_index(idx, base.start)
             substart = get_flat_index_start(sub_idx)
-            self._info[name] = (self.array[sub_idx], substart)
-            self._subviews.add(name)
+            self._info[name] = ViewInfo(base.view, substart, to_slice(idx),
+                                        len(to_indices(idx, base.view)), True)
+
+            if self.array[sub_idx].size != sz:
+                raise RuntimeError("size mismatch: in system %s, view for %s is %s, idx=%s, size=%d" %
+                                     (system.name, name,
+                                     list(self.bounds(name)),
+                                     sub_idx,self.array[sub_idx].size))
+
 
     def __getitem__(self, name):
-        return self._info[name][0]
+        view, _, idxs, _, _ = self._info[name]
+        return view[idxs]
 
     def __setitem__(self, name, value):
-        self._info[name][0][:] = value.flat
+        view, _, idxs, _, _ = self._info[name]
+        view[idxs] = value.flat
 
     def __contains__(self, name):
         return name in self._info
 
-    def keys(self, subviews=False):
-        """Return list of names of views. If subviews is
-        True, include names of views that are subviews of other views.
-        """
-        if subviews:
-            return self._info.keys()
-        else:
-            return [k for k in self._info.keys() if k not in self._subviews]
+    def keys(self):
+        """Return list of names of views."""
+        return [k for k,v in self._info.items() if not v.hide]
 
-    def items(self, subviews=False):
-        """Return list of (name, view) for each view. If subviews is
-        True, include views that are subviews of other views.
-        """
-        lst = []
-        for name, (view, start) in self._info.items():
-            if subviews or name not in self._subviews:
-                lst.append((name, view))
-        return lst
+    def items(self):
+        """Return list of (name, view) for each view."""
+        return [(k, v.view) for k,v in self._info.items() if not v.hide]
 
     def start(self, name):
         """Return the starting index for the array view belonging
         to the given name. name may contain array indexing.
         """
-        return self._info[name][1]
+        return self._info[name].start
 
     def bounds(self, names):
         """Return the bounds corresponding to the slice occupied
@@ -110,37 +103,22 @@ class VecWrapperBase(object):
         the named variables AND any variables between them.
         """
         if isinstance(names, basestring):
-            view, start = self._info[names]
-            return (start, start + view.size)
+            info = self._info[names]
+            return (info.start, info.start + info.size)
 
         infos = [self._info[n] for n in names]
-        bnds = [(strt, strt+v.size) for v,strt in infos]
+        bnds = [(i.start, i.start+i.size) for i in infos]
         return (min([u for u,v in bnds]), max([v for u,v in bnds]))
-
-    def multi_indices(self, names):
-        """Returns an index array that corresponds to names.
-        """
-        return idx_merge([self.indices(n) for n in names])
 
     def indices(self, scope, name):
         """Return the index array corresponding to a single name."""
         if name not in self._info:
-            if base_var(scope._depgraph, name) in self._info:
+            if isinstance(name, basestring):
+                name = scope.name2collapsed[name]
+            if name[0].split('[',1)[0] in self._info:
                 self._add_subview(scope, name)
-        view, start = self._info[name]
-        return petsc_linspace(start, start+view.size)
-
-    def set_to_vecwrapper(self, vec, vnames=None):
-        """Pull values for the given set of names out of our array
-        and set them into the given vecwrapper.
-        """
-        if vnames is None:
-            vnames = self.keys()
-
-        for name in vnames:
-            array_val, start = self._info.get(name,(None,None))
-            if start is not None:
-                vec[name][:] = array_val
+        _, start, _, size, _ = self._info[name]
+        return petsc_linspace(start, start+size)
 
     def set_to_array(self, arr, vnames=None):
         """Pull values for the given set of names out of our array
@@ -168,43 +146,30 @@ class VecWrapperBase(object):
 
         start = end = 0
         for name in vnames:
-            array_val = self[name]
-            end += array_val.size
+            size = self[name].size
+            end += size
             if end > asize:
                 raise ValueError("end index %d exceeds size of target array" % (end-1))
-            array_val[:] = arr[start:end]
-            start += array_val.size
+            self[name] = arr[start:end]
+            start += size
 
     def dump(self, verbose=False, stream=MPI_STREAM):
-        for name, (array_val, start) in self._info.items():
-            if verbose or name not in self._subviews:
-                if start is None:
-                    start = 0
-                    mpiprint("bad start idx", stream=stream)
+        for name, info in self._info.items():
+            if verbose or not info.hide:
                 mpiprint("%s - %s: (%d,%d) %s" %
-                           (self.name, array_val, start, start+len(array_val), name),
+                           (self.name, info.view[info.idxs], info.start,
+                            info.start+len(info.view[info.idxs]), name),
                            stream=stream)
         if self.petsc_vec is not None:
             mpiprint("%s - petsc sizes: %s" % (self.name, self.petsc_vec.sizes),
                      stream=stream)
-
-    def check(self, parent_vec):
-        """Debugging method to check consistency of indexing between a child
-        vecwrapper and its parent.
-        """
-        retval = True
-        for name in self._info.keys():
-            if not all(self[name] == parent_vec[name]):
-                mpiprint("%s not the same in parent (%s) and child (%s)" % (name, parent_vec[name], self[name]))
-                retval = False
-        return retval
 
 
 class VecWrapper(VecWrapperBase):
     def _initialize(self, system):
         scope = system.scope
         name2collapsed = scope.name2collapsed
-        allvars = system.variables
+        flat_vars = system.flat_vars
         vector_vars = system.vector_vars
         self.app_ordering = system.app_ordering
         rank = system.mpi.rank
@@ -227,7 +192,8 @@ class VecWrapper(VecWrapperBase):
             if sz > 0:
                 end += sz
                 # store the view, local start idx, and distributed start idx
-                self._info[name] = (self.array[start:end], start)#, dist_start)
+                self._info[name] = ViewInfo(self.array[start:end], start, slice(None),
+                                            end-start, False)
 
                 base = name[0].split('[',1)[0]
 
@@ -252,31 +218,12 @@ class VecWrapper(VecWrapperBase):
                                  (system.name,name, [start,end],self[name].size))
                 start += sz
 
-
         # now add views for subvars that are subviews of their
         # basevars
         if vector_vars:
-            for name, var in allvars.items():
+            for name, var in flat_vars.items():
                 if name not in vector_vars:
-                    sz = var['size']
-                    if sz > 0 and not var.get('noflat'):
-                        idx = var['flat_idx']
-                        try:
-                            basestart = self.start(name2collapsed[var['basevar']])
-                        except KeyError:
-                            mpiprint("name: %s, base: %s, vars: %s" %
-                                     (name, var['basevar'], self._info.keys()))
-                            raise
-                        sub_idx = offset_flat_index(idx, basestart)
-                        substart = get_flat_index_start(sub_idx)
-                        self._info[name] = (self.array[sub_idx], substart)
-                        self._subviews.add(name)
-
-                        if self.array[sub_idx].size != sz:
-                            raise RuntimeError("size mismatch: in system %s, view for %s is %s, idx=%s, size=%d" %
-                                                 (system.name, name,
-                                                 list(self.bounds(name)),
-                                                 sub_idx,self.array[sub_idx].size))
+                    self._add_subview(scope, name)
 
         # TODO: handle cases where we have overlapping subvars but no basevar
 
@@ -303,15 +250,14 @@ class VecWrapper(VecWrapperBase):
             assert(size == view.size)
             assert(len(resids) == 1)
 
-            self._info[resids[0]] = (view, start)
-            self._subviews.add(resids[0])
+            self._info[resids[0]] = ViewInfo(view, start, slice(None),
+                                             end-start, True)
 
     def _map_resids_to_states(self, system):
         # add any mappings of residuals to states
         for resid, state in system._mapped_resids.items():
             if resid not in self._info:
-                self._info[resid] = self._info[state]
-                self._subviews.add(resid)
+                self._add_aliasview(resid, state)
 
     def set_from_scope(self, scope, vnames=None):
         """Get the named values from the given scope and set flattened
@@ -319,15 +265,14 @@ class VecWrapper(VecWrapperBase):
         """
         if vnames is None:
             vnames = self.keys()
+        else:
+            vnames = [n for n in vnames if n in self]
 
         for name in vnames:
-            array_val, start = self._info.get(name,(None,None))
-            if start is not None:
-                if isinstance(name, tuple):
-                    array_val[:] = scope.get_flattened_value(name[0]).real
-                else:
-                    array_val[:] = scope.get_flattened_value(name).real
-                #mpiprint("setting %s from scope (%s)" % (name, array_val))
+            if isinstance(name, tuple):
+                self[name] = scope.get_flattened_value(name[0]).real
+            else:
+                self[name] = scope.get_flattened_value(name).real
 
     def set_from_scope_complex(self, scope, vnames=None):
         """Get the named values from the given scope and set flattened
@@ -335,15 +280,14 @@ class VecWrapper(VecWrapperBase):
         """
         if vnames is None:
             vnames = self.keys()
+        else:
+            vnames = [n for n in vnames if n in self]
 
         for name in vnames:
-            array_val, start = self._info.get(name,(None,None))
-            if start is not None:
-                if isinstance(name, tuple):
-                    array_val[:] = scope.get_flattened_value(name[0]).imag
-                else:
-                    array_val[:] = scope.get_flattened_value(name).imag
-                #mpiprint("getting %s from scope (%s)" % (name, array_val))
+            if isinstance(name, tuple):
+                self[name] = scope.get_flattened_value(name[0]).imag
+            else:
+                self[name] = scope.get_flattened_value(name).imag
 
     def set_to_scope(self, scope, vnames=None):
         """Pull values for the given set of names out of our array
@@ -355,23 +299,22 @@ class VecWrapper(VecWrapperBase):
             vnames = [n for n in vnames if n in self]
 
         for name in vnames:
-            array_val, start = self._info.get(name,(None,None))
-            if start is not None:
-                if isinstance(name, tuple):
-                    scope.set_flattened_value(name[0], array_val)
-                    for dest in name[1]:
-                        if dest != name[0]:
-                            scope.set_flattened_value(dest, array_val)
-                else:
-                    scope.set_flattened_value(name, array_val)
+            if isinstance(name, tuple):
+                array_val = self[name]
+                scope.set_flattened_value(name[0], array_val)
+                for dest in name[1]:
+                    if dest != name[0]:
+                        scope.set_flattened_value(dest, array_val)
+            else:
+                scope.set_flattened_value(name, self[name])
 
 
 class InputVecWrapper(VecWrapperBase):
     def _initialize(self, system):
-
-        varmeta = system.scope._var_meta
-        name2collapsed = system.scope.name2collapsed
-        flat_ins = _filter_flat(system.scope, system._owned_args)
+        scope = system.scope
+        varmeta = scope._var_meta
+        name2collapsed = scope.name2collapsed
+        flat_ins = _filter_flat(scope, system._owned_args)
         start, end = 0, 0
         arg_idx = system.arg_idx
 
@@ -380,7 +323,8 @@ class InputVecWrapper(VecWrapperBase):
                 if name in flat_ins and name not in self._info:
                     sz = len(arg_idx[name])
                     end += sz
-                    self._info[name] = (self.array[start:end], start)
+                    self._info[name] = ViewInfo(self.array[start:end], start,
+                                                slice(None), end-start, False)
                     if end-start > self.array[start:end].size:
                         raise RuntimeError("size mismatch: in system %s view for %s is %s, size=%d" %
                                      (system.name,name, [start,end],self[name].size))
@@ -399,25 +343,7 @@ class InputVecWrapper(VecWrapperBase):
             if name in system.vector_vars or name2collapsed.get(var.get('basevar')) not in self:
                 continue
 
-            sz = var['size']
-            if sz > 0 and not var.get('noflat'):
-                idx = var['flat_idx']
-                try:
-                    basestart = self.start(name2collapsed[var['basevar']])
-                except KeyError:
-                    mpiprint("name: %s, base: %s, vars: %s" %
-                             (name, var['basevar'], self._info.keys()))
-                    raise
-                sub_idx = offset_flat_index(idx, basestart)
-                substart = get_flat_index_start(sub_idx)
-                self._info[name] = (self.array[sub_idx], substart)
-                self._subviews.add(name)
-
-                if self.array[sub_idx].size != sz:
-                    raise RuntimeError("size mismatch: in system %s, view for %s is %s, idx=%s, size=%d" %
-                                         (system.name, name,
-                                         list(self.bounds(name)),
-                                         sub_idx,self.array[sub_idx].size))
+            self._add_subview(scope, name)
 
     def _map_resids_to_states(self, system):
         pass
@@ -427,7 +353,7 @@ class InputVecWrapper(VecWrapperBase):
         any subvars removed that have basevars in the vector.
         """
         ret = OrderedDict()
-        for node, (start, view) in self._info.items():
+        for node in self._info.keys():
             if isinstance(node, tuple) and len(node) > 1:
                 src, dests = node
                 for d in dests:
@@ -436,7 +362,8 @@ class InputVecWrapper(VecWrapperBase):
 
         for cname, in_nodes in ret.items():
             bases = [n[0] for n in in_nodes if n[0].split('[',1)[0]==n[0]]
-            ret[cname] = [n for n in in_nodes if n[0] in bases or n[0].split('[',1)[0] not in bases]
+            ret[cname] = [n for n in in_nodes
+                             if n[0] in bases or n[0].split('[',1)[0] not in bases]
 
         return ret
 
@@ -450,13 +377,12 @@ class InputVecWrapper(VecWrapperBase):
             vnames = [n for n in vnames if n in self]
 
         for name in vnames:
-            array_val, start = self._info.get(name,(None, None))
-            if start is not None:
-                if isinstance(name, tuple):
-                    for dest in name[1]:
-                        scope.set_flattened_value(dest, array_val)
-                else:
-                    scope.set_flattened_value(name, array_val)
+            array_val = self[name]
+            if isinstance(name, tuple):
+                for dest in name[1]:
+                    scope.set_flattened_value(dest, array_val)
+            else:
+                scope.set_flattened_value(name, array_val)
 
     def set_to_scope_complex(self, scope, vnames=None):
         """Pull values for the given set of names out of our array
@@ -468,16 +394,15 @@ class InputVecWrapper(VecWrapperBase):
             vnames = [n for n in vnames if n in self]
 
         for name in vnames:
-            step, start = self._info.get(name,(None, None))
+            step = self[name]
 
-            if start is not None:
-                if isinstance(name, tuple):
-                    for dest in name[1]:
-                        array_val = scope.get_flattened_value(dest)
-                        scope.set_flattened_value(dest, array_val + step*1j)
-                else:
-                    array_val = scope.get_flattened_value(name)
-                    scope.set_flattened_value(name, array_val + step*1j)
+            if isinstance(name, tuple):
+                for dest in name[1]:
+                    array_val = scope.get_flattened_value(dest)
+                    scope.set_flattened_value(dest, array_val + step*1j)
+            else:
+                array_val = scope.get_flattened_value(name)
+                scope.set_flattened_value(name, array_val + step*1j)
 
 
 class DataTransfer(object):
@@ -494,8 +419,7 @@ class DataTransfer(object):
         if not (MPI or scatter_conns or noflat_vars):
             return  # no data to xfer
 
-        var_idxs = idx_merge(var_idxs)
-        input_idxs = idx_merge(input_idxs)
+        var_idxs, input_idxs = merge_idxs(var_idxs, input_idxs)
 
         if len(var_idxs) != len(input_idxs):
             raise RuntimeError("ERROR: creating scatter (index size mismatch): (%d != %d) srcs: %s,  dest: %s in %s" %
@@ -563,8 +487,8 @@ class DataTransfer(object):
 
 class SerialScatter(object):
     def __init__(self, srcvec, src_idxs, destvec, dest_idxs):
-        self.src_idxs = src_idxs
-        self.dest_idxs = dest_idxs
+        self.src_idxs = to_slice(src_idxs)
+        self.dest_idxs = to_slice(dest_idxs)
         self.svec = srcvec
         self.dvec = destvec
 
@@ -574,14 +498,27 @@ class SerialScatter(object):
         else:
             destvec[self.dest_idxs] = srcvec[self.src_idxs]
 
+def merge_idxs(src_idxs, dest_idxs):
+    """Return source and destination index arrays, built up from
+    smaller index arrays and combined in order of ascending source
+    index (to allow us to convert src indices to a slice in some cases).
+    """
+    assert(len(src_idxs) == len(dest_idxs))
+
+    src_tups = list(enumerate(src_idxs))
+
+    src_sorted = sorted(src_tups, key=lambda x: x[1].min())
+
+    new_src = [idxs for i, idxs in src_sorted]
+    new_dest = [dest_idxs[i] for i,_ in src_sorted]
+
+    return idx_merge(new_src), idx_merge(new_dest)
+
 
 def idx_merge(idxs):
     """Combines a mixed iterator of int and iterator indices into an
     array of int indices.
     """
-    # TODO: (for serial at least) convert the collection of indices into
-    #       a slice object (if possible) to avoid any unnecessary copying.  Not sure if petsc
-    #       will allow use of slice objects, but even if it's serial only it may still be worth it.
     if len(idxs) > 0:
         idxs = [i for i in idxs if isinstance(i, int_types) or
                            len(i)>0]
