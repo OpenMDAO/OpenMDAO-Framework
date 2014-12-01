@@ -147,7 +147,7 @@ def applyJ(system, variables):
             break
 
     if nonzero is False:
-        #print 'applyJ', obj.name, arg, result
+        print 'applyJ', obj.name, arg, result
         return
 
     # If storage of the local Jacobian is a problem, the user can specify the
@@ -180,7 +180,7 @@ def applyJ(system, variables):
             if hasattr(value, 'flatten'):
                 arg[key] = value.flatten()
 
-        #print 'applyJ', obj.name, arg, result
+        print 'applyJ', obj.name, arg, result
         return
 
     if is_sys:
@@ -251,7 +251,7 @@ def applyJ(system, variables):
 
             tmp += Jsub.dot(arg[ikey])
 
-    #print 'applyJ', obj.name, arg, result
+    print 'applyJ', obj.name, arg, result
 
 def applyJT(system, variables):
     """Multiply an input vector by the transposed Jacobian.
@@ -332,7 +332,7 @@ def applyJT(system, variables):
             break
 
     if nonzero is False:
-        #mpiprint('applyJT %s: %s, %s' % (obj.name, arg, result))
+        mpiprint('applyJT %s: %s, %s' % (obj.name, arg, result))
         return
 
     # If storage of the local Jacobian is a problem, the user can
@@ -366,7 +366,7 @@ def applyJT(system, variables):
             if hasattr(value, 'flatten'):
                 arg[key] = value.flatten()
 
-        #print 'applyJT', obj.name, arg, result
+        print 'applyJT', obj.name, arg, result
         return
 
     if is_sys:
@@ -434,7 +434,7 @@ def applyJT(system, variables):
 
             tmp += Jsub.dot(arg[ikey])
 
-    #print 'applyJT', obj.name, arg, result
+    print 'applyJT', obj.name, arg, result
 
 def applyMinv(obj, inputs, shape_cache):
     """Simple wrapper around a component's applyMinv where we can reshape the
