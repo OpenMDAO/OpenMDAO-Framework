@@ -68,16 +68,8 @@ class ScipyGMRES(LinearSolver):
         A = self.A
 
         # Size the problem
-        # TODO - Support for array slice inputs/outputs
-        try:
-            num_input = system.get_size(inputs)
-            num_output = system.get_size(outputs)
-        except KeyError as exc:
-            if '[' in str(exc):
-                msg = 'Array slice inputs and outputs currently not supported.'
-                raise RuntimeError(msg)
-            else:
-                raise
+        num_input = system.get_size(inputs)
+        num_output = system.get_size(outputs)
 
         if return_format == 'dict':
             J = {}
@@ -95,7 +87,7 @@ class ScipyGMRES(LinearSolver):
             outputs, inputs = inputs, outputs
 
         # If Forward mode, solve linear system for each parameter
-        # If Reverse mode, solve linear system for each requested output
+        # If Adjoint mode, solve linear system for each requested output
         j = 0
         for param in inputs:
 

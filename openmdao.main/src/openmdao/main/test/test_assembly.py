@@ -420,17 +420,6 @@ class AssemblyTestCase(unittest.TestCase):
         else:
             self.fail('exception expected')
 
-    def test_metadata_link(self):
-        try:
-            self.asm.connect('comp1.rout.units', 'comp2.s')
-        except Exception, err:
-            self.assertEqual(str(err),
-                             ": Can't connect 'comp1.rout.units' to 'comp2.s':"
-                             " Couldn't find metadata for traits"
-                             " 'comp1.rout.units'")
-        else:
-            self.fail('Exception expected')
-
     def test_get_metadata(self):
         units = self.asm.comp1.get_metadata('rout', 'units')
         self.assertEqual(units, 'ft')

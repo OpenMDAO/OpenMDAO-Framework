@@ -1,3 +1,4 @@
+import sys
 import weakref
 
 import networkx as nx
@@ -220,9 +221,28 @@ class ExprMapper(object):
             raise RuntimeError("'%s' and '%s' refer to the same component."
                                % (src, dest))
 
-        return srcexpr, destexpr, self._needs_pseudo(scope, srcexpr, destexpr)
+        try:
+            return srcexpr, destexpr, self._needs_pseudo(srcexpr, destexpr)
+        except AttributeError as err:
+            exc_type, value, traceback = sys.exc_info()
 
-    def _needs_pseudo(self, parent, srcexpr, destexpr):
+            invalid_vars = srcexpr.get_unresolved() + destexpr.get_unresolved()
+            parts = invalid_vars[0].rsplit('.', 1)
+
+            parent = repr(scope.name) if scope.name else 'top level assembly'
+            vname = repr(parts[0])
+
+            if len(parts) > 1:
+                parent = repr(parts[0])
+                vname = repr(parts[1])
+
+            msg = "{parent} has no variable {vname}"
+            msg = msg.format(parent=parent, vname=vname)
+
+            raise AttributeError, AttributeError(msg), traceback
+
+
+    def _needs_pseudo(self, srcexpr, destexpr):
         """Return a non-None pseudo_type if srcexpr and destexpr require a
         pseudocomp to be created.
         """
@@ -277,4 +297,3 @@ def _split_varpath(cont, path):
     if t and t.iotype:
         return (None, cont, path)
     return (compname, getattr(cont, compname), varname)
-
