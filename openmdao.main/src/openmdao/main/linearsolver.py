@@ -180,8 +180,8 @@ class ScipyGMRES(LinearSolver):
             vnames = system.flat_vars.keys()
         system.applyJ(vnames)
 
-        #print system.name, 'mult: arg, result', arg, system.rhs_vec.array[:]
-        #print system.rhs_vec.keys()
+        print system.name, 'mult: arg, result', arg, system.rhs_vec.array[:]
+        print system.rhs_vec.keys()
         return system.rhs_vec.array[:]
 
 
@@ -321,7 +321,7 @@ class PETSc_KSP(LinearSolver):
         vnames = set(system.flat_vars.keys())
         if system._parent_system:
             g = system._parent_system._comp._reduced_internal_graph
-            vnames.update([n for n,data in g.nodes_iter(data=True) 
+            vnames.update([n for n,data in g.nodes_iter(data=True)
                                if 'comp' not in data and not varmeta[n].get('noflat')])
 
         system.applyJ(vnames)
@@ -495,10 +495,10 @@ class LinearGS(LinearSolver):
                     #print 'C4', subsystem.name, subsystem2.name, system.vec['dp'].array, system.vec['du'].array, system.vec['df'].array, system.sol_buf[:], system.rhs_buf[:]
                     subsystem.solve_linear(options)
                     #print 'C5', subsystem.name, subsystem2.name, system.vec['dp'].array, system.vec['du'].array, system.vec['df'].array, system.sol_buf[:], system.rhs_buf[:]
- 
+
             norm = self._norm()
             counter += 1
-            
+
         #print 'return', options.parent.name, np.linalg.norm(system.rhs_vec.array), system.rhs_vec.array
         print 'Linear solution vec', system.sol_vec.array
         return system.sol_vec.array
