@@ -103,7 +103,7 @@ class Sellar_MDA_subbed_connected(Assembly):
 
         self.add('P1', Paraboloid())
         self.add('P2', Paraboloid())
-        
+
         self.connect('d1.y1', 'd2.y1')
         self.connect('P1.f_xy', 'd1.x1')
         self.connect('d1.y1', 'P2.x')
@@ -202,7 +202,7 @@ class Testcase_derivatives(unittest.TestCase):
     def test_linearGS_Sellar_subbed(self):
 
         old_diff = Driver.is_differentiable
-        def is_differentiable(self): 
+        def is_differentiable(self):
             return True
         Driver.is_differentiable = is_differentiable
 
@@ -211,7 +211,7 @@ class Testcase_derivatives(unittest.TestCase):
         top.driver.gradient_options.maxiter = 1
         top.run()
         J = top.driver.workflow.calc_gradient(mode='forward')
-        
+
         assert_rel_error(self, J[0, 0], 0.9806145, 0.0001)
         assert_rel_error(self, J[1, 0], 0.0969276, 0.0001)
 
@@ -230,10 +230,10 @@ class Testcase_derivatives(unittest.TestCase):
         top.run()
         J = top.driver.workflow.calc_gradient(mode='forward')
         assert_rel_error(self, J[0, 0], -628.543, 0.01)
-        
+
         J = top.driver.workflow.calc_gradient(mode='adjoint')
         assert_rel_error(self, J[0, 0], -628.543, 0.01)
-        
+
     def test_linearGS_simul_element_and_full_connection(self):
         # Added because of a bug with array slices for Linear GS
 
@@ -249,12 +249,12 @@ class Testcase_derivatives(unittest.TestCase):
         top.driver.add_constraint('comp2.y[0][1] < 0')
         top.driver.gradient_options.lin_solver = 'linear_gs'
         top.driver.gradient_options.maxiter = 1
-        
+
         top.run()
 
-        #J = top.driver.calc_gradient(mode='forward')
-        #assert_rel_error(self, J[0, 0], 2.0, .000001)
-        #assert_rel_error(self, J[1, 0], 39.0, .000001)
+        J = top.driver.calc_gradient(mode='forward')
+        assert_rel_error(self, J[0, 0], 2.0, .000001)
+        assert_rel_error(self, J[1, 0], 39.0, .000001)
 
         J = top.driver.calc_gradient(mode='adjoint')
         assert_rel_error(self, J[0, 0], 2.0, .000001)

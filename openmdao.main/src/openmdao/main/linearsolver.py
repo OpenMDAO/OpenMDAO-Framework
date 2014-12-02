@@ -180,8 +180,8 @@ class ScipyGMRES(LinearSolver):
             vnames = system.flat_vars.keys()
         system.applyJ(vnames)
 
-        print system.name, 'mult: arg, result', arg, system.rhs_vec.array[:]
-        print system.rhs_vec.keys()
+        #print system.name, 'mult: arg, result', arg, system.rhs_vec.array[:]
+        #print system.rhs_vec.keys()
         return system.rhs_vec.array[:]
 
 
@@ -483,23 +483,17 @@ class LinearGS(LinearSolver):
                         if subsystem is not subsystem2:
                             system.rhs_vec.array[:] = 0.0
                             args = subsystem.flat_vars.keys()
-                            #print 'C0', subsystem.name, subsystem2.name, system.vec['dp'].array, system.vec['du'].array, system.vec['df'].array, system.sol_buf[:], system.rhs_buf[:]
                             subsystem2.applyJ(args)
-                            print 'C1', subsystem.name, subsystem2.name, system.vec['dp'].array, system.vec['du'].array, system.vec['df'].array, system.sol_buf[:], system.rhs_buf[:]
-                            system.scatter('du', 'dp', subsystem=subsystem2)
-                            print 'C2', subsystem.name, subsystem2.name, system.vec['dp'].array, system.vec['du'].array, system.vec['df'].array, system.sol_buf[:], system.rhs_buf[:]
+                            system.scatter('du', 'dp')
                             system.sol_buf[:] -= system.rhs_vec.array[:]
                             system.vec['dp'].array[:] = 0.0
-                            #print 'C3', subsystem.name, subsystem2.name, system.vec['dp'].array, system.vec['du'].array, system.vec['df'].array, system.sol_buf[:], system.rhs_buf[:]
                     system.rhs_vec.array[:] = system.sol_buf[:]
-                    #print 'C4', subsystem.name, subsystem2.name, system.vec['dp'].array, system.vec['du'].array, system.vec['df'].array, system.sol_buf[:], system.rhs_buf[:]
                     subsystem.solve_linear(options)
-                    #print 'C5', subsystem.name, subsystem2.name, system.vec['dp'].array, system.vec['du'].array, system.vec['df'].array, system.sol_buf[:], system.rhs_buf[:]
 
             norm = self._norm()
             counter += 1
 
         #print 'return', options.parent.name, np.linalg.norm(system.rhs_vec.array), system.rhs_vec.array
-        print 'Linear solution vec', system.sol_vec.array
+        #print 'Linear solution vec', system.sol_vec.array
         return system.sol_vec.array
 
