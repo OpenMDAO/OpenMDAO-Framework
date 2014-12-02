@@ -422,6 +422,7 @@ class Component(Container):
             self.configure()
             self._call_configure = False
 
+
     def _pre_execute(self):
         """Prepares for execution by calling various initialization methods
         if necessary.
@@ -434,9 +435,27 @@ class Component(Container):
 
         if self._new_config:
             self.check_config()
-            if self.parent is None and has_interface(self, IAssembly):
-                self._setup()  # only call _setup from top level
+            # per Bret
+            # if self.parent is None and has_interface(self, IAssembly):
+            #     self._setup()  # only call _setup from top level
             self._new_config = False
+
+
+    # def _pre_execute(self):
+    #     """Prepares for execution by calling various initialization methods
+    #     if necessary.
+
+    #     Overrides of this function must call this version.
+    #     """
+
+    #     if self._call_cpath_updated:
+    #         self.cpath_updated()
+
+    #     if self._new_config:
+    #         self.check_config()
+    #         if self.parent is None and has_interface(self, IAssembly):
+    #             self._setup()  # only call _setup from top level
+    #         self._new_config = False
 
     def execute(self):
         """Perform calculations or other actions, assuming that inputs
@@ -510,8 +529,8 @@ class Component(Container):
         self._stop = False
         self._case_uuid = case_uuid
 
-        if self.parent is None:
-            self._run_begins()
+        # if self.parent is None: # per Bret
+        #     self._run_begins()
         try:
             self._pre_execute()
             self._set_exec_state('RUNNING')
@@ -538,6 +557,50 @@ class Component(Container):
                 self._run_terminated()
             if self.directory:
                 self.pop_dir()
+    
+    # def run(self, case_uuid=''):
+    #     """Run this object. This should include fetching input variables
+    #     (if necessary), executing, and updating output variables.
+    #     Do not override this function.
+
+    #     case_uuid: str
+    #         Identifier for the Case that is associated with this run.
+    #     """
+
+    #     if self.directory:
+    #         self.push_dir()
+
+    #     self._stop = False
+    #     self._case_uuid = case_uuid
+
+    #     if self.parent is None:
+    #         self._run_begins()
+    #     try:
+    #         self._pre_execute()
+    #         self._set_exec_state('RUNNING')
+
+    #         #print '  execute: %s' % self.get_pathname()
+    #         # Component executes as normal
+    #         self.exec_count += 1
+    #         if tracing.TRACER is not None and \
+    #            not obj_has_interface(self, IDriver, IAssembly):
+    #             tracing.TRACER.debug(self.get_itername())
+    #             #tracing.TRACER.debug(self.get_itername() + '  ' + self.name)
+
+    #         self.execute()
+    #         self._post_execute()
+    #         self._post_run()
+
+    #     except Exception:
+    #         info = sys.exc_info()
+    #         self._set_exec_state('INVALID')
+    #         raise info[0], info[1], info[2]
+    #     finally:
+    #         # If this is the top-level component, perform run termination.
+    #         if self.parent is None:
+    #             self._run_terminated()
+    #         if self.directory:
+    #             self.pop_dir()
 
     @rbac(('owner', 'user'))
     def _run_begins(self):

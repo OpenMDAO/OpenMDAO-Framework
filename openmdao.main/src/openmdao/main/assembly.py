@@ -185,6 +185,26 @@ class Assembly(Component):
 
         self.add('recording_options', RecordingOptions())
 
+    def _pre_execute(self):
+        """Prepares for execution by calling various initialization methods
+        if necessary.
+
+        Overrides of this function must call this version.
+        """
+
+        # if self._call_cpath_updated:
+        #     self.cpath_updated()
+
+        if self._new_config:
+            # self.check_config()
+            if self.parent is None and has_interface(self, IAssembly):
+                self._setup()  # only call _setup from top level
+            #self._new_config = False
+
+        super(Assembly, self)._pre_execute()
+
+        self.configure_recording(self.recording_options)
+
     @property
     def _top_driver(self):
         if self._pre_driver:
