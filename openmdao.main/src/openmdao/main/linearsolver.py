@@ -479,14 +479,14 @@ class LinearGS(LinearSolver):
 
                 for subsystem in rev_systems:
                     system.sol_buf[:] = system.rhs_buf[:]
+                    succs = system.graph.successors(subsystem.name)
                     for subsystem2 in rev_systems:
-                        if subsystem is not subsystem2:
+                        #if subsystem is not subsystem2:
+                        if subsystem2.name in succs:
                             system.rhs_vec.array[:] = 0.0
                             args = subsystem.flat_vars.keys()
                             subsystem2.applyJ(args)
-                            #print 'C1', subsystem.name, subsystem2.name, system.vec['dp'].array, system.vec['du'].array, system.vec['df'].array, system.sol_buf[:], system.rhs_buf[:]
                             system.scatter('du', 'dp', subsystem=subsystem2)
-                            #print 'C2', subsystem.name, subsystem2.name, system.vec['dp'].array, system.vec['du'].array, system.vec['df'].array, system.sol_buf[:], system.rhs_buf[:]
                             system.sol_buf[:] -= system.rhs_vec.array[:]
                             system.vec['dp'].array[:] = 0.0
                     system.rhs_vec.array[:] = system.sol_buf[:]
