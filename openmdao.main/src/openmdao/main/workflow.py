@@ -85,7 +85,6 @@ class Workflow(object):
         self._rec_responses = None
         self._rec_constraints = None
         self._rec_outputs = None
-        self._rec_all_outputs = None
 
         if members:
             for member in members:
@@ -501,6 +500,20 @@ class Workflow(object):
         """Called at start of top-level run to configure case recording.
         Returns set of paths for changing inputs."""
 
+        print "configure_recording", self.parent
+        driver = self.parent
+        scope = driver.parent
+        top = scope
+        while top.parent:
+            top = top.parent
+        top._setup()
+        for comp in driver.workflow: 
+            print "comp", comp
+            if driver._reduced_graph:
+                successors = driver._reduced_graph.successors(comp.name)
+                for output_name, aliases in successors:
+                    print output_name, aliases
+
         if recording_options:
             includes = recording_options.includes
             excludes = recording_options.excludes
@@ -514,17 +527,18 @@ class Workflow(object):
 
         driver = self.parent
         scope = driver.parent
-        top = scope
-        while top.parent:
-            top = top.parent
-        prefix_drop = len(top.name)+1 if top.name else 0
-        prefix = '' if scope is top else scope.get_pathname()[prefix_drop:]
-        # prefix = scope.get_pathname()
+        #top = scope
+        #while top.parent:
+        #    top = top.parent
+        #prefix_drop = len(top.name)+1 if top.name else 0
+        #prefix = '' if scope is top else scope.get_pathname()[prefix_drop:]
+        prefix = scope.get_pathname()
         if prefix:
             prefix += '.'
         inputs = []
         outputs = []
 
+        print "configure_recording Parameters"
         # Parameters
         self._rec_parameters = []
         if hasattr(driver, 'get_parameters'):
@@ -550,8 +564,8 @@ class Workflow(object):
                 if save_problem_formulation or \
                    self._check_path(path, includes, excludes):
                     self._rec_objectives.append(key)
-                    #outputs.append(name)
-                    outputs.append(path + '.out0')
+                    outputs.append(name)
+                    #outputs.append(path + '.out0')
 
 
         # Responses
@@ -563,8 +577,8 @@ class Workflow(object):
                 if save_problem_formulation or \
                    self._check_path(path, includes, excludes):
                     self._rec_responses.append(key)
-                    #outputs.append(name)
-                    outputs.append(path+'.out0')
+                    outputs.append(name)
+                    #outputs.append(path+'.out0')
 
         # Constraints
         self._rec_constraints = []
@@ -575,8 +589,8 @@ class Workflow(object):
                 if save_problem_formulation or \
                    self._check_path(path, includes, excludes):
                     self._rec_constraints.append(con)
-                    #outputs.append(name)
-                    outputs.append(path + '.out0')
+                    outputs.append(name)
+                    #outputs.append(path + '.out0')
         if hasattr(driver, 'get_ineq_constraints'):
             for con in driver.get_ineq_constraints().values():
                 name = con.pcomp_name
@@ -584,11 +598,12 @@ class Workflow(object):
                 if save_problem_formulation or \
                    self._check_path(path, includes, excludes):
                     self._rec_constraints.append(con)
-                    #outputs.append(name)
-                    outputs.append(path+'.out0')
+                    outputs.append(name)
+                    #outputs.append(path+'.out0')
 
         #driver.get_reduced_graph()
-        self._rec_all_outputs = []
+        #self._rec_all_outputs = []
+        self._rec_outputs = []
         for comp in driver.workflow: 
             successors = driver._reduced_graph.successors(comp.name)
             for output_name, aliases in successors:
@@ -600,10 +615,11 @@ class Workflow(object):
                 output_name = prefix + output_name
                 if output_name not in outputs and self._check_path(output_name, includes, excludes) :
                     outputs.append(output_name)
-                    self._rec_all_outputs.append(output_name)
+                    self._rec_outputs.append(output_name)
+                    #self._rec_all_outputs.append(output_name)
 
         # Other outputs.
-        self._rec_outputs = []
+        #self._rec_outputs = []
         # srcs = scope.list_inputs()
         # if hasattr(driver, 'get_parameters'):
         #     srcs.extend(param.target
@@ -640,19 +656,21 @@ class Workflow(object):
                 if src not in outputs and \
                    self._check_path(path, includes, excludes):
                     if scope.get_metadata(src).has_key('framework_var') and scope.get_metadata(src)['framework_var']:
-                        self._rec_outputs.append(path)
-                        self._rec_all_outputs.append(path)
-                        outputs.append(path)
+                        self._rec_outputs.append(src)
+                        #self._rec_outputs.append(path)
+                        #self._rec_all_outputs.append(path)
+                        #outputs.append(path)
+                        outputs.append(src)
 
         name = '%s.workflow.itername' % driver.name
         path = prefix+name
         if self._check_path(path, includes, excludes):
-            self._rec_outputs.append(path)
-            self._rec_all_outputs.append(path)
-            outputs.append(path)
-            #self._rec_outputs.append(name)
+            #self._rec_outputs.append(path)
+            #self._rec_all_outputs.append(path)
+            #outputs.append(path)
+            self._rec_outputs.append(name)
             #self._rec_all_outputs.append(name)
-            #outputs.append(name)
+            outputs.append(name)
 
         # If recording required, register names in recorders.
         self._rec_required = bool(inputs or outputs)
@@ -706,7 +724,7 @@ class Workflow(object):
                 value = value[0]
             inputs.append(value)
 
-        ## Objectives.
+        # Objectives.
         for key in self._rec_objectives:
             try:
                 outputs.append(driver.eval_named_objective(key))
@@ -731,17 +749,11 @@ class Workflow(object):
                 value = value[0]
             outputs.append(value)
 
-        ## Other outputs.
-        #for name in self._rec_outputs:
-            #try:
-                #outputs.append(scope.get(name))
-            #except Exception as exc:
-                #scope.raise_exception("Can't get '%s' for recording: %s"
-                                      #% (name, exc), RuntimeError)
-        ## Other outputs.
-        for name in self._rec_all_outputs:
+        # Other outputs.
+        for name in self._rec_outputs:
             try:
-                outputs.append(top.get(name))
+                #outputs.append(top.get(name))
+                outputs.append(scope.get(name))
             except Exception as exc:
                 scope.raise_exception("Can't get '%s' for recording: %s"
                                       % (name, exc), RuntimeError)

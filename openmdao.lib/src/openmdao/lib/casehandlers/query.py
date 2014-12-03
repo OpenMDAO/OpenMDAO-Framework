@@ -9,10 +9,6 @@ from weakref import ref
 
 from openmdao.main.api import Assembly, VariableTree
 
-#from  openmdao.lib.casehandlers.pymongodb_bson_binary_util import loads, dumps
-
-#from  bson.json_util import loads, dumps
-
 _GLOBAL_DICT = dict(__builtins__=None)
 
 
@@ -110,7 +106,6 @@ class CaseDataset(object):
                 all_names = []
                 for driver_info in self._drivers.values():
                     prefix = driver_info['prefix']
-                    #prefix = ''
                     all_names.extend([prefix+name
                                       for name in driver_info['recording']])
             names = sorted(all_names+metadata_names)
@@ -291,7 +286,6 @@ class CaseDataset(object):
             if prefix:
                 prefix += '.'
             driver_info['prefix'] = prefix
-            #driver_info['prefix'] = ''
             self._drivers[_id] = driver_info
             if driver_info['name'] == query.driver_name:
                 self._driver_id = _id

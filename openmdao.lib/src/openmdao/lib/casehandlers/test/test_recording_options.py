@@ -54,10 +54,19 @@ class RecordingOptionsTestCase(unittest.TestCase):
                     u'comp1.x', u'comp1.z', u'comp2.derivative_exec_count', u'comp2.exec_count',
                     u'comp2.itername', u'comp2.z', u'driver.workflow.itername', 
                     'error_message', 'error_status', 'timestamp']
-        self.assertFalse(set(vnames) - set(expected))
+        expected = ['_driver_id', '_id', '_parent_id', u'_pseudo_0', u'_pseudo_1', 
+                    u'comp1.derivative_exec_count', u'comp1.exec_count', u'comp1.itername', 
+                    u'comp1.x', u'comp2.derivative_exec_count', u'comp2.exec_count', u'comp2.itername', 
+                    u'driver.workflow.itername', 'error_message', 'error_status', 'timestamp']
+        expected = ['_driver_id', '_id', '_parent_id', u'_pseudo_0', u'_pseudo_1', u'comp1.derivative_exec_count', 
+                    u'comp1.exec_count', u'comp1.itername', u'comp1.x', u'comp2.derivative_exec_count', u'comp2.exec_count', 
+                    u'comp2.itername', u'driver.workflow.itername', 'error_message', 'error_status', 'timestamp']
+
+        self.assertFalse(set(vnames).symmetric_difference(set(expected)))
+        #self.assertFalse(set(vnames) - set(expected))
         
         # Specific variables.
-        names = [ 'comp1.x', 'comp1.z', 'comp2.z']
+        names = [ 'comp1.x', '_pseudo_0', '_pseudo_1']
         vnames = cds.data.vars(names).var_names().fetch()
         self.assertEqual(vnames, names)
 
@@ -67,8 +76,8 @@ class RecordingOptionsTestCase(unittest.TestCase):
 
         iteration_case_1 = {
             "comp1.x": 0.0,
-            "comp1.z": 0.0,
-            "comp2.z": 1.0,
+            "_pseudo_0": 0.0,
+            "_pseudo_1": 1.0,
         }
         for name, val in zip(names, cases[0]):
             self.assertAlmostEqual(val, iteration_case_1[name])

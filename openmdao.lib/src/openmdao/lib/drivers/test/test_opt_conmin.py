@@ -172,7 +172,7 @@ class CONMINdriverTestCase(unittest.TestCase):
         self.assertEqual(self.top.comp.x[1],
                          end_case.get_input('comp.x[1]'))
         self.assertEqual(10*self.top.comp.result,
-                         end_case.get_output('_pseudo_0.out0'))
+                         end_case.get_output('_pseudo_0'))
 
     def test_opt1_a(self):
         # Run with scalar parameters, 1D constraint, and OpenMDAO gradient.

@@ -369,3 +369,6 @@ class Testcase_ComplexStep_Derivatives(unittest.TestCase):
 
         assert_rel_error(self, model.paraboloid.x, 7.175775, 0.01)
         assert_rel_error(self, model.paraboloid.y, -7.824225, 0.01)
+
+if __name__ == '__main__':
+    unittest.main()

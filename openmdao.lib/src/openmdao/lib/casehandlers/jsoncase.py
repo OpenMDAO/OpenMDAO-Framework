@@ -47,7 +47,6 @@ class _BaseRecorder(object):
 
     def register(self, driver, inputs, outputs):
         """ Register names for later record call from `driver`. """
-        #self._cfg_map[driver] = driver_map(driver, inputs, outputs)
         self._cfg_map[driver] = (inputs, outputs)
 
     def get_simulation_info(self, constants):
@@ -173,17 +172,23 @@ class _BaseRecorder(object):
                       case_uuid, parent_uuid):
         """ Return case info dictionary. """
         in_names, out_names = self._cfg_map[driver]
+
+        scope = driver.parent
+        prefix = scope.get_pathname()
+        if prefix:
+            prefix += '.'
+        in_names = [prefix+name for name in in_names]        
+        out_names = [prefix+name for name in out_names]        
+        
         data = dict(zip(in_names, inputs))
         data.update(zip(out_names, outputs))
 
-        subdriver_last_case_uuids = {}
-        for subdriver in driver.subdrivers():
-            subdriver_last_case_uuids[ id(subdriver) ] = self._last_child_case_uuids[ id(subdriver) ]
-        self._last_child_case_uuids[ id(driver) ] = case_uuid
-        
-        #qqq
-        #data = data.values()
-        
+        #subdriver_last_case_uuids = {}
+        #for subdriver in driver.subdrivers():
+            #subdriver_last_case_uuids[ id(subdriver) ] = self._last_child_case_uuids[ id(subdriver) ]
+        #self._last_child_case_uuids[ id(driver) ] = case_uuid
+            
+            
         return dict(_id=case_uuid,
                     _parent_id=parent_uuid or self._uuid,
                     _driver_id=id(driver),

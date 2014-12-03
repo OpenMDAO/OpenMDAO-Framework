@@ -116,7 +116,7 @@ class COBYLAdriverTestCase(unittest.TestCase):
         self.assertEqual(self.top.comp.x[1],
                          end_case.get_input('comp.x[1]'))
         self.assertEqual(self.top.comp.result,
-                         end_case.get_output('_pseudo_0.out0'))
+                         end_case.get_output('_pseudo_0'))
 
     def test_max_iter(self):
         self.top.driver.add_objective('comp.result')
@@ -153,7 +153,7 @@ class COBYLAdriverTestCase(unittest.TestCase):
         self.assertEqual(self.top.comp.x[1],
                          end_case.get_input('comp.x')[1])
         self.assertEqual(self.top.comp.result,
-                         end_case.get_output('_pseudo_0.out0'))
+                         end_case.get_output('_pseudo_0'))
 
     def test_initial_run(self):
         # Test the fix that puts a run_iteration call

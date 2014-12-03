@@ -215,6 +215,36 @@ class CSVPostProcessorTestCase(unittest.TestCase):
             #'      driver.workflow.itername: 1',
         #]
 
+        expected = [
+            'Case:',
+            '   uuid: d146b38a-7954-11e4-800d-20c9d0478eff',
+            '   timestamp: 1417436592.324334',
+            '   parent_uuid: d1416af5-7954-11e4-9df0-20c9d0478eff',
+            '   inputs:',
+            '      comp1.x_array[0]: 2.0',
+            '      comp1.x_array[1]: 2.0',
+            '      comp1.x_array[2]: 2.0',
+            '   outputs:',
+            '      Response(comp1.a_array)[0]: 1.0',
+            '      Response(comp1.a_array)[1]: 3.0',
+            '      Response(comp1.a_array)[2]: 5.5',
+            '      Response(comp1.vt).data: ',
+            '      Response(comp1.vt).v1: 1.0',
+            '      Response(comp1.vt).v2: 2.0',
+            '      Response(comp1.vt).vt2.data: ',
+            '      Response(comp1.vt).vt2.vt3.a: 1.0',
+            '      Response(comp1.vt).vt2.vt3.b: 12.0',
+            '      Response(comp1.vt).vt2.vt3.data: ',
+            '      Response(comp1.vt).vt2.x: -1.0',
+            '      Response(comp1.vt).vt2.y: -2.0',
+            '      comp1.derivative_exec_count: 0.0',
+            '      comp1.exec_count: 1.0',
+            '      comp1.itername: 1-comp1',
+            '      comp2.derivative_exec_count: 0.0',
+            '      comp2.exec_count: 1.0',
+            '      comp2.itername: 1-comp2',
+            '      driver.workflow.itername: 1',
+        ]
         #print sout.getvalue()
         lines = sout.getvalue().split('\n')
         for index, line in enumerate(lines):

@@ -608,12 +608,13 @@ class TestCase(unittest.TestCase):
             model = set_as_top(Model(box))
             model.run()
 
+            #import pdb; pdb.set_trace()
             # Check results.
             for width in range(1, 2):
                 for height in range(1, 3):
                     for depth in range(1, 4):
                         case = model.recorders[0].cases.pop(0)
-                        self.assertEqual(case.get_output('box.volume'),
+                        self.assertEqual(case.get_output('volume'),
                                          width*height*depth)
         finally:
             if factory is not None:
@@ -700,8 +701,8 @@ class TestCase(unittest.TestCase):
 
 if __name__ == '__main__':
     #logging.getLogger().setLevel(logging.DEBUG)
-    #unittest.main()
+    unittest.main()
     #sys.argv.append('--cover-package=openmdao.main')
     #sys.argv.append('--cover-erase')
-    import nose
-    nose.runmodule()
+    #import nose
+    #nose.runmodule()

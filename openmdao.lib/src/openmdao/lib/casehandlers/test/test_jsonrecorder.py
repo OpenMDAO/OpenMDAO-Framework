@@ -74,11 +74,12 @@ class TestCase(unittest.TestCase):
         #self.top.run() #qqqqqqqqqqqqq
         #self.top._pre_execute() #qqqqqqqqqqqqq
         
-        self.top.setup_depgraph()
-        self.top.setup_reduced_graph()
-        self.top.setup_systems()
+        # self.top.setup_depgraph()
+        # self.top.setup_reduced_graph()
+        # self.top.setup_systems()
         
-        
+        #self.top._setup()
+
         self.top.record_configuration()
 
         with open('jsonrecorder_norun.new', 'w') as out:
@@ -106,8 +107,8 @@ class TestCase(unittest.TestCase):
         self.top.recorders = [JSONCaseRecorder(sout)]
         self.top.run()
 
-        with open('multiobj.new', 'w') as out:
-            out.write(sout.getvalue())
+        # with open('multiobj.new', 'w') as out:
+        #     out.write(sout.getvalue())
         verify_json(self, sout, 'multiobj.json')
         #self.verify(sout, 'multiobj.json')
 

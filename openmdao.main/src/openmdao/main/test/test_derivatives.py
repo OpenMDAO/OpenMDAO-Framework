@@ -3365,6 +3365,7 @@ class TestMultiDriver(unittest.TestCase):
 if __name__ == '__main__':
     import nose
     import sys
-    sys.argv.append('--cover-package=openmdao')
-    sys.argv.append('--cover-erase')
-    nose.runmodule()
+    unittest.main()
+    #sys.argv.append('--cover-package=openmdao')
+    #sys.argv.append('--cover-erase')
+    #nose.runmodule()
