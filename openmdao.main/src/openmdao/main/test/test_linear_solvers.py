@@ -123,8 +123,8 @@ class Sellar_MDA_subbed_connected(Assembly):
         self.driver.add_constraint('P2.f_xy < 0')
 
 
-class Testcase_derivatives(unittest.TestCase):
-    """ Test derivative aspects of a simple workflow. """
+class Testcase_Scipy_Gmres(unittest.TestCase):
+    """ Test gmres linear solver. """
 
     def test_scipy_gmres_single_comp(self):
 
@@ -166,6 +166,9 @@ class Testcase_derivatives(unittest.TestCase):
         assert_rel_error(self, J[0, 0], 5.0, 0.0001)
         assert_rel_error(self, J[0, 1], 21.0, 0.0001)
 
+
+class Testcase_Linear_GS(unittest.TestCase):
+    """ Test Linear Gauss Siedel linear solver. """
 
     def test_linearGS_single_comp(self):
 
@@ -238,7 +241,7 @@ class Testcase_derivatives(unittest.TestCase):
     def test_linearGS_simul_element_and_full_connection(self):
         # Added because of a bug with array slices for Linear GS
 
-        #raise SkipTest('Skip until Bret finished')
+        raise SkipTest('Skip until Bret finished')
         
         top = Assembly()
         top.add('comp1', ArrayComp2D())
@@ -262,6 +265,52 @@ class Testcase_derivatives(unittest.TestCase):
         J = top.driver.calc_gradient(mode='adjoint')
         assert_rel_error(self, J[0, 0], 2.0, .000001)
         assert_rel_error(self, J[1, 0], 39.0, .000001)
+
+
+class Testcase_PetSC_KSP(unittest.TestCase):
+    """ Test PetSC KSP solver. """
+
+    def test_petsc_ksp_single_comp(self):
+
+        top = set_as_top(Assembly())
+        top.add('comp', Paraboloid())
+        top.add('driver', SimpleDriver())
+        top.driver.workflow.add(['comp'])
+        top.driver.add_parameter('comp.x', low=-1000, high=1000)
+        top.driver.add_parameter('comp.y', low=-1000, high=1000)
+        top.driver.add_objective('comp.f_xy')
+
+        top.driver.gradient_options.lin_solver = 'petsc_ksp'
+
+        top.comp.x = 3
+        top.comp.y = 5
+        top.run()
+
+        self.assertEqual(top.comp.f_xy, 93.)
+        self.assertEqual(top._pseudo_0.out0, 93.)
+
+        J = top.driver.workflow.calc_gradient(inputs=['comp.x', 'comp.y'],
+                                              outputs=['comp.f_xy'],
+                                              mode='forward', return_format='dict')
+
+        assert_rel_error(self, J[0, 0], 5.0, 0.0001)
+        assert_rel_error(self, J[0, 1], 21.0, 0.0001)
+
+        J = top.driver.workflow.calc_gradient(inputs=['comp.x', 'comp.y'],
+                                              mode='adjoint')
+
+        assert_rel_error(self, J[0, 0], 5.0, 0.0001)
+        assert_rel_error(self, J[0, 1], 21.0, 0.0001)
+
+        # Make sure we aren't add-scattering out p vector
+
+        top.run()
+        J = top.driver.workflow.calc_gradient(inputs=['comp.x', 'comp.y'],
+                                              mode='forward')
+        assert_rel_error(self, J[0, 0], 5.0, 0.0001)
+        assert_rel_error(self, J[0, 1], 21.0, 0.0001)
+
+
 
 if __name__ == '__main__':
     import nose

@@ -65,11 +65,19 @@ if _under_mpirun():
                 stream.flush()
 else:
     MPI = None
-    PETSc = None
     COMM_NULL = None
 
-    def create_petsc_vec(comm, arr):
-        return None
+    try:
+        from petsc4py import PETSc
+        
+        def create_petsc_vec(comm, arr):
+            return PETSc.Vec().createWithArray(arr, comm=comm)
+        
+    except ImportError:
+        PETSc = None
+        
+        def create_petsc_vec(comm, arr):
+            return None
 
     def mpiprint(*args, **kwargs):
         for arg in args:

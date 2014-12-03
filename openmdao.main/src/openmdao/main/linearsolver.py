@@ -10,9 +10,9 @@ from openmdao.main.mpiwrap import MPI
 from openmdao.util.graph import fix_single_tuple
 from openmdao.util.log import logger
 
-if MPI:
+try:
     from petsc4py import PETSc
-else:
+except ImportError:
     class PETSc(object):
         # Dummy class so things parse.
         pass
@@ -317,13 +317,10 @@ class PETSc_KSP(LinearSolver):
         system.rhs_vec.array[:] = 0.0
         system.clear_dp()
 
-        varmeta = system.scope._var_meta
-        vnames = set(system.flat_vars.keys())
         if system._parent_system:
-            g = system._parent_system._comp._reduced_internal_graph
-            vnames.update([n for n,data in g.nodes_iter(data=True)
-                               if 'comp' not in data and not varmeta[n].get('noflat')])
-
+            vnames = system._parent_system._relevant_vars
+        else:
+            vnames = system.flat_vars.keys()
         system.applyJ(vnames)
 
         rhs_vec.array[:] = system.rhs_vec.array[:]
