@@ -434,9 +434,6 @@ class Component(Container):
 
         if self._new_config:
             self.check_config()
-            # per Bret
-            # if self.parent is None and has_interface(self, IAssembly):
-            #     self._setup()  # only call _setup from top level
             self._new_config = False
 
     def execute(self):
@@ -511,8 +508,6 @@ class Component(Container):
         self._stop = False
         self._case_uuid = case_uuid
 
-        # if self.parent is None: # per Bret
-        #     self._run_begins()
         try:
             self._pre_execute()
             self._set_exec_state('RUNNING')
@@ -544,7 +539,7 @@ class Component(Container):
     def _run_begins(self):
         """ Executed at start of top-level run. """
         if hasattr(self, 'recorders'):
-            pass
+            self.configure_recording()
 
     @rbac(('owner', 'user'))
     def _run_terminated(self):

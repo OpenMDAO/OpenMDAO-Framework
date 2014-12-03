@@ -191,19 +191,11 @@ class Assembly(Component):
 
         Overrides of this function must call this version.
         """
-
-        # if self._call_cpath_updated:
-        #     self.cpath_updated()
-
-        #if 1:
-        if self._new_config:
-            #super(Assembly, self)._pre_execute()
-            # self.check_config()
-            if self.parent is None and has_interface(self, IAssembly):
-                self._setup()  # only call _setup from top level
-            #self._new_config = False
-
+        new_config = self._new_config
         super(Assembly, self)._pre_execute()
+
+        if new_config and self.parent is None:
+            self._setup()  # only call _setup from top level
 
         self.configure_recording(self.recording_options)
 
