@@ -321,7 +321,7 @@ class PETSc_KSP(LinearSolver):
         vnames = set(system.flat_vars.keys())
         if system._parent_system:
             g = system._parent_system._comp._reduced_internal_graph
-            vnames.update([n for n,data in g.nodes_iter(data=True) 
+            vnames.update([n for n,data in g.nodes_iter(data=True)
                                if 'comp' not in data and not varmeta[n].get('noflat')])
 
         system.applyJ(vnames)
@@ -491,11 +491,10 @@ class LinearGS(LinearSolver):
                             system.vec['dp'].array[:] = 0.0
                     system.rhs_vec.array[:] = system.sol_buf[:]
                     subsystem.solve_linear(options)
- 
             norm = self._norm()
             counter += 1
-            
+
         #print 'return', options.parent.name, np.linalg.norm(system.rhs_vec.array), system.rhs_vec.array
-        print 'Linear solution vec', system.sol_vec.array
+        #print 'Linear solution vec', system.sol_vec.array
         return system.sol_vec.array
 
