@@ -655,7 +655,6 @@ class Assembly(Component):
         if isinstance(dest, ndarray) and dest.size == 0:
             destexpr.set(srcexpr.evaluate(), self)
 
-
         self.config_changed(update_parent=False)
 
     @rbac(('owner', 'user'))
@@ -1121,7 +1120,7 @@ class Assembly(Component):
         rgraph.collapse_subdrivers([], [self._top_driver])
 
         if len(rgraph) > 1:
-            self._system = SerialSystem(self, rgraph, rgraph.component_graph(), 
+            self._system = SerialSystem(self, rgraph, rgraph.component_graph(),
                                         self.name+'._inner_asm')
             self._system.set_ordering(nx.topological_sort(rgraph), {})
         else:
@@ -1181,6 +1180,7 @@ class Assembly(Component):
         """Creates vector wrapper objects to manage local and
         distributed vectors need to solve the distributed system.
         """
+        print self.get_pathname(), 'setup_vectors()'
         self._system.setup_vectors(None)
 
     def setup_scatters(self):
