@@ -481,8 +481,8 @@ class LinearGS(LinearSolver):
                     system.sol_buf[:] = system.rhs_buf[:]
                     succs = system.graph.successors(subsystem.name)
                     for subsystem2 in rev_systems:
-                        #if subsystem is not subsystem2:
-                        if subsystem2.name in succs:
+                        if subsystem is not subsystem2:
+                        #if subsystem2.name in succs:
                             system.rhs_vec.array[:] = 0.0
                             args = subsystem.flat_vars.keys()
                             subsystem2.applyJ(args)
