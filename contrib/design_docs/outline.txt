@@ -1,0 +1,52 @@
+Should cover the steps necessary to prepare for execution ("setup stack") internally:
+
+- use example problem to illustrate concepts (better then sellar?)
+
+
+Build depgraph?
+    -setup time vs. live changes per connection
+    -gives code simplification vs old way of doing things
+
+Assembly lifecycle?
+    -checkconfig will happen after setup, following refactor
+
+Collapse depgraph
+    -at beginning of setup
+
+Create subgraphs for each driver
+
+
+Do system decomposition
+    - Error checking
+
+execution management (data passing, etc)
+    -scattering: primary data passing mechanism for flattened data
+
+Flattenable vs non-flattenable variables 
+    -impact on differentiation
+
+distinguish linear solvers available for derivatives
+    -ksp, gmres, linear gauss-seidel
+
+
+Case recording structure
+
+Implicit vs explicit components & their dynamics
+    -
+
+relationship between an assembly any subassembly
+
+Systems dictionary:
+    -serial
+    -parallel
+    -simple
+    -compound
+    -opaque
+
+Python class hierarchy
+
+Distrbuted vectors: U, P, F
+
+Non differentiable finite difference grouping.
+
+---------------------------------------
