@@ -67,10 +67,6 @@ class ScipyGMRES(LinearSolver):
         RHS = system.rhs_buf
         A = self.A
 
-        # Size the problem
-        num_input = system.get_size(inputs)
-        num_output = system.get_size(outputs)
-
         if return_format == 'dict':
             J = {}
             for okey in outputs:
@@ -80,8 +76,9 @@ class ScipyGMRES(LinearSolver):
                         ikey = ikey[0]
                     J[okey][ikey] = None
         else:
+            num_input = system.get_size(inputs)
+            num_output = system.get_size(outputs)
             J = np.zeros((num_output, num_input))
-
 
         if system.mode == 'adjoint':
             outputs, inputs = inputs, outputs
@@ -221,15 +218,6 @@ class PETSc_KSP(LinearSolver):
         """Returns a nested dict of sensitivities if return_format == 'dict'.
         """
 
-        if return_format == 'dict':
-            return self._J_dict_solve(inputs, outputs)
-        else:
-            raise RuntimeError("unsupported solve return_format '%s'" % return_format)
-
-    def _J_dict_solve(self, inputs, outputs):
-        """Returns a dict of sensitivities for given
-        inputs and outputs.
-        """
         system = self._system
         options = self.options
         name2collapsed = system.scope.name2collapsed
@@ -237,11 +225,18 @@ class PETSc_KSP(LinearSolver):
         inputs = [fix_single_tuple(x) for x in inputs]
         outputs = [fix_single_tuple(x) for x in outputs]
 
-        J = {}
-        for okey in outputs:
-            J[okey] = {}
-            for ikey in inputs:
-                J[okey][ikey] = None
+        if return_format == 'dict':
+            J = {}
+            for okey in outputs:
+                J[okey] = {}
+                for ikey in inputs:
+                    if isinstance(ikey, tuple):
+                        ikey = ikey[0]
+                    J[okey][ikey] = None
+        else:
+            num_input = system.get_size(inputs)
+            num_output = system.get_size(outputs)
+            J = np.zeros((num_output, num_input))
 
         if system.mode == 'adjoint':
             outputs, inputs = inputs, outputs
@@ -258,26 +253,37 @@ class PETSc_KSP(LinearSolver):
             jbase = j
 
             for irhs in xrange(param_size):
+                
+                # Solve the system with PetSC KSP
                 solvec = system._compute_derivatives(param_tup, irhs)
 
+                i = 0
                 for out in outputs:
                     out_size = system.get_size(out)
 
-                    if system.mode == 'forward':
-                        if out in solvec:
-                            if J[out][param] is None:
-                                J[out][param] = np.zeros((out_size, param_size))
-                            J[out][param][:, j-jbase] = solvec[out]
+                    if return_format == 'dict':
+                        if system.mode == 'forward':
+                            if out in solvec:
+                                if J[out][param] is None:
+                                    J[out][param] = np.zeros((out_size, param_size))
+                                J[out][param][:, j-jbase] = solvec[out]
+                            else:
+                                del J[out][param]
                         else:
-                            del J[out][param]
-                    else:
-                        if out in solvec:
-                            if J[param][out] is None:
-                                J[param][out] = np.zeros((out_size, param_size))
-                            J[param][out][j-jbase, :] = solvec[out]
-                        else:
-                            del J[param][out]
+                            if out in solvec:
+                                if J[param][out] is None:
+                                    J[param][out] = np.zeros((out_size, param_size))
+                                J[param][out][j-jbase, :] = solvec[out]
+                            else:
+                                del J[param][out]
 
+                    else:
+                        nk = len(solvec[out])
+                        if system.mode == 'forward':
+                            J[i:i+nk, j] = solvec[out]
+                        else:
+                            J[j, i:i+nk] = solvec[out]
+                        i += nk
                 j += 1
 
         return J
@@ -296,12 +302,12 @@ class PETSc_KSP(LinearSolver):
         system.rhs_vec.array[:] = system.vec['f'].array[:]
         #print 'newton start vec', system.vec['f'].array[:]
 
-        system.sol_buf.array[:] = arg
-        system.rhs_buf.array[:] = system.rhs_vec.array[:]
+        system.sol_buf[:] = arg
+        system.rhs_buf[:] = system.rhs_vec.array[:]
 
         system.ln_solver.ksp.solve(system.rhs_buf, system.sol_buf)
 
-        system.vec['df'].array[:] = -system.sol_buf.array[:]
+        system.vec['df'].array[:] = system.sol_buf[:]
 
         #print 'newton solution vec', system.vec['df'].array[:]
         return system.vec['df'].array[:]
