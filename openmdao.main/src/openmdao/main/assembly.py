@@ -15,6 +15,8 @@ from numpy import ndarray
 
 # pylint: disable=E0611,F0401
 import networkx as nx
+from networkx.algorithms.components import strongly_connected_components
+from networkx.algorithms.dag import is_directed_acyclic_graph
 
 from openmdao.main.mpiwrap import MPI, mpiprint
 
@@ -1120,9 +1122,26 @@ class Assembly(Component):
         rgraph = rgraph.subgraph(rgraph.nodes_iter())
         rgraph.collapse_subdrivers([], [self._top_driver])
 
+        drvname = self._top_driver.name
+        
         if len(rgraph) > 1:
-            self._system = SerialSystem(self, rgraph, rgraph.component_graph(), 
+            self._system = SerialSystem(self, rgraph, rgraph.component_graph(),
                                         self.name+'._inner_asm')
+            # see if there's a driver cycle (happens when driver has params and 
+            # constraints/objectives that are boundary vars.)
+            # FIXME: if we modify the graph to have to/from edges between a driver and
+            # all of its workflow comps, then use strongly connected components to
+            # determine full iteration sets, this will never happen.
+            for strong in strongly_connected_components(rgraph):
+                if drvname in strong:
+                    if len(strong) > 1:
+                        # break driver input edge
+                        for p in rgraph.predecessors(drvname):
+                            if p in strong:
+                                rgraph.remove_edge(p, drvname)
+                                if is_directed_acyclic_graph(rgraph):
+                                    break
+                    break
             self._system.set_ordering(nx.topological_sort(rgraph), {})
         else:
             # TODO: if top driver has no params/constraints, possibly

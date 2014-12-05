@@ -320,10 +320,10 @@ class FiniteDifference(object):
         start = end = 0
 
         for src in self.outputs:
-            sz = uvec[src].size
-            end += sz
-            x[start:end] = uvec[src]
-            start += sz
+            uarray = uvec[src]
+            end += uarray.size
+            x[start:end] = uarray
+            start += uarray.size
 
     def get_complex_outputs(self, x):
         """Return matrix of flattened values from output edges.
@@ -334,10 +334,10 @@ class FiniteDifference(object):
         start = end = 0
 
         for src in self.outputs:
-            sz = uvec[src].size
-            end += sz
-            x[start:end] = uvec[src] + duvec[src]*1j
-            start += sz
+            uarray = uvec[src]
+            end += uarray.size
+            x[start:end] = uarray + duvec[src]*1j
+            start += uarray.size
 
     def set_value(self, srcs, val, index):
         """Set a value in the model"""
@@ -363,13 +363,12 @@ class FiniteDifference(object):
             srcs = [srcs]
 
         for src in srcs:
-            if src in self.system.vec['du']:
-                vec = self.system.vec['du'][src]
-
+            du = self.system.vec['du']
+            if src in du:
                 if undo_complex is True:
-                    vec[index] = 0.0
+                    du[src][index] = 0.0
                 else:
-                    vec[index] = val
+                    du[src][index] = val
 
                 # avoid adding to the same array entry multiple times for
                 # param groups
@@ -571,10 +570,10 @@ class DirectionalFD(object):
 
             direction = fd_step*arg[srcs[0]].flatten()
 
+            uvec = self.system.vec['u']
             for src in srcs:
-                if src in self.system.vec['u']:
-                    vec = self.system.vec['u'][src]
-                    vec[:] += direction
+                if src in uvec:
+                    uvec[src][:] += direction
 
     def set_value_complex(self, fd_step, arg, undo_complex=False):
         """Set a complex value in the model"""
@@ -586,15 +585,14 @@ class DirectionalFD(object):
                 srcs = (srcs,)
 
             direction = fd_step*arg[srcs[0]].flatten()
-
+            
+            du = self.system.vec['du']
             for src in srcs:
-                if src in self.system.vec['du']:
-                    vec = self.system.vec['du'][src]
-
+                if src in du:
                     if undo_complex is True:
-                        vec[:] = 0.0
+                        du[src][:] = 0.0
                     else:
-                        vec[:] = direction
+                        du[src][:] = direction
 
     def get_outputs(self, x):
         """Return matrix of flattened values from output edges."""
@@ -603,10 +601,10 @@ class DirectionalFD(object):
         start = end = 0
 
         for src in self.outputs:
-            sz = uvec[src].size
-            end += sz
-            x[start:end] = uvec[src]
-            start += sz
+            uarray = uvec[src]
+            end += uarray.size
+            x[start:end] = uarray
+            start += uarray.size
 
     def get_outputs_complex(self, x):
         """Return matrix of flattened values from output edges.
@@ -617,8 +615,7 @@ class DirectionalFD(object):
         start = end = 0
 
         for src in self.outputs:
-            sz = uvec[src].size
-            end += sz
-            x[start:end] = uvec[src] + 1j*duvec[src]
-            start += sz
-
+            uarray = uvec[src]
+            end += uarray.size
+            x[start:end] = uarray + 1j*duvec[src]
+            start += uarray.size
