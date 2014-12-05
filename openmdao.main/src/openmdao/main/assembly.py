@@ -197,7 +197,7 @@ class Assembly(Component):
         if new_config and self.parent is None:
             self._setup()  # only call _setup from top level
 
-        self.configure_recording(self.recording_options)
+            self.configure_recording(self.recording_options)
 
     @property
     def _top_driver(self):
@@ -840,7 +840,6 @@ class Assembly(Component):
     def record_configuration(self):
         """ record model configuration without running the model
         """
-        self._setup()
         self.configure_recording()
         for recorder in self.recorders:
             recorder.close()

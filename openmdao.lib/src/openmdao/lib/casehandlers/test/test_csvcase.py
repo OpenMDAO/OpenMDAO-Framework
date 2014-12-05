@@ -275,9 +275,16 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         Case.set_vartree_inputs(self.top.driver, cases)
         self.top.driver.clear_responses()
         self.top.driver.add_responses(outputs)
-        self.top.recorders = [CSVCaseRecorder(filename=self.filename)]
+        #self.top.recorders = [CSVCaseRecorder(filename=self.filename)]
+        from openmdao.lib.casehandlers.api import JSONCaseRecorder
+        self.top.recorders = [JSONCaseRecorder('flatten.json')]
         self.top.recorders[0].num_backups = 0
         self.top.run()
+
+        from openmdao.util.dotgraph import plot_graph
+        #plot_graph(self.top.driver.workflow._collapsed_graph)
+        plot_graph(self.top._reduced_graph)
+        
 
         # check recorded cases
         cases = [case for case in self.top.recorders[0].get_iterator()]
@@ -481,7 +488,7 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
             '   force_fd: False',
             '   missing_deriv_policy: assume_zero',
             '   recording_options.excludes: []',
-            '   recording_options.includes: ['*']',
+            '   recording_options.includes: ["*""]',
             '   recording_options.save_problem_formulation: True',
             'Case:',
             '   uuid: 2fe2830f-798c-11e4-800e-20c9d0478eff',

@@ -500,19 +500,19 @@ class Workflow(object):
         """Called at start of top-level run to configure case recording.
         Returns set of paths for changing inputs."""
 
-        print "configure_recording", self.parent
-        driver = self.parent
-        scope = driver.parent
-        top = scope
-        while top.parent:
-            top = top.parent
-        top._setup()
-        for comp in driver.workflow: 
-            print "comp", comp
-            if driver._reduced_graph:
-                successors = driver._reduced_graph.successors(comp.name)
-                for output_name, aliases in successors:
-                    print output_name, aliases
+        # print "configure_recording", self.parent
+        # driver = self.parent
+        # scope = driver.parent
+        # top = scope
+        # while top.parent:
+        #     top = top.parent
+        # top._setup()
+        # for comp in driver.workflow: 
+        #     print "comp", comp
+        #     if driver._reduced_graph:
+        #         successors = driver._reduced_graph.successors(comp.name)
+        #         for output_name, aliases in successors:
+        #             print output_name, aliases
 
         if recording_options:
             includes = recording_options.includes

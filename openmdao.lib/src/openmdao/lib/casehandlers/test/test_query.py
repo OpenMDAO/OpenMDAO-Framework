@@ -118,7 +118,7 @@ def create_files():
 class TestCase(unittest.TestCase):
 
     def setUp(self):
-        #create_files()  # Uncomment to create 'sellar.new'
+        create_files()  # Uncomment to create 'sellar.new'
 
         path = os.path.join(os.path.dirname(__file__), 'sellar.json')
         self.cds = CaseDataset(path, 'json')
@@ -135,18 +135,18 @@ class TestCase(unittest.TestCase):
     def test_query(self):
         # Full dataset.
         vnames = self.cds.data.var_names().fetch()
-        expected = [
-            '_driver_id', '_id', '_parent_id', '_pseudo_0', '_pseudo_1',
-            '_pseudo_2', 'driver.workflow.itername', 'error_message',
-            'error_status', 'half.derivative_exec_count', 'half.exec_count',
-            'half.itername', 'half.z2a', 'half.z2b', 'sub._pseudo_0',
-            'sub.derivative_exec_count', 'sub.dis1.derivative_exec_count',
-            'sub.dis1.exec_count', 'sub.dis1.itername', 'sub.dis1.y1',
-            'sub.dis1.y2', 'sub.dis2.derivative_exec_count',
-            'sub.dis2.exec_count', 'sub.dis2.itername', 'sub.dis2.y2',
-            'sub.driver.workflow.itername', 'sub.exec_count', 'sub.globals.z1',
-            'sub.itername', 'sub.states', 'sub.states.y[0]', 'sub.states.y[1]',
-            'sub.x1', 'timestamp']
+        #expected = [
+            #'_driver_id', '_id', '_parent_id', '_pseudo_0', '_pseudo_1',
+            #'_pseudo_2', 'driver.workflow.itername', 'error_message',
+            #'error_status', 'half.derivative_exec_count', 'half.exec_count',
+            #'half.itername', 'half.z2a', 'half.z2b', 'sub._pseudo_0',
+            #'sub.derivative_exec_count', 'sub.dis1.derivative_exec_count',
+            #'sub.dis1.exec_count', 'sub.dis1.itername', 'sub.dis1.y1',
+            #'sub.dis1.y2', 'sub.dis2.derivative_exec_count',
+            #'sub.dis2.exec_count', 'sub.dis2.itername', 'sub.dis2.y2',
+            #'sub.driver.workflow.itername', 'sub.exec_count', 'sub.globals.z1',
+            #'sub.itername', 'sub.states', 'sub.states.y[0]', 'sub.states.y[1]',
+            #'sub.x1', 'timestamp']
         expected = ['_driver_id', '_id', '_parent_id', u'_pseudo_0', u'_pseudo_1', u'_pseudo_2', u'driver.workflow.itername', 
                     'error_message', 'error_status', u'half.derivative_exec_count', u'half.exec_count', u'half.itername', 
                     u'half.z2a', u'sub._pseudo_0', u'sub.derivative_exec_count', u'sub.dis1.derivative_exec_count',
