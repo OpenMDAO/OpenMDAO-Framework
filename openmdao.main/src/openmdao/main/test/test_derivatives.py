@@ -671,6 +671,60 @@ class Testcase_derivatives(unittest.TestCase):
             openmdao.main.linearsolver.gmres = orig_gmres
             openmdao.main.linearsolver.logger = orig_logger
 
+    def test_provideJ(self):
+        top = set_as_top(Assembly())
+        top.add('comp', SimpleComp())
+        top.add('driver', SimpleDriver())
+        top.driver.workflow.add(['comp'])
+        top.driver.add_parameter('comp.x', low=-1000, high=1000)
+        top.comp.x = 14
+        top.comp.run()
+        
+        top.comp.x = 14
+        
+        top.comp.run()
+        top.driver.calc_gradient(outputs=['comp.y'])
+
+    def test_non_2d_jacobian(self):
+        comp = SimpleComp()
+        comp.provideJ = lambda : np.array([2.0])
+    
+        top = set_as_top(Assembly())
+        top.add('comp', comp)
+        top.add('driver', SimpleDriver())
+        top.driver.workflow.add(['comp'])
+        top.driver.add_parameter('comp.x', low=-1000, high=1000)
+        top.comp.x = 14
+        
+        try:
+            top.comp.run()
+            top.driver.calc_gradient(outputs=['comp.y'])
+        except ValueError as err:
+            expected = "Jacobian has the wrong dimensions. Expected 2D but got 1D."
+            self.assertEqual(str(err), expected)
+        else:
+            self.fail("Should have caught error because Jacobian is not 2D")
+
+    def test_bad_sized_jacobian(self):
+        comp = SimpleComp()
+        comp.provideJ = lambda : np.array([[2.0, 2.0]])
+    
+        top = set_as_top(Assembly())
+        top.add('comp', comp)
+        top.add('driver', SimpleDriver())
+        top.driver.workflow.add(['comp'])
+        top.driver.add_parameter('comp.x', low=-1000, high=1000)
+        top.comp.x = 14
+        
+        try:
+            top.comp.run()
+            top.driver.calc_gradient(outputs=['comp.y'])
+        except RuntimeError as err:
+            expected = "comp: Jacobian is the wrong size. Expected (1x1) but got (1x2)"
+            self.assertEqual(str(err), expected)
+        else:
+            self.fail("Should have caught error because Jacobian is the wrong size")
+
     def test_error_logging2(self):
 
         top = set_as_top(Assembly())
