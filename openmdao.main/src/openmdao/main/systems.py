@@ -820,7 +820,7 @@ class System(object):
         """ Solve Jacobian, df |-> du [fwd] or du |-> df [rev] """
         self.rhs_buf[:] = self.rhs_vec.array[:]
         self.sol_buf[:] = self.sol_vec.array[:]
-        self.sol_buf = self.ln_solver.solve(self.rhs_buf)
+        self.sol_buf[:] = self.ln_solver.solve(self.rhs_buf)
         self.sol_vec.array[:] = self.sol_buf[:]
 
     def _compute_derivatives(self, vname, ind):
@@ -849,12 +849,12 @@ class System(object):
             # here to avoid hanging, even though we don't need the IS
             ind_set = PETSc.IS().createGeneral([], comm=self.mpi.comm)
 
-        self.sol_buf.array[:] = self.sol_vec.array[:]
-        self.rhs_buf.array[:] = self.rhs_vec.array[:]
+        self.sol_buf[:] = self.sol_vec.array[:]
+        self.rhs_buf[:] = self.rhs_vec.array[:]
 
         self.ln_solver.ksp.solve(self.rhs_buf, self.sol_buf)
 
-        self.sol_vec.array[:] = self.sol_buf.array[:]
+        self.sol_vec.array[:] = self.sol_buf[:]
 
         #mpiprint('dx', self.sol_vec.array)
         return self.sol_vec
@@ -1041,9 +1041,9 @@ class SimpleSystem(System):
 
             for var in self.list_outputs():
 
-                collapsed = self.scope.name2collapsed.get(var)
-                if collapsed not in variables:
-                    continue
+                #collapsed = self.scope.name2collapsed.get(var)
+                #if collapsed not in variables:
+                #    continue
 
                 vec['du'][var][:] += vec['df'][var][:]
 
