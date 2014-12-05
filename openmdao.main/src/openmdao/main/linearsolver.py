@@ -6,7 +6,7 @@
 import numpy as np
 from scipy.sparse.linalg import gmres, LinearOperator
 
-from openmdao.main.mpiwrap import MPI
+from openmdao.main.mpiwrap import MPI, mpiprint
 from openmdao.util.graph import fix_single_tuple
 from openmdao.util.log import logger
 
@@ -299,18 +299,12 @@ class PETSc_KSP(LinearSolver):
                                atol=options.atol,
                                rtol=options.rtol)
 
-        system.rhs_vec.array[:] = system.vec['f'].array[:]
-        #print 'newton start vec', system.vec['f'].array[:]
-
-        system.sol_buf[:] = arg
-        system.rhs_buf[:] = system.rhs_vec.array[:]
-
-        system.ln_solver.ksp.solve(system.rhs_buf, system.sol_buf)
-
-        system.vec['df'].array[:] = system.sol_buf[:]
+        system.rhs_buf[:] = arg[:]
+  
+        self.ksp.solve(system.rhs_buf, system.sol_buf)
 
         #print 'newton solution vec', system.vec['df'].array[:]
-        return system.vec['df'].array[:]
+        return system.sol_buf[:]
 
     def mult(self, mat, sol_vec, rhs_vec):
         """ KSP Callback: applies Jacobian matrix. Mode is determined by the
@@ -475,7 +469,7 @@ class LinearGS(LinearSolver):
                     sub_options = options if subsystem.options is None \
                                           else subsystem.options
                     subsystem.solve_linear(sub_options)
-
+                    
             elif system.mode == 'adjoint':
 
                 rev_systems = [item for item in reversed(system.subsystems(local=True))]
