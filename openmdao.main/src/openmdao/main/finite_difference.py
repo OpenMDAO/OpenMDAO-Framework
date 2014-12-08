@@ -573,7 +573,7 @@ class DirectionalFD(object):
             uvec = self.system.vec['u']
             for src in srcs:
                 if src in uvec:
-                    uvec[src][:] += direction
+                    uvec[src] += direction
 
     def set_value_complex(self, fd_step, arg, undo_complex=False):
         """Set a complex value in the model"""
