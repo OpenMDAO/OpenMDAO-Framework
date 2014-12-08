@@ -814,7 +814,7 @@ class Workflow(object):
             if reduced.out_degree(vname) == 0:
                 reduced.add_node(vname, comp='dumbvar')
                 reduced.add_edge(out, vname)
-                reduced.node[out]['system'] = \
+                reduced.node[vname]['system'] = \
                            VarSystem(scope, reduced, vname)
 
         cgraph = reduced.component_graph()

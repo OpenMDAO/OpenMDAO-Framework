@@ -217,6 +217,33 @@ class DGraphBase(nx.DiGraph):
     def remove_edges_from(self, ebunch):
         super(DGraphBase, self).remove_edges_from(ebunch)
         self.config_changed()
+        
+    def in_degree(self, name):
+        """The nx.DiGraph version returns an empty dict when it should
+        return 0, so fix it here...
+        """
+        indeg = super(DGraphBase, self).in_degree(name)
+        if isinstance(indeg, dict):
+            return len(indeg)
+        return indeg
+
+    def out_degree(self, name):
+        """The nx.DiGraph version returns an empty dict when it should
+        return 0, so fix it here...
+        """
+        odeg = super(DGraphBase, self).out_degree(name)
+        if isinstance(odeg, dict):
+            return len(odeg)
+        return odeg
+
+    def degree(self, name):
+        """The nx.DiGraph version returns an empty dict when it should
+        return 0, so fix it here...
+        """
+        deg = super(DGraphBase, self).degree(name)
+        if isinstance(deg, dict):
+            return len(deg)
+        return deg
 
 
 class DependencyGraph(DGraphBase):
