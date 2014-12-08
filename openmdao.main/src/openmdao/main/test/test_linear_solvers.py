@@ -1,12 +1,14 @@
 """
 Basic unit testing of the linear solvers.
 """
+import sys
 
 import unittest
 from nose import SkipTest
 
 import numpy as np
 
+from openmdao.main.mpiwrap import PETSc
 from openmdao.examples.simple.paraboloid import Paraboloid
 from openmdao.lib.drivers.api import NewtonSolver
 from openmdao.lib.optproblems.sellar import Discipline1_WithDerivatives, \
@@ -303,10 +305,7 @@ class Testcase_PetSc_KSP(unittest.TestCase):
     """ Test PetSC KSP solver. """
 
     def setUp(self):
-        
-        try:
-            from petsc4py import PETSc
-        except ImportError:
+        if not PETSc.installed:
             raise SkipTest("PetSc not installed")
         
     def test_petsc_ksp_single_comp_array(self):

@@ -16,7 +16,6 @@ def use_proc_files():
     sname = "%s.out" % rank
     MPI_STREAM = open(sname, 'w')
 
-
 def set_print_rank(rank):
     global MPI_PRINT_RANK
     MPI_PRINT_RANK = rank
@@ -31,15 +30,53 @@ def _under_mpirun():
             return True
     return False
 
+class PETSc(object):
+    def __init__(self):
+        self.needs_ksp = False # PETSc won't actually be imported unless this is True
+        self._PETSc = None
+        self.PC = None
+        
+    def IS(self):
+        if self.installed:
+            return self._PETSc.IS()
+        
+    def Vec(self):
+        if self.installed:
+            return self._PETSc.Vec()
+        
+    def Mat(self):
+        if self.installed:
+            return self._PETSc.Mat()
+    
+    def KSP(self):
+        if self.installed:
+            return self._PETSc.KSP()
+
+    @property
+    def installed(self):
+        try:
+            if self._PETSc is None:
+                from petsc4py import PETSc
+                del sys.modules['petsc4py']
+                self._PETSc = PETSc
+                self.PC = self._PETSc.PC
+            return True
+        except ImportError:
+            self._PETSc = None
+            return False
+    
+PETSc = PETSc()
+        
+def create_petsc_vec(comm, arr):
+    if MPI or PETSc.needs_ksp or PETSc.installed:
+        return PETSc.Vec().createWithArray(arr, comm=comm)
+
+    return None
 
 if _under_mpirun():
     from mpi4py import MPI
-    from petsc4py import PETSc
 
     COMM_NULL = MPI.COMM_NULL
-
-    def create_petsc_vec(comm, arr):
-        return PETSc.Vec().createWithArray(arr, comm=comm)
 
     def mpiprint(*args, **kwargs):
         rank = kwargs.get('rank', -1)
@@ -66,18 +103,6 @@ if _under_mpirun():
 else:
     MPI = None
     COMM_NULL = None
-
-    try:
-        from petsc4py import PETSc
-        
-        def create_petsc_vec(comm, arr):
-            return PETSc.Vec().createWithArray(arr, comm=comm)
-        
-    except ImportError:
-        PETSc = None
-        
-        def create_petsc_vec(comm, arr):
-            return None
 
     def mpiprint(*args, **kwargs):
         for arg in args:

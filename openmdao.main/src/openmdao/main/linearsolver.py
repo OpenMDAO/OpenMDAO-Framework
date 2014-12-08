@@ -6,17 +6,9 @@
 import numpy as np
 from scipy.sparse.linalg import gmres, LinearOperator
 
-from openmdao.main.mpiwrap import MPI, mpiprint
+from openmdao.main.mpiwrap import MPI, mpiprint, PETSc
 from openmdao.util.graph import fix_single_tuple
 from openmdao.util.log import logger
-
-try:
-    from petsc4py import PETSc
-except ImportError:
-    class PETSc(object):
-        # Dummy class so things parse.
-        pass
-
 
 class LinearSolver(object):
     """ A base class for linear solvers """
