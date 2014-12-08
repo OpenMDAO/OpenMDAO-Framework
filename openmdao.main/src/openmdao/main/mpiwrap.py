@@ -68,8 +68,9 @@ class PETSc(object):
 PETSc = PETSc()
         
 def create_petsc_vec(comm, arr):
-    if MPI or PETSc.needs_ksp or PETSc.installed:
-        return PETSc.Vec().createWithArray(arr, comm=comm)
+    if MPI or PETSc.needs_ksp:
+        if PETSc.installed:
+            return PETSc.Vec().createWithArray(arr, comm=comm)
 
     return None
 
