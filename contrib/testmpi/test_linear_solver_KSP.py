@@ -2,11 +2,7 @@
 Basic unit testing of the linear solvers. PetSc requires MPI, so it must be
 tested separately.
 """
-import sys
-
 import unittest
-from nose import SkipTest
-
 import numpy as np
 
 from openmdao.main.mpiwrap import PETSc

@@ -1,11 +1,8 @@
 """
 Basic unit testing of the linear solvers.
 """
-import sys
 
 import unittest
-from nose import SkipTest
-
 import numpy as np
 
 from openmdao.examples.simple.paraboloid import Paraboloid
