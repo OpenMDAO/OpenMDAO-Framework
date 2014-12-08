@@ -1,7 +1,7 @@
 {
-"__length_1": 6792
+"__length_1": 6592
 , "simulation_info": {
-    "OpenMDAO_Version": "0.10.2", 
+    "OpenMDAO_Version": "0.10.3.2", 
     "comp_graph": "{\"directed\": true, \"graph\": [], \"nodes\": [{\"comp\": true, \"pseudo\": \"objective\", \"id\": \"_pseudo_0\"}, {\"comp\": true, \"id\": \"writer\"}, {\"comp\": true, \"driver\": true, \"id\": \"driver\"}, {\"comp\": true, \"id\": \"c2\"}], \"links\": [{\"source\": 1, \"target\": 3}, {\"source\": 3, \"target\": 0}], \"multigraph\": false}", 
     "constants": {}, 
     "expressions": {
@@ -10,22 +10,10 @@
             "pcomp_name": "_pseudo_0"
         }
     }, 
-    "graph": "{\"directed\": true, \"graph\": [[\"title\", \"unknown\"]], \"nodes\": [{\"full\": \"driver.theta\", \"color_idx\": 2, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.theta\", \"short\": \"theta\"}, {\"full\": \"c2.file_in\", \"color_idx\": 3, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"file_in\", \"var\": true, \"iotype\": \"in\", \"id\": \"c2.file_in\"}, {\"full\": \"writer.x\", \"color_idx\": 1, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"writer.x\", \"short\": \"x\"}, {\"full\": \"driver.fdchm\", \"color_idx\": 2, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.fdchm\", \"short\": \"fdchm\"}, {\"short\": \"_pseudo_0\", \"color_idx\": 0, \"full\": \"_pseudo_0\", \"title\": \"{}\", \"comp\": true, \"pseudo\": \"objective\", \"id\": \"_pseudo_0\"}, {\"full\": \"_pseudo_0.in0\", \"color_idx\": 0, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"in0\", \"var\": true, \"iotype\": \"in\", \"id\": \"_pseudo_0.in0\"}, {\"full\": \"driver.ctl\", \"color_idx\": 2, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.ctl\", \"short\": \"ctl\"}, {\"full\": \"driver.delfun\", \"color_idx\": 2, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.delfun\", \"short\": \"delfun\"}, {\"short\": \"writer\", \"color_idx\": 1, \"full\": \"writer\", \"title\": \"{}\", \"comp\": true, \"id\": \"writer\"}, {\"full\": \"driver.linobj\", \"color_idx\": 2, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"linobj\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.linobj\"}, {\"full\": \"driver.fdch\", \"color_idx\": 2, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.fdch\", \"short\": \"fdch\"}, {\"full\": \"c2.f_xy\", \"color_idx\": 3, \"title\": \"{}\", \"var\": true, \"iotype\": \"out\", \"id\": \"c2.f_xy\", \"short\": \"f_xy\"}, {\"full\": \"driver.iprint\", \"color_idx\": 2, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"iprint\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.iprint\"}, {\"full\": \"driver.conmin_diff\", \"color_idx\": 2, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"conmin_diff\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.conmin_diff\"}, {\"full\": \"writer.y\", \"color_idx\": 1, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"writer.y\", \"short\": \"y\"}, {\"short\": \"driver\", \"color_idx\": 2, \"full\": \"driver\", \"title\": \"{'driver': True}\", \"comp\": true, \"driver\": true, \"id\": \"driver\"}, {\"full\": \"driver.icndir\", \"color_idx\": 2, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.icndir\", \"short\": \"icndir\"}, {\"full\": \"driver.dabfun\", \"color_idx\": 2, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.dabfun\", \"short\": \"dabfun\"}, {\"short\": \"c2\", \"color_idx\": 3, \"full\": \"c2\", \"title\": \"{}\", \"comp\": true, \"id\": \"c2\"}, {\"full\": \"_pseudo_0.out0\", \"color_idx\": 0, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"out0\", \"var\": true, \"iotype\": \"out\", \"id\": \"_pseudo_0.out0\"}, {\"full\": \"driver.ctlmin\", \"color_idx\": 2, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.ctlmin\", \"short\": \"ctlmin\"}, {\"full\": \"driver.ctmin\", \"color_idx\": 2, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.ctmin\", \"short\": \"ctmin\"}, {\"full\": \"driver.itrm\", \"color_idx\": 2, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"itrm\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.itrm\"}, {\"full\": \"driver.ct\", \"color_idx\": 2, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.ct\", \"short\": \"ct\"}, {\"full\": \"writer.file_out\", \"color_idx\": 1, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"file_out\", \"var\": true, \"iotype\": \"out\", \"id\": \"writer.file_out\"}, {\"full\": \"driver.phi\", \"color_idx\": 2, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.phi\", \"short\": \"phi\"}, {\"full\": \"driver.itmax\", \"color_idx\": 2, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"itmax\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.itmax\"}], \"links\": [{\"source\": 0, \"target\": 15}, {\"source\": 22, \"target\": 15}, {\"source\": 2, \"target\": 8}, {\"source\": 3, \"target\": 15}, {\"source\": 17, \"target\": 15}, {\"source\": 5, \"target\": 4}, {\"source\": 6, \"target\": 15}, {\"source\": 7, \"target\": 15}, {\"source\": 8, \"target\": 24}, {\"source\": 9, \"target\": 15}, {\"source\": 10, \"target\": 15}, {\"source\": 11, \"target\": 5, \"conn\": true}, {\"source\": 12, \"target\": 15}, {\"source\": 13, \"target\": 15}, {\"source\": 14, \"target\": 8}, {\"source\": 16, \"target\": 15}, {\"source\": 4, \"target\": 19}, {\"source\": 18, \"target\": 11}, {\"source\": 20, \"target\": 15}, {\"source\": 21, \"target\": 15}, {\"source\": 1, \"target\": 18}, {\"source\": 23, \"target\": 15}, {\"source\": 24, \"target\": 1, \"conn\": true}, {\"source\": 25, \"target\": 15}, {\"source\": 26, \"target\": 15}], \"multigraph\": false}", 
+    "graph": "{\"directed\": true, \"graph\": [[\"title\", \"unknown\"]], \"nodes\": [{\"full\": \"driver.theta\", \"color_idx\": 2, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.theta\", \"short\": \"theta\"}, {\"full\": \"c2.file_in\", \"color_idx\": 3, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"file_in\", \"var\": true, \"iotype\": \"in\", \"id\": \"c2.file_in\"}, {\"full\": \"writer.x\", \"color_idx\": 1, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"writer.x\", \"short\": \"x\"}, {\"full\": \"driver.fdchm\", \"color_idx\": 2, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.fdchm\", \"short\": \"fdchm\"}, {\"short\": \"_pseudo_0\", \"color_idx\": 0, \"full\": \"_pseudo_0\", \"title\": \"{}\", \"comp\": true, \"pseudo\": \"objective\", \"id\": \"_pseudo_0\"}, {\"full\": \"_pseudo_0.in0\", \"color_idx\": 0, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"_pseudo_0.in0\", \"short\": \"in0\"}, {\"full\": \"driver.ctl\", \"color_idx\": 2, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.ctl\", \"short\": \"ctl\"}, {\"full\": \"driver.delfun\", \"color_idx\": 2, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.delfun\", \"short\": \"delfun\"}, {\"short\": \"writer\", \"color_idx\": 1, \"full\": \"writer\", \"title\": \"{}\", \"comp\": true, \"id\": \"writer\"}, {\"full\": \"driver.linobj\", \"color_idx\": 2, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"linobj\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.linobj\"}, {\"full\": \"driver.fdch\", \"color_idx\": 2, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.fdch\", \"short\": \"fdch\"}, {\"full\": \"c2.f_xy\", \"color_idx\": 3, \"title\": \"{}\", \"var\": true, \"iotype\": \"out\", \"id\": \"c2.f_xy\", \"short\": \"f_xy\"}, {\"full\": \"driver.iprint\", \"color_idx\": 2, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"iprint\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.iprint\"}, {\"full\": \"driver.conmin_diff\", \"color_idx\": 2, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"conmin_diff\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.conmin_diff\"}, {\"full\": \"writer.y\", \"color_idx\": 1, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"writer.y\", \"short\": \"y\"}, {\"short\": \"driver\", \"color_idx\": 2, \"full\": \"driver\", \"title\": \"{'driver': True}\", \"comp\": true, \"driver\": true, \"id\": \"driver\"}, {\"full\": \"driver.icndir\", \"color_idx\": 2, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.icndir\", \"short\": \"icndir\"}, {\"full\": \"driver.dabfun\", \"color_idx\": 2, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.dabfun\", \"short\": \"dabfun\"}, {\"short\": \"c2\", \"color_idx\": 3, \"full\": \"c2\", \"title\": \"{}\", \"comp\": true, \"id\": \"c2\"}, {\"full\": \"_pseudo_0.out0\", \"color_idx\": 0, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"out0\", \"var\": true, \"iotype\": \"out\", \"id\": \"_pseudo_0.out0\"}, {\"full\": \"driver.ctlmin\", \"color_idx\": 2, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.ctlmin\", \"short\": \"ctlmin\"}, {\"full\": \"driver.ctmin\", \"color_idx\": 2, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.ctmin\", \"short\": \"ctmin\"}, {\"full\": \"driver.itrm\", \"color_idx\": 2, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"itrm\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.itrm\"}, {\"full\": \"driver.ct\", \"color_idx\": 2, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.ct\", \"short\": \"ct\"}, {\"full\": \"writer.file_out\", \"color_idx\": 1, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"file_out\", \"var\": true, \"iotype\": \"out\", \"id\": \"writer.file_out\"}, {\"full\": \"driver.phi\", \"color_idx\": 2, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.phi\", \"short\": \"phi\"}, {\"full\": \"driver.itmax\", \"color_idx\": 2, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"itmax\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.itmax\"}], \"links\": [{\"source\": 0, \"target\": 15}, {\"source\": 22, \"target\": 15}, {\"source\": 2, \"target\": 8}, {\"source\": 3, \"target\": 15}, {\"source\": 17, \"target\": 15}, {\"source\": 5, \"target\": 4}, {\"source\": 6, \"target\": 15}, {\"source\": 7, \"target\": 15}, {\"source\": 8, \"target\": 24}, {\"source\": 9, \"target\": 15}, {\"source\": 10, \"target\": 15}, {\"source\": 11, \"target\": 5, \"conn\": true}, {\"source\": 12, \"target\": 15}, {\"source\": 13, \"target\": 15}, {\"source\": 14, \"target\": 8}, {\"drv_conn\": \"driver\", \"target\": 15, \"source\": 19}, {\"drv_conn\": \"driver\", \"target\": 2, \"source\": 15}, {\"drv_conn\": \"driver\", \"target\": 14, \"source\": 15}, {\"source\": 16, \"target\": 15}, {\"source\": 4, \"target\": 19}, {\"source\": 18, \"target\": 11}, {\"source\": 20, \"target\": 15}, {\"source\": 21, \"target\": 15}, {\"source\": 1, \"target\": 18}, {\"source\": 23, \"target\": 15}, {\"source\": 24, \"target\": 1, \"conn\": true}, {\"source\": 25, \"target\": 15}, {\"source\": 26, \"target\": 15}], \"multigraph\": false}", 
     "name": "", 
-    "uuid": "3a7d4aae-6c3e-11e4-9183-080027a1f086", 
+    "uuid": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
     "variable_metadata": {
-        "c2.f_xy": {
-            "assumed_default": false, 
-            "high": null, 
-            "iotype": "out", 
-            "low": null, 
-            "target": "func.f_xy", 
-            "vartypename": "Float"
-        }, 
-        "writer.file_out": {
-            "iotype": "out", 
-            "vartypename": "File"
-        }, 
         "writer.x": {
             "assumed_default": false, 
             "high": null, 
@@ -42,9 +30,9 @@
         }
     }
 }
-, "__length_2": 333
+, "__length_2": 280
 , "driver_info_1": {
-    "_id": 139754462293168, 
+    "_id": 4566342736, 
     "ineq_constraints": [], 
     "name": "driver", 
     "objectives": [
@@ -57,1035 +45,539 @@
     "recording": [
         "writer.x", 
         "writer.y", 
-        "_pseudo_0", 
-        "c2.f_xy", 
-        "writer.file_out"
+        "_pseudo_0"
     ]
 }
-, "__length_3": 733
+, "__length_3": 333
 , "iteration_case_1": {
-    "_driver_id": 139754462293168, 
-    "_id": "3a7eb16e-6c3e-11e4-8001-080027a1f086", 
-    "_parent_id": "3a7d4aae-6c3e-11e4-9183-080027a1f086", 
+    "_driver_id": 4566342736, 
+    "_id": "95fd71e1-7c92-11e4-8001-20c9d0478eff", 
+    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
     "data": {
         "_pseudo_0": 39.0, 
-        "c2.f_xy": 39.0, 
-        "writer.file_out": {
-            "big_endian": false, 
-            "binary": false, 
-            "content_type": "", 
-            "desc": "", 
-            "integer_8": false, 
-            "path": "x.in", 
-            "platform": "linux2", 
-            "recordmark_8": false, 
-            "single_precision": false, 
-            "unformatted": false
-        }, 
         "writer.x": 1.0, 
         "writer.y": 2.0
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1415997525.314373
+    "timestamp": 1417792975.166085
 }
-, "__length_4": 733
+, "__length_4": 333
 , "iteration_case_2": {
-    "_driver_id": 139754462293168, 
-    "_id": "3a7f5507-6c3e-11e4-8003-080027a1f086", 
-    "_parent_id": "3a7d4aae-6c3e-11e4-9183-080027a1f086", 
+    "_driver_id": 4566342736, 
+    "_id": "9601050a-7c92-11e4-8003-20c9d0478eff", 
+    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
     "data": {
         "_pseudo_0": 39.0, 
-        "c2.f_xy": 39.0, 
-        "writer.file_out": {
-            "big_endian": false, 
-            "binary": false, 
-            "content_type": "", 
-            "desc": "", 
-            "integer_8": false, 
-            "path": "x.in", 
-            "platform": "linux2", 
-            "recordmark_8": false, 
-            "single_precision": false, 
-            "unformatted": false
-        }, 
         "writer.x": 1.0, 
         "writer.y": 2.0
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1415997525.316197
+    "timestamp": 1417792975.170426
 }
-, "__length_5": 739
+, "__length_5": 337
 , "iteration_case_3": {
-    "_driver_id": 139754462293168, 
-    "_id": "3a7f8c91-6c3e-11e4-8005-080027a1f086", 
-    "_parent_id": "3a7d4aae-6c3e-11e4-9183-080027a1f086", 
+    "_driver_id": 4566342736, 
+    "_id": "96019c17-7c92-11e4-8005-20c9d0478eff", 
+    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
     "data": {
         "_pseudo_0": 38.9801, 
-        "c2.f_xy": 38.9801, 
-        "writer.file_out": {
-            "big_endian": false, 
-            "binary": false, 
-            "content_type": "", 
-            "desc": "", 
-            "integer_8": false, 
-            "path": "x.in", 
-            "platform": "linux2", 
-            "recordmark_8": false, 
-            "single_precision": false, 
-            "unformatted": false
-        }, 
         "writer.x": 1.01, 
         "writer.y": 2.0
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1415997525.31751
+    "timestamp": 1417792975.174799
 }
-, "__length_6": 760
+, "__length_6": 347
 , "iteration_case_4": {
-    "_driver_id": 139754462293168, 
-    "_id": "3a7fc2ab-6c3e-11e4-8007-080027a1f086", 
-    "_parent_id": "3a7d4aae-6c3e-11e4-9183-080027a1f086", 
+    "_driver_id": 4566342736, 
+    "_id": "9602449c-7c92-11e4-8007-20c9d0478eff", 
+    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
     "data": {
         "_pseudo_0": 39.26039999999999, 
-        "c2.f_xy": 39.26039999999999, 
-        "writer.file_out": {
-            "big_endian": false, 
-            "binary": false, 
-            "content_type": "", 
-            "desc": "", 
-            "integer_8": false, 
-            "path": "x.in", 
-            "platform": "linux2", 
-            "recordmark_8": false, 
-            "single_precision": false, 
-            "unformatted": false
-        }, 
         "writer.x": 1.0, 
         "writer.y": 2.02
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1415997525.318992
+    "timestamp": 1417792975.178468
 }
-, "__length_7": 773
+, "__length_7": 376
 , "iteration_case_5": {
-    "_driver_id": 139754462293168, 
-    "_id": "3a7ff951-6c3e-11e4-8009-080027a1f086", 
-    "_parent_id": "3a7d4aae-6c3e-11e4-9183-080027a1f086", 
+    "_driver_id": 4566342736, 
+    "_id": "9602f0e8-7c92-11e4-8009-20c9d0478eff", 
+    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
     "data": {
-        "_pseudo_0": 36.372761, 
-        "c2.f_xy": 36.372761, 
-        "writer.file_out": {
-            "big_endian": false, 
-            "binary": false, 
-            "content_type": "", 
-            "desc": "", 
-            "integer_8": false, 
-            "path": "x.in", 
-            "platform": "linux2", 
-            "recordmark_8": false, 
-            "single_precision": false, 
-            "unformatted": false
-        }, 
+        "_pseudo_0": 36.372760999999997, 
         "writer.x": 1.0305683568303128, 
         "writer.y": 1.7999999970197678
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1415997525.320294
+    "timestamp": 1417792975.18471
 }
-, "__length_8": 792
+, "__length_8": 378
 , "iteration_case_6": {
-    "_driver_id": 139754462293168, 
-    "_id": "3a802a94-6c3e-11e4-800b-080027a1f086", 
-    "_parent_id": "3a7d4aae-6c3e-11e4-9183-080027a1f086", 
+    "_driver_id": 4566342736, 
+    "_id": "9603e4bd-7c92-11e4-800b-20c9d0478eff", 
+    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
     "data": {
         "_pseudo_0": 26.564408999999998, 
-        "c2.f_xy": 26.564408999999998, 
-        "writer.file_out": {
-            "big_endian": false, 
-            "binary": false, 
-            "content_type": "", 
-            "desc": "", 
-            "integer_8": false, 
-            "path": "x.in", 
-            "platform": "linux2", 
-            "recordmark_8": false, 
-            "single_precision": false, 
-            "unformatted": false
-        }, 
         "writer.x": 1.1528417841515644, 
         "writer.y": 0.99999998509883881
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1415997525.321549
+    "timestamp": 1417792975.189993
 }
-, "__length_9": 772
+, "__length_9": 377
 , "iteration_case_7": {
-    "_driver_id": 139754462293168, 
-    "_id": "3a805b40-6c3e-11e4-800d-080027a1f086", 
-    "_parent_id": "3a7d4aae-6c3e-11e4-9183-080027a1f086", 
+    "_driver_id": 4566342736, 
+    "_id": "96049845-7c92-11e4-800d-20c9d0478eff", 
+    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
     "data": {
-        "_pseudo_0": -5.764304, 
-        "c2.f_xy": -5.764304, 
-        "writer.file_out": {
-            "big_endian": false, 
-            "binary": false, 
-            "content_type": "", 
-            "desc": "", 
-            "integer_8": false, 
-            "path": "x.in", 
-            "platform": "linux2", 
-            "recordmark_8": false, 
-            "single_precision": false, 
-            "unformatted": false
-        }, 
+        "_pseudo_0": -5.7643040000000001, 
         "writer.x": 1.764208920757822, 
         "writer.y": -3.000000074505806
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1415997525.322728
+    "timestamp": 1417792975.193788
 }
-, "__length_10": 773
+, "__length_10": 368
 , "iteration_case_8": {
-    "_driver_id": 139754462293168, 
-    "_id": "3a808a0c-6c3e-11e4-800f-080027a1f086", 
-    "_parent_id": "3a7d4aae-6c3e-11e4-9183-080027a1f086", 
+    "_driver_id": 4566342736, 
+    "_id": "960544a8-7c92-11e4-800f-20c9d0478eff", 
+    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
     "data": {
         "_pseudo_0": -5.862476, 
-        "c2.f_xy": -5.862476, 
-        "writer.file_out": {
-            "big_endian": false, 
-            "binary": false, 
-            "content_type": "", 
-            "desc": "", 
-            "integer_8": false, 
-            "path": "x.in", 
-            "platform": "linux2", 
-            "recordmark_8": false, 
-            "single_precision": false, 
-            "unformatted": false
-        }, 
         "writer.x": 1.7818510099654001, 
         "writer.y": -3.000000074505806
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1415997525.324008
+    "timestamp": 1417792975.198523
 }
-, "__length_11": 791
+, "__length_11": 378
 , "iteration_case_9": {
-    "_driver_id": 139754462293168, 
-    "_id": "3a80bbdc-6c3e-11e4-8011-080027a1f086", 
-    "_parent_id": "3a7d4aae-6c3e-11e4-9183-080027a1f086", 
+    "_driver_id": 4566342736, 
+    "_id": "9605e3f3-7c92-11e4-8011-20c9d0478eff", 
+    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
     "data": {
-        "_pseudo_0": -5.650484000000001, 
-        "c2.f_xy": -5.650484000000001, 
-        "writer.file_out": {
-            "big_endian": false, 
-            "binary": false, 
-            "content_type": "", 
-            "desc": "", 
-            "integer_8": false, 
-            "path": "x.in", 
-            "platform": "linux2", 
-            "recordmark_8": false, 
-            "single_precision": false, 
-            "unformatted": false
-        }, 
+        "_pseudo_0": -5.6504840000000014, 
         "writer.x": 1.764208920757822, 
         "writer.y": -2.9700000737607479
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1415997525.325345
+    "timestamp": 1417792975.202195
 }
-, "__length_12": 774
+, "__length_12": 378
 , "iteration_case_10": {
-    "_driver_id": 139754462293168, 
-    "_id": "3a812a28-6c3e-11e4-8013-080027a1f086", 
-    "_parent_id": "3a7d4aae-6c3e-11e4-9183-080027a1f086", 
+    "_driver_id": 4566342736, 
+    "_id": "96068fde-7c92-11e4-8013-20c9d0478eff", 
+    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
     "data": {
-        "_pseudo_0": -6.889407, 
-        "c2.f_xy": -6.889407, 
-        "writer.file_out": {
-            "big_endian": false, 
-            "binary": false, 
-            "content_type": "", 
-            "desc": "", 
-            "integer_8": false, 
-            "path": "x.in", 
-            "platform": "linux2", 
-            "recordmark_8": false, 
-            "single_precision": false, 
-            "unformatted": false
-        }, 
+        "_pseudo_0": -6.8894070000000003, 
         "writer.x": 1.8788891850925069, 
         "writer.y": -3.1356631301619964
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1415997525.328608
+    "timestamp": 1417792975.20838
 }
-, "__length_13": 794
+, "__length_13": 378
 , "iteration_case_11": {
-    "_driver_id": 139754462293168, 
-    "_id": "3a817699-6c3e-11e4-8015-080027a1f086", 
-    "_parent_id": "3a7d4aae-6c3e-11e4-9183-080027a1f086", 
+    "_driver_id": 4566342736, 
+    "_id": "96076987-7c92-11e4-8015-20c9d0478eff", 
+    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
     "data": {
         "_pseudo_0": -11.057236000000001, 
-        "c2.f_xy": -11.057236000000001, 
-        "writer.file_out": {
-            "big_endian": false, 
-            "binary": false, 
-            "content_type": "", 
-            "desc": "", 
-            "integer_8": false, 
-            "path": "x.in", 
-            "platform": "linux2", 
-            "recordmark_8": false, 
-            "single_precision": false, 
-            "unformatted": false
-        }, 
         "writer.x": 2.3376102424312468, 
         "writer.y": -3.6783153527867585
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1415997525.333728
+    "timestamp": 1417792975.21233
 }
-, "__length_14": 776
+, "__length_14": 379
 , "iteration_case_12": {
-    "_driver_id": 139754462293168, 
-    "_id": "3a823fb5-6c3e-11e4-8017-080027a1f086", 
-    "_parent_id": "3a7d4aae-6c3e-11e4-9183-080027a1f086", 
+    "_driver_id": 4566342736, 
+    "_id": "9607ff35-7c92-11e4-8017-20c9d0478eff", 
+    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
     "data": {
-        "_pseudo_0": -24.219527, 
-        "c2.f_xy": -24.219527, 
-        "writer.file_out": {
-            "big_endian": false, 
-            "binary": false, 
-            "content_type": "", 
-            "desc": "", 
-            "integer_8": false, 
-            "path": "x.in", 
-            "platform": "linux2", 
-            "recordmark_8": false, 
-            "single_precision": false, 
-            "unformatted": false
-        }, 
+        "_pseudo_0": -24.219526999999999, 
         "writer.x": 4.6312155291249457, 
         "writer.y": -6.3915764659105703
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1415997525.336085
+    "timestamp": 1417792975.216966
 }
-, "__length_15": 776
+, "__length_15": 370
 , "iteration_case_13": {
-    "_driver_id": 139754462293168, 
-    "_id": "3a82a499-6c3e-11e4-8019-080027a1f086", 
-    "_parent_id": "3a7d4aae-6c3e-11e4-9183-080027a1f086", 
+    "_driver_id": 4566342736, 
+    "_id": "9608b517-7c92-11e4-8019-20c9d0478eff", 
+    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
     "data": {
         "_pseudo_0": -24.364428, 
-        "c2.f_xy": -24.364428, 
-        "writer.file_out": {
-            "big_endian": false, 
-            "binary": false, 
-            "content_type": "", 
-            "desc": "", 
-            "integer_8": false, 
-            "path": "x.in", 
-            "platform": "linux2", 
-            "recordmark_8": false, 
-            "single_precision": false, 
-            "unformatted": false
-        }, 
         "writer.x": 4.6775276844161953, 
         "writer.y": -6.3915764659105703
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1415997525.338153
+    "timestamp": 1417792975.220772
 }
-, "__length_16": 776
+, "__length_16": 370
 , "iteration_case_14": {
-    "_driver_id": 139754462293168, 
-    "_id": "3a830a0a-6c3e-11e4-801b-080027a1f086", 
-    "_parent_id": "3a7d4aae-6c3e-11e4-9183-080027a1f086", 
+    "_driver_id": 4566342736, 
+    "_id": "9609478a-7c92-11e4-801b-20c9d0478eff", 
+    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
     "data": {
         "_pseudo_0": -24.225223, 
-        "c2.f_xy": -24.225223, 
-        "writer.file_out": {
-            "big_endian": false, 
-            "binary": false, 
-            "content_type": "", 
-            "desc": "", 
-            "integer_8": false, 
-            "path": "x.in", 
-            "platform": "linux2", 
-            "recordmark_8": false, 
-            "single_precision": false, 
-            "unformatted": false
-        }, 
         "writer.x": 4.6312155291249457, 
         "writer.y": -6.3276607012514647
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1415997525.340468
+    "timestamp": 1417792975.224404
 }
-, "__length_17": 792
+, "__length_17": 377
 , "iteration_case_15": {
-    "_driver_id": 139754462293168, 
-    "_id": "3a833f05-6c3e-11e4-801d-080027a1f086", 
-    "_parent_id": "3a7d4aae-6c3e-11e4-9183-080027a1f086", 
+    "_driver_id": 4566342736, 
+    "_id": "9609d554-7c92-11e4-801d-20c9d0478eff", 
+    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
     "data": {
         "_pseudo_0": -27.129673000000004, 
-        "c2.f_xy": -27.129673000000004, 
-        "writer.file_out": {
-            "big_endian": false, 
-            "binary": false, 
-            "content_type": "", 
-            "desc": "", 
-            "integer_8": false, 
-            "path": "x.in", 
-            "platform": "linux2", 
-            "recordmark_8": false, 
-            "single_precision": false, 
-            "unformatted": false
-        }, 
         "writer.x": 6.1940719634916768, 
         "writer.y": -6.90711982519767
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1415997525.341754
+    "timestamp": 1417792975.228018
 }
-, "__length_18": 794
+, "__length_18": 379
 , "iteration_case_16": {
-    "_driver_id": 139754462293168, 
-    "_id": "3a83728a-6c3e-11e4-801f-080027a1f086", 
-    "_parent_id": "3a7d4aae-6c3e-11e4-9183-080027a1f086", 
+    "_driver_id": 4566342736, 
+    "_id": "960a65f0-7c92-11e4-801f-20c9d0478eff", 
+    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
     "data": {
         "_pseudo_0": -27.262503000000002, 
-        "c2.f_xy": -27.262503000000002, 
-        "writer.file_out": {
-            "big_endian": false, 
-            "binary": false, 
-            "content_type": "", 
-            "desc": "", 
-            "integer_8": false, 
-            "path": "x.in", 
-            "platform": "linux2", 
-            "recordmark_8": false, 
-            "single_precision": false, 
-            "unformatted": false
-        }, 
         "writer.x": 6.5886277470278447, 
         "writer.y": -7.0372729279379174
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1415997525.343087
+    "timestamp": 1417792975.232195
 }
-, "__length_19": 776
+, "__length_19": 379
 , "iteration_case_17": {
-    "_driver_id": 139754462293168, 
-    "_id": "3a83a411-6c3e-11e4-8021-080027a1f086", 
-    "_parent_id": "3a7d4aae-6c3e-11e4-9183-080027a1f086", 
+    "_driver_id": 4566342736, 
+    "_id": "960b2080-7c92-11e4-8021-20c9d0478eff", 
+    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
     "data": {
-        "_pseudo_0": -27.263149, 
-        "c2.f_xy": -27.263149, 
-        "writer.file_out": {
-            "big_endian": false, 
-            "binary": false, 
-            "content_type": "", 
-            "desc": "", 
-            "integer_8": false, 
-            "path": "x.in", 
-            "platform": "linux2", 
-            "recordmark_8": false, 
-            "single_precision": false, 
-            "unformatted": false
-        }, 
+        "_pseudo_0": -27.263148999999999, 
         "writer.x": 6.6109227140348423, 
         "writer.y": -7.0446274244439513
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1415997525.344346
+    "timestamp": 1417792975.236598
 }
-, "__length_20": 794
+, "__length_20": 379
 , "iteration_case_18": {
-    "_driver_id": 139754462293168, 
-    "_id": "3a83d642-6c3e-11e4-8023-080027a1f086", 
-    "_parent_id": "3a7d4aae-6c3e-11e4-9183-080027a1f086", 
+    "_driver_id": 4566342736, 
+    "_id": "960bb323-7c92-11e4-8023-20c9d0478eff", 
+    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
     "data": {
         "_pseudo_0": -27.247111000000004, 
-        "c2.f_xy": -27.247111000000004, 
-        "writer.file_out": {
-            "big_endian": false, 
-            "binary": false, 
-            "content_type": "", 
-            "desc": "", 
-            "integer_8": false, 
-            "path": "x.in", 
-            "platform": "linux2", 
-            "recordmark_8": false, 
-            "single_precision": false, 
-            "unformatted": false
-        }, 
         "writer.x": 6.6770319411751906, 
         "writer.y": -7.0446274244439513
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1415997525.345632
+    "timestamp": 1417792975.240332
 }
-, "__length_21": 776
+, "__length_21": 370
 , "iteration_case_19": {
-    "_driver_id": 139754462293168, 
-    "_id": "3a8407fd-6c3e-11e4-8025-080027a1f086", 
-    "_parent_id": "3a7d4aae-6c3e-11e4-9183-080027a1f086", 
+    "_driver_id": 4566342736, 
+    "_id": "960c458c-7c92-11e4-8025-20c9d0478eff", 
+    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
     "data": {
         "_pseudo_0": -27.221117, 
-        "c2.f_xy": -27.221117, 
-        "writer.file_out": {
-            "big_endian": false, 
-            "binary": false, 
-            "content_type": "", 
-            "desc": "", 
-            "integer_8": false, 
-            "path": "x.in", 
-            "platform": "linux2", 
-            "recordmark_8": false, 
-            "single_precision": false, 
-            "unformatted": false
-        }, 
         "writer.x": 6.6109227140348423, 
         "writer.y": -6.9741811501995121
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1415997525.346716
+    "timestamp": 1417792975.244034
 }
-, "__length_22": 794
+, "__length_22": 379
 , "iteration_case_20": {
-    "_driver_id": 139754462293168, 
-    "_id": "3a8436f3-6c3e-11e4-8027-080027a1f086", 
-    "_parent_id": "3a7d4aae-6c3e-11e4-9183-080027a1f086", 
+    "_driver_id": 4566342736, 
+    "_id": "960cd7d4-7c92-11e4-8027-20c9d0478eff", 
+    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
     "data": {
         "_pseudo_0": -14.672609000000001, 
-        "c2.f_xy": -14.672609000000001, 
-        "writer.file_out": {
-            "big_endian": false, 
-            "binary": false, 
-            "content_type": "", 
-            "desc": "", 
-            "integer_8": false, 
-            "path": "x.in", 
-            "platform": "linux2", 
-            "recordmark_8": false, 
-            "single_precision": false, 
-            "unformatted": false
-        }, 
         "writer.x": 5.3807031993338494, 
         "writer.y": -10.070262241004933
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1415997525.348204
+    "timestamp": 1417792975.247782
 }
-, "__length_23": 793
+, "__length_23": 379
 , "iteration_case_21": {
-    "_driver_id": 139754462293168, 
-    "_id": "3a846fdc-6c3e-11e4-8029-080027a1f086", 
-    "_parent_id": "3a7d4aae-6c3e-11e4-9183-080027a1f086", 
+    "_driver_id": 4566342736, 
+    "_id": "960d66a6-7c92-11e4-8029-20c9d0478eff", 
+    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
     "data": {
         "_pseudo_0": -27.317853000000007, 
-        "c2.f_xy": -27.317853000000007, 
-        "writer.file_out": {
-            "big_endian": false, 
-            "binary": false, 
-            "content_type": "", 
-            "desc": "", 
-            "integer_8": false, 
-            "path": "x.in", 
-            "platform": "linux2", 
-            "recordmark_8": false, 
-            "single_precision": false, 
-            "unformatted": false
-        }, 
         "writer.x": 6.5228604066048641, 
         "writer.y": -7.2612102214186844
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1415997525.34959
+    "timestamp": 1417792975.252244
 }
-, "__length_24": 794
+, "__length_24": 378
 , "iteration_case_22": {
-    "_driver_id": 139754462293168, 
-    "_id": "3a849c33-6c3e-11e4-802b-080027a1f086", 
-    "_parent_id": "3a7d4aae-6c3e-11e4-9183-080027a1f086", 
+    "_driver_id": 4566342736, 
+    "_id": "960e168c-7c92-11e4-802b-20c9d0478eff", 
+    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
     "data": {
         "_pseudo_0": -27.318541000000003, 
-        "c2.f_xy": -27.318541000000003, 
-        "writer.file_out": {
-            "big_endian": false, 
-            "binary": false, 
-            "content_type": "", 
-            "desc": "", 
-            "integer_8": false, 
-            "path": "x.in", 
-            "platform": "linux2", 
-            "recordmark_8": false, 
-            "single_precision": false, 
-            "unformatted": false
-        }, 
         "writer.x": 6.5415625877875776, 
         "writer.y": -7.2152135762217471
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1415997525.350723
+    "timestamp": 1417792975.25599
 }
-, "__length_25": 776
+, "__length_25": 379
 , "iteration_case_23": {
-    "_driver_id": 139754462293168, 
-    "_id": "3a84cf4a-6c3e-11e4-802d-080027a1f086", 
-    "_parent_id": "3a7d4aae-6c3e-11e4-9183-080027a1f086", 
+    "_driver_id": 4566342736, 
+    "_id": "960ea6d9-7c92-11e4-802d-20c9d0478eff", 
+    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
     "data": {
-        "_pseudo_0": -27.322831, 
-        "c2.f_xy": -27.322831, 
-        "writer.file_out": {
-            "big_endian": false, 
-            "binary": false, 
-            "content_type": "", 
-            "desc": "", 
-            "integer_8": false, 
-            "path": "x.in", 
-            "platform": "linux2", 
-            "recordmark_8": false, 
-            "single_precision": false, 
-            "unformatted": false
-        }, 
+        "_pseudo_0": -27.322831000000001, 
         "writer.x": 6.6069782136654531, 
         "writer.y": -7.2152135762217471
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1415997525.351993
+    "timestamp": 1417792975.260162
 }
-, "__length_26": 794
+, "__length_26": 379
 , "iteration_case_24": {
-    "_driver_id": 139754462293168, 
-    "_id": "3a85003a-6c3e-11e4-802f-080027a1f086", 
-    "_parent_id": "3a7d4aae-6c3e-11e4-9183-080027a1f086", 
+    "_driver_id": 4566342736, 
+    "_id": "960f4bf5-7c92-11e4-802f-20c9d0478eff", 
+    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
     "data": {
         "_pseudo_0": -27.305293000000006, 
-        "c2.f_xy": -27.305293000000006, 
-        "writer.file_out": {
-            "big_endian": false, 
-            "binary": false, 
-            "content_type": "", 
-            "desc": "", 
-            "integer_8": false, 
-            "path": "x.in", 
-            "platform": "linux2", 
-            "recordmark_8": false, 
-            "single_precision": false, 
-            "unformatted": false
-        }, 
         "writer.x": 6.5415625877875776, 
         "writer.y": -7.1430614404595296
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1415997525.353254
+    "timestamp": 1417792975.264434
 }
-, "__length_27": 775
+, "__length_27": 378
 , "iteration_case_25": {
-    "_driver_id": 139754462293168, 
-    "_id": "3a8531f5-6c3e-11e4-8031-080027a1f086", 
-    "_parent_id": "3a7d4aae-6c3e-11e4-9183-080027a1f086", 
+    "_driver_id": 4566342736, 
+    "_id": "960ffd1c-7c92-11e4-8031-20c9d0478eff", 
+    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
     "data": {
-        "_pseudo_0": -25.264729, 
-        "c2.f_xy": -25.264729, 
-        "writer.file_out": {
-            "big_endian": false, 
-            "binary": false, 
-            "content_type": "", 
-            "desc": "", 
-            "integer_8": false, 
-            "path": "x.in", 
-            "platform": "linux2", 
-            "recordmark_8": false, 
-            "single_precision": false, 
-            "unformatted": false
-        }, 
+        "_pseudo_0": -25.264728999999999, 
         "writer.x": 6.838965543807503, 
         "writer.y": -8.8499570410262187
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1415997525.355347
+    "timestamp": 1417792975.268657
 }
-, "__length_28": 793
+, "__length_28": 378
 , "iteration_case_26": {
-    "_driver_id": 139754462293168, 
-    "_id": "3a858373-6c3e-11e4-8033-080027a1f086", 
-    "_parent_id": "3a7d4aae-6c3e-11e4-9183-080027a1f086", 
+    "_driver_id": 4566342736, 
+    "_id": "9610b161-7c92-11e4-8033-20c9d0478eff", 
+    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
     "data": {
         "_pseudo_0": -27.323180999999998, 
-        "c2.f_xy": -27.323180999999998, 
-        "writer.file_out": {
-            "big_endian": false, 
-            "binary": false, 
-            "content_type": "", 
-            "desc": "", 
-            "integer_8": false, 
-            "path": "x.in", 
-            "platform": "linux2", 
-            "recordmark_8": false, 
-            "single_precision": false, 
-            "unformatted": false
-        }, 
         "writer.x": 6.5615898850107977, 
         "writer.y": -7.325298202452438
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1415997525.356624
+    "timestamp": 1417792975.273114
 }
-, "__length_29": 793
+, "__length_29": 378
 , "iteration_case_27": {
-    "_driver_id": 139754462293168, 
-    "_id": "3a85bab8-6c3e-11e4-8035-080027a1f086", 
-    "_parent_id": "3a7d4aae-6c3e-11e4-9183-080027a1f086", 
+    "_driver_id": 4566342736, 
+    "_id": "96114480-7c92-11e4-8035-20c9d0478eff", 
+    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
     "data": {
         "_pseudo_0": -27.323749000000003, 
-        "c2.f_xy": -27.323749000000003, 
-        "writer.file_out": {
-            "big_endian": false, 
-            "binary": false, 
-            "content_type": "", 
-            "desc": "", 
-            "integer_8": false, 
-            "path": "x.in", 
-            "platform": "linux2", 
-            "recordmark_8": false, 
-            "single_precision": false, 
-            "unformatted": false
-        }, 
         "writer.x": 6.5543127464410915, 
         "writer.y": -7.285297743551463
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1415997525.358117
+    "timestamp": 1417792975.277081
 }
-, "__length_30": 792
+, "__length_30": 377
 , "iteration_case_28": {
-    "_driver_id": 139754462293168, 
-    "_id": "3a85e380-6c3e-11e4-8037-080027a1f086", 
-    "_parent_id": "3a7d4aae-6c3e-11e4-9183-080027a1f086", 
+    "_driver_id": 4566342736, 
+    "_id": "9611dfc5-7c92-11e4-8037-20c9d0478eff", 
+    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
     "data": {
         "_pseudo_0": -27.331075000000002, 
-        "c2.f_xy": -27.331075000000002, 
-        "writer.file_out": {
-            "big_endian": false, 
-            "binary": false, 
-            "content_type": "", 
-            "desc": "", 
-            "integer_8": false, 
-            "path": "x.in", 
-            "platform": "linux2", 
-            "recordmark_8": false, 
-            "single_precision": false, 
-            "unformatted": false
-        }, 
         "writer.x": 6.619855873905502, 
         "writer.y": -7.285297743551463
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1415997525.359128
+    "timestamp": 1417792975.282229
 }
-, "__length_31": 794
+, "__length_31": 378
 , "iteration_case_29": {
-    "_driver_id": 139754462293168, 
-    "_id": "3a8618e6-6c3e-11e4-8039-080027a1f086", 
-    "_parent_id": "3a7d4aae-6c3e-11e4-9183-080027a1f086", 
+    "_driver_id": 4566342736, 
+    "_id": "9612b263-7c92-11e4-8039-20c9d0478eff", 
+    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
     "data": {
         "_pseudo_0": -27.319588000000003, 
-        "c2.f_xy": -27.319588000000003, 
-        "writer.file_out": {
-            "big_endian": false, 
-            "binary": false, 
-            "content_type": "", 
-            "desc": "", 
-            "integer_8": false, 
-            "path": "x.in", 
-            "platform": "linux2", 
-            "recordmark_8": false, 
-            "single_precision": false, 
-            "unformatted": false
-        }, 
         "writer.x": 6.5543127464410915, 
         "writer.y": -7.2124447661159481
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1415997525.361026
+    "timestamp": 1417792975.28751
 }
-, "__length_32": 775
+, "__length_32": 379
 , "iteration_case_30": {
-    "_driver_id": 139754462293168, 
-    "_id": "3a8668c7-6c3e-11e4-803b-080027a1f086", 
-    "_parent_id": "3a7d4aae-6c3e-11e4-9183-080027a1f086", 
+    "_driver_id": 4566342736, 
+    "_id": "961377f8-7c92-11e4-803b-20c9d0478eff", 
+    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
     "data": {
-        "_pseudo_0": -27.314951, 
-        "c2.f_xy": -27.314951, 
-        "writer.file_out": {
-            "big_endian": false, 
-            "binary": false, 
-            "content_type": "", 
-            "desc": "", 
-            "integer_8": false, 
-            "path": "x.in", 
-            "platform": "linux2", 
-            "recordmark_8": false, 
-            "single_precision": false, 
-            "unformatted": false
-        }, 
+        "_pseudo_0": -27.314951000000001, 
         "writer.x": 6.7226225125029639, 
         "writer.y": -7.4875115523846079
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1415997525.36371
+    "timestamp": 1417792975.292003
 }
-, "__length_33": 776
+, "__length_33": 379
 , "iteration_case_31": {
-    "_driver_id": 139754462293168, 
-    "_id": "3a86d421-6c3e-11e4-803d-080027a1f086", 
-    "_parent_id": "3a7d4aae-6c3e-11e4-9183-080027a1f086", 
+    "_driver_id": 4566342736, 
+    "_id": "961426ee-7c92-11e4-803d-20c9d0478eff", 
+    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
     "data": {
-        "_pseudo_0": -27.328784, 
-        "c2.f_xy": -27.328784, 
-        "writer.file_out": {
-            "big_endian": false, 
-            "binary": false, 
-            "content_type": "", 
-            "desc": "", 
-            "integer_8": false, 
-            "path": "x.in", 
-            "platform": "linux2", 
-            "recordmark_8": false, 
-            "single_precision": false, 
-            "unformatted": false
-        }, 
+        "_pseudo_0": -27.328783999999999, 
         "writer.x": 6.6195607460771662, 
         "writer.y": -7.3636891930428963
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1415997525.365698
+    "timestamp": 1417792975.295691
 }
-, "__length_34": 794
+, "__length_34": 379
 , "iteration_case_32": {
-    "_driver_id": 139754462293168, 
-    "_id": "3a8720d7-6c3e-11e4-803f-080027a1f086", 
-    "_parent_id": "3a7d4aae-6c3e-11e4-9183-080027a1f086", 
+    "_driver_id": 4566342736, 
+    "_id": "9614b5e6-7c92-11e4-803f-20c9d0478eff", 
+    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
     "data": {
         "_pseudo_0": -27.328723000000004, 
-        "c2.f_xy": -27.328723000000004, 
-        "writer.file_out": {
-            "big_endian": false, 
-            "binary": false, 
-            "content_type": "", 
-            "desc": "", 
-            "integer_8": false, 
-            "path": "x.in", 
-            "platform": "linux2", 
-            "recordmark_8": false, 
-            "single_precision": false, 
-            "unformatted": false
-        }, 
         "writer.x": 6.6129564628703879, 
         "writer.y": -7.3557545538766558
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1415997525.367643
+    "timestamp": 1417792975.299371
 }
-, "__length_35": 794
+, "__length_35": 379
 , "iteration_case_33": {
-    "_driver_id": 139754462293168, 
-    "_id": "3a877023-6c3e-11e4-8041-080027a1f086", 
-    "_parent_id": "3a7d4aae-6c3e-11e4-9183-080027a1f086", 
+    "_driver_id": 4566342736, 
+    "_id": "96154697-7c92-11e4-8041-20c9d0478eff", 
+    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
     "data": {
         "_pseudo_0": -27.332611999999997, 
-        "c2.f_xy": -27.332611999999997, 
-        "writer.file_out": {
-            "big_endian": false, 
-            "binary": false, 
-            "content_type": "", 
-            "desc": "", 
-            "integer_8": false, 
-            "path": "x.in", 
-            "platform": "linux2", 
-            "recordmark_8": false, 
-            "single_precision": false, 
-            "unformatted": false
-        }, 
         "writer.x": 6.6857563535379381, 
         "writer.y": -7.3636891930428963
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1415997525.369891
+    "timestamp": 1417792975.303052
 }
-, "__length_36": 772
+, "__length_36": 379
 , "iteration_case_34": {
-    "_driver_id": 139754462293168, 
-    "_id": "3a87c93d-6c3e-11e4-8043-080027a1f086", 
-    "_parent_id": "3a7d4aae-6c3e-11e4-9183-080027a1f086", 
+    "_driver_id": 4566342736, 
+    "_id": "9615da70-7c92-11e4-8043-20c9d0478eff", 
+    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
     "data": {
-        "_pseudo_0": -27.3313, 
-        "c2.f_xy": -27.3313, 
-        "writer.file_out": {
-            "big_endian": false, 
-            "binary": false, 
-            "content_type": "", 
-            "desc": "", 
-            "integer_8": false, 
-            "path": "x.in", 
-            "platform": "linux2", 
-            "recordmark_8": false, 
-            "single_precision": false, 
-            "unformatted": false
-        }, 
+        "_pseudo_0": -27.331299999999999, 
         "writer.x": 6.6195607460771662, 
         "writer.y": -7.2900523011124676
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1415997525.372078
+    "timestamp": 1417792975.306892
 }
-, "__length_37": 794
+, "__length_37": 379
 , "iteration_case_35": {
-    "_driver_id": 139754462293168, 
-    "_id": "3a8812f5-6c3e-11e4-8045-080027a1f086", 
-    "_parent_id": "3a7d4aae-6c3e-11e4-9183-080027a1f086", 
+    "_driver_id": 4566342736, 
+    "_id": "9616855e-7c92-11e4-8045-20c9d0478eff", 
+    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
     "data": {
         "_pseudo_0": -27.332775000000005, 
-        "c2.f_xy": -27.332775000000005, 
-        "writer.file_out": {
-            "big_endian": false, 
-            "binary": false, 
-            "content_type": "", 
-            "desc": "", 
-            "integer_8": false, 
-            "path": "x.in", 
-            "platform": "linux2", 
-            "recordmark_8": false, 
-            "single_precision": false, 
-            "unformatted": false
-        }, 
         "writer.x": 6.6852257059805744, 
         "writer.y": -7.3248914811661976
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1415997525.373397
+    "timestamp": 1417792975.311225
 }
-, "__length_38": 776
+, "__length_38": 379
 , "iteration_case_36": {
-    "_driver_id": 139754462293168, 
-    "_id": "3a8844ae-6c3e-11e4-8047-080027a1f086", 
-    "_parent_id": "3a7d4aae-6c3e-11e4-9183-080027a1f086", 
+    "_driver_id": 4566342736, 
+    "_id": "961714c7-7c92-11e4-8047-20c9d0478eff", 
+    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
     "data": {
-        "_pseudo_0": -27.313968, 
-        "c2.f_xy": -27.313968, 
-        "writer.file_out": {
-            "big_endian": false, 
-            "binary": false, 
-            "content_type": "", 
-            "desc": "", 
-            "integer_8": false, 
-            "path": "x.in", 
-            "platform": "linux2", 
-            "recordmark_8": false, 
-            "single_precision": false, 
-            "unformatted": false
-        }, 
+        "_pseudo_0": -27.313967999999999, 
         "writer.x": 6.7681541291549614, 
         "writer.y": -7.2758937649802506
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1415997525.374606
+    "timestamp": 1417792975.314868
 }
-, "__length_39": 794
+, "__length_39": 379
 , "iteration_case_37": {
-    "_driver_id": 139754462293168, 
-    "_id": "3a8873e8-6c3e-11e4-8049-080027a1f086", 
-    "_parent_id": "3a7d4aae-6c3e-11e4-9183-080027a1f086", 
+    "_driver_id": 4566342736, 
+    "_id": "9617a4e8-7c92-11e4-8049-20c9d0478eff", 
+    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
     "data": {
         "_pseudo_0": -27.332852000000003, 
-        "c2.f_xy": -27.332852000000003, 
-        "writer.file_out": {
-            "big_endian": false, 
-            "binary": false, 
-            "content_type": "", 
-            "desc": "", 
-            "integer_8": false, 
-            "path": "x.in", 
-            "platform": "linux2", 
-            "recordmark_8": false, 
-            "single_precision": false, 
-            "unformatted": false
-        }, 
         "writer.x": 6.6837693609986939, 
         "writer.y": -7.3257519530690693
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1415997525.375874
+    "timestamp": 1417792975.318588
 }
-, "__length_40": 794
+, "__length_40": 379
 , "iteration_case_38": {
-    "_driver_id": 139754462293168, 
-    "_id": "3a88a5fd-6c3e-11e4-804b-080027a1f086", 
-    "_parent_id": "3a7d4aae-6c3e-11e4-9183-080027a1f086", 
+    "_driver_id": 4566342736, 
+    "_id": "96183428-7c92-11e4-804b-20c9d0478eff", 
+    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
     "data": {
         "_pseudo_0": -27.332852000000003, 
-        "c2.f_xy": -27.332852000000003, 
-        "writer.file_out": {
-            "big_endian": false, 
-            "binary": false, 
-            "content_type": "", 
-            "desc": "", 
-            "integer_8": false, 
-            "path": "x.in", 
-            "platform": "linux2", 
-            "recordmark_8": false, 
-            "single_precision": false, 
-            "unformatted": false
-        }, 
         "writer.x": 6.6837693609986939, 
         "writer.y": -7.3257519530690693
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1415997525.377136
+    "timestamp": 1417792975.322181
 }
 }

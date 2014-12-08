@@ -840,6 +840,10 @@ class Assembly(Component):
     def record_configuration(self):
         """ record model configuration without running the model
         """
+        top = self
+        while top.parent:
+            top = top.parent
+        top._setup()
         self.configure_recording()
         for recorder in self.recorders:
             recorder.close()

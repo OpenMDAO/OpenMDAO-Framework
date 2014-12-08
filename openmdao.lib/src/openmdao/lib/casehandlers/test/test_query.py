@@ -147,40 +147,42 @@ class TestCase(unittest.TestCase):
             #'sub.driver.workflow.itername', 'sub.exec_count', 'sub.globals.z1',
             #'sub.itername', 'sub.states', 'sub.states.y[0]', 'sub.states.y[1]',
             #'sub.x1', 'timestamp']
-        expected = ['_driver_id', '_id', '_parent_id', u'_pseudo_0', u'_pseudo_1', u'_pseudo_2', u'driver.workflow.itername', 
-                    'error_message', 'error_status', u'half.derivative_exec_count', u'half.exec_count', u'half.itername', 
-                    u'half.z2a', u'sub._pseudo_0', u'sub.derivative_exec_count', u'sub.dis1.derivative_exec_count',
-                    u'sub.dis1.exec_count', u'sub.dis1.itername', u'sub.dis1.y2', u'sub.dis2.derivative_exec_count',
-                    u'sub.dis2.exec_count', u'sub.dis2.itername', u'sub.driver.workflow.itername', u'sub.exec_count',
-                    u'sub.globals.z1', u'sub.itername', u'sub.x1', 'timestamp']
+        #expected = ['_driver_id', '_id', '_parent_id', u'_pseudo_0', u'_pseudo_1', u'_pseudo_2', u'driver.workflow.itername', 
+                    #'error_message', 'error_status', u'half.derivative_exec_count', u'half.exec_count', u'half.itername', 
+                    #u'half.z2a', u'sub._pseudo_0', u'sub.derivative_exec_count', u'sub.dis1.derivative_exec_count',
+                    #u'sub.dis1.exec_count', u'sub.dis1.itername', u'sub.dis1.y2', u'sub.dis2.derivative_exec_count',
+                    #u'sub.dis2.exec_count', u'sub.dis2.itername', u'sub.driver.workflow.itername', u'sub.exec_count',
+                    #u'sub.globals.z1', u'sub.itername', u'sub.x1', 'timestamp']
+        expected = ['_driver_id', '_id', '_parent_id', 'error_message', 'error_status', 'timestamp', u'top._pseudo_0', u'top._pseudo_1', u'top._pseudo_2', u'top.driver.workflow.itername', u'top.half.derivative_exec_count', u'top.half.exec_count', u'top.half.itername', u'top.half.z2a', u'top.sub._pseudo_0', u'top.sub.derivative_exec_count', u'top.sub.dis1.derivative_exec_count', u'top.sub.dis1.exec_count', u'top.sub.dis1.itername', u'top.sub.dis1.y2', u'top.sub.dis2.derivative_exec_count', u'top.sub.dis2.exec_count', u'top.sub.dis2.itername', u'top.sub.driver.workflow.itername', u'top.sub.exec_count', u'top.sub.globals.z1', u'top.sub.itername', u'top.sub.x1']
 
         self.assertEqual(vnames, expected)
 
         cases = self.cds.data.fetch()
         #self.assertEqual(len(cases), 142)
-        self.assertEqual(len(cases), 130)
+        self.assertEqual(len(cases), 242)
         self.assertEqual(len(cases[0]), len(expected))
 
         # Specific variables.
         #names = ['half.z2a', 'sub.dis1.y1', 'sub.dis2.y2', 'sub.x1']
-        names = ['half.z2a', 'sub.dis1.y2', 'sub.x1']
+        #names = ['half.z2a', 'sub.dis1.y2', 'sub.x1']
+        names = ['top.half.z2a', 'top.sub.dis1.y2', 'top.sub.x1']
         vnames = self.cds.data.vars(names).var_names().fetch()
         self.assertEqual(vnames, names)
 
         cases = self.cds.data.vars(names).fetch()
         #self.assertEqual(len(cases), 142)
-        self.assertEqual(len(cases), 130)
+        self.assertEqual(len(cases), 242)
         self.assertEqual(len(cases[0]), len(names))
 
         #iteration_case_142 = {
-        iteration_case_130 = {
+        iteration_case_242 = {
             "half.z2a": 3.2649235987085278e-15,
             "sub.dis2.y2": 3.755280110989017,
             "sub.x1": 2.8984826597319301e-15
         }
         for name, val in zip(names, cases[-1]):
             #self.assertAlmostEqual(val, iteration_case_142[name])
-            self.assertAlmostEqual(val, iteration_case_130[name])
+            self.assertAlmostEqual(val, iteration_case_242[name])
 
         # Local to driver.
         # For some reason the top-level driver isn't the last recorded.

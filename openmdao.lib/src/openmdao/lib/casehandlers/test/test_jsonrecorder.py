@@ -107,8 +107,8 @@ class TestCase(unittest.TestCase):
         self.top.recorders = [JSONCaseRecorder(sout)]
         self.top.run()
 
-        # with open('multiobj.new', 'w') as out:
-        #     out.write(sout.getvalue())
+        with open('multiobj.new', 'w') as out:
+            out.write(sout.getvalue())
         verify_json(self, sout, 'multiobj.json')
         #self.verify(sout, 'multiobj.json')
 

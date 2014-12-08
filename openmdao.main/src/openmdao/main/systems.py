@@ -419,7 +419,6 @@ class System(object):
             self.flat_vars[name] = self.variables[name]
 
         # now get all flattenable vars that add to vector size
-        print "self.flat_vars", self.flat_vars
         self.vector_vars = self._get_vector_vars(self.flat_vars)
 
         for name, info in self.variables.items():
@@ -976,12 +975,8 @@ class SimpleSystem(System):
             self._comp.run(case_uuid=case_uuid)
 
             # put component outputs in u vector
-            print "self.name", self.name
-            print "self.vector_vars", self.vector_vars
-            print "[n for n in graph.successors(self.name)]", [n for n in graph.successors(self.name)]
             vnames = [n for n in graph.successors(self.name)
                                    if n in self.vector_vars]
-            print 'vnames', vnames
             self.vec['u'].set_from_scope(self.scope, vnames)
 
             if self.complex_step is True:

@@ -56,6 +56,7 @@ class _BaseRecorder(object):
         while top.parent:
             top = top.parent
         prefix_drop = len(top.name)+1 if top.name else 0
+        prefix_drop = 0
 
         # Collect variable metadata.
         cruft = ('desc', 'framework_var', 'type', 'validation_trait')
@@ -144,7 +145,8 @@ class _BaseRecorder(object):
         while top.parent:
             top = top.parent
         prefix_drop = len(top.name) + 1 if top.name else 0
-
+        prefix_drop = 0 
+        
         driver_info = []
         for driver, (ins, outs) in sorted(self._cfg_map.items(),
                                           key=lambda item: item[0].get_pathname()):
