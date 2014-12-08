@@ -460,7 +460,7 @@ class LinearGS(LinearSolver):
 
                 for subsystem in rev_systems:
                     system.sol_buf[:] = system.rhs_buf[:]
-                    succs = system.graph.successors(subsystem.name)
+                    #succs = system.graph.successors(subsystem.name)
                     for subsystem2 in rev_systems:
                         if subsystem is not subsystem2:
                         #if subsystem2.name in succs:
