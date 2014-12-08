@@ -1288,131 +1288,41 @@ class CompoundSystem(System):
     #             return True
     #     return False
     #     
-    # def _get_node_scatter_idxs(self, node, noflats, dest_start, destsys=None):
-    #     varkeys = self.vector_vars.keys()
-    #     
-    #     if node in noflats:
-    #         return (None, None, node)
-    # 
-    #     elif node in self.vector_vars: # basevar or non-duped subvar
-    #         if node not in self.vec['p']: # or not self._has_output_data(node):
-    #             return (None, None, None)
-    #         
-    #         isrc = varkeys.index(node)
-    #         src_idxs = numpy.sum(self.local_var_sizes[:, :isrc]) + self.arg_idx[node]
-    #         dest_idxs = dest_start + self.vec['p']._info[node].start + self.arg_idx[node]
-    # 
-    #         return (src_idxs, dest_idxs, None)
-    # 
-    #     elif node in self.flat_vars:  # duped subvar
-    #         if node not in self.vec['p']:
-    #             return (None, None, None)
-    #         base = self.scope.name2collapsed[node[0].split('[', 1)[0]]
-    #         if base in self.vec['p']: # and self._has_output_data(base):
-    #             if destsys is not None:
-    #                 basedests = base[1]
-    #                 for comp in destsys._all_comp_nodes():
-    #                     if comp in basedests:
-    #                         return (None, None, None)
-    #             else:
-    #                 return (None, None, None)
-    #         isrc = varkeys.index(base)
-    #         src_idxs = numpy.sum(self.local_var_sizes[:, :isrc]) + self.scope._var_meta[node]['flat_idx']
-    # 
-    #         dest_idxs = dest_start + self.vec['p']._info[node].start  + self.arg_idx[node]
-    #         return (src_idxs, dest_idxs, None)
-    # 
-    #     return (None, None, None)
-    # 
-    # def setup_scatters(self):
-    #     """ Defines scatters for args at this system's level """
-    #     if not self.is_active():
-    #         return
-    #     var_sizes = self.local_var_sizes
-    #     input_sizes = self.input_sizes
-    #     rank = self.mpi.rank
-    #     varmeta = self.scope._var_meta
-    #     collname = self.scope.name2collapsed
-    #     pvecinfo = self.vec['p']._info
-    # 
-    #     if MPI:
-    #         self.app_ordering = self.create_app_ordering()
-    # 
-    #     src_full = []
-    #     dest_full = []
-    #     scatter_conns_full = set()
-    #     noflat_conns_full = set()
-    #     noflats = set([k for k,v in self.variables.items()
-    #                        if v.get('noflat')])
-    #     noflats.update([v for v in self._in_nodes if varmeta[v].get('noflat')])
-    # 
-    #     dest_start = numpy.sum(input_sizes[:rank])
-    #     varkeys = self.vector_vars.keys()
-    # 
-    #     # for subsystem in self.all_subsystems():
-    #     #     src_partial = []
-    #     #     dest_partial = []
-    #     #     scatter_conns = set()
-    #     #     noflat_conns = set()  # non-flattenable vars
-    #     #
-    #     #     for node in sorted(self._reduced_graph.successors(subsystem.node)):
-    #     #         src_idxs, dest_idxs, nflat = self._get_node_scatter_idxs(node, noflats, dest_start)
-    #     #         if (src_idxs, dest_idxs, nflat) == (None, None, None):
-    #     #             continue
-    #     #
-    #     #         if nflat:
-    #     #             noflat_conns.add(node)
-    #     #         else:
-    #     #             src_partial.append(src_idxs)
-    #     #             dest_partial.append(dest_idxs)
-    #     #             src_full.append(src_idxs)
-    #     #             dest_full.append(dest_idxs)
-    #     #
-    #     #         #print "%s.%s -->" % (str(node), subsystem.name)
-    #     #         scatter_conns.add(node)
-    #     #         scatter_conns_full.add(node)
-    #     #
-    #     #     if MPI or scatter_conns or noflat_conns:
-    #     #         subsystem.scatter_partial = DataTransfer(self, src_partial,
-    #     #                                                  dest_partial,
-    #     #                                                  scatter_conns, noflat_conns)
-    # 
-    #     for subsystem in self.all_subsystems():
-    #         src_partial = []
-    #         dest_partial = []
-    #         scatter_conns = set()
-    #         noflat_conns = set()  # non-flattenable vars
-    # 
-    #         for node in sorted(self._reduced_graph.predecessors(subsystem.node)):
-    #             src_idxs, dest_idxs, nflat = self._get_node_scatter_idxs(node, noflats, dest_start, destsys=subsystem)
-    #             if (src_idxs, dest_idxs, nflat) == (None, None, None):
-    #                 continue
-    #             
-    #             if nflat:
-    #                 noflat_conns.add(node)
-    #             else:
-    #                 src_partial.append(src_idxs)
-    #                 dest_partial.append(dest_idxs)
-    #                 
-    #                 if node not in scatter_conns_full:
-    #                     src_full.append(src_idxs)
-    #                     dest_full.append(dest_idxs)
-    #                 
-    #             #print "--> %s.%s" % (str(node), subsystem.name)
-    #             scatter_conns.add(node)
-    #             scatter_conns_full.add(node)
-    # 
-    #         if MPI or scatter_conns or noflat_conns:
-    #             subsystem.scatter_partial = DataTransfer(self, src_partial,
-    #                                                      dest_partial,
-    #                                                      scatter_conns, noflat_conns)
-    #             
-    #     if MPI or scatter_conns_full or noflat_conns_full:
-    #         self.scatter_full = DataTransfer(self, src_full, dest_full,
-    #                                          scatter_conns_full, noflat_conns_full)
-    # 
-    #     for sub in self.local_subsystems():
-    #         sub.setup_scatters()
+    def _get_node_scatter_idxs(self, node, noflats, dest_start, destsys=None):
+        varkeys = self.vector_vars.keys()
+        
+        if node in noflats:
+            return (None, None, node)
+    
+        elif node in self.vector_vars: # basevar or non-duped subvar
+            if node not in self.vec['p']: # or not self._has_output_data(node):
+                return (None, None, None)
+            
+            isrc = varkeys.index(node)
+            src_idxs = numpy.sum(self.local_var_sizes[:, :isrc]) + self.arg_idx[node]
+            dest_idxs = dest_start + self.vec['p']._info[node].start + self.arg_idx[node]
+    
+            return (src_idxs, dest_idxs, None)
+    
+        elif node in self.flat_vars:  # duped subvar
+            if node not in self.vec['p']:
+                return (None, None, None)
+            base = self.scope.name2collapsed[node[0].split('[', 1)[0]]
+            if base in self.vec['p']: # and self._has_output_data(base):
+                if destsys is not None:
+                    basedests = base[1]
+                    for comp in destsys._all_comp_nodes():
+                        if comp in basedests:
+                            return (None, None, None)
+                else:
+                    return (None, None, None)
+            isrc = varkeys.index(base)
+            src_idxs = numpy.sum(self.local_var_sizes[:, :isrc]) + self.scope._var_meta[node]['flat_idx']
+    
+            dest_idxs = dest_start + self.vec['p']._info[node].start  + self.arg_idx[node]
+            return (src_idxs, dest_idxs, None)
+    
+        return (None, None, None)
 
 
     def setup_scatters(self):
@@ -1435,72 +1345,42 @@ class CompoundSystem(System):
                            if v.get('noflat')])
         noflats.update([v for v in self._in_nodes if varmeta[v].get('noflat')])
 
-        start = numpy.sum(input_sizes[:rank])
-        varkeys = self.vector_vars.keys()
+        dest_start = numpy.sum(input_sizes[:rank])
 
-        visited = {}
-
-        # collect all destinations from p vector
-        ret = self.vec['p'].get_dests_by_comp()
-
-        start = numpy.sum(input_sizes[:rank])
         for subsystem in self.all_subsystems():
             src_partial = []
             dest_partial = []
             scatter_conns = set()
             noflat_conns = set()  # non-flattenable vars
             for sub in subsystem.simple_subsystems():
-                for node in self.vector_vars:
-                    if node in sub._in_nodes:
-                        if node not in self._owned_args or node in scatter_conns:
+                for node in self.variables:
+                    src_idxs, dest_idxs, nflat = self._get_node_scatter_idxs(node, noflats, dest_start, destsys=sub)
+                    if (src_idxs, dest_idxs, nflat) == (None, None, None) or node in scatter_conns:
+                        continue
+                    
+                    if nflat:
+                        if node in noflat_conns or node not in subsystem._in_nodes or node not in self._owned_args:
                             continue
-
-                        isrc = varkeys.index(node)
-                        src_idxs = numpy.sum(var_sizes[:, :isrc]) + self.arg_idx[node]
-
-                        # FIXME: broadcast var nodes will be scattered
-                        #  more than necessary using this scheme. switch to a push
-                        #  model with one scatter per source.
-                        if node in visited:
-                            dest_idxs = visited[node]
-                        else:
-                            dest_idxs = start + self.arg_idx[node]
-                            start += len(dest_idxs)
-
-                            visited[node] = dest_idxs
-
-                        if node not in scatter_conns:
-                            scatter_conns.add(node)
-                            src_partial.append(src_idxs)
-                            dest_partial.append(dest_idxs)
-
+                        noflat_conns.add(node)
+                    else:
+                        src_partial.append(src_idxs)
+                        dest_partial.append(dest_idxs)
+                        
                         if node not in scatter_conns_full:
-                            scatter_conns_full.add(node)
                             src_full.append(src_idxs)
                             dest_full.append(dest_idxs)
-
-                for node in sub._in_nodes:
-                    if node in noflats:
-                        if node not in self._owned_args or node in noflat_conns or node not in subsystem._in_nodes:
-                            continue
-                        scatter_conns.add(node)
-                        scatter_conns_full.add(node)
-                        noflat_conns.add(node)
-                        noflat_conns_full.add(node)
-                    else:
-                        for sname in sub._all_comp_nodes():
-                            if sname in ret and node in self.vec['p'] and node in ret[sname]:
-                                scatter_conns.add(node)
-                                scatter_conns_full.add(node)
-
-            if MPI or scatter_conns or noflat_conns:
-                subsystem.scatter_partial = DataTransfer(self, src_partial,
-                                                         dest_partial,
-                                                         scatter_conns, noflat_conns)
-
-        if MPI or scatter_conns_full or noflat_conns_full:
-            self.scatter_full = DataTransfer(self, src_full, dest_full,
-                                             scatter_conns_full, noflat_conns_full)
+                        
+                    scatter_conns.add(node)
+                    scatter_conns_full.add(node)
+        
+                if MPI or scatter_conns or noflat_conns:
+                    subsystem.scatter_partial = DataTransfer(self, src_partial,
+                                                             dest_partial,
+                                                             scatter_conns, noflat_conns)
+                    
+            if MPI or scatter_conns_full or noflat_conns_full:
+                self.scatter_full = DataTransfer(self, src_full, dest_full,
+                                                 scatter_conns_full, noflat_conns_full)
 
         for sub in self.local_subsystems():
             sub.setup_scatters()

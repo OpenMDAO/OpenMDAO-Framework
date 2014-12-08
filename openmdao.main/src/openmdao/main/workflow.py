@@ -804,18 +804,18 @@ class Workflow(object):
             reduced.node[param]['system'] = \
                        ParamSystem(scope, reduced, param)
 
-        outs = []
-        for p in parent_graph.predecessors(drvname):
-            if parent_graph[p][drvname].get('drv_conn') == drvname:
-                outs.append(p)
+        #outs = []
+        #for p in parent_graph.predecessors(drvname):
+        #    if parent_graph[p][drvname].get('drv_conn') == drvname:
+        #        outs.append(p)
 
-        for out in outs:
-            vname = out[1][0]
-            if reduced.out_degree(vname) == 0:
-                reduced.add_node(vname, comp='dumbvar')
-                reduced.add_edge(out, vname)
-                reduced.node[vname]['system'] = \
-                           VarSystem(scope, reduced, vname)
+        #for out in outs:
+        #    vname = out[1][0]
+        #    if reduced.out_degree(vname) == 0:
+        #        reduced.add_node(vname, comp='dumbvar')
+        #        reduced.add_edge(out, vname)
+        #        reduced.node[vname]['system'] = \
+        #                   VarSystem(scope, reduced, vname)
 
         cgraph = reduced.component_graph()
 
