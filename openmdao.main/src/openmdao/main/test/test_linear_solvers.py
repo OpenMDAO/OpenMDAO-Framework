@@ -8,7 +8,6 @@ from nose import SkipTest
 
 import numpy as np
 
-from openmdao.main.mpiwrap import PETSc
 from openmdao.examples.simple.paraboloid import Paraboloid
 from openmdao.lib.drivers.api import NewtonSolver
 from openmdao.lib.optproblems.sellar import Discipline1_WithDerivatives, \
