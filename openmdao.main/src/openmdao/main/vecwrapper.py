@@ -1,6 +1,7 @@
 
 from collections import OrderedDict, namedtuple
 import numpy
+from numpy import ndarray
 
 from openmdao.main.mpiwrap import MPI, MPI_STREAM, mpiprint, create_petsc_vec, PETSc
 from openmdao.main.array_helpers import offset_flat_index, \
@@ -69,14 +70,16 @@ class VecWrapperBase(object):
                                      list(self.bounds(name)),
                                      sub_idx,self.array[sub_idx].size))
 
-
     def __getitem__(self, name):
         view, _, idxs, _, _ = self._info[name]
         return view[idxs]
 
     def __setitem__(self, name, value):
         view, _, idxs, _, _ = self._info[name]
-        view[idxs] = value.flat
+        if isinstance(value, ndarray):
+            view[idxs] = value.flat
+        else:
+            view[idxs] = value
 
     def __contains__(self, name):
         return name in self._info
@@ -227,7 +230,6 @@ class VecWrapper(VecWrapperBase):
 
         # TODO: handle cases where we have overlapping subvars but no basevar
 
-
     def _add_resid(self, system):
         nodemap = system.scope.name2collapsed
         if hasattr(system, '_comp') and IImplicitComponent.providedBy(system._comp):
@@ -334,6 +336,21 @@ class InputVecWrapper(VecWrapperBase):
         for sub in system.simple_subsystems():
             for arg in sub._in_nodes:
                 all_ins.add(arg)
+
+        #all_ins = set()
+        #for sub in system.all_subsystems(): #system.simple_subsystems():
+        #    all_ins.update(sub._in_nodes)
+
+        #for name in [n for n in system.vector_vars if n in all_ins]:
+        #    if name in flat_ins and name not in self._info:
+        #        sz = len(arg_idx[name])
+        #        end += sz
+        #        self._info[name] = ViewInfo(self.array[start:end], start,
+        #                                    slice(None), end-start, False)
+        #        if end-start > self.array[start:end].size:
+        #            raise RuntimeError("size mismatch: in system %s view for %s is %s, size=%d" %
+        #                         (system.name, name, [start,end],self[name].size))
+        #        start += sz
 
         # now add views for subvars that are subviews of their
         # basevars
@@ -469,6 +486,10 @@ class DataTransfer(object):
             dest, src = src, dest
 
         if self.scatter:
+            #print "%s for %s\n%s <-- %s" % (destvec.name.rsplit('.', 1)[1], 
+                                            #destvec.name.rsplit('.',1)[0], 
+                                            #list(self.scatter_conns), 
+                                            #src[self.scatter.dest_idxs if addv else self.scatter.src_idxs])
             self.scatter.scatter(src, dest, addv=addv, mode=mode)
 
         if destvec.name.endswith('.p') and self.noflat_vars:
@@ -513,7 +534,6 @@ def merge_idxs(src_idxs, dest_idxs):
     new_dest = [dest_idxs[i] for i,_ in src_sorted]
 
     return idx_merge(new_src), idx_merge(new_dest)
-
 
 def idx_merge(idxs):
     """Combines a mixed iterator of int and iterator indices into an

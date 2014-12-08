@@ -285,11 +285,9 @@ class Parameter(ParameterBase):
         """Assigns the given value to the target of this parameter."""
         transval = self._transform(val)
         try:
-            view = param_owner._system.vec['u'][self._expreval.text]
+            param_owner._system.vec['u'][self._expreval.text] = transval
         except (KeyError, AttributeError):
             self._expreval.set(transval)
-        else:
-            view[:] = transval
 
     def copy(self):
         """Return a copy of this Parameter."""
@@ -727,11 +725,9 @@ class ArrayParameter(ParameterBase):
         transval = self._transform(value)
         
         try:
-            view = param_owner._system.vec['u'][self._expreval.text]
+            param_owner._system.vec['u'][self._expreval.text] = transval.flatten()
         except (KeyError, AttributeError):
             self._expreval.set(transval)
-        else:
-            view[:] = transval.flatten()
 
     def copy(self):
         """Return a copy of this parameter."""

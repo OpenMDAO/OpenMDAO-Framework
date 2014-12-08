@@ -13,6 +13,7 @@ from openmdao.lib.optproblems.sellar import Discipline1_WithDerivatives, \
 from openmdao.main.api import Component, Assembly, set_as_top, Driver
 from openmdao.main.datatypes.api import Float
 from openmdao.main.test.simpledriver import SimpleDriver
+from openmdao.main.test.test_derivatives import ArrayComp2D
 from openmdao.util.testutil import assert_rel_error
 
 class Paraboloid(Component):
@@ -102,7 +103,7 @@ class Sellar_MDA_subbed_connected(Assembly):
 
         self.add('P1', Paraboloid())
         self.add('P2', Paraboloid())
-        
+
         self.connect('d1.y1', 'd2.y1')
         self.connect('P1.f_xy', 'd1.x1')
         self.connect('d1.y1', 'P2.x')
@@ -201,7 +202,7 @@ class Testcase_derivatives(unittest.TestCase):
     def test_linearGS_Sellar_subbed(self):
 
         old_diff = Driver.is_differentiable
-        def is_differentiable(self): 
+        def is_differentiable(self):
             return True
         Driver.is_differentiable = is_differentiable
 
@@ -210,7 +211,7 @@ class Testcase_derivatives(unittest.TestCase):
         top.driver.gradient_options.maxiter = 1
         top.run()
         J = top.driver.workflow.calc_gradient(mode='forward')
-        
+
         assert_rel_error(self, J[0, 0], 0.9806145, 0.0001)
         assert_rel_error(self, J[1, 0], 0.0969276, 0.0001)
 
@@ -228,13 +229,38 @@ class Testcase_derivatives(unittest.TestCase):
         top.driver.gradient_options.maxiter = 1
         top.run()
         J = top.driver.workflow.calc_gradient(mode='forward')
-        print J
+        #print J
         assert_rel_error(self, J[0, 0], -628.543, 0.01)
-        
+
         J = top.driver.workflow.calc_gradient(mode='adjoint')
-        print J
+        #print J
         assert_rel_error(self, J[0, 0], -628.543, 0.01)
-        
+
+    def test_linearGS_simul_element_and_full_connection(self):
+        # Added because of a bug with array slices for Linear GS
+
+        top = Assembly()
+        top.add('comp1', ArrayComp2D())
+        top.add('comp2', ArrayComp2D())
+
+        top.add('driver', SimpleDriver())
+        top.driver.workflow.add(['comp1', 'comp2'])
+        top.connect('comp1.y', 'comp2.x')
+        top.driver.add_parameter('comp1.x[0][0]', low=-10, high=10)
+        top.driver.add_objective('comp1.y[0][0]')
+        top.driver.add_constraint('comp2.y[0][1] < 0')
+        top.driver.gradient_options.lin_solver = 'linear_gs'
+        top.driver.gradient_options.maxiter = 1
+
+        top.run()
+
+        J = top.driver.calc_gradient(mode='forward')
+        assert_rel_error(self, J[0, 0], 2.0, .000001)
+        assert_rel_error(self, J[1, 0], 39.0, .000001)
+
+        J = top.driver.calc_gradient(mode='adjoint')
+        assert_rel_error(self, J[0, 0], 2.0, .000001)
+        assert_rel_error(self, J[1, 0], 39.0, .000001)
 
 if __name__ == '__main__':
     import nose
