@@ -3,7 +3,6 @@ Basic unit testing of the linear solvers.
 """
 
 import unittest
-
 import numpy as np
 
 from openmdao.examples.simple.paraboloid import Paraboloid
@@ -49,6 +48,7 @@ class Paraboloid(Component):
         input_keys = ('x', 'y')
         output_keys = ('f_xy',)
         return input_keys, output_keys
+
 
 class Sellar_MDA_subbed(Assembly):
 
@@ -122,8 +122,8 @@ class Sellar_MDA_subbed_connected(Assembly):
         self.driver.add_constraint('P2.f_xy < 0')
 
 
-class Testcase_derivatives(unittest.TestCase):
-    """ Test derivative aspects of a simple workflow. """
+class Testcase_Scipy_Gmres(unittest.TestCase):
+    """ Test gmres linear solver. """
 
     def test_scipy_gmres_single_comp(self):
 
@@ -165,6 +165,9 @@ class Testcase_derivatives(unittest.TestCase):
         assert_rel_error(self, J[0, 0], 5.0, 0.0001)
         assert_rel_error(self, J[0, 1], 21.0, 0.0001)
 
+
+class Testcase_Linear_GS(unittest.TestCase):
+    """ Test Linear Gauss Siedel linear solver. """
 
     def test_linearGS_single_comp(self):
 
@@ -229,11 +232,9 @@ class Testcase_derivatives(unittest.TestCase):
         top.driver.gradient_options.maxiter = 1
         top.run()
         J = top.driver.workflow.calc_gradient(mode='forward')
-        #print J
         assert_rel_error(self, J[0, 0], -628.543, 0.01)
 
         J = top.driver.workflow.calc_gradient(mode='adjoint')
-        #print J
         assert_rel_error(self, J[0, 0], -628.543, 0.01)
 
     def test_linearGS_simul_element_and_full_connection(self):
@@ -261,6 +262,7 @@ class Testcase_derivatives(unittest.TestCase):
         J = top.driver.calc_gradient(mode='adjoint')
         assert_rel_error(self, J[0, 0], 2.0, .000001)
         assert_rel_error(self, J[1, 0], 39.0, .000001)
+
 
 if __name__ == '__main__':
     import nose

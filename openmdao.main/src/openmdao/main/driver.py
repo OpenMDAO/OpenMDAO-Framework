@@ -7,6 +7,7 @@ __all__ = ["Driver"]
 
 from networkx.algorithms.components import strongly_connected_components
 
+from openmdao.main.mpiwrap import PETSc
 from openmdao.main.component import Component
 from openmdao.main.dataflow import Dataflow
 from openmdao.main.datatypes.api import Bool, Enum, Float, Int, Slot, \
@@ -89,6 +90,15 @@ class GradientOptions(VariableTree):
                                framework_var=True)
     maxiter = Int(100, desc='Maximum number of iterations for the linear solver.',
                   framework_var=True)
+
+    def _lin_solver_changed(self, oldls, newls):
+        # if PETSc has been imported prior to the creation of a remote object using
+        # the multiprocessing package, we get errors due to broken socket connections
+        # from PETSc, so use this flag to prevent PETSc from being imported unless it's
+        # actually used.
+        if newls == 'petsc_ksp':
+            PETSc.needs_ksp = True
+
 
 @add_delegate(HasEvents)
 class Driver(Component):
