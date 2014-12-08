@@ -6,17 +6,9 @@
 import numpy as np
 from scipy.sparse.linalg import gmres, LinearOperator
 
-from openmdao.main.mpiwrap import MPI
+from openmdao.main.mpiwrap import MPI, mpiprint, PETSc
 from openmdao.util.graph import fix_single_tuple
 from openmdao.util.log import logger
-
-if MPI:
-    from petsc4py import PETSc
-else:
-    class PETSc(object):
-        # Dummy class so things parse.
-        pass
-
 
 class LinearSolver(object):
     """ A base class for linear solvers """
@@ -67,10 +59,6 @@ class ScipyGMRES(LinearSolver):
         RHS = system.rhs_buf
         A = self.A
 
-        # Size the problem
-        num_input = system.get_size(inputs)
-        num_output = system.get_size(outputs)
-
         if return_format == 'dict':
             J = {}
             for okey in outputs:
@@ -80,6 +68,8 @@ class ScipyGMRES(LinearSolver):
                         ikey = ikey[0]
                     J[okey][ikey] = None
         else:
+            num_input = system.get_size(inputs)
+            num_output = system.get_size(outputs)
             J = np.zeros((num_output, num_input))
 
         if system.mode == 'adjoint':
@@ -220,15 +210,6 @@ class PETSc_KSP(LinearSolver):
         """Returns a nested dict of sensitivities if return_format == 'dict'.
         """
 
-        if return_format == 'dict':
-            return self._J_dict_solve(inputs, outputs)
-        else:
-            raise RuntimeError("unsupported solve return_format '%s'" % return_format)
-
-    def _J_dict_solve(self, inputs, outputs):
-        """Returns a dict of sensitivities for given
-        inputs and outputs.
-        """
         system = self._system
         options = self.options
         name2collapsed = system.scope.name2collapsed
@@ -236,11 +217,18 @@ class PETSc_KSP(LinearSolver):
         inputs = [fix_single_tuple(x) for x in inputs]
         outputs = [fix_single_tuple(x) for x in outputs]
 
-        J = {}
-        for okey in outputs:
-            J[okey] = {}
-            for ikey in inputs:
-                J[okey][ikey] = None
+        if return_format == 'dict':
+            J = {}
+            for okey in outputs:
+                J[okey] = {}
+                for ikey in inputs:
+                    if isinstance(ikey, tuple):
+                        ikey = ikey[0]
+                    J[okey][ikey] = None
+        else:
+            num_input = system.get_size(inputs)
+            num_output = system.get_size(outputs)
+            J = np.zeros((num_output, num_input))
 
         if system.mode == 'adjoint':
             outputs, inputs = inputs, outputs
@@ -257,26 +245,37 @@ class PETSc_KSP(LinearSolver):
             jbase = j
 
             for irhs in xrange(param_size):
+                
+                # Solve the system with PetSC KSP
                 solvec = system._compute_derivatives(param_tup, irhs)
 
+                i = 0
                 for out in outputs:
                     out_size = system.get_size(out)
 
-                    if system.mode == 'forward':
-                        if out in solvec:
-                            if J[out][param] is None:
-                                J[out][param] = np.zeros((out_size, param_size))
-                            J[out][param][:, j-jbase] = solvec[out]
+                    if return_format == 'dict':
+                        if system.mode == 'forward':
+                            if out in solvec:
+                                if J[out][param] is None:
+                                    J[out][param] = np.zeros((out_size, param_size))
+                                J[out][param][:, j-jbase] = solvec[out]
+                            else:
+                                del J[out][param]
                         else:
-                            del J[out][param]
-                    else:
-                        if out in solvec:
-                            if J[param][out] is None:
-                                J[param][out] = np.zeros((out_size, param_size))
-                            J[param][out][j-jbase, :] = solvec[out]
-                        else:
-                            del J[param][out]
+                            if out in solvec:
+                                if J[param][out] is None:
+                                    J[param][out] = np.zeros((out_size, param_size))
+                                J[param][out][j-jbase, :] = solvec[out]
+                            else:
+                                del J[param][out]
 
+                    else:
+                        nk = len(solvec[out])
+                        if system.mode == 'forward':
+                            J[i:i+nk, j] = solvec[out]
+                        else:
+                            J[j, i:i+nk] = solvec[out]
+                        i += nk
                 j += 1
 
         return J
@@ -292,18 +291,12 @@ class PETSc_KSP(LinearSolver):
                                atol=options.atol,
                                rtol=options.rtol)
 
-        system.rhs_vec.array[:] = system.vec['f'].array[:]
-        #print 'newton start vec', system.vec['f'].array[:]
-
-        system.sol_buf.array[:] = arg
-        system.rhs_buf.array[:] = system.rhs_vec.array[:]
-
-        system.ln_solver.ksp.solve(system.rhs_buf, system.sol_buf)
-
-        system.vec['df'].array[:] = -system.sol_buf.array[:]
+        system.rhs_buf[:] = arg[:]
+  
+        self.ksp.solve(system.rhs_buf, system.sol_buf)
 
         #print 'newton solution vec', system.vec['df'].array[:]
-        return system.vec['df'].array[:]
+        return system.sol_buf[:]
 
     def mult(self, mat, sol_vec, rhs_vec):
         """ KSP Callback: applies Jacobian matrix. Mode is determined by the
@@ -316,12 +309,10 @@ class PETSc_KSP(LinearSolver):
         system.rhs_vec.array[:] = 0.0
         system.clear_dp()
 
-        varmeta = system.scope._var_meta
         if system._parent_system:
             vnames = system._parent_system._relevant_vars
         else:
             vnames = system.flat_vars.keys()
-
         system.applyJ(vnames)
 
         rhs_vec.array[:] = system.rhs_vec.array[:]
@@ -462,34 +453,25 @@ class LinearGS(LinearSolver):
                     sub_options = options if subsystem.options is None \
                                           else subsystem.options
                     subsystem.solve_linear(sub_options)
-
+                    
             elif system.mode == 'adjoint':
 
                 rev_systems = [item for item in reversed(system.subsystems(local=True))]
 
                 for subsystem in rev_systems:
-                    #print '1)', system.name, subsystem.name
-                    #print 'T0', system.vec['df'].array[:], system.vec['du'].array[:], system.vec['dp'].array[:] 
                     system.sol_buf[:] = system.rhs_buf[:]
-                    #print 'T1', system.vec['df'].array[:], system.vec['du'].array[:], system.vec['dp'].array[:] 
+                    #succs = system.graph.successors(subsystem.name)
                     for subsystem2 in rev_systems:
                         if subsystem is not subsystem2:
-                            #print '2)', subsystem2.name, subsystem.name
+                        #if subsystem2.name in succs:
                             system.rhs_vec.array[:] = 0.0
                             args = subsystem.flat_vars.keys()
-                            #print 'T2', system.vec['df'].array[:], system.vec['du'].array[:], system.vec['dp'].array[:] 
                             subsystem2.applyJ(args)
-                            #print 'T3', system.vec['df'].array[:], system.vec['du'].array[:], system.vec['dp'].array[:] 
                             system.scatter('du', 'dp', subsystem=subsystem2)
-                            #print 'T4', system.vec['df'].array[:], system.vec['du'].array[:], system.vec['dp'].array[:] 
-                            system.vec['dp'].array[:] = 0.0
                             system.sol_buf[:] -= system.rhs_vec.array[:]
-                            #print 'T5', system.vec['df'].array[:], system.vec['du'].array[:], system.vec['dp'].array[:] 
+                            system.vec['dp'].array[:] = 0.0
                     system.rhs_vec.array[:] = system.sol_buf[:]
-                    #print 'T6', system.vec['df'].array[:], system.vec['du'].array[:], system.vec['dp'].array[:] 
                     subsystem.solve_linear(options)
-                    #print 'T7', system.vec['df'].array[:], system.vec['du'].array[:], system.vec['dp'].array[:] 
-
             norm = self._norm()
             counter += 1
 
