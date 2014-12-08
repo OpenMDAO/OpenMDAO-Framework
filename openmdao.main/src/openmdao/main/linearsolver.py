@@ -355,16 +355,8 @@ class LinearGS(LinearSolver):
         system = self._system
 
         # Size the problem
-        # TODO - Support for array slice inputs/outputs
-        try:
-            num_input = system.get_size(inputs)
-            num_output = system.get_size(outputs)
-        except KeyError as exc:
-            if '[' in str(exc):
-                msg = 'Array slice inputs and outputs currently not supported.'
-                raise RuntimeError(msg)
-            else:
-                raise
+        num_input = system.get_size(inputs)
+        num_output = system.get_size(outputs)
 
         n_edge = system.vec['f'].array.size
 
@@ -486,4 +478,3 @@ class LinearGS(LinearSolver):
         #print 'return', options.parent.name, np.linalg.norm(system.rhs_vec.array), system.rhs_vec.array
         #print 'Linear solution vec', system.sol_vec.array
         return system.sol_vec.array
-

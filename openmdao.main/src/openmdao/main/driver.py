@@ -199,7 +199,7 @@ class Driver(Component):
             g = parent_graph.subgraph(parent_graph.nodes_iter())
 
             nodes = set([c.name for c in self.workflow])
-            g.collapse_subdrivers(nodes, [self])
+            g.collapse_subdrivers(nodes, self.workflow.subdrivers())
 
             nodes.add(self.name)
 
@@ -221,7 +221,6 @@ class Driver(Component):
             comps = []
             for comps in strongly_connected_components(g):
                 if self.name in comps:
-                    comps.remove(self.name)
                     break
             g.remove_edges_from(to_add)
             self._reduced_graph = g.subgraph(comps)
