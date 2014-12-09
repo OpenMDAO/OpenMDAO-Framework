@@ -500,7 +500,7 @@ class Workflow(object):
         """Called at start of top-level run to configure case recording.
         Returns set of paths for changing inputs."""
 
-        # print "configure_recording", self.parent
+        print "configure_recording", self.parent
         # driver = self.parent
         # scope = driver.parent
         # top = scope
@@ -605,8 +605,10 @@ class Workflow(object):
         #self._rec_all_outputs = []
         self._rec_outputs = []
         for comp in driver.workflow: 
+            print "comp.name", comp.name
             successors = driver._reduced_graph.successors(comp.name)
             for output_name, aliases in successors:
+                print "successor", output_name
                 if '.in' in output_name: # look for something that is not a pseudo input
                     for n in aliases:
                         if not ".in" in n:

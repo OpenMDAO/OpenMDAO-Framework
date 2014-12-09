@@ -197,6 +197,7 @@ class Assembly(Component):
         if new_config and self.parent is None:
             self._setup()  # only call _setup from top level
 
+        if self.parent is None:
             self.configure_recording(self.recording_options)
 
     @property

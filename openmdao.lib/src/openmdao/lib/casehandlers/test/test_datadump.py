@@ -85,6 +85,14 @@ class Data_Dump_TestCase(unittest.TestCase):
         self.top.recorders = [DumpCaseRecorder(sout)]
         self.top.run()
 
+        from openmdao.util.dotgraph import plot_graph 
+        #plot_graph(self.top._depgraph)
+        #plot_graph(self.top._reduced_graph)
+        plot_graph(self.top.driver.workflow._collapsed_graph)
+        #plot_graph(prob.solver._reduced_graph)
+        #plot_graph(prob.driver._reduced_graph)
+
+
         expected = """\
 Constants:
    comp1.directory:
