@@ -169,6 +169,9 @@ class System(object):
         """
 
         comm = self.mpi.comm
+        if comm is None:
+            return
+            
         myrank = comm.rank
 
         tups = []

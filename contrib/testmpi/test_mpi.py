@@ -3,7 +3,7 @@ import time
 
 import numpy as np
 
-from openmdao.test.mpiunittest import MPITestCase
+from openmdao.test.mpiunittest import MPITestCase, collective_assert_rel_error
 from openmdao.util.testutil import assert_rel_error
 
 from openmdao.main.api import Assembly, Component, set_as_top
