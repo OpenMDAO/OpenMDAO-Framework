@@ -1,3 +1,5 @@
+import sys 
+
 """ Some functions and objects that support the component-side derivative API.
 """
 from numpy import zeros, vstack, hstack
@@ -147,7 +149,7 @@ def applyJ(system, variables):
             break
 
     if nonzero is False:
-        print 'applyJ', obj.name, arg, result
+        #print 'applyJ', obj.name, arg, result
         return
 
     # If storage of the local Jacobian is a problem, the user can specify the
@@ -180,7 +182,7 @@ def applyJ(system, variables):
             if hasattr(value, 'flatten'):
                 arg[key] = value.flatten()
 
-        print 'applyJ', obj.name, arg, result
+        #print 'applyJ', obj.name, arg, result
         return
 
     if is_sys:
@@ -251,7 +253,7 @@ def applyJ(system, variables):
 
             tmp += Jsub.dot(arg[ikey])
 
-    print 'applyJ', obj.name, arg, result
+    #print 'applyJ', obj.name, arg, result
 
 def applyJT(system, variables):
     """Multiply an input vector by the transposed Jacobian.
@@ -332,7 +334,7 @@ def applyJT(system, variables):
             break
 
     if nonzero is False:
-        mpiprint('applyJT %s: %s, %s' % (obj.name, arg, result))
+        #mpiprint('applyJT %s: %s, %s' % (obj.name, arg, result))
         return
 
     # If storage of the local Jacobian is a problem, the user can
@@ -366,7 +368,7 @@ def applyJT(system, variables):
             if hasattr(value, 'flatten'):
                 arg[key] = value.flatten()
 
-        print 'applyJT', obj.name, arg, result
+        #print 'applyJT', obj.name, arg, result
         return
 
     if is_sys:
@@ -434,7 +436,7 @@ def applyJT(system, variables):
 
             tmp += Jsub.dot(arg[ikey])
 
-    print 'applyJT', obj.name, arg, result
+    #print 'applyJT', obj.name, arg, result
 
 def applyMinv(obj, inputs, shape_cache):
     """Simple wrapper around a component's applyMinv where we can reshape the
@@ -523,7 +525,15 @@ def get_bounds(obj, input_keys, output_keys, J):
 
     if num_input and num_output:
         # Give the user an intelligible error if the size of J is wrong.
-        J_output, J_input = J.shape
+        try:
+            J_output, J_input = J.shape
+        except ValueError as err:
+            exc_type, value, traceback = sys.exc_info()
+            msg = "Jacobian has the wrong dimensions. Expected 2D but got {}D."
+            msg = msg.format(J.ndim)
+
+            raise ValueError, ValueError(msg), traceback
+
         if num_output != J_output or num_input != J_input:
             msg = 'Jacobian is the wrong size. Expected ' + \
                 '(%dx%d) but got (%dx%d)' % (num_output, num_input,
@@ -575,4 +585,3 @@ def reduce_jacobian(J, i1, i2, idx, ish, o1, o2, odx, osh):
         return eval('J[%s, %s]' % (ostring, istring))
     else:
         return J[o1:o2, i1:i2]
-

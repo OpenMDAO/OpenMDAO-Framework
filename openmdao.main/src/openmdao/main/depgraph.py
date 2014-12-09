@@ -217,6 +217,33 @@ class DGraphBase(nx.DiGraph):
     def remove_edges_from(self, ebunch):
         super(DGraphBase, self).remove_edges_from(ebunch)
         self.config_changed()
+        
+    def in_degree(self, name):
+        """The nx.DiGraph version returns an empty dict when it should
+        return 0, so fix it here...
+        """
+        indeg = super(DGraphBase, self).in_degree(name)
+        if isinstance(indeg, dict):
+            return len(indeg)
+        return indeg
+
+    def out_degree(self, name):
+        """The nx.DiGraph version returns an empty dict when it should
+        return 0, so fix it here...
+        """
+        odeg = super(DGraphBase, self).out_degree(name)
+        if isinstance(odeg, dict):
+            return len(odeg)
+        return odeg
+
+    def degree(self, name):
+        """The nx.DiGraph version returns an empty dict when it should
+        return 0, so fix it here...
+        """
+        deg = super(DGraphBase, self).degree(name)
+        if isinstance(deg, dict):
+            return len(deg)
+        return deg
 
 
 class DependencyGraph(DGraphBase):
@@ -890,9 +917,6 @@ class DependencyGraph(DGraphBase):
         """Take all subvars and connect them directly to
         their parent component node rather than to their
         base var node.
-
-        This should be called on a graph before edge
-        collapsing.
         """
         self._add_boundary_comps()
 
@@ -910,6 +934,10 @@ class DependencyGraph(DGraphBase):
                         if self.node[sub_out].get('basevar') == base_out:
                             self.add_edge(comp, sub_out)
                             self.remove_edge(base_out, sub_out)
+                            #for subsucc in self.successors(sub_out):
+                            #    sub_comp = subsucc.split('.', 1)[0]
+                            #    if sub_comp in self and not self.has_edge(base_out, sub_comp):
+                            #        self.add_edge(base_out, sub_comp, nodata=True)
 
         # get rid of fake boundary comps
         self.remove_nodes_from(['#in', '#out'])
@@ -1287,6 +1315,17 @@ class CollapsedGraph(DGraphBase):
                 if n in self.successors(s):
                     to_remove.append((n, s))
 
+        # The following was found to be necessary when push scattering
+        #  (the output edges were kept in that case so the loop above
+        #    was removed)
+        # # remove input edge of bidirectional edges to/from drivers
+        # to_remove = []
+        # subdrvnames = [s.name for s in subdrivers]
+        # for n in subdrvnames:
+        #     for p in self.predecessors(n):
+        #         if n in self.predecessors(p):
+        #             to_remove.append((p, n))
+
         self.remove_edges_from(to_remove)
 
         # now remove any comps that are shared by subdrivers but are not found
@@ -1316,7 +1355,7 @@ class CollapsedGraph(DGraphBase):
         self.node[driver.name]['comp'] = True
 
     def prune(self, keep):
-        """Remove all unconnected vars that are not states."""
+        """Remove all unconnected vars that are not in 'keep'."""
         to_remove = []
 
         for node, data in self.nodes_iter(data=True):
@@ -1376,27 +1415,46 @@ class CollapsedGraph(DGraphBase):
         """If there are any dangling var nodes left in the
         collapsed graph g, connect them to a var comp.
         """
-        to_add = []
+        to_add = set()
         for node, data in self.nodes(data=True):
-            if 'comp' not in data:
+            if 'comp' not in data and 'iotype' in data:
+                base = node[0].split('[', 1)[0]
                 if self.in_degree(node) == 0:
-                    if data['iotype'] == 'in':
-                        newname = node[0]
+                    if base in self and 'comp' in self.node[base]:
+                        newname = base
                     else:
-                        newname = '@'+node[0]
-                    to_add.append((newname, node))
-                    self.add_node(newname, comp='invar')
+                        if data['iotype'] == 'in':
+                            newname = node[0]
+                        else:
+                            newname = '@'+node[0]
+                        self.add_node(newname, comp='invar')
+                        
+                    if not self.has_edge(node, newname) and (node, newname) not in to_add:
+                        to_add.add((newname, node))
+                        
                 if self.out_degree(node) == 0:
-                    if data['iotype'] == 'out':
-                        newname = node[0]
+                    if base in self and 'comp' in self.node[base]:
+                        newname = base
                     else:
-                        newname = '@'+node[0]
-                    to_add.append((node, newname))
-                    self.add_node(newname, comp='outvar')
+                        if data['iotype'] == 'out':
+                            newname = node[0]
+                        else:
+                            newname = '@'+node[0]
+                        self.add_node(newname, comp='outvar')
+                        
+                    if not self.has_edge(newname, node) and (newname, node) not in to_add:
+                        to_add.add((node, newname))
 
         if to_add:
             self.add_edges_from(to_add)
 
+    # def _connect_srcs_to_comps(self):
+    #     for node, data in self.nodes_iter(data=True):
+    #         if 'comp' not in data:
+    #             comp = node[0].split('[', 1)[0].split('.', 1)[0]
+    #             if comp in self and not self.has_edge(comp, node):
+    #                 self.add_edge(comp, node)
+        
     def config_changed(self):
         pass
 
@@ -1784,10 +1842,17 @@ def _add_collapsed_node(g, src, dests):
         if isinstance(s, tuple):
             continue
         cname = s.split('.', 1)[0]
+        pmeta = g[newname][s]
+        cmeta = g[newname][cname] if g.has_edge(newname, cname) else {}
         g.remove_edge(newname, s)
         if g.node[cname].get('comp'):
             if s == cname or cname in g[s]:
-                to_add.append((newname, cname, {}))
+                if 'drv_conn' in cmeta:
+                    to_add.append((newname, cname, {'drv_conn': cmeta['drv_conn']}))
+                elif 'drv_conn' in pmeta:
+                    to_add.append((newname, cname, {'drv_conn': pmeta['drv_conn']}))
+                elif not g.has_edge(newname, cname):
+                    to_add.append((newname, cname, {}))
 
     for u,v, meta in to_add:
         g.add_edge(u, v, **meta)

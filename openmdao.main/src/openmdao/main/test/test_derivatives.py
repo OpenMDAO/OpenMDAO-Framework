@@ -657,7 +657,7 @@ class Testcase_derivatives(unittest.TestCase):
             mocklogger.error.assert_called_with(
                 "ERROR in calc_gradient in '%s': gmres failed to converge after"
                 " %d iterations",
-                "('comp', 'comp.y', 'comp.x', '_pseudo_0')", 13)
+                "('_pseudo_0', 'comp', 'comp.x', 'comp.y')", 13)
 
             top.driver.workflow.calc_gradient(outputs=['comp.f_xy'],
                                               mode='adjoint')
@@ -665,11 +665,65 @@ class Testcase_derivatives(unittest.TestCase):
             mocklogger.error.assert_called_with(
                 "ERROR in calc_gradient in '%s': gmres failed to"
                 " converge after %d iterations",
-                "('comp', 'comp.y', 'comp.x', '_pseudo_0')", 13)
+                "('_pseudo_0', 'comp', 'comp.x', 'comp.y')", 13)
 
         finally:
             openmdao.main.linearsolver.gmres = orig_gmres
             openmdao.main.linearsolver.logger = orig_logger
+
+    def test_provideJ(self):
+        top = set_as_top(Assembly())
+        top.add('comp', SimpleComp())
+        top.add('driver', SimpleDriver())
+        top.driver.workflow.add(['comp'])
+        top.driver.add_parameter('comp.x', low=-1000, high=1000)
+        top.comp.x = 14
+        top.comp.run()
+        
+        top.comp.x = 14
+        
+        top.comp.run()
+        top.driver.calc_gradient(outputs=['comp.y'])
+
+    def test_non_2d_jacobian(self):
+        comp = SimpleComp()
+        comp.provideJ = lambda : np.array([2.0])
+    
+        top = set_as_top(Assembly())
+        top.add('comp', comp)
+        top.add('driver', SimpleDriver())
+        top.driver.workflow.add(['comp'])
+        top.driver.add_parameter('comp.x', low=-1000, high=1000)
+        top.comp.x = 14
+        
+        try:
+            top.comp.run()
+            top.driver.calc_gradient(outputs=['comp.y'])
+        except ValueError as err:
+            expected = "Jacobian has the wrong dimensions. Expected 2D but got 1D."
+            self.assertEqual(str(err), expected)
+        else:
+            self.fail("Should have caught error because Jacobian is not 2D")
+
+    def test_bad_sized_jacobian(self):
+        comp = SimpleComp()
+        comp.provideJ = lambda : np.array([[2.0, 2.0]])
+    
+        top = set_as_top(Assembly())
+        top.add('comp', comp)
+        top.add('driver', SimpleDriver())
+        top.driver.workflow.add(['comp'])
+        top.driver.add_parameter('comp.x', low=-1000, high=1000)
+        top.comp.x = 14
+        
+        try:
+            top.comp.run()
+            top.driver.calc_gradient(outputs=['comp.y'])
+        except RuntimeError as err:
+            expected = "comp: Jacobian is the wrong size. Expected (1x1) but got (1x2)"
+            self.assertEqual(str(err), expected)
+        else:
+            self.fail("Should have caught error because Jacobian is the wrong size")
 
     def test_error_logging2(self):
 
@@ -702,13 +756,13 @@ class Testcase_derivatives(unittest.TestCase):
                                      mode='forward')
             mocklogger.error.assert_called_with(
                 "ERROR in calc_gradient in '%s': gmres failed",
-                "('comp', 'comp.y', 'comp.x')")
+                "('comp', 'comp.x', 'comp.y')")
 
             top.driver.workflow.calc_gradient(outputs=['comp.f_xy'],
                                               mode='adjoint')
             mocklogger.error.assert_called_with(
                 "ERROR in calc_gradient in '%s': gmres failed",
-                "('comp', 'comp.y', 'comp.x')")
+                "('comp', 'comp.x', 'comp.y')")
 
         finally:
             openmdao.main.derivatives.gmres = orig_gmres
@@ -3321,9 +3375,9 @@ class TestMultiDriver(unittest.TestCase):
 
         # Test gradient
         #sp.driver.gradient_options.fd_form = 'central'
-        J = sp.driver.workflow.calc_gradient()
+        J = sp.driver.calc_gradient()
 
-        Jfd = sp.driver.workflow.calc_gradient(mode='fd')
+        Jfd = sp.driver.calc_gradient(mode='fd')
 
         diff = J - Jfd
 
