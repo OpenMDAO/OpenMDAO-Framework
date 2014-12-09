@@ -155,6 +155,9 @@ class Workflow(object):
 
     def run(self, case_uuid=None):
         """ Run the Components in this Workflow. """
+        if not self._system.is_active():
+            return
+            
         self._stop = False
         self._exec_count += 1
 

@@ -198,12 +198,15 @@ class PETSc_KSP(LinearSolver):
         pc_mat.setType('python')
         pc_mat.setPythonContext(self)
 
+        system.rhs_buf = np.zeros((lsize, ))
+        system.sol_buf = np.zeros((lsize, ))
+        
         # # Set these in the system
         # #mpiprint("KSP: creating sol buf, size %d" % lsize)
-        system.sol_buf = PETSc.Vec().createWithArray(np.zeros(lsize),
+        system.sol_buf_petsc = PETSc.Vec().createWithArray(system.sol_buf,
                                                      comm=system.mpi.comm)
         # #mpiprint("KSP: creating rhs buf, size %d" % lsize)
-        system.rhs_buf = PETSc.Vec().createWithArray(np.zeros(lsize),
+        system.rhs_buf_petsc = PETSc.Vec().createWithArray(system.rhs_buf,
                                                      comm=system.mpi.comm)
 
     def calc_gradient(self, inputs, outputs, return_format='dict'):
@@ -292,8 +295,7 @@ class PETSc_KSP(LinearSolver):
                                rtol=options.rtol)
 
         system.rhs_buf[:] = arg[:]
-
-        self.ksp.solve(system.rhs_buf, system.sol_buf)
+        self.ksp.solve(system.rhs_buf_petsc, system.sol_buf_petsc)
 
         #print 'newton solution vec', system.vec['df'].array[:]
         return system.sol_buf[:]
