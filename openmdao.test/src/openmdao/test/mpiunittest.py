@@ -51,7 +51,8 @@ def wrapper(f):
         return f
         
     else:
-        
+        # note that the name of this internal function must start
+        # with 'test_' or nose won't run the test
         def test_wrap_serial(self, *args, **kwargs):
             if MPI is None:
                 raise SkipTest("mpi4py not installed")
@@ -70,13 +71,17 @@ def wrapper(f):
 
         
 class MPITestCaseMeta(type):
+    """A metaclass to wrap all of the test_ methods to act appropriately
+    when run serially vs. under mpi.  Also creates collective versions of
+    all of the 'assert*' methods used for testing.
+    """
     def __new__(meta, name, bases, dct):
         newdict = {}
         for n, obj in dct.items():
             if n.startswith('test_') and isinstance(obj, types.FunctionType):
                 newdict[n] = wrapper(obj)
             elif n.startswith('assert') or n == 'fail':
-                newdict[n] = mpi_fail_if_any(obj)
+                newdict['collective_'+n] = mpi_fail_if_any(obj)
             else:
                 newdict[n] = obj
                     
