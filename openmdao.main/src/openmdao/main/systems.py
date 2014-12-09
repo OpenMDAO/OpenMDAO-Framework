@@ -842,7 +842,7 @@ class System(object):
         self.sol_buf[:] = self.sol_vec.array[:]
         self.rhs_buf[:] = self.rhs_vec.array[:]
 
-        self.ln_solver.ksp.solve(self.rhs_buf, self.sol_buf)
+        self.ln_solver.ksp.solve(self.rhs_buf_petsc, self.sol_buf_petsc)
 
         self.sol_vec.array[:] = self.sol_buf[:]
 
