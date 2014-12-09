@@ -245,7 +245,7 @@ class PETSc_KSP(LinearSolver):
             jbase = j
 
             for irhs in xrange(param_size):
-                
+
                 # Solve the system with PetSC KSP
                 solvec = system._compute_derivatives(param_tup, irhs)
 
@@ -292,7 +292,7 @@ class PETSc_KSP(LinearSolver):
                                rtol=options.rtol)
 
         system.rhs_buf[:] = arg[:]
-  
+
         self.ksp.solve(system.rhs_buf, system.sol_buf)
 
         #print 'newton solution vec', system.vec['df'].array[:]
@@ -453,7 +453,7 @@ class LinearGS(LinearSolver):
                     sub_options = options if subsystem.options is None \
                                           else subsystem.options
                     subsystem.solve_linear(sub_options)
-                    
+
             elif system.mode == 'adjoint':
 
                 rev_systems = [item for item in reversed(system.subsystems(local=True))]
