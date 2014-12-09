@@ -92,10 +92,13 @@ Component, Driver, Variable and other plugins for OpenMDAO
       openmdao.lib.components.linear_system.LinearSystem = openmdao.lib.componnets.linear_system:LinearSystem
       openmdao.lib.geometry.stl_group.STLGroup = openmdao.lib.components.stl_group:STLGroup
       openmdao.lib.geometry.box.BoxParametricGeometry = openmdao.lib.components.box:BoxParametricGeometry
+      openmdao.lib.components.multi_metamodel.MultiFiMetaModel = openmdao.lib.components.multi_metamodel:MultiFiMetaModel
 
       [openmdao.surrogatemodel]
       openmdao.lib.surrogatemodels.kriging_surrogate.KrigingSurrogate = openmdao.lib.surrogatemodels.kriging_surrogate:KrigingSurrogate
       openmdao.lib.surrogatemodels.kriging_surrogate.FloatKrigingSurrogate = openmdao.lib.surrogatemodels.kriging_surrogate:FloatKrigingSurrogate
+      openmdao.lib.surrogatemodels.multifi_cokriging_surrogate.MultiFiCoKrigingSurrogate = openmdao.lib.surrogatemodels.multifi_cokriging_surrogate:MultiFiCoKrigingSurrogate
+      openmdao.lib.surrogatemodels.multifi_cokriging_surrogate.FloatMultiFiCoKrigingSurrogate = openmdao.lib.surrogatemodels.multifi_cokriging_surrogate:FloatMultiFiCoKrigingSurrogate
       openmdao.lib.surrogatemodels.logistic_regression.LogisticRegression = openmdao.lib.surrogatemodels.logistic_regression:LogisticRegression
       openmdao.lib.surrogatemodels.response_surface.ResponseSurface = openmdao.lib.surrogatemodels.response_surface:ResponseSurface
 

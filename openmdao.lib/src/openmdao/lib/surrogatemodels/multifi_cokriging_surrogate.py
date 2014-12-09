@@ -78,7 +78,7 @@ def squared_exponential_correlation(theta, d):
                                           i = 1
 
     Parameters
-    ----------
+    
     theta : array_like
         An array with shape 1 (isotropic) or n (anisotropic) giving the
         autocorrelation parameter(s).
@@ -89,7 +89,7 @@ def squared_exponential_correlation(theta, d):
         should be evaluated.
 
     Returns
-    -------
+    
     r : array_like
         An array with shape (n_eval, ) containing the values of the
         autocorrelation model.
@@ -117,7 +117,7 @@ Computes the nonzero componentwise L1 cross-distances between the vectors
 in X and Y.
 
 Parameters
-----------
+
 X : array_like
     An array with shape (n_samples_X, n_features)
     
@@ -125,7 +125,7 @@ Y : array_like
     An array with shape (n_samples_Y, n_features)
 
 Returns
--------
+
 D: array with shape (n_samples * (n_samples - 1) / 2, n_features)
     The array of componentwise L1 cross-distances.
 
@@ -170,7 +170,7 @@ This class integrates the Multi-Fidelity Co-Kriging method described in
 [LeGratiet2013]_.
 
 Parameters
-----------
+
 regr : string or callable, optional
     A regression function returning an array of outputs of the linear
     regression functional basis for Universal Kriging purpose.
@@ -225,7 +225,7 @@ thetaU : double, array_like or list, optional
     
     
 Attributes
-----------
+
 `theta`: list
     Specified theta for each level OR the best set of autocorrelation parameters
     (the sought maximizer of the reduced likelihood function).
@@ -236,8 +236,9 @@ Attributes
 
 
 Examples
---------
+
 >>> import numpy as np
+>>> from openmdao.lib.surrogatemodels.api import MultiFiCoKriging
 >>> # Xe: DOE for expensive code (nested in Xc)
 >>> # Xc: DOE for cheap code
 >>> # ye: expensive response
@@ -254,7 +255,7 @@ True
 
 
 Notes
------
+
 
 Implementation is based on the Package Scikit-Learn
 (Author: Vincent Dubourg <vincent.dubourg@gmail.com>) which translates
@@ -262,7 +263,7 @@ the DACE Matlab toolbox, see [NLNS2002]_.
 
 
 References
-----------
+
 
 .. [NLNS2002] `H.B. Nielsen, S.N. Lophaven, H. B. Nielsen and J. Sondergaard.
    DACE - A MATLAB Kriging Toolbox.` (2002)
@@ -321,7 +322,7 @@ References
 The Multi-Fidelity co-kriging model fitting method.
 
 Parameters
-----------
+
 X : list of double array_like elements
     A list of arrays with the input at which observations were made, from lowest
     fidelity to highest fidelity. Designs must be nested
@@ -443,7 +444,7 @@ distribution of the observations y evaluated onto the design of
 experiments X.
 
 Parameters
-----------
+
 self: Multi-Fidelity Co-Kriging object
 
 lvl: Integer
@@ -456,7 +457,7 @@ theta : array_like, optional
     (ie ``theta = self.theta``).
 
 Returns
--------
+
 rlf_value : double
     The value of the negative concentrated reduced likelihood function
     associated to the given autocorrelation parameters theta.
@@ -526,7 +527,7 @@ as the maximizer of the reduced likelihood function of the given level (lvl).
 (Minimization of the negative reduced likelihood function is used for convenience)
 
 Parameters
-----------
+
 self : Most parameters are stored in the Gaussian Process model object.
 
 lvl : integer
@@ -539,7 +540,7 @@ tol : float
     Optimizer terminates when the tolerance tol is reached.
 
 Returns
--------
+
 optimal_theta : array_like
 optimal_rlf_value : double
     The optimal negative reduced likelihood function value.
@@ -590,7 +591,7 @@ res : dict
 This function performs the predictions of the kriging model on X.
 
 Parameters
-----------
+
 X : array_like
     An array with shape (n_eval, n_features) giving the point(s) at
     which the prediction(s) should be made.
@@ -600,7 +601,7 @@ eval_MSE : boolean, optional
     evaluated or not. Default assumes evalMSE is True.
 
 Returns
--------
+
 y : array_like
     An array with shape (n_eval, ) with the Best Linear Unbiased
     Prediction at X. If all_levels is set to True, an array
