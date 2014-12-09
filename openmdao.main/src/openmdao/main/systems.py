@@ -44,6 +44,7 @@ class System(object):
         self._residuals = None
 
         self._reduced_graph = graph.full_subgraph(nodes)
+        self._reduced_graph.fix_dangling_vars()
 
         self._mapped_resids = {}
 
@@ -56,17 +57,8 @@ class System(object):
                     if succ not in self._out_nodes:
                         self._out_nodes.append(succ)
 
-        if hasattr(self, '_comp') and \
-           IImplicitComponent.providedBy(self._comp):
-            states = set(['.'.join((self.name,s))
-                                  for s in self._comp.list_states()])
-        else:
-            states = ()
-
-        pure_outs = [out for out in self._out_nodes if out not in states]
-
         all_outs = set(nodes)
-        all_outs.update(pure_outs)
+        all_outs.update(self._out_nodes)
 
         # get our input nodes from the depgraph
         ins, _ = get_node_boundary(graph, all_outs)
@@ -79,8 +71,6 @@ class System(object):
                 n = self.scope.name2collapsed[i]
                 if i != self.scope.name2collapsed[i] and n not in self._in_nodes:
                     self._in_nodes.append(n)
-
-        self._combined_graph = graph.subgraph(list(all_outs)+list(self._in_nodes))
 
         self._in_nodes = sorted(self._in_nodes)
         self._out_nodes = sorted(self._out_nodes)
@@ -836,7 +826,7 @@ class System(object):
         """ Solve Jacobian, df |-> du [fwd] or du |-> df [rev] """
         self.rhs_buf[:] = self.rhs_vec.array[:]
         self.sol_buf[:] = self.sol_vec.array[:]
-        self.sol_buf = self.ln_solver.solve(self.rhs_buf)
+        self.sol_buf[:] = self.ln_solver.solve(self.rhs_buf)
         self.sol_vec.array[:] = self.sol_buf[:]
 
     def _compute_derivatives(self, vname, ind):
@@ -865,12 +855,12 @@ class System(object):
             # here to avoid hanging, even though we don't need the IS
             ind_set = PETSc.IS().createGeneral([], comm=self.mpi.comm)
 
-        self.sol_buf.array[:] = self.sol_vec.array[:]
-        self.rhs_buf.array[:] = self.rhs_vec.array[:]
+        self.sol_buf[:] = self.sol_vec.array[:]
+        self.rhs_buf[:] = self.rhs_vec.array[:]
 
         self.ln_solver.ksp.solve(self.rhs_buf, self.sol_buf)
 
-        self.sol_vec.array[:] = self.sol_buf.array[:]
+        self.sol_vec.array[:] = self.sol_buf[:]
 
         #mpiprint('dx', self.sol_vec.array)
         return self.sol_vec
@@ -956,7 +946,7 @@ class SimpleSystem(System):
         for vname in chain(mystates, mynonstates):
             if vname not in self.variables:
                 base = base_var(self.scope._depgraph, vname[0])
-                if base != vname[0] and base in topsys._combined_graph: #self.scope._reduced_graph:
+                if base != vname[0] and base in topsys._reduced_graph:
                     continue
                 self.variables[vname] = varmeta[vname].copy()
 
@@ -1041,12 +1031,15 @@ class SimpleSystem(System):
         # Forward Mode
         if self.mode == 'forward':
 
-            self._comp.applyJ(self, variables)
+            if self._comp is None:
+                applyJ(self, variables)
+            else:
+                self._comp.applyJ(self, variables)
+                
             vec['df'].array[:] *= -1.0
 
             for var in self.list_outputs():
                 vec['df'][var][:] += vec['du'][var][:]
-
 
         # Adjoint Mode
         elif self.mode == 'adjoint':
@@ -1057,15 +1050,13 @@ class SimpleSystem(System):
             # previous component's contributions, we can multiply
             # our local 'arg' by -1, and then revert it afterwards.
             vec['df'].array[:] *= -1.0
-            self._comp.applyJT(self, variables)
+            if self._comp is None:
+                applyJT(self, variables)
+            else:
+                self._comp.applyJT(self, variables)
             vec['df'].array[:] *= -1.0
 
             for var in self.list_outputs():
-
-                collapsed = self.scope.name2collapsed.get(var)
-                if collapsed not in variables:
-                    continue
-
                 vec['du'][var][:] += vec['df'][var][:]
 
     def solve_linear(self, options=None):
@@ -1309,6 +1300,43 @@ class CompoundSystem(System):
         for s in self.local_subsystems():
             s.pre_run()
 
+    def _get_node_scatter_idxs(self, node, noflats, dest_start, destsys=None):
+        varkeys = self.vector_vars.keys()
+        
+        if node in noflats:
+            return (None, None, node)
+    
+        elif node in self.vector_vars: # basevar or non-duped subvar
+            if node not in self.vec['p']:
+                return (None, None, None)
+            
+            isrc = varkeys.index(node)
+            src_idxs = numpy.sum(self.local_var_sizes[:, :isrc]) + self.arg_idx[node]
+            dest_idxs = dest_start + self.vec['p']._info[node].start + self.arg_idx[node]
+    
+            return (src_idxs, dest_idxs, None)
+    
+        elif node in self.flat_vars:  # duped subvar
+            if node not in self.vec['p']:
+                return (None, None, None)
+            base = self.scope.name2collapsed[node[0].split('[', 1)[0]]
+            if base in self.vec['p']:
+                if destsys is not None:
+                    basedests = base[1]
+                    for comp in destsys._all_comp_nodes():
+                        if comp in basedests:
+                            return (None, None, None)
+                else:
+                    return (None, None, None)
+            isrc = varkeys.index(base)
+            src_idxs = numpy.sum(self.local_var_sizes[:, :isrc]) + self.scope._var_meta[node]['flat_idx']
+    
+            dest_idxs = dest_start + self.vec['p']._info[node].start  + self.arg_idx[node]
+            return (src_idxs, dest_idxs, None)
+    
+        return (None, None, None)
+
+
     def setup_scatters(self):
         """ Defines scatters for args at this system's level """
         if not self.is_active():
@@ -1329,100 +1357,44 @@ class CompoundSystem(System):
                            if v.get('noflat')])
         noflats.update([v for v in self._in_nodes if varmeta[v].get('noflat')])
 
-        start = numpy.sum(input_sizes[:rank])
-        varkeys = self.vector_vars.keys()
+        dest_start = numpy.sum(input_sizes[:rank])
 
-        visited = {}
-
-        # collect all destinations from p vector
-        ret = self.vec['p'].get_dests_by_comp()
-
-        # for subsystem in self.all_subsystems():
-        #     src_partial = []
-        #     dest_partial = []
-        #     scatter_conns = set()
-        #     noflat_conns = set()  # non-flattenable vars
-        #
-        #     for node in self._reduced_graph.successors(subsystem.node):
-        #         if node in noflats:
-        #             noflat_conns.add(node)
-        #
-        #         elif node in self.vector_vars: # basevar or non-duped subvar
-        #             if node not in self._owned_args:
-        #                 continue
-        #             isrc = varkeys.index(node)
-        #             src_idxs = numpy.sum(var_sizes[:, :isrc]) + self.arg_idx[node]
-        #             dest_idxs = start + self.arg_idx[node]
-        #             start += len(dest_idxs)
-        #
-        #         elif node in self.flat_vars:  # duped subvar
-        #             pass
-        #
-        #         else:
-        #             continue
-        #
-        #         scatter_conns.add(node)
-
-
-
-        start = numpy.sum(input_sizes[:rank])
         for subsystem in self.all_subsystems():
             src_partial = []
             dest_partial = []
             scatter_conns = set()
             noflat_conns = set()  # non-flattenable vars
             for sub in subsystem.simple_subsystems():
-                for node in self.vector_vars:
-                    if node in sub._in_nodes:
-                        if node not in self._owned_args or node in scatter_conns:
+                for node in self.variables:
+                    if node not in sub._in_nodes or node in scatter_conns:
+                        continue
+                    src_idxs, dest_idxs, nflat = self._get_node_scatter_idxs(node, noflats, dest_start, destsys=sub)
+                    if (src_idxs, dest_idxs, nflat) == (None, None, None):
+                        continue
+                    
+                    if nflat:
+                        if node in noflat_conns or node not in subsystem._in_nodes or node not in self._owned_args:
                             continue
-
-                        isrc = varkeys.index(node)
-                        src_idxs = numpy.sum(var_sizes[:, :isrc]) + self.arg_idx[node]
-
-                        # FIXME: broadcast var nodes will be scattered
-                        #  more than necessary using this scheme. switch to a push
-                        #  model with one scatter per source.
-                        if node in visited:
-                            dest_idxs = visited[node]
-                        else:
-                            dest_idxs = start + self.arg_idx[node]
-                            start += len(dest_idxs)
-
-                            visited[node] = dest_idxs
-
-                        if node not in scatter_conns:
-                            scatter_conns.add(node)
-                            src_partial.append(src_idxs)
-                            dest_partial.append(dest_idxs)
-
+                        noflat_conns.add(node)
+                    else:
+                        src_partial.append(src_idxs)
+                        dest_partial.append(dest_idxs)
+                        
                         if node not in scatter_conns_full:
-                            scatter_conns_full.add(node)
                             src_full.append(src_idxs)
                             dest_full.append(dest_idxs)
-
-                for node in sub._in_nodes:
-                    if node in noflats:
-                        if node not in self._owned_args or node in noflat_conns or node not in subsystem._in_nodes:
-                            continue
-                        scatter_conns.add(node)
-                        scatter_conns_full.add(node)
-                        noflat_conns.add(node)
-                        noflat_conns_full.add(node)
-                    else:
-                        for sname in sub._all_comp_nodes():
-                            if sname in ret and node in self.vec['p'] and node in ret[sname]:
-                                scatter_conns.add(node)
-                                scatter_conns_full.add(node)
-
-            if MPI or scatter_conns or noflat_conns:
-                subsystem.scatter_partial = DataTransfer(self, src_partial,
-                                                         dest_partial,
-                                                         scatter_conns, noflat_conns)
-
-        if MPI or scatter_conns_full or noflat_conns_full:
-            self.scatter_full = DataTransfer(self, src_full, dest_full,
-                                             scatter_conns_full, noflat_conns_full)
+                        
+                    scatter_conns.add(node)
+                    scatter_conns_full.add(node)
+        
+                if MPI or scatter_conns or noflat_conns:
+                    subsystem.scatter_partial = DataTransfer(self, src_partial,
+                                                             dest_partial,
+                                                             scatter_conns, noflat_conns)
+                    
+            if MPI or scatter_conns_full or noflat_conns_full:
+                self.scatter_full = DataTransfer(self, src_full, dest_full,
+                                                 scatter_conns_full, noflat_conns_full)
 
         for sub in self.local_subsystems():
             sub.setup_scatters()
@@ -1692,7 +1664,7 @@ class OpaqueSystem(SimpleSystem):
     system.
     """
     def __init__(self, scope, pgraph, subg, name):
-        nodes = set(subg.nodes())
+        nodes = sorted(subg.nodes())
 
         # take the graph we're given, collapse our nodes into a single
         # node, and create a simple system for that
@@ -1853,36 +1825,6 @@ class OpaqueSystem(SimpleSystem):
 
         self.complex_step = complex_step
         self._inner_system.set_complex_step(complex_step)
-
-    def applyJ(self, variables):
-        vec = self.vec
-        dfvec = vec['df']
-
-        # Forward Mode
-        if self.mode == 'forward':
-
-            applyJ(self, variables)
-            dfvec.array[:] *= -1.0
-
-            for var in self.list_outputs():
-                if var in dfvec:
-                    dfvec[var][:] += vec['du'][var][:]
-
-        # Adjoint Mode
-        elif self.mode == 'adjoint':
-
-            # Sign on the local Jacobian needs to be -1 before
-            # we add in the fake residual. Since we can't modify
-            # the 'du' vector at this point without stomping on the
-            # previous component's contributions, we can multiply
-            # our local 'arg' by -1, and then revert it afterwards.
-            dfvec.array[:] *= -1.0
-            applyJT(self, variables)
-            dfvec.array[:] *= -1.0
-
-            for var in self.list_outputs():
-                if var in dfvec:
-                    vec['du'][var][:] += dfvec[var][:]
 
     def set_ordering(self, ordering, opaque_map):
         self._inner_system.set_ordering(ordering, opaque_map)
@@ -2131,6 +2073,7 @@ def partition_subsystems(scope, graph, cgraph):
 
             for branch in parallel_group:
                 if isinstance(branch, tuple):
+                    branch = tuple(sorted(branch))
                     to_remove.extend(branch)
                     subg = cgraph.subgraph(branch)
                     partition_subsystems(scope, graph, subg)
@@ -2142,7 +2085,7 @@ def partition_subsystems(scope, graph, cgraph):
                     gcopy.remove_node(branch)
 
             #parallel_group = tuple(sorted(parallel_group))
-            parallel_group = tuple(parallel_group)
+            parallel_group = tuple(sorted(parallel_group))
             to_remove.extend(parallel_group)
             subg = cgraph.subgraph(parallel_group)
             system=ParallelSystem(scope, graph, subg, str(parallel_group))

@@ -1,3 +1,5 @@
+import sys 
+
 """ Some functions and objects that support the component-side derivative API.
 """
 from numpy import zeros, vstack, hstack
@@ -523,7 +525,15 @@ def get_bounds(obj, input_keys, output_keys, J):
 
     if num_input and num_output:
         # Give the user an intelligible error if the size of J is wrong.
-        J_output, J_input = J.shape
+        try:
+            J_output, J_input = J.shape
+        except ValueError as err:
+            exc_type, value, traceback = sys.exc_info()
+            msg = "Jacobian has the wrong dimensions. Expected 2D but got {}D."
+            msg = msg.format(J.ndim)
+
+            raise ValueError, ValueError(msg), traceback
+
         if num_output != J_output or num_input != J_input:
             msg = 'Jacobian is the wrong size. Expected ' + \
                 '(%dx%d) but got (%dx%d)' % (num_output, num_input,
@@ -575,4 +585,3 @@ def reduce_jacobian(J, i1, i2, idx, ish, o1, o2, odx, osh):
         return eval('J[%s, %s]' % (ostring, istring))
     else:
         return J[o1:o2, i1:i2]
-
