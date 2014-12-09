@@ -427,70 +427,90 @@ class Sellar_MDA_Cycles(Assembly):
         self.driver.workflow.add(['d1', 'd2'])
 
 class SysX(Component):
-    
+
     z = Float(1.0, iotype='in')
     x = Float(1.0, iotype='out')
-    
+
     def execute(self):
         self.x = 0.8*self.z + 2
-        
+
     def provideJ(self):
         return numpy.array([[0.8]])
-    
+
     def list_deriv_vars(self):
         return ['z'], ['x']
-    
+
 class SysY(Component):
-    
+
     x = Float(1.0, iotype='in')
     z = Float(1.0, iotype='in')
     y = Float(1.0, iotype='out')
-    
+
     def execute(self):
         self.y = -0.2*self.z + 4.0*self.x + 3
-        
+
     def provideJ(self):
         return numpy.array([[4.0, -0.2]])
-    
+
     def list_deriv_vars(self):
-        return ['x', 'z'], ['y']    
-    
+        return ['x', 'z'], ['y']
+
 class SysZ(Component):
-    
+
     x = Float(1.0, iotype='in')
     y = Float(1.0, iotype='in')
     z = Float(1.0, iotype='out')
-    
+
     def execute(self):
         self.z = 1.0*self.x - 1.0*self.y - 1.0
-        
+
     def provideJ(self):
         return numpy.array([[1.0, -1.0]])
-    
+
     def list_deriv_vars(self):
         return ['x', 'y'], ['z']
-    
+
 
 class DoubleCycle(Assembly):
-    
+
     def configure(self):
-        
+
         self.add('SysX', SysX())
         self.add('SysY', SysY())
         self.add('SysZ', SysZ())
-        
+
         self.connect('SysX.x', 'SysY.x')
         self.connect('SysX.x', 'SysZ.x')
         self.connect('SysY.y', 'SysZ.y')
-        #self.connect('SysZ.z', 'SysX.z')
+        self.connect('SysZ.z', 'SysX.z')
         self.connect('SysZ.z', 'SysY.z')
-        
+
+        self.add('driver', NewtonSolver())
+        self.driver.workflow.add(['SysX', 'SysY', 'SysZ'])
+        #self.driver.add_parameter('SysX.z')
+        #self.driver.add_constraint('SysX.z = SysZ.z')
+
+
+class DoubleCycle_1PC(Assembly):
+
+    def configure(self):
+
+        self.add('SysX', SysX())
+        self.add('SysY', SysY())
+        self.add('SysZ', SysZ())
+
+        self.connect('SysX.x', 'SysY.x')
+        self.connect('SysX.x', 'SysZ.x')
+        self.connect('SysY.y', 'SysZ.y')
+        self.connect('SysZ.z', 'SysY.z')
+
         self.add('driver', NewtonSolver())
         self.driver.workflow.add(['SysX', 'SysY', 'SysZ'])
         self.driver.add_parameter('SysX.z')
         self.driver.add_constraint('SysX.z = SysZ.z')
-        
-        
+
+
+
 class Newton_SolverTestCase_with_Cycles(unittest.TestCase):
     """test the Newton Solver component with cycles"""
 
@@ -553,17 +573,29 @@ class Newton_SolverTestCase_with_Cycles(unittest.TestCase):
         top.driver.gradient_options.fd_form = 'central'
         J = top.driver.workflow.calc_gradient(mode='fd')
         assert_rel_error(self, J[0][0], 10.77542099, 1e-5)
-        
+
     def test_for_push_scatters(self):
         # This test will fail when we go to push scatters. The problem is
         # that Newton (and linear Gauss Siedel) both need to poke values
         # directly into the u vector and expects those values to be
         # scattered. To make it work, we need to manually scatter them during
         # execution of those solvers.
-    
+
+        top = set_as_top(DoubleCycle_1PC())
+        top.run()
+
+        assert_rel_error(self, top.SysX.x, -0.5, .0001)
+        assert_rel_error(self, top.SysY.y, 1.625, .0001)
+        assert_rel_error(self, top.SysZ.z, -3.125, .0001)
+
+    def test_for_push_scatters__cycle_only(self):
+        # This test will fail when we go to push scatters. See Above.
+        # However, this flavor of the test was added because of a key error
+        # in the code that finds the smallest edges to break.
+
         top = set_as_top(DoubleCycle())
         top.run()
-        
+
         assert_rel_error(self, top.SysX.x, -0.5, .0001)
         assert_rel_error(self, top.SysY.y, 1.625, .0001)
         assert_rel_error(self, top.SysZ.z, -3.125, .0001)

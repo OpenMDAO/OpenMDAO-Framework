@@ -972,6 +972,7 @@ def get_cycle_vars(system):
                 if src in strong and dest in strong:
                     cycle_vars.extend(g[src][dest]['varconns'])
                     g.remove_edge(src, dest)
+                    sizes.remove((sz, (src, dest)))
                     break
 
     return cycle_vars
