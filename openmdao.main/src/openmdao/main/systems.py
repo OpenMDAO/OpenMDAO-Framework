@@ -1036,6 +1036,11 @@ class SimpleSystem(System):
             vec['df'].array[:] *= -1.0
 
             for var in self.list_outputs():
+
+                collapsed = self.scope.name2collapsed.get(var)
+                if collapsed not in variables:
+                    continue
+
                 vec['du'][var][:] += vec['df'][var][:]
 
     def solve_linear(self, options=None):
