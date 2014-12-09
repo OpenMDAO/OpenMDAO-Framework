@@ -657,7 +657,7 @@ class Testcase_derivatives(unittest.TestCase):
             mocklogger.error.assert_called_with(
                 "ERROR in calc_gradient in '%s': gmres failed to converge after"
                 " %d iterations",
-                "('comp', 'comp.y', 'comp.x', '_pseudo_0')", 13)
+                "('_pseudo_0', 'comp', 'comp.x', 'comp.y')", 13)
 
             top.driver.workflow.calc_gradient(outputs=['comp.f_xy'],
                                               mode='adjoint')
@@ -665,7 +665,7 @@ class Testcase_derivatives(unittest.TestCase):
             mocklogger.error.assert_called_with(
                 "ERROR in calc_gradient in '%s': gmres failed to"
                 " converge after %d iterations",
-                "('comp', 'comp.y', 'comp.x', '_pseudo_0')", 13)
+                "('_pseudo_0', 'comp', 'comp.x', 'comp.y')", 13)
 
         finally:
             openmdao.main.linearsolver.gmres = orig_gmres
@@ -756,13 +756,13 @@ class Testcase_derivatives(unittest.TestCase):
                                      mode='forward')
             mocklogger.error.assert_called_with(
                 "ERROR in calc_gradient in '%s': gmres failed",
-                "('comp', 'comp.y', 'comp.x')")
+                "('comp', 'comp.x', 'comp.y')")
 
             top.driver.workflow.calc_gradient(outputs=['comp.f_xy'],
                                               mode='adjoint')
             mocklogger.error.assert_called_with(
                 "ERROR in calc_gradient in '%s': gmres failed",
-                "('comp', 'comp.y', 'comp.x')")
+                "('comp', 'comp.x', 'comp.y')")
 
         finally:
             openmdao.main.derivatives.gmres = orig_gmres
@@ -3375,9 +3375,9 @@ class TestMultiDriver(unittest.TestCase):
 
         # Test gradient
         #sp.driver.gradient_options.fd_form = 'central'
-        J = sp.driver.workflow.calc_gradient()
+        J = sp.driver.calc_gradient()
 
-        Jfd = sp.driver.workflow.calc_gradient(mode='fd')
+        Jfd = sp.driver.calc_gradient(mode='fd')
 
         diff = J - Jfd
 

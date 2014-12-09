@@ -846,27 +846,29 @@ class Workflow(object):
         for s in parent_graph.successors(drvname):
             if parent_graph[drvname][s].get('drv_conn') == drvname:
                 params.add(s)
+                reduced.add_node(s[0], comp='param')
+                reduced.add_edge(s[0], s)
+
+        #reduced._connect_srcs_to_comps()
 
         # we need to connect a param comp node to all param nodes
         for node in params:
             param = node[0]
-            reduced.add_node(param, comp='param')
-            reduced.add_edge(param, node)
             reduced.node[param]['system'] = \
                        ParamSystem(scope, reduced, param)
 
-        outs = []
-        for p in parent_graph.predecessors(drvname):
-            if parent_graph[p][drvname].get('drv_conn') == drvname:
-                outs.append(p)
+        #outs = []
+        #for p in parent_graph.predecessors(drvname):
+        #    if parent_graph[p][drvname].get('drv_conn') == drvname:
+        #        outs.append(p)
 
-        for out in outs:
-            vname = out[1][0]
-            if reduced.out_degree(vname) == 0:
-                reduced.add_node(vname, comp='dumbvar')
-                reduced.add_edge(out, vname)
-                reduced.node[out]['system'] = \
-                           VarSystem(scope, reduced, vname)
+        #for out in outs:
+        #    vname = out[1][0]
+        #    if reduced.out_degree(vname) == 0:
+        #        reduced.add_node(vname, comp='dumbvar')
+        #        reduced.add_edge(out, vname)
+        #        reduced.node[vname]['system'] = \
+        #                   VarSystem(scope, reduced, vname)
 
         cgraph = reduced.component_graph()
 
@@ -877,7 +879,7 @@ class Workflow(object):
             # opaque systems
             systems = {}
             for group in get_nondiff_groups(reduced, cgraph, self.scope):
-                gtup = tuple(group)
+                gtup = tuple(sorted(group))
                 system = OpaqueSystem(scope, self.scope._reduced_graph,
                                       cgraph.subgraph(group),
                                       str(gtup))
@@ -900,24 +902,16 @@ class Workflow(object):
                         to_remove.append((s, node))
             reduced.remove_edges_from(to_remove)
 
-            ## attach any dangling subvars to their corresponding VarNode
-            #for node, data in reduced.nodes_iter(data=True):
-            #    if 'comp' not in data and reduced.in_degree(node) == 0:
-            #        if node[0] in reduced:
-            #            reduced.add_edge(node[0], node)
-            #        elif node[0].split('[', 1)[0] in reduced:
-            #            reduced.add_edge(node[0].split('[', 1)[0], node)
-
         self._reduced_graph = reduced
 
         if MPI and system_type == 'auto':
             self._auto_setup_systems(scope, reduced, cgraph)
         elif MPI and system_type == 'parallel':
             self._system = ParallelSystem(scope, reduced, cgraph,
-                                          str(tuple(cgraph.nodes())))
+                                          str(tuple(sorted(cgraph.nodes()))))
         else:
             self._system = SerialSystem(scope, reduced, cgraph,
-                                        str(tuple(cgraph.nodes())))
+                                        str(tuple(sorted(cgraph.nodes()))))
 
         self._system.set_ordering([p[0] for p in params]+
                                   [c.name for c in self], opaque_map)
