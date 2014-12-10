@@ -79,7 +79,11 @@ class VecWrapperBase(object):
     def __setitem__(self, name, value):
         view, _, idxs, _, _ = self._info[name]
         if isinstance(value, ndarray):
-            view[idxs] = value.flat
+            try:
+                view[idxs] = value.flat
+            except Exception as err:
+                raise RuntimeError("cannot set array %s to value:\n %s\n %s" %
+                                    (name, str(value), str(err)))
         else:
             view[idxs] = value
 
@@ -495,9 +499,9 @@ class DataTransfer(object):
             dest, src = src, dest
 
         if self.scatter:
-            #print "%s for %s\n%s <-- %s" % (destvec.name.rsplit('.', 1)[1], 
-                                            #destvec.name.rsplit('.',1)[0], 
-                                            #list(self.scatter_conns), 
+            #print "%s for %s\n%s <-- %s" % (destvec.name.rsplit('.', 1)[1],
+                                            #destvec.name.rsplit('.',1)[0],
+                                            #list(self.scatter_conns),
                                             #src[self.scatter.dest_idxs if addv else self.scatter.src_idxs])
             self.scatter.scatter(src, dest, addv=addv, mode=mode)
 
