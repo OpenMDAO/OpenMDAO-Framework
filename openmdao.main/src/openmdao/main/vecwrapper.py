@@ -38,8 +38,6 @@ class VecWrapperBase(object):
         """Add all srcs and dests from var tuples so that views for
         particular openmdao variables can be accessed.
         """
-        if 'EqConstraintSystem' == type(system).__name__:
-            print 'VecWrapperBase _add_tuple_members', system.name, type(system).__name__, tups
         for tup in tups:
             names = set([tup[0]]+list(tup[1])) # src + dests
             for name in names:
@@ -192,17 +190,12 @@ class VecWrapper(VecWrapperBase):
         bases = dict([(n.split('[',1)[0], []) for n in vec_srcs
                                     if n.split('[',1)[0] not in vec_srcs])
 
-        if 'EqConstraintSystem' == type(system).__name__:
-            print 'VecWrapper _initialize', system.name, type(system).__name__, vector_vars.items()
-
         # first, add views for vars whose sizes are added to the total,
         # i.e., either they are basevars or their basevars are not included
         # in the vector.
         start, end = 0, 0
         for ivar, (name, var) in enumerate(vector_vars.items()):
             sz = system.local_var_sizes[rank, ivar]
-            if 'EqConstraintSystem' == type(system).__name__:
-                print 'VecWrapper _initialize', system.name, type(system).__name__, ivar, (name, var), sz
             if sz > 0:
                 end += sz
                 # store the view, local start idx, and distributed start idx
@@ -250,8 +243,6 @@ class VecWrapper(VecWrapperBase):
         else:
             states = []
             resids = []
-        if 'EqConstraintSystem' == type(system).__name__:
-            print self.name, '_add_resid()', states, resids
         states = [s for s in states if nodemap[s] in system.variables]
         if states:
             start, end = self.bounds(states)
@@ -271,7 +262,6 @@ class VecWrapper(VecWrapperBase):
         # add any mappings of residuals to states
         for resid, state in system._mapped_resids.items():
             if resid not in self._info:
-                print 'VecWrapper _map_resids_to_states', resid, state
                 self._add_aliasview(resid, state)
 
     def set_from_scope(self, scope, vnames=None):

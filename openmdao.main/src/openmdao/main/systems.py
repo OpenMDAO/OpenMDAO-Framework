@@ -171,7 +171,7 @@ class System(object):
         comm = self.mpi.comm
         if comm is None:
             return
-            
+
         myrank = comm.rank
 
         tups = []
@@ -204,7 +204,6 @@ class System(object):
             for (param, output), rank in tupdict.items():
                 if rank == myrank:
                     comm.send(J[param][output], dest=0, tag=0)
-
 
         # FIXME: rework some of this using knowledge of local_var_sizes in order
         # to avoid any unnecessary data passing
@@ -303,7 +302,7 @@ class System(object):
                                       for s in system._comp.list_states()])
                 except AttributeError:
                     pass
-                out_nodes = [node for node in system._out_nodes \
+                out_nodes = [node for node in system._out_nodes
                              if node not in self._mapped_resids]
                 comps = self._all_comp_nodes()
                 for src, _ in out_nodes:
@@ -407,28 +406,16 @@ class System(object):
         #     are slices of other vars already in the vectors
         #  3) non-flattenable vars
 
-        if 'EqConstraintSystem' == type(self).__name__:
-            print '  ', self.name, type(self).__name__, '_create_var_dicts() vars:', self.variables.keys()
-
         # first, get all flattenable variables
         for name in _filter_flat(self.scope, self.variables.keys()):
             self.flat_vars[name] = self.variables[name]
 
-        if 'EqConstraintSystem' == type(self).__name__:
-            print '  ', self.name, type(self).__name__, '_create_var_dicts() flat_vars:', self.flat_vars.keys()
-
         # now get all flattenable vars that add to vector size
         self.vector_vars = self._get_vector_vars(self.flat_vars)
-
-        if 'EqConstraintSystem' == type(self).__name__:
-            print '  ', self.name, type(self).__name__, '_create_var_dicts() vector_vars:', self.vector_vars.keys()
 
         for name, info in self.variables.items():
             if name not in self.flat_vars:
                 self.noflat_vars[name] = info
-
-        if 'EqConstraintSystem' == type(self).__name__:
-            print '  ', self.name, type(self).__name__, '_create_var_dicts() noflat_vars:', self.noflat_vars.keys()
 
     def setup_sizes(self):
         """Given a dict of variables, set the sizes for
@@ -497,9 +484,6 @@ class System(object):
         """
         if not self.is_active():
             return
-
-        if 'EqConstraintSystem' == type(self).__name__:
-            print '  ', type(self).__name__, 'setup_vectors()'
 
         rank = self.mpi.rank
         if arrays is None:  # we're the top level System in our Assembly
@@ -570,7 +554,7 @@ class System(object):
 
                 if self.complex_step is True:
                     scatter(self, self.vec['du'], self.vec['dp'],
-                            complex_step = True)
+                            complex_step=True)
 
                 if scatter is self.scatter_full:
                     destvec.set_to_scope(self.scope)
@@ -680,8 +664,6 @@ class System(object):
         use a subview of the view corresponding to their base var)
         """
         keep_srcs = set(_filter_subs([n[0] for n in vardict]))
-        if 'EqConstraintSystem' == type(self).__name__:
-            print '  ', self.name, type(self).__name__, '_get_vector_vars() vardict:', vardict.keys(), '  =====>   keep_srcs:', keep_srcs
 
         return OrderedDict([(k,v) for k,v in vardict.items() if k[0] in keep_srcs])
 
@@ -874,8 +856,6 @@ class SimpleSystem(System):
     Outputs, States, and Residuals."""
 
     def __init__(self, scope, graph, name):
-        if 'EqConstraintSystem' == type(self).__name__:
-            print type(self).__name__, name, '__init__()', scope
         comp = None
         nodes = set([name])
         cpus = 1
@@ -924,9 +904,6 @@ class SimpleSystem(System):
         self.mpi.comm = comm
 
     def _create_var_dicts(self, resid_state_map):
-        if 'EqConstraintSystem' == type(self).__name__:
-            print '  ', self.name, type(self).__name__, '_create_var_dicts() resid_state_map:', resid_state_map
-
         varmeta = self.scope._var_meta
 
         if IImplicitComponent.providedBy(self._comp):
@@ -1162,7 +1139,6 @@ class EqConstraintSystem(SimpleSystem):
     residuals.
     """
     def setup_variables(self, resid_state_map=None):
-        print type(self).__name__, self.name, 'setup_variables()'
         super(EqConstraintSystem, self).setup_variables(resid_state_map)
 
         nodemap = self.scope.name2collapsed
@@ -1343,7 +1319,6 @@ class CompoundSystem(System):
             return (src_idxs, dest_idxs, None)
 
         return (None, None, None)
-
 
     def setup_scatters(self):
         """ Defines scatters for args at this system's level """
@@ -1732,7 +1707,7 @@ class OpaqueSystem(SimpleSystem):
 
         self._inner_system = SerialSystem(scope, graph,
                                           graph.component_graph(),
-                                          name = "FD_" + str(name))
+                                          name="FD_" + str(name))
 
         self._inner_system._provideJ_bounds = None
         self._comp = None
