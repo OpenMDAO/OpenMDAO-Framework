@@ -285,7 +285,8 @@ def run_openmdao_suite(argv=None):
                 args.remove('--small')
             args.extend(['-c', os.path.join(os.path.dirname(__file__), 'release_tests.cfg')])
         else:  # in a dev install, default is all tests
-            args.append('--all')
+            if '--mpi' not in args:
+                args.append('--all')
 
     args.append('--exe')  # by default, nose will skip any .py files that are
                           # executable. --exe prevents this behavior

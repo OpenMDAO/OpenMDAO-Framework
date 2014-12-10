@@ -2,7 +2,7 @@
 import numpy as np
 
 from openmdao.util.testutil import assert_rel_error
-from openmdao.test.mpiunittest import MPITestCase
+from openmdao.test.mpiunittest import MPITestCase, collective_assert_rel_error
 from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.main.datatypes.api import Float
 from openmdao.main.mpiwrap import mpiprint
@@ -77,8 +77,12 @@ class MPITests(MPITestCase):
         J = self.top.driver.workflow._system.get_combined_J(J)
         #mpiprint("final J: %s" % J)
 
-        assert_rel_error(self, J['_pseudo_0.out0']['comp.x'][0][0], 5.0, 0.0001)
-        assert_rel_error(self, J['_pseudo_0.out0']['comp.y'][0][0], 21.0, 0.0001)
+        collective_assert_rel_error(self, 
+                                    J['_pseudo_0.out0']['comp.x'][0][0], 
+                                    5.0, 0.0001)
+        collective_assert_rel_error(self, 
+                                    J['_pseudo_0.out0']['comp.y'][0][0], 
+                                    21.0, 0.0001)
 
     def test_calc_gradient_adjoint(self):
         self.top.run()
@@ -90,8 +94,12 @@ class MPITests(MPITestCase):
         J = self.top.driver.workflow._system.get_combined_J(J)
         #mpiprint("final J: %s" % J)
 
-        assert_rel_error(self, J['_pseudo_0.out0']['comp.x'][0][0], 5.0, 0.0001)
-        assert_rel_error(self, J['_pseudo_0.out0']['comp.y'][0][0], 21.0, 0.0001)
+        collective_assert_rel_error(self, 
+                                    J['_pseudo_0.out0']['comp.x'][0][0], 
+                                    5.0, 0.0001)
+        collective_assert_rel_error(self,
+                                    J['_pseudo_0.out0']['comp.y'][0][0], 
+                                    21.0, 0.0001)
 
     def test_calc_gradient_fd(self):
         self.top.run()
@@ -99,8 +107,12 @@ class MPITests(MPITestCase):
         J = self.top.driver.calc_gradient(mode='fd',
                                           return_format='dict')
 
-        assert_rel_error(self, J['_pseudo_0.out0']['comp.x'][0][0], 5.0, 0.0001)
-        assert_rel_error(self, J['_pseudo_0.out0']['comp.y'][0][0], 21.0, 0.0001)
+        collective_assert_rel_error(self, 
+                                    J['_pseudo_0.out0']['comp.x'][0][0], 
+                                    5.0, 0.0001)
+        collective_assert_rel_error(self, 
+                                    J['_pseudo_0.out0']['comp.y'][0][0], 
+                                    21.0, 0.0001)
 
 
 if __name__ == '__main__':

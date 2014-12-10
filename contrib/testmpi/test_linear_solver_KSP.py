@@ -3,6 +3,8 @@ Basic unit testing of the linear solvers. PetSc requires MPI, so it must be
 tested separately.
 """
 import unittest
+
+from nose import SkipTest
 import numpy as np
 
 from openmdao.main.mpiwrap import PETSc
@@ -47,7 +49,7 @@ class SellarMDF(Assembly):
         self.driver.add_parameter('d1.x1', low=-1e99, high=1e99)
         self.driver.add_constraint('d1.y1 < 0')
         self.driver.add_constraint('d2.y2 < 0')
-        
+
 
 class Testcase_PetSc_KSP(unittest.TestCase):
     """ Test PetSC KSP solver. """
@@ -55,7 +57,7 @@ class Testcase_PetSc_KSP(unittest.TestCase):
     def setUp(self):
         if not PETSc.installed:
             raise SkipTest("PetSc not installed")
-        
+
     def test_petsc_ksp_single_comp_array(self):
 
         top = set_as_top(Assembly())
@@ -142,7 +144,7 @@ class Testcase_PetSc_KSP(unittest.TestCase):
         top.driver.gradient_options.lin_solver = 'petsc_ksp'
         top.subdriver.gradient_options.lin_solver = 'petsc_ksp'
         top.run()
-        
+
         J = top.driver.workflow.calc_gradient(mode='forward')
 
         assert_rel_error(self, J[0, 0], 0.9806145, 0.0001)
@@ -159,7 +161,7 @@ class Testcase_PetSc_KSP(unittest.TestCase):
         top.driver.gradient_options.lin_solver = 'linear_gs'
         top.subdriver.gradient_options.lin_solver = 'petsc_ksp'
         top.run()
-        
+
         J = top.driver.workflow.calc_gradient(mode='forward')
 
         assert_rel_error(self, J[0, 0], 0.9806145, 0.0001)
