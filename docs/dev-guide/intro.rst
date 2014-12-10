@@ -62,7 +62,7 @@ compilers.
     It's sometimes hard to figure out which version of gfortran to install on your Mac. See
     this `page <http://gcc.gnu.org/wiki/GFortranBinaries#MacOS>`_ for a pretty good overview 
     of what's available. Alternatively, you can follow the instructions for installing a package manager 
-    called `Homebrew <http://www.thisisthegreenroom.com/2011/installing-python-numpy-scipy-matplotlib-and-ipython-on-lion/>`_,
+    called `Homebrew <http://www.lowindata.com/2013/installing-scientific-python-on-mac-os-x/>`_,
     which will figure out the right kind of gfortran for you. 
 
 
@@ -78,7 +78,7 @@ compilers.
 
          XCode's *Downloads* Screen     
 
-    - As mentioned previously, you may install and use the package manager `Homebrew <http://www.thisisthegreenroom.com/2011/installing-python-numpy-scipy-matplotlib-and-ipython-on-lion/>`_.
+    - As mentioned previously, you may install and use the package manager `Homebrew <http://www.lowindata.com/2013/installing-scientific-python-on-mac-os-x/>`_.
      
 
 
@@ -136,7 +136,7 @@ compilers.
     You can optionally use Visual C++ 2008 as your C++ compiler. You don't need it; mingw32 will work fine,
     but if you prefer Visual C++ 2008, you're welcome to use it instead. The Express version will work, 
     but others (Professional, Standard) should work too. To get this software,
-    go to the `downloads page <http://www.microsoft.com/visualstudio/eng/products/visual-studio-overview#2008-Visual-CPP>`_.
+    go to the `downloads page <http://www.visualstudio.com/en-us#2008-Visual-CPP>`_.
 
 .. __: http://sourceforge.net/projects/mingw/files
 
@@ -164,7 +164,7 @@ about :term:`Git` and Github itself. The
 `GitHub help page <https://help.github.com/>`_ is a good place to start. If you're a 
 Windows user, make sure to read the details about using Git Bash on the `Windows 
 specific installation instructions <https://help.github.com/articles/set-up-git>`_. 
-The `Pro Git book <http://git-scm.com/book>`_ is also excellent.  It's very
+The `Pro Git book <http://git-scm.com/book/en/v2>`_ is also excellent.  It's very
 important to take a look at these, because Git differs from other version
 control systems in some significant ways. 
 

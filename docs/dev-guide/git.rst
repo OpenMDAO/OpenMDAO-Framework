@@ -21,7 +21,7 @@ tasks you will be doing.
 
 References:
 
-* Pro Git: http://git-scm.com/book
+* Pro Git: http://git-scm.com/book/en/v2
 
 .. index Git commands
 

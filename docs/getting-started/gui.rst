@@ -85,7 +85,7 @@ existing global objects having the same names.
 
 From this point, you're ready to start working with OpenMDAO using our GUI. We have a number of screen casts that walk you
 through how to use the GUI, and they follow along with the tutorials that you can go through in the rest of our docs. Just
-follow this link to our YouTube channel: http://www.youtube.com/openmdao.  
+follow this link to our YouTube channel: https://www.youtube.com/user/OpenMDAO.  
 
 That covers the basics you need to know to start working with the OpenMDAO GUI. You'll learn the rest as you work through the documentation. 
 
