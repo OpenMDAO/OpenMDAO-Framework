@@ -1297,6 +1297,7 @@ class CollapsedGraph(DGraphBase):
             cnodes = set([c.name for c in comp.iteration_set()])
             itercomps[comp.name] = cnodes
 
+        to_remove = []
         for child_drv in subdrivers:
             excludes = set()
             for name, comps in itercomps.items():
@@ -1307,24 +1308,15 @@ class CollapsedGraph(DGraphBase):
 
             self.collapse_driver(child_drv, excludes)
 
-        # remove output edge of bidirectional edges to/from drivers
-        to_remove = []
-        subdrvnames = [s.name for s in subdrivers]
-        for n in subdrvnames:
-            for s in self.successors(n):
-                if n in self.successors(s):
-                    to_remove.append((n, s))
-
-        # The following was found to be necessary when push scattering
-        #  (the output edges were kept in that case so the loop above
-        #    was removed)
-        # # remove input edge of bidirectional edges to/from drivers
-        # to_remove = []
-        # subdrvnames = [s.name for s in subdrivers]
-        # for n in subdrvnames:
-        #     for p in self.predecessors(n):
-        #         if n in self.predecessors(p):
-        #             to_remove.append((p, n))
+            # locate any bidirectional edges to/from collapsed driver.
+            # If the driver isn't the only input to a var, remove the
+            # driver input to the var. 
+            dname = child_drv.name
+            succ = self.successors(dname)
+            for p in self.predecessors(dname):
+                if p in succ:
+                    if self.in_degree(p) > 1:
+                        to_remove.append((dname, p))
 
         self.remove_edges_from(to_remove)
 
