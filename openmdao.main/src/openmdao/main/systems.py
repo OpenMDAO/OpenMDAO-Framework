@@ -1366,7 +1366,7 @@ class CompoundSystem(System):
                     if node not in sub._in_nodes or node in scatter_conns:
                         continue
                     src_idxs, dest_idxs, nflat = self._get_node_scatter_idxs(node, noflats, dest_start, destsys=sub)
-                    if (src_idxs, dest_idxs, nflat) == (None, None, None):
+                    if (src_idxs is None) and (dest_idxs is None) and (nflat is None):
                         continue
 
                     if nflat:
