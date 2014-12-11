@@ -81,17 +81,19 @@ class TestCase(unittest.TestCase):
         # Check the results
         expected = [
             'Case:',
-            '   uuid: 2ee927bd-7d8f-11e4-804e-20c9d0478eff',
-            '   timestamp: 1417901464.879319',
+            '   uuid: f18c0e94-8005-11e4-804e-20c9d0478eff',
+            '   timestamp: 1418172374.364364',
             '   inputs:',
             '      comp.dummy_data.dummy1: 0.0333333393814',
             '   outputs:',
             '      Response(comp.x): -2.19888892477',
+            '      _pseudo_1.out0: -2.19888892477',
             '      comp.derivative_exec_count: 0',
             '      comp.exec_count: 46',
             '      comp.itername: 4-comp',
+            '      comp.x: -2.19888892477',
             '      driver.workflow.itername: 4',
-        ]
+            ]
         
         lines = sout.getvalue().split('\n')
         count = 0
@@ -133,17 +135,19 @@ class TestCase(unittest.TestCase):
         # Check the results
         expected = [
             'Case:',
-            '   uuid: 2ee927bd-7d8f-11e4-804e-20c9d0478eff',
-            '   timestamp: 1417901464.879319',
+            '   uuid: f18c0e94-8005-11e4-804e-20c9d0478eff',
+            '   timestamp: 1418172374.364364',
             '   inputs:',
             '      comp.dummy_data.dummy1: 0.0333333393814',
             '   outputs:',
             '      Response(comp.x): -2.19888892477',
+            '      _pseudo_1.out0: -2.19888892477',
             '      comp.derivative_exec_count: 0',
             '      comp.exec_count: 46',
             '      comp.itername: 4-comp',
+            '      comp.x: -2.19888892477',
             '      driver.workflow.itername: 4',
-        ]
+            ]
         
         lines = sout.getvalue().split('\n')
         count = 0

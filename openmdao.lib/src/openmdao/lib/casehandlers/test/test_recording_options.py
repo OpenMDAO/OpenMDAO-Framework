@@ -61,6 +61,8 @@ class RecordingOptionsTestCase(unittest.TestCase):
         expected = ['_driver_id', '_id', '_parent_id', u'_pseudo_0', u'_pseudo_1', u'comp1.derivative_exec_count', 
                     u'comp1.exec_count', u'comp1.itername', u'comp1.x', u'comp2.derivative_exec_count', u'comp2.exec_count', 
                     u'comp2.itername', u'driver.workflow.itername', 'error_message', 'error_status', 'timestamp']
+        expected = ['_driver_id', '_id', '_parent_id', u'_pseudo_0', u'_pseudo_0.out0', u'_pseudo_1', u'_pseudo_1.out0', u'comp1.derivative_exec_count', u'comp1.exec_count', u'comp1.itername', u'comp1.x', u'comp1.z', u'comp2.derivative_exec_count', u'comp2.exec_count', u'comp2.itername', u'comp2.z', u'driver.workflow.itername', 'error_message', 'error_status', 'timestamp']
+
 
         self.assertFalse(set(vnames).symmetric_difference(set(expected)))
         #self.assertFalse(set(vnames) - set(expected))

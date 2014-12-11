@@ -500,7 +500,6 @@ class Workflow(object):
         """Called at start of top-level run to configure case recording.
         Returns set of paths for changing inputs."""
 
-        print "configure_recording", self.parent
         # driver = self.parent
         # scope = driver.parent
         # top = scope
@@ -538,7 +537,6 @@ class Workflow(object):
         inputs = []
         outputs = []
 
-        print "configure_recording Parameters"
         # Parameters
         self._rec_parameters = []
         if hasattr(driver, 'get_parameters'):
@@ -612,11 +610,27 @@ class Workflow(object):
                         if not ".in" in n:
                             output_name = n
                             break
-                output_name = prefix + output_name
+                #output_name = prefix + output_name
                 if output_name not in outputs and self._check_path(output_name, includes, excludes) :
                     outputs.append(output_name)
                     self._rec_outputs.append(output_name)
                     #self._rec_all_outputs.append(output_name)
+                    
+        #####
+        # also need get any outputs of comps that are not connected vars and therefore not in the graph
+        # could use 
+        #   scope._depgraph
+        #      there's 'iotype' metadata in the var nodes
+        #    
+        #   also:
+        #         scope._depgraph.list_outputs('comp2')
+        
+        for comp in driver.workflow: 
+            for output_name in scope._depgraph.list_outputs(comp.name):
+                #output_name = prefix + output_name
+                if output_name not in outputs and self._check_path(output_name, includes, excludes) :
+                    outputs.append(output_name)
+                    self._rec_outputs.append(output_name)
 
         # Other outputs.
         #self._rec_outputs = []
@@ -649,18 +663,19 @@ class Workflow(object):
         #         self._rec_outputs.append(src)
         #         #qqq outputs.append(src)
 
-        for comp in self.get_components():
-            for name in comp.list_outputs():
-                src = '%s.%s' % (comp.name, name)
-                path = prefix+src
-                if src not in outputs and \
-                   self._check_path(path, includes, excludes):
-                    if scope.get_metadata(src).has_key('framework_var') and scope.get_metadata(src)['framework_var']:
-                        self._rec_outputs.append(src)
-                        #self._rec_outputs.append(path)
-                        #self._rec_all_outputs.append(path)
-                        #outputs.append(path)
-                        outputs.append(src)
+        ##### Not sure I need this ! 
+        #for comp in self.get_components():
+            #for name in comp.list_outputs():
+                #src = '%s.%s' % (comp.name, name)
+                #path = prefix+src
+                #if src not in outputs and \
+                   #self._check_path(path, includes, excludes):
+                    #if scope.get_metadata(src).has_key('framework_var') and scope.get_metadata(src)['framework_var']:
+                        #self._rec_outputs.append(src)
+                        ##self._rec_outputs.append(path)
+                        ##self._rec_all_outputs.append(path)
+                        ##outputs.append(path)
+                        #outputs.append(src)
 
         name = '%s.workflow.itername' % driver.name
         path = prefix+name

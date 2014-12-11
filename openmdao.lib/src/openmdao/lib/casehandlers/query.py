@@ -271,8 +271,9 @@ class CaseDataset(object):
         if query.vnames is not None:
             bad = []
             metadata = self.simulation_info['variable_metadata']
+            expressions = self.simulation_info['expressions']
             for name in query.vnames:
-                if name not in metadata:
+                if name not in metadata and name not in [ e['pcomp_name'] for e in expressions.values()]:
                     bad.append(name)
             if bad:
                 raise RuntimeError('Names not found in the dataset: %s' % bad)

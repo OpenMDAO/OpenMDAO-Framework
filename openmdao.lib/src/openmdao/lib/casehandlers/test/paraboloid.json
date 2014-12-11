@@ -1,5 +1,5 @@
 {
-"__length_1": 6592
+"__length_1": 6923
 , "simulation_info": {
     "OpenMDAO_Version": "0.10.3.2", 
     "comp_graph": "{\"directed\": true, \"graph\": [], \"nodes\": [{\"comp\": true, \"pseudo\": \"objective\", \"id\": \"_pseudo_0\"}, {\"comp\": true, \"id\": \"writer\"}, {\"comp\": true, \"driver\": true, \"id\": \"driver\"}, {\"comp\": true, \"id\": \"c2\"}], \"links\": [{\"source\": 1, \"target\": 3}, {\"source\": 3, \"target\": 0}], \"multigraph\": false}", 
@@ -12,8 +12,20 @@
     }, 
     "graph": "{\"directed\": true, \"graph\": [[\"title\", \"unknown\"]], \"nodes\": [{\"full\": \"driver.theta\", \"color_idx\": 2, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.theta\", \"short\": \"theta\"}, {\"full\": \"c2.file_in\", \"color_idx\": 3, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"file_in\", \"var\": true, \"iotype\": \"in\", \"id\": \"c2.file_in\"}, {\"full\": \"writer.x\", \"color_idx\": 1, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"writer.x\", \"short\": \"x\"}, {\"full\": \"driver.fdchm\", \"color_idx\": 2, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.fdchm\", \"short\": \"fdchm\"}, {\"short\": \"_pseudo_0\", \"color_idx\": 0, \"full\": \"_pseudo_0\", \"title\": \"{}\", \"comp\": true, \"pseudo\": \"objective\", \"id\": \"_pseudo_0\"}, {\"full\": \"_pseudo_0.in0\", \"color_idx\": 0, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"_pseudo_0.in0\", \"short\": \"in0\"}, {\"full\": \"driver.ctl\", \"color_idx\": 2, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.ctl\", \"short\": \"ctl\"}, {\"full\": \"driver.delfun\", \"color_idx\": 2, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.delfun\", \"short\": \"delfun\"}, {\"short\": \"writer\", \"color_idx\": 1, \"full\": \"writer\", \"title\": \"{}\", \"comp\": true, \"id\": \"writer\"}, {\"full\": \"driver.linobj\", \"color_idx\": 2, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"linobj\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.linobj\"}, {\"full\": \"driver.fdch\", \"color_idx\": 2, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.fdch\", \"short\": \"fdch\"}, {\"full\": \"c2.f_xy\", \"color_idx\": 3, \"title\": \"{}\", \"var\": true, \"iotype\": \"out\", \"id\": \"c2.f_xy\", \"short\": \"f_xy\"}, {\"full\": \"driver.iprint\", \"color_idx\": 2, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"iprint\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.iprint\"}, {\"full\": \"driver.conmin_diff\", \"color_idx\": 2, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"conmin_diff\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.conmin_diff\"}, {\"full\": \"writer.y\", \"color_idx\": 1, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"writer.y\", \"short\": \"y\"}, {\"short\": \"driver\", \"color_idx\": 2, \"full\": \"driver\", \"title\": \"{'driver': True}\", \"comp\": true, \"driver\": true, \"id\": \"driver\"}, {\"full\": \"driver.icndir\", \"color_idx\": 2, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.icndir\", \"short\": \"icndir\"}, {\"full\": \"driver.dabfun\", \"color_idx\": 2, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.dabfun\", \"short\": \"dabfun\"}, {\"short\": \"c2\", \"color_idx\": 3, \"full\": \"c2\", \"title\": \"{}\", \"comp\": true, \"id\": \"c2\"}, {\"full\": \"_pseudo_0.out0\", \"color_idx\": 0, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"out0\", \"var\": true, \"iotype\": \"out\", \"id\": \"_pseudo_0.out0\"}, {\"full\": \"driver.ctlmin\", \"color_idx\": 2, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.ctlmin\", \"short\": \"ctlmin\"}, {\"full\": \"driver.ctmin\", \"color_idx\": 2, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.ctmin\", \"short\": \"ctmin\"}, {\"full\": \"driver.itrm\", \"color_idx\": 2, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"itrm\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.itrm\"}, {\"full\": \"driver.ct\", \"color_idx\": 2, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.ct\", \"short\": \"ct\"}, {\"full\": \"writer.file_out\", \"color_idx\": 1, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"file_out\", \"var\": true, \"iotype\": \"out\", \"id\": \"writer.file_out\"}, {\"full\": \"driver.phi\", \"color_idx\": 2, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.phi\", \"short\": \"phi\"}, {\"full\": \"driver.itmax\", \"color_idx\": 2, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"itmax\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.itmax\"}], \"links\": [{\"source\": 0, \"target\": 15}, {\"source\": 22, \"target\": 15}, {\"source\": 2, \"target\": 8}, {\"source\": 3, \"target\": 15}, {\"source\": 17, \"target\": 15}, {\"source\": 5, \"target\": 4}, {\"source\": 6, \"target\": 15}, {\"source\": 7, \"target\": 15}, {\"source\": 8, \"target\": 24}, {\"source\": 9, \"target\": 15}, {\"source\": 10, \"target\": 15}, {\"source\": 11, \"target\": 5, \"conn\": true}, {\"source\": 12, \"target\": 15}, {\"source\": 13, \"target\": 15}, {\"source\": 14, \"target\": 8}, {\"drv_conn\": \"driver\", \"target\": 15, \"source\": 19}, {\"drv_conn\": \"driver\", \"target\": 2, \"source\": 15}, {\"drv_conn\": \"driver\", \"target\": 14, \"source\": 15}, {\"source\": 16, \"target\": 15}, {\"source\": 4, \"target\": 19}, {\"source\": 18, \"target\": 11}, {\"source\": 20, \"target\": 15}, {\"source\": 21, \"target\": 15}, {\"source\": 1, \"target\": 18}, {\"source\": 23, \"target\": 15}, {\"source\": 24, \"target\": 1, \"conn\": true}, {\"source\": 25, \"target\": 15}, {\"source\": 26, \"target\": 15}], \"multigraph\": false}", 
     "name": "", 
-    "uuid": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
+    "uuid": "5aa6965c-800d-11e4-b244-20c9d0478eff", 
     "variable_metadata": {
+        "c2.f_xy": {
+            "assumed_default": false, 
+            "high": null, 
+            "iotype": "out", 
+            "low": null, 
+            "target": "func.f_xy", 
+            "vartypename": "Float"
+        }, 
+        "writer.file_out": {
+            "iotype": "out", 
+            "vartypename": "File"
+        }, 
         "writer.x": {
             "assumed_default": false, 
             "high": null, 
@@ -30,9 +42,9 @@
         }
     }
 }
-, "__length_2": 280
+, "__length_2": 328
 , "driver_info_1": {
-    "_id": 4566342736, 
+    "_id": 4451979536, 
     "ineq_constraints": [], 
     "name": "driver", 
     "objectives": [
@@ -45,539 +57,1035 @@
     "recording": [
         "writer.x", 
         "writer.y", 
-        "_pseudo_0"
+        "_pseudo_0", 
+        "writer.file_out", 
+        "c2.f_xy"
     ]
 }
-, "__length_3": 333
+, "__length_3": 728
 , "iteration_case_1": {
-    "_driver_id": 4566342736, 
-    "_id": "95fd71e1-7c92-11e4-8001-20c9d0478eff", 
-    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
+    "_driver_id": 4451979536, 
+    "_id": "5aa6fe28-800d-11e4-8001-20c9d0478eff", 
+    "_parent_id": "5aa6965c-800d-11e4-b244-20c9d0478eff", 
     "data": {
         "_pseudo_0": 39.0, 
+        "c2.f_xy": 39.0, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
         "writer.x": 1.0, 
         "writer.y": 2.0
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1417792975.166085
+    "timestamp": 1418175557.182463
 }
-, "__length_4": 333
+, "__length_4": 728
 , "iteration_case_2": {
-    "_driver_id": 4566342736, 
-    "_id": "9601050a-7c92-11e4-8003-20c9d0478eff", 
-    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
+    "_driver_id": 4451979536, 
+    "_id": "5aa7c11c-800d-11e4-8003-20c9d0478eff", 
+    "_parent_id": "5aa6965c-800d-11e4-b244-20c9d0478eff", 
     "data": {
         "_pseudo_0": 39.0, 
+        "c2.f_xy": 39.0, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
         "writer.x": 1.0, 
         "writer.y": 2.0
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1417792975.170426
+    "timestamp": 1418175557.183945
 }
-, "__length_5": 337
+, "__length_5": 735
 , "iteration_case_3": {
-    "_driver_id": 4566342736, 
-    "_id": "96019c17-7c92-11e4-8005-20c9d0478eff", 
-    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
+    "_driver_id": 4451979536, 
+    "_id": "5aa7f3f0-800d-11e4-8005-20c9d0478eff", 
+    "_parent_id": "5aa6965c-800d-11e4-b244-20c9d0478eff", 
     "data": {
         "_pseudo_0": 38.9801, 
+        "c2.f_xy": 38.9801, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
         "writer.x": 1.01, 
         "writer.y": 2.0
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1417792975.174799
+    "timestamp": 1418175557.185228
 }
-, "__length_6": 347
+, "__length_6": 755
 , "iteration_case_4": {
-    "_driver_id": 4566342736, 
-    "_id": "9602449c-7c92-11e4-8007-20c9d0478eff", 
-    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
+    "_driver_id": 4451979536, 
+    "_id": "5aa8267d-800d-11e4-8007-20c9d0478eff", 
+    "_parent_id": "5aa6965c-800d-11e4-b244-20c9d0478eff", 
     "data": {
         "_pseudo_0": 39.26039999999999, 
+        "c2.f_xy": 39.26039999999999, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
         "writer.x": 1.0, 
         "writer.y": 2.02
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1417792975.178468
+    "timestamp": 1418175557.186519
 }
-, "__length_7": 376
+, "__length_7": 786
 , "iteration_case_5": {
-    "_driver_id": 4566342736, 
-    "_id": "9602f0e8-7c92-11e4-8009-20c9d0478eff", 
-    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
+    "_driver_id": 4451979536, 
+    "_id": "5aa856ee-800d-11e4-8009-20c9d0478eff", 
+    "_parent_id": "5aa6965c-800d-11e4-b244-20c9d0478eff", 
     "data": {
         "_pseudo_0": 36.372760999999997, 
+        "c2.f_xy": 36.372760999999997, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
         "writer.x": 1.0305683568303128, 
         "writer.y": 1.7999999970197678
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1417792975.18471
+    "timestamp": 1418175557.187759
 }
-, "__length_8": 378
+, "__length_8": 787
 , "iteration_case_6": {
-    "_driver_id": 4566342736, 
-    "_id": "9603e4bd-7c92-11e4-800b-20c9d0478eff", 
-    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
+    "_driver_id": 4451979536, 
+    "_id": "5aa88735-800d-11e4-800b-20c9d0478eff", 
+    "_parent_id": "5aa6965c-800d-11e4-b244-20c9d0478eff", 
     "data": {
         "_pseudo_0": 26.564408999999998, 
+        "c2.f_xy": 26.564408999999998, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
         "writer.x": 1.1528417841515644, 
         "writer.y": 0.99999998509883881
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1417792975.189993
+    "timestamp": 1418175557.188996
 }
-, "__length_9": 377
+, "__length_9": 787
 , "iteration_case_7": {
-    "_driver_id": 4566342736, 
-    "_id": "96049845-7c92-11e4-800d-20c9d0478eff", 
-    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
+    "_driver_id": 4451979536, 
+    "_id": "5aa8b88a-800d-11e4-800d-20c9d0478eff", 
+    "_parent_id": "5aa6965c-800d-11e4-b244-20c9d0478eff", 
     "data": {
         "_pseudo_0": -5.7643040000000001, 
+        "c2.f_xy": -5.7643040000000001, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
         "writer.x": 1.764208920757822, 
         "writer.y": -3.000000074505806
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1417792975.193788
+    "timestamp": 1418175557.190324
 }
-, "__length_10": 368
+, "__length_10": 768
 , "iteration_case_8": {
-    "_driver_id": 4566342736, 
-    "_id": "960544a8-7c92-11e4-800f-20c9d0478eff", 
-    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
+    "_driver_id": 4451979536, 
+    "_id": "5aa8eb51-800d-11e4-800f-20c9d0478eff", 
+    "_parent_id": "5aa6965c-800d-11e4-b244-20c9d0478eff", 
     "data": {
         "_pseudo_0": -5.862476, 
+        "c2.f_xy": -5.862476, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
         "writer.x": 1.7818510099654001, 
         "writer.y": -3.000000074505806
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1417792975.198523
+    "timestamp": 1418175557.191557
 }
-, "__length_11": 378
+, "__length_11": 788
 , "iteration_case_9": {
-    "_driver_id": 4566342736, 
-    "_id": "9605e3f3-7c92-11e4-8011-20c9d0478eff", 
-    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
+    "_driver_id": 4451979536, 
+    "_id": "5aa91af0-800d-11e4-8011-20c9d0478eff", 
+    "_parent_id": "5aa6965c-800d-11e4-b244-20c9d0478eff", 
     "data": {
         "_pseudo_0": -5.6504840000000014, 
+        "c2.f_xy": -5.6504840000000014, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
         "writer.x": 1.764208920757822, 
         "writer.y": -2.9700000737607479
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1417792975.202195
+    "timestamp": 1418175557.192773
 }
-, "__length_12": 378
+, "__length_12": 789
 , "iteration_case_10": {
-    "_driver_id": 4566342736, 
-    "_id": "96068fde-7c92-11e4-8013-20c9d0478eff", 
-    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
+    "_driver_id": 4451979536, 
+    "_id": "5aa94ade-800d-11e4-8013-20c9d0478eff", 
+    "_parent_id": "5aa6965c-800d-11e4-b244-20c9d0478eff", 
     "data": {
         "_pseudo_0": -6.8894070000000003, 
+        "c2.f_xy": -6.8894070000000003, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
         "writer.x": 1.8788891850925069, 
         "writer.y": -3.1356631301619964
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1417792975.20838
+    "timestamp": 1418175557.193998
 }
-, "__length_13": 378
+, "__length_13": 789
 , "iteration_case_11": {
-    "_driver_id": 4566342736, 
-    "_id": "96076987-7c92-11e4-8015-20c9d0478eff", 
-    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
+    "_driver_id": 4451979536, 
+    "_id": "5aa97a4a-800d-11e4-8015-20c9d0478eff", 
+    "_parent_id": "5aa6965c-800d-11e4-b244-20c9d0478eff", 
     "data": {
         "_pseudo_0": -11.057236000000001, 
+        "c2.f_xy": -11.057236000000001, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
         "writer.x": 2.3376102424312468, 
         "writer.y": -3.6783153527867585
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1417792975.21233
+    "timestamp": 1418175557.195214
 }
-, "__length_14": 379
+, "__length_14": 788
 , "iteration_case_12": {
-    "_driver_id": 4566342736, 
-    "_id": "9607ff35-7c92-11e4-8017-20c9d0478eff", 
-    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
+    "_driver_id": 4451979536, 
+    "_id": "5aa9a9d1-800d-11e4-8017-20c9d0478eff", 
+    "_parent_id": "5aa6965c-800d-11e4-b244-20c9d0478eff", 
     "data": {
         "_pseudo_0": -24.219526999999999, 
+        "c2.f_xy": -24.219526999999999, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
         "writer.x": 4.6312155291249457, 
         "writer.y": -6.3915764659105703
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1417792975.216966
+    "timestamp": 1418175557.19643
 }
-, "__length_15": 370
+, "__length_15": 771
 , "iteration_case_13": {
-    "_driver_id": 4566342736, 
-    "_id": "9608b517-7c92-11e4-8019-20c9d0478eff", 
-    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
+    "_driver_id": 4451979536, 
+    "_id": "5aa9d97a-800d-11e4-8019-20c9d0478eff", 
+    "_parent_id": "5aa6965c-800d-11e4-b244-20c9d0478eff", 
     "data": {
         "_pseudo_0": -24.364428, 
+        "c2.f_xy": -24.364428, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
         "writer.x": 4.6775276844161953, 
         "writer.y": -6.3915764659105703
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1417792975.220772
+    "timestamp": 1418175557.197649
 }
-, "__length_16": 370
+, "__length_16": 771
 , "iteration_case_14": {
-    "_driver_id": 4566342736, 
-    "_id": "9609478a-7c92-11e4-801b-20c9d0478eff", 
-    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
+    "_driver_id": 4451979536, 
+    "_id": "5aaa090f-800d-11e4-801b-20c9d0478eff", 
+    "_parent_id": "5aa6965c-800d-11e4-b244-20c9d0478eff", 
     "data": {
         "_pseudo_0": -24.225223, 
+        "c2.f_xy": -24.225223, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
         "writer.x": 4.6312155291249457, 
         "writer.y": -6.3276607012514647
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1417792975.224404
+    "timestamp": 1418175557.198863
 }
-, "__length_17": 377
+, "__length_17": 787
 , "iteration_case_15": {
-    "_driver_id": 4566342736, 
-    "_id": "9609d554-7c92-11e4-801d-20c9d0478eff", 
-    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
+    "_driver_id": 4451979536, 
+    "_id": "5aaa399e-800d-11e4-801d-20c9d0478eff", 
+    "_parent_id": "5aa6965c-800d-11e4-b244-20c9d0478eff", 
     "data": {
         "_pseudo_0": -27.129673000000004, 
+        "c2.f_xy": -27.129673000000004, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
         "writer.x": 6.1940719634916768, 
         "writer.y": -6.90711982519767
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1417792975.228018
+    "timestamp": 1418175557.200204
 }
-, "__length_18": 379
+, "__length_18": 789
 , "iteration_case_16": {
-    "_driver_id": 4566342736, 
-    "_id": "960a65f0-7c92-11e4-801f-20c9d0478eff", 
-    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
+    "_driver_id": 4451979536, 
+    "_id": "5aaa6cde-800d-11e4-801f-20c9d0478eff", 
+    "_parent_id": "5aa6965c-800d-11e4-b244-20c9d0478eff", 
     "data": {
         "_pseudo_0": -27.262503000000002, 
+        "c2.f_xy": -27.262503000000002, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
         "writer.x": 6.5886277470278447, 
         "writer.y": -7.0372729279379174
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1417792975.232195
+    "timestamp": 1418175557.201435
 }
-, "__length_19": 379
+, "__length_19": 789
 , "iteration_case_17": {
-    "_driver_id": 4566342736, 
-    "_id": "960b2080-7c92-11e4-8021-20c9d0478eff", 
-    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
+    "_driver_id": 4451979536, 
+    "_id": "5aaa9cfd-800d-11e4-8021-20c9d0478eff", 
+    "_parent_id": "5aa6965c-800d-11e4-b244-20c9d0478eff", 
     "data": {
         "_pseudo_0": -27.263148999999999, 
+        "c2.f_xy": -27.263148999999999, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
         "writer.x": 6.6109227140348423, 
         "writer.y": -7.0446274244439513
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1417792975.236598
+    "timestamp": 1418175557.202651
 }
-, "__length_20": 379
+, "__length_20": 788
 , "iteration_case_18": {
-    "_driver_id": 4566342736, 
-    "_id": "960bb323-7c92-11e4-8023-20c9d0478eff", 
-    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
+    "_driver_id": 4451979536, 
+    "_id": "5aaacc7d-800d-11e4-8023-20c9d0478eff", 
+    "_parent_id": "5aa6965c-800d-11e4-b244-20c9d0478eff", 
     "data": {
         "_pseudo_0": -27.247111000000004, 
+        "c2.f_xy": -27.247111000000004, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
         "writer.x": 6.6770319411751906, 
         "writer.y": -7.0446274244439513
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1417792975.240332
+    "timestamp": 1418175557.20387
 }
-, "__length_21": 370
+, "__length_21": 771
 , "iteration_case_19": {
-    "_driver_id": 4566342736, 
-    "_id": "960c458c-7c92-11e4-8025-20c9d0478eff", 
-    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
+    "_driver_id": 4451979536, 
+    "_id": "5aaafc1c-800d-11e4-8025-20c9d0478eff", 
+    "_parent_id": "5aa6965c-800d-11e4-b244-20c9d0478eff", 
     "data": {
         "_pseudo_0": -27.221117, 
+        "c2.f_xy": -27.221117, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
         "writer.x": 6.6109227140348423, 
         "writer.y": -6.9741811501995121
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1417792975.244034
+    "timestamp": 1418175557.205085
 }
-, "__length_22": 379
+, "__length_22": 789
 , "iteration_case_20": {
-    "_driver_id": 4566342736, 
-    "_id": "960cd7d4-7c92-11e4-8027-20c9d0478eff", 
-    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
+    "_driver_id": 4451979536, 
+    "_id": "5aab2bd7-800d-11e4-8027-20c9d0478eff", 
+    "_parent_id": "5aa6965c-800d-11e4-b244-20c9d0478eff", 
     "data": {
         "_pseudo_0": -14.672609000000001, 
+        "c2.f_xy": -14.672609000000001, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
         "writer.x": 5.3807031993338494, 
         "writer.y": -10.070262241004933
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1417792975.247782
+    "timestamp": 1418175557.206309
 }
-, "__length_23": 379
+, "__length_23": 789
 , "iteration_case_21": {
-    "_driver_id": 4566342736, 
-    "_id": "960d66a6-7c92-11e4-8029-20c9d0478eff", 
-    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
+    "_driver_id": 4451979536, 
+    "_id": "5aab5b59-800d-11e4-8029-20c9d0478eff", 
+    "_parent_id": "5aa6965c-800d-11e4-b244-20c9d0478eff", 
     "data": {
         "_pseudo_0": -27.317853000000007, 
+        "c2.f_xy": -27.317853000000007, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
         "writer.x": 6.5228604066048641, 
         "writer.y": -7.2612102214186844
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1417792975.252244
+    "timestamp": 1418175557.207542
 }
-, "__length_24": 378
+, "__length_24": 787
 , "iteration_case_22": {
-    "_driver_id": 4566342736, 
-    "_id": "960e168c-7c92-11e4-802b-20c9d0478eff", 
-    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
+    "_driver_id": 4451979536, 
+    "_id": "5aab8dee-800d-11e4-802b-20c9d0478eff", 
+    "_parent_id": "5aa6965c-800d-11e4-b244-20c9d0478eff", 
     "data": {
         "_pseudo_0": -27.318541000000003, 
+        "c2.f_xy": -27.318541000000003, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
         "writer.x": 6.5415625877875776, 
         "writer.y": -7.2152135762217471
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1417792975.25599
+    "timestamp": 1418175557.2094
 }
-, "__length_25": 379
+, "__length_25": 789
 , "iteration_case_23": {
-    "_driver_id": 4566342736, 
-    "_id": "960ea6d9-7c92-11e4-802d-20c9d0478eff", 
-    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
+    "_driver_id": 4451979536, 
+    "_id": "5aabd8ee-800d-11e4-802d-20c9d0478eff", 
+    "_parent_id": "5aa6965c-800d-11e4-b244-20c9d0478eff", 
     "data": {
         "_pseudo_0": -27.322831000000001, 
+        "c2.f_xy": -27.322831000000001, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
         "writer.x": 6.6069782136654531, 
         "writer.y": -7.2152135762217471
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1417792975.260162
+    "timestamp": 1418175557.210934
 }
-, "__length_26": 379
+, "__length_26": 789
 , "iteration_case_24": {
-    "_driver_id": 4566342736, 
-    "_id": "960f4bf5-7c92-11e4-802f-20c9d0478eff", 
-    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
+    "_driver_id": 4451979536, 
+    "_id": "5aac1230-800d-11e4-802f-20c9d0478eff", 
+    "_parent_id": "5aa6965c-800d-11e4-b244-20c9d0478eff", 
     "data": {
         "_pseudo_0": -27.305293000000006, 
+        "c2.f_xy": -27.305293000000006, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
         "writer.x": 6.5415625877875776, 
         "writer.y": -7.1430614404595296
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1417792975.264434
+    "timestamp": 1418175557.212649
 }
-, "__length_27": 378
+, "__length_27": 788
 , "iteration_case_25": {
-    "_driver_id": 4566342736, 
-    "_id": "960ffd1c-7c92-11e4-8031-20c9d0478eff", 
-    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
+    "_driver_id": 4451979536, 
+    "_id": "5aac5b97-800d-11e4-8031-20c9d0478eff", 
+    "_parent_id": "5aa6965c-800d-11e4-b244-20c9d0478eff", 
     "data": {
         "_pseudo_0": -25.264728999999999, 
+        "c2.f_xy": -25.264728999999999, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
         "writer.x": 6.838965543807503, 
         "writer.y": -8.8499570410262187
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1417792975.268657
+    "timestamp": 1418175557.214352
 }
-, "__length_28": 378
+, "__length_28": 787
 , "iteration_case_26": {
-    "_driver_id": 4566342736, 
-    "_id": "9610b161-7c92-11e4-8033-20c9d0478eff", 
-    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
+    "_driver_id": 4451979536, 
+    "_id": "5aac9b3a-800d-11e4-8033-20c9d0478eff", 
+    "_parent_id": "5aa6965c-800d-11e4-b244-20c9d0478eff", 
     "data": {
         "_pseudo_0": -27.323180999999998, 
+        "c2.f_xy": -27.323180999999998, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
         "writer.x": 6.5615898850107977, 
         "writer.y": -7.325298202452438
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1417792975.273114
+    "timestamp": 1418175557.21594
 }
-, "__length_29": 378
+, "__length_29": 788
 , "iteration_case_27": {
-    "_driver_id": 4566342736, 
-    "_id": "96114480-7c92-11e4-8035-20c9d0478eff", 
-    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
+    "_driver_id": 4451979536, 
+    "_id": "5aacd507-800d-11e4-8035-20c9d0478eff", 
+    "_parent_id": "5aa6965c-800d-11e4-b244-20c9d0478eff", 
     "data": {
         "_pseudo_0": -27.323749000000003, 
+        "c2.f_xy": -27.323749000000003, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
         "writer.x": 6.5543127464410915, 
         "writer.y": -7.285297743551463
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1417792975.277081
+    "timestamp": 1418175557.217274
 }
-, "__length_30": 377
+, "__length_30": 787
 , "iteration_case_28": {
-    "_driver_id": 4566342736, 
-    "_id": "9611dfc5-7c92-11e4-8037-20c9d0478eff", 
-    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
+    "_driver_id": 4451979536, 
+    "_id": "5aad0959-800d-11e4-8037-20c9d0478eff", 
+    "_parent_id": "5aa6965c-800d-11e4-b244-20c9d0478eff", 
     "data": {
         "_pseudo_0": -27.331075000000002, 
+        "c2.f_xy": -27.331075000000002, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
         "writer.x": 6.619855873905502, 
         "writer.y": -7.285297743551463
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1417792975.282229
+    "timestamp": 1418175557.218656
 }
-, "__length_31": 378
+, "__length_31": 789
 , "iteration_case_29": {
-    "_driver_id": 4566342736, 
-    "_id": "9612b263-7c92-11e4-8039-20c9d0478eff", 
-    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
+    "_driver_id": 4451979536, 
+    "_id": "5aad3f05-800d-11e4-8039-20c9d0478eff", 
+    "_parent_id": "5aa6965c-800d-11e4-b244-20c9d0478eff", 
     "data": {
         "_pseudo_0": -27.319588000000003, 
+        "c2.f_xy": -27.319588000000003, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
         "writer.x": 6.5543127464410915, 
         "writer.y": -7.2124447661159481
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1417792975.28751
+    "timestamp": 1418175557.220011
 }
-, "__length_32": 379
+, "__length_32": 789
 , "iteration_case_30": {
-    "_driver_id": 4566342736, 
-    "_id": "961377f8-7c92-11e4-803b-20c9d0478eff", 
-    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
+    "_driver_id": 4451979536, 
+    "_id": "5aad7480-800d-11e4-803b-20c9d0478eff", 
+    "_parent_id": "5aa6965c-800d-11e4-b244-20c9d0478eff", 
     "data": {
         "_pseudo_0": -27.314951000000001, 
+        "c2.f_xy": -27.314951000000001, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
         "writer.x": 6.7226225125029639, 
         "writer.y": -7.4875115523846079
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1417792975.292003
+    "timestamp": 1418175557.221378
 }
-, "__length_33": 379
+, "__length_33": 789
 , "iteration_case_31": {
-    "_driver_id": 4566342736, 
-    "_id": "961426ee-7c92-11e4-803d-20c9d0478eff", 
-    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
+    "_driver_id": 4451979536, 
+    "_id": "5aada8fd-800d-11e4-803d-20c9d0478eff", 
+    "_parent_id": "5aa6965c-800d-11e4-b244-20c9d0478eff", 
     "data": {
         "_pseudo_0": -27.328783999999999, 
+        "c2.f_xy": -27.328783999999999, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
         "writer.x": 6.6195607460771662, 
         "writer.y": -7.3636891930428963
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1417792975.295691
+    "timestamp": 1418175557.222698
 }
-, "__length_34": 379
+, "__length_34": 789
 , "iteration_case_32": {
-    "_driver_id": 4566342736, 
-    "_id": "9614b5e6-7c92-11e4-803f-20c9d0478eff", 
-    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
+    "_driver_id": 4451979536, 
+    "_id": "5aaddb75-800d-11e4-803f-20c9d0478eff", 
+    "_parent_id": "5aa6965c-800d-11e4-b244-20c9d0478eff", 
     "data": {
         "_pseudo_0": -27.328723000000004, 
+        "c2.f_xy": -27.328723000000004, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
         "writer.x": 6.6129564628703879, 
         "writer.y": -7.3557545538766558
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1417792975.299371
+    "timestamp": 1418175557.223917
 }
-, "__length_35": 379
+, "__length_35": 788
 , "iteration_case_33": {
-    "_driver_id": 4566342736, 
-    "_id": "96154697-7c92-11e4-8041-20c9d0478eff", 
-    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
+    "_driver_id": 4451979536, 
+    "_id": "5aae0b28-800d-11e4-8041-20c9d0478eff", 
+    "_parent_id": "5aa6965c-800d-11e4-b244-20c9d0478eff", 
     "data": {
         "_pseudo_0": -27.332611999999997, 
+        "c2.f_xy": -27.332611999999997, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
         "writer.x": 6.6857563535379381, 
         "writer.y": -7.3636891930428963
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1417792975.303052
+    "timestamp": 1418175557.22514
 }
-, "__length_36": 379
+, "__length_36": 789
 , "iteration_case_34": {
-    "_driver_id": 4566342736, 
-    "_id": "9615da70-7c92-11e4-8043-20c9d0478eff", 
-    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
+    "_driver_id": 4451979536, 
+    "_id": "5aae3ad9-800d-11e4-8043-20c9d0478eff", 
+    "_parent_id": "5aa6965c-800d-11e4-b244-20c9d0478eff", 
     "data": {
         "_pseudo_0": -27.331299999999999, 
+        "c2.f_xy": -27.331299999999999, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
         "writer.x": 6.6195607460771662, 
         "writer.y": -7.2900523011124676
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1417792975.306892
+    "timestamp": 1418175557.226372
 }
-, "__length_37": 379
+, "__length_37": 789
 , "iteration_case_35": {
-    "_driver_id": 4566342736, 
-    "_id": "9616855e-7c92-11e4-8045-20c9d0478eff", 
-    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
+    "_driver_id": 4451979536, 
+    "_id": "5aae6b0c-800d-11e4-8045-20c9d0478eff", 
+    "_parent_id": "5aa6965c-800d-11e4-b244-20c9d0478eff", 
     "data": {
         "_pseudo_0": -27.332775000000005, 
+        "c2.f_xy": -27.332775000000005, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
         "writer.x": 6.6852257059805744, 
         "writer.y": -7.3248914811661976
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1417792975.311225
+    "timestamp": 1418175557.227598
 }
-, "__length_38": 379
+, "__length_38": 789
 , "iteration_case_36": {
-    "_driver_id": 4566342736, 
-    "_id": "961714c7-7c92-11e4-8047-20c9d0478eff", 
-    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
+    "_driver_id": 4451979536, 
+    "_id": "5aae9b19-800d-11e4-8047-20c9d0478eff", 
+    "_parent_id": "5aa6965c-800d-11e4-b244-20c9d0478eff", 
     "data": {
         "_pseudo_0": -27.313967999999999, 
+        "c2.f_xy": -27.313967999999999, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
         "writer.x": 6.7681541291549614, 
         "writer.y": -7.2758937649802506
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1417792975.314868
+    "timestamp": 1418175557.228824
 }
-, "__length_39": 379
+, "__length_39": 789
 , "iteration_case_37": {
-    "_driver_id": 4566342736, 
-    "_id": "9617a4e8-7c92-11e4-8049-20c9d0478eff", 
-    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
+    "_driver_id": 4451979536, 
+    "_id": "5aaecac2-800d-11e4-8049-20c9d0478eff", 
+    "_parent_id": "5aa6965c-800d-11e4-b244-20c9d0478eff", 
     "data": {
         "_pseudo_0": -27.332852000000003, 
+        "c2.f_xy": -27.332852000000003, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
         "writer.x": 6.6837693609986939, 
         "writer.y": -7.3257519530690693
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1417792975.318588
+    "timestamp": 1418175557.230043
 }
-, "__length_40": 379
+, "__length_40": 789
 , "iteration_case_38": {
-    "_driver_id": 4566342736, 
-    "_id": "96183428-7c92-11e4-804b-20c9d0478eff", 
-    "_parent_id": "95fbedd4-7c92-11e4-b241-20c9d0478eff", 
+    "_driver_id": 4451979536, 
+    "_id": "5aaefa61-800d-11e4-804b-20c9d0478eff", 
+    "_parent_id": "5aa6965c-800d-11e4-b244-20c9d0478eff", 
     "data": {
         "_pseudo_0": -27.332852000000003, 
+        "c2.f_xy": -27.332852000000003, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
         "writer.x": 6.6837693609986939, 
         "writer.y": -7.3257519530690693
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1417792975.322181
+    "timestamp": 1418175557.231261
 }
 }

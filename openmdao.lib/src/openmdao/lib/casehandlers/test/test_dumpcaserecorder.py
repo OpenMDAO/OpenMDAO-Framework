@@ -105,20 +105,21 @@ Constants:
    recording_options.excludes: []
    recording_options.includes: ['*']
    recording_options.save_problem_formulation: True"""
-
+        
         expected_case = """\
 Case:
-   uuid: 636c94b0-7e27-11e4-8009-20c9d0478eff
-   timestamp: 1417966836.485175
+   uuid: e2904a73-800a-11e4-8009-20c9d0478eff
+   timestamp: 1418174496.710163
    inputs:
       comp.dummy_data.dummy1: 2.28846229958
    outputs:
       Objective(comp.x): -10.4937141009
+      _pseudo_0.out0: -10.4937141009
       comp.derivative_exec_count: 0
       comp.exec_count: 11
       comp.itername: 9-comp
+      comp.x: -10.4937141009
       driver.workflow.itername: 9"""
-
 
 
         # print sout1.getvalue()
@@ -344,6 +345,55 @@ Case:
       #driver.workflow.itername: 1
 #"""
 
+        expected = """\
+Constants:
+   comp1.directory:
+   comp1.force_fd: False
+   comp1.missing_deriv_policy: error
+   comp1.y: 0.0
+   comp2.directory:
+   comp2.force_fd: False
+   comp2.missing_deriv_policy: error
+   directory:
+   driver.directory:
+   driver.force_fd: False
+   driver.gradient_options.atol: 1e-09
+   driver.gradient_options.derivative_direction: auto
+   driver.gradient_options.directional_fd: False
+   driver.gradient_options.fd_blocks: []
+   driver.gradient_options.fd_form: forward
+   driver.gradient_options.fd_step: 1e-06
+   driver.gradient_options.fd_step_type: absolute
+   driver.gradient_options.force_fd: False
+   driver.gradient_options.lin_solver: scipy_gmres
+   driver.gradient_options.maxiter: 100
+   driver.gradient_options.rtol: 1e-09
+   force_fd: False
+   missing_deriv_policy: assume_zero
+   recording_options.excludes: []
+   recording_options.includes: ['*']
+   recording_options.save_problem_formulation: True
+Case:
+   uuid: 56bc95a1-800a-11e4-800b-20c9d0478eff
+   timestamp: 1418174262.123138
+   inputs:
+      comp1.x: 0.0
+   outputs:
+      Objective(comp1.z): 0.0
+      Objective(comp2.z): 1.0
+      _pseudo_2.out0: 0.0
+      _pseudo_3.out0: 1.0
+      comp1.derivative_exec_count: 0
+      comp1.exec_count: 1
+      comp1.itername: 1-comp1
+      comp1.z: 0.0
+      comp2.derivative_exec_count: 0
+      comp2.exec_count: 1
+      comp2.itername: 1-comp2
+      comp2.z: 1.0
+      driver.workflow.itername: 1
+"""
+        
         
 
         # print sout.getvalue()
