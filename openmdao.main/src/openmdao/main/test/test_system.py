@@ -160,22 +160,128 @@ class UninitializedArray(unittest.TestCase):
         x = Array(iotype='out')
 
         def execute(self):
-            self.x = eye(2)
+            pass
 
     class C2(Component):
         x = Array(iotype='in')
 
         def execute(self):
-            self.x = eye(2)
+            pass
+
+    class C3(Component):
+        x = Array(iotype='out', noflat=True)
+
+        def execute(self):
+            pass
+
+    class C4(Component):
+        x = Array(iotype='out')
+
+        def __init__(self, x):
+            super(UninitializedArray.C4, self).__init__()
+            self.x = x
+
+        def execute(self):
+            pass
 
     def test_uninitialized_array(self):
         expected = ": c1.x was not initialized. OpenMDAO does not support uninitialized variables."
+
+        """
+        c1.x is:
+            - uninitialized
+            - flattenable
+            - the source of a connection
+            - not a slice
+        """
 
         top = set_as_top(Assembly())
         top.add('c1', self.C1())
         top.add('c2', self.C2())
         top.connect('c1.x', 'c2.x')
         top.driver.workflow.add(['c1', 'c2'])
+
+        try:
+            top.run()
+        except ValueError as e:
+            self.assertEqual(str(e), expected)
+        else:
+            self.fail("Should have raised error message: {}".format(expected))
+
+        """
+        c3.x is:
+            - uninitialized
+            - not flattenable
+            - the source of a connection
+            - not a slice
+        """
+
+        top = set_as_top(Assembly())
+        top.add('c3', self.C3())
+        top.add('c2', self.C2())
+        top.connect('c3.x', 'c2.x')
+        top.driver.workflow.add(['c3', 'c2'])
+        
+        top.run()
+       
+        """
+        c4.x is:
+            - initialized
+            - flattenable
+            - the source of a connection
+            - not a slice
+        """
+
+        top = set_as_top(Assembly())
+        top.add('c4', self.C4(eye(2)))
+        top.add('c2', self.C2())
+        top.connect('c4.x', 'c2.x')
+        top.driver.workflow.add(['c4', 'c2'])
+        
+        top.run()
+
+        """
+        out1.x is:
+            - initialized
+            - flattenable
+            - the source of a connection
+            - not a slice
+
+        in1.x[::1] is:
+            - initialized
+            - flattenable
+            - the source of a connection
+            - a slice
+        """ 
+        
+        top = set_as_top(Assembly())
+        top.add('out1', self.C4(array(range(5))))
+        top.add('in1', self.C2())
+        top.add('in2', self.C2())
+        top.connect('out1.x', 'in1.x')
+        top.connect('in1.x[::1]', 'in2.x')
+        top.driver.workflow.add(['out1', 'in1', 'in2'])
+        
+        top.run()
+       
+        """
+        sub.out1.x is:
+            - not initialized
+            - flattenable
+            - source of a connection
+            - not a slice
+        """
+        expected = "sub: out1.x was not initialized. OpenMDAO does not support uninitialized variables."
+ 
+        top = set_as_top(Assembly())
+        top.add('sub', Assembly())
+        top.sub.add('out1', self.C1())
+        top.sub.add('in1', self.C2())
+
+        top.sub.connect('out1.x', 'in1.x')
+        top.sub.driver.workflow.add(['out1', 'in1'])
+        top.driver.workflow.add(['sub'])
+
 
         try:
             top.run()
