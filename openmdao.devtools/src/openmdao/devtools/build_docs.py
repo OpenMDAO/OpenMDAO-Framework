@@ -133,9 +133,15 @@ def _pkg_sphinx_info(startdir, pkg, outfile, show_undoc=False,
 
     #excluding traits now since they need to be sorted separately
     #also excluding gui-related files, in case of non-gui build
+    # _names = list(_get_resource_files(dist,
+    #                                 ['*__init__.py', '*setup.py', '*datatypes*.py'],
+    #                                 ['*.py']))
+
     _names = list(_get_resource_files(dist,
-                                    ['*__init__.py', '*setup.py', '*datatypes*.py'],
+                                    ['*__init__.py', '*setup.py', '*datatypes*.py', '*/lib/casehandlers/pymongo_bson/*'],
                                     ['*.py']))
+
+
     names = []
     for n in _names:
         parts = n.split('/')
