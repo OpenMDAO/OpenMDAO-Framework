@@ -5,16 +5,11 @@ import sys
 # specified in the call, will print results from that rank only
 MPI_PRINT_RANK = None
 
-MPI_STREAM = sys.stdout
-
 def use_proc_files():
-    global MPI_STREAM
-    if MPI is None:
-        rank = 'non_mpi'
-    else:
+    if MPI is not None:
         rank = MPI.COMM_WORLD.rank
-    sname = "%s.out" % rank
-    MPI_STREAM = open(sname, 'w')
+        sname = "%s.out" % rank
+        sys.stdout = sys.stderr = open(sname, 'w')
 
 def set_print_rank(rank):
     global MPI_PRINT_RANK
@@ -68,7 +63,7 @@ if _under_mpirun():
 
     def mpiprint(*args, **kwargs):
         rank = kwargs.get('rank', -1)
-        stream = kwargs.get('stream', MPI_STREAM)
+        stream = kwargs.get('stream', sys.stdout)
         if rank < 0:
             if MPI_PRINT_RANK is not None and MPI_PRINT_RANK != MPI.COMM_WORLD.rank:
                 return
@@ -97,8 +92,8 @@ else:
         for arg in args:
             if isinstance(arg, tuple):
                 arg = str(arg)
-            MPI_STREAM.write("%s " % arg)
-        MPI_STREAM.write('\n')
+            sys.stdout.write("%s " % arg)
+        sys.stdout.write('\n')
 
 class MPI_info(object):
     def __init__(self):

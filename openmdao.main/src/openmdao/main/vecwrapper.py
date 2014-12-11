@@ -1,9 +1,9 @@
-
+import sys
 from collections import OrderedDict, namedtuple
 import numpy
 from numpy import ndarray
 
-from openmdao.main.mpiwrap import MPI, MPI_STREAM, mpiprint, create_petsc_vec, PETSc
+from openmdao.main.mpiwrap import MPI, mpiprint, create_petsc_vec, PETSc
 from openmdao.main.array_helpers import offset_flat_index, \
                                         get_flat_index_start, get_val_and_index, get_shape, \
                                         get_flattened_index, to_slice, to_indices
@@ -156,7 +156,7 @@ class VecWrapperBase(object):
             self[name] = arr[start:end]
             start += size
 
-    def dump(self, verbose=False, stream=MPI_STREAM):
+    def dump(self, verbose=False, stream=sys.stdout):
         for name, info in self._info.items():
             if verbose or not info.hide:
                 mpiprint("%s - %s: (%d,%d) %s" %

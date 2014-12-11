@@ -606,8 +606,8 @@ class System(object):
                                            self.vec['u'].array.size,
                                            self.input_sizes[self.mpi.rank]))
 
-        for v, (arr, start) in self.vec['u']._info.items():
-            if verbose or v not in self.vec['u']._subviews:
+        for v, info in self.vec['u']._info.items():
+            if verbose or not info.hide:
                 stream.write(" "*(nest+2))
                 if v in self.vec['p']:
                     stream.write("u (%s)  p (%s): %s\n" %
@@ -616,8 +616,8 @@ class System(object):
                 else:
                     stream.write("u (%s): %s\n" % (list(self.vec['u'].bounds([v])), v))
 
-        for v, (arr, start) in self.vec['p']._info.items():
-            if v not in self.vec['u'] and (verbose or v not in self.vec['p']._subviews):
+        for v, info in self.vec['p']._info.items():
+            if v not in self.vec['u'] and (verbose or not info.hide):
                 stream.write(" "*(nest+2))
                 stream.write("           p (%s): %s\n" %
                                  (list(self.vec['p'].bounds([v])), v))
@@ -635,18 +635,18 @@ class System(object):
             stream.write(" "*(nest+2))
             stream.write("%s --> %s\n" % (src, dest))
 
-        stream.write(" "*(nest+2))
-        stream.write("_in_nodes: %s\n" % self._in_nodes)
-        stream.write(" "*(nest+2))
-        stream.write("_out_nodes: %s\n" % self._out_nodes)
-        stream.write(" "*(nest+2))
-        stream.write("list_inputs(): %s\n" % self.list_inputs())
-        stream.write(" "*(nest+2))
-        stream.write("list_outputs(): %s\n" % self.list_outputs())
-        stream.write(" "*(nest+2))
-        stream.write("list_states(): %s\n" % self.list_states())
-        stream.write(" "*(nest+2))
-        stream.write("list_residuals(): %s\n" % self.list_residuals())
+        # stream.write(" "*(nest+2))
+        # stream.write("_in_nodes: %s\n" % self._in_nodes)
+        # stream.write(" "*(nest+2))
+        # stream.write("_out_nodes: %s\n" % self._out_nodes)
+        # stream.write(" "*(nest+2))
+        # stream.write("list_inputs(): %s\n" % self.list_inputs())
+        # stream.write(" "*(nest+2))
+        # stream.write("list_outputs(): %s\n" % self.list_outputs())
+        # stream.write(" "*(nest+2))
+        # stream.write("list_states(): %s\n" % self.list_states())
+        # stream.write(" "*(nest+2))
+        # stream.write("list_residuals(): %s\n" % self.list_residuals())
 
         nest += 4
         if isinstance(self, OpaqueSystem):
