@@ -51,9 +51,7 @@ def wrapper(f):
         return f
         
     else:
-        # note that the name of this internal function must start
-        # with 'test_' or nose won't run the test
-        def test_wrap_serial(self, *args, **kwargs):
+        def wrap(self, *args, **kwargs):
             if MPI is None:
                 raise SkipTest("mpi4py not installed")
                 
@@ -67,7 +65,8 @@ def wrapper(f):
                     if "a test failed in another rank" not in info['errors'][0]:
                         self.fail("{process %d} %s" % (i, info['errors'][0]))
                     
-        return test_wrap_serial
+        wrap.__name__ = f.__name__ # nose won't find it unless __name__ starts with 'test_'
+        return wrap
 
         
 class MPITestCaseMeta(type):
