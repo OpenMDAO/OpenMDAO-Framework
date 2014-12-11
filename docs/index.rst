@@ -26,6 +26,7 @@ OpenMDAO Developer Guide
    code-contribution-example
    documenting/index
    
+   
 ==============================
 Appendix and Glossary
 ==============================
@@ -36,6 +37,15 @@ Appendix and Glossary
    units
    glossary
 
+============================
+Doc TBD
+============================
+   
+.. toctree::
+   :hidden: 
+   
+   design-doc/index
+
 
 ==============================
 Index
@@ -44,7 +54,4 @@ Index
 * :ref:`genindex`
 
 
-
-   
-  
 
