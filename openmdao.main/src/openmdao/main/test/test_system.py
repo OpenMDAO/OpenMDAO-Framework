@@ -2,7 +2,7 @@
 import unittest
 
 import time
-from numpy import array, ones
+from numpy import array, ones, eye
 
 from openmdao.main.api import Component, Driver, Assembly, set_as_top
 from openmdao.main.datatypes.api import Float, Array
@@ -12,6 +12,7 @@ from openmdao.main.hasconstraints import HasConstraints
 from openmdao.main.interfaces import IHasParameters, implements
 from openmdao.util.decorators import add_delegate
 from openmdao.util.testutil import assert_rel_error
+
 
 class Paraboloid(Component):
     """ Evaluates the equation f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3 """
@@ -153,3 +154,32 @@ class TestArrayComp(unittest.TestCase):
             self.assertEqual(str(err), "Subvars ['C1.c[3::]', 'C1.c[:5:]'] share overlapping indices. Try reformulating the problem to prevent this.")
         else:
             self.fail("Exception expected")
+
+class UninitializedArray(unittest.TestCase):
+    class C1(Component):
+        x = Array(iotype='out')
+
+        def execute(self):
+            self.x = eye(2)
+
+    class C2(Component):
+        x = Array(iotype='in')
+
+        def execute(self):
+            self.x = eye(2)
+
+    def test_uninitialized_array(self):
+        expected = ": c1.x was not initialized. OpenMDAO does not support uninitialized variables."
+
+        top = set_as_top(Assembly())
+        top.add('c1', self.C1())
+        top.add('c2', self.C2())
+        top.connect('c1.x', 'c2.x')
+        top.driver.workflow.add(['c1', 'c2'])
+
+        try:
+            top.run()
+        except ValueError as e:
+            self.assertEqual(str(e), expected)
+        else:
+            self.fail("Should have raised error message: {}".format(expected))
