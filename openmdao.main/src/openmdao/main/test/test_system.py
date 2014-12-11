@@ -188,7 +188,7 @@ class UninitializedArray(unittest.TestCase):
         expected = ": c1.x was not initialized. OpenMDAO does not support uninitialized variables."
 
         """
-        c1.x is:
+        out1.x is:
             - uninitialized
             - flattenable
             - the source of a connection
@@ -196,10 +196,10 @@ class UninitializedArray(unittest.TestCase):
         """
 
         top = set_as_top(Assembly())
-        top.add('c1', self.C1())
-        top.add('c2', self.C2())
-        top.connect('c1.x', 'c2.x')
-        top.driver.workflow.add(['c1', 'c2'])
+        top.add('out1', self.C1())
+        top.add('in1', self.C2())
+        top.connect('out1.x', 'in1.x')
+        top.driver.workflow.add(['out1', 'in1'])
 
         try:
             top.run()
@@ -209,7 +209,7 @@ class UninitializedArray(unittest.TestCase):
             self.fail("Should have raised error message: {}".format(expected))
 
         """
-        c3.x is:
+        out1.x is:
             - uninitialized
             - not flattenable
             - the source of a connection
@@ -217,15 +217,15 @@ class UninitializedArray(unittest.TestCase):
         """
 
         top = set_as_top(Assembly())
-        top.add('c3', self.C3())
-        top.add('c2', self.C2())
-        top.connect('c3.x', 'c2.x')
-        top.driver.workflow.add(['c3', 'c2'])
+        top.add('out1', self.C3())
+        top.add('in1', self.C2())
+        top.connect('out1.x', 'in1.x')
+        top.driver.workflow.add(['out1', 'in1'])
         
         top.run()
        
         """
-        c4.x is:
+        out1.x is:
             - initialized
             - flattenable
             - the source of a connection
@@ -233,10 +233,10 @@ class UninitializedArray(unittest.TestCase):
         """
 
         top = set_as_top(Assembly())
-        top.add('c4', self.C4(eye(2)))
-        top.add('c2', self.C2())
-        top.connect('c4.x', 'c2.x')
-        top.driver.workflow.add(['c4', 'c2'])
+        top.add('out1', self.C4(eye(2)))
+        top.add('in1', self.C2())
+        top.connect('out1.x', 'in1.x')
+        top.driver.workflow.add(['out1', 'in1'])
         
         top.run()
 
