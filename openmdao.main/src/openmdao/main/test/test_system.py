@@ -185,7 +185,7 @@ class UninitializedArray(unittest.TestCase):
             pass
 
     def test_uninitialized_array(self):
-        expected = ": c1.x was not initialized. OpenMDAO does not support uninitialized variables."
+        expected = ": out1.x was not initialized. OpenMDAO does not support uninitialized variables."
 
         """
         out1.x is:
