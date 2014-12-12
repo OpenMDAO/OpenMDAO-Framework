@@ -77,20 +77,20 @@ def squared_exponential_correlation(theta, d):
         theta, dx --> r(theta, dx) = exp(  sum  - theta_i * (dx_i)^2 )
                                           i = 1
 
-    Parameters
+    *Parameters*
     
-    theta : array_like
+    theta: array_like
         An array with shape 1 (isotropic) or n (anisotropic) giving the
         autocorrelation parameter(s).
 
-    dx : array_like
+    dx: array_like
         An array with shape (n_eval, n_features) giving the componentwise
         distances between locations x and x' at which the correlation model
         should be evaluated.
 
-    Returns
+    *Returns*
     
-    r : array_like
+    r: array_like
         An array with shape (n_eval, ) containing the values of the
         autocorrelation model.
     """
@@ -116,15 +116,15 @@ def l1_cross_distances(X, Y=None):
 Computes the nonzero componentwise L1 cross-distances between the vectors
 in X and Y.
 
-Parameters
+*Parameters*
 
-X : array_like
+X: array_like
     An array with shape (n_samples_X, n_features)
     
-Y : array_like
+Y: array_like
     An array with shape (n_samples_Y, n_features)
 
-Returns
+*Returns*
 
 D: array with shape (n_samples * (n_samples - 1) / 2, n_features)
     The array of componentwise L1 cross-distances.
@@ -169,26 +169,26 @@ class MultiFiCoKriging(object):
 This class integrates the Multi-Fidelity Co-Kriging method described in
 [LeGratiet2013]_.
 
-Parameters
+`Parameters`
 
-regr : string or callable, optional
+regr: string or callable, optional
     A regression function returning an array of outputs of the linear
     regression functional basis for Universal Kriging purpose.
     regr is assumed to be the same for all levels of code.
     Default assumes a simple constant regression trend.
-    Available built-in regression models are :
+    Available built-in regression models are:
     'constant', 'linear'
 
-rho_regr : string or callable, optional
+rho_regr: string or callable, optional
     A regression function returning an array of outputs of the linear
     regression functional basis. Defines the regression function for the
     autoregressive parameter rho.
     rho_regr is assumed to be the same for all levels of code.
     Default assumes a simple constant regression trend.
-    Available built-in regression models are :
+    Available built-in regression models are:
     'constant', 'linear'
 
-theta : double, array_like or list, optional
+theta: double, array_like or list, optional
     Value of correlation parameters if they are known; no optimization is run.
     Default is None, so that optimization is run.
     if double: value is replicated for all features and all levels.
@@ -196,7 +196,7 @@ theta : double, array_like or list, optional
     isotropic calculation. It is replicated for all levels.
     if list: a list of nlevel arrays specifying value for each level
     
-theta0 : double, array_like or list, optional
+theta0: double, array_like or list, optional
     Starting point for the maximum likelihood estimation of the
     best set of parameters.
     Default is None and meaning use of the default 0.5*np.ones(n_features)
@@ -205,7 +205,7 @@ theta0 : double, array_like or list, optional
     isotropic calculation. It is replicated for all levels.
     if list: a list of nlevel arrays specifying value for each level
 
-thetaL : double, array_like or list, optional
+thetaL: double, array_like or list, optional
     Lower bound on the autocorrelation parameters for maximum
     likelihood estimation. 
     Default is None meaning use of the default 1e-5*np.ones(n_features).
@@ -214,7 +214,7 @@ thetaL : double, array_like or list, optional
     for all levels of code.
     if list: a list of nlevel arrays specifying value for each level
 
-thetaU : double, array_like or list, optional
+thetaU: double, array_like or list, optional
     Upper bound on the autocorrelation parameters for maximum
     likelihood estimation. 
     Default is None meaning use of default value 50*np.ones(n_features).
@@ -224,7 +224,7 @@ thetaU : double, array_like or list, optional
     if list: a list of nlevel arrays specifying value for each level
     
     
-Attributes
+*Attributes*
 
 `theta`: list
     Specified theta for each level OR the best set of autocorrelation parameters
@@ -235,7 +235,7 @@ Attributes
     for each level.
 
 
-Examples
+*Examples*
 
 >>> import numpy as np
 >>> from openmdao.lib.surrogatemodels.api import MultiFiCoKriging
@@ -254,7 +254,7 @@ Examples
 True
 
 
-Notes
+*Notes*
 
 
 Implementation is based on the Package Scikit-Learn
@@ -265,22 +265,22 @@ the DACE Matlab toolbox, see [NLNS2002]_.
 References
 
 
-.. [NLNS2002] `H.B. Nielsen, S.N. Lophaven, H. B. Nielsen and J. Sondergaard.
-   DACE - A MATLAB Kriging Toolbox.` (2002)
+.. [NLNS2002] H. B. Nielsen, S. N. Lophaven, and J. Sondergaard.
+   `DACE - A MATLAB Kriging Toolbox.` (2002)
    http://www2.imm.dtu.dk/~hbn/dace/dace.pdf
 
-.. [WBSWM1992] `W.J. Welch, R.J. Buck, J. Sacks, H.P. Wynn, T.J. Mitchell,
-   and M.D. Morris (1992). Screening, predicting, and computer experiments.
-   Technometrics, 34(1) 15--25.`
+.. [WBSWM1992] W. J. Welch, R. J. Buck, J. Sacks, H. P. Wynn, T. J. Mitchell,
+   and M. D. Morris (1992). "Screening, predicting, and computer experiments."
+   `Technometrics,` 34(1) 15--25.
    http://www.jstor.org/pss/1269548
 
-.. [LeGratiet2013] `L. Le Gratiet (2013). Multi-fidelity Gaussian process
-   regression for computer experiments.
-   PhD thesis, Universite Paris-Diderot-Paris VII.`
+.. [LeGratiet2013] L. Le Gratiet (2013). "Multi-fidelity Gaussian process
+   regression for computer experiments."
+   PhD thesis, Universite Paris-Diderot-Paris VII.
    
 .. [TBKH2011] Toal, D. J., Bressloff, N. W., Keane, A. J., & Holden, C. M. E. (2011).
-   The development of a hybridized particle swarm for kriging hyperparameter
-   tuning. `Engineering optimization`, 43(6), 675-699.
+   "The development of a hybridized particle swarm for kriging hyperparameter
+   tuning." `Engineering optimization`, 43(6), 675-699.
 """
 
     _regression_types = {
@@ -321,21 +321,21 @@ References
         """
 The Multi-Fidelity co-kriging model fitting method.
 
-Parameters
+*Parameters*
 
-X : list of double array_like elements
+X: list of double array_like elements
     A list of arrays with the input at which observations were made, from lowest
     fidelity to highest fidelity. Designs must be nested
     with X[i] = np.vstack([..., X[i+1])
 
-y : list of double array_like elements
+y: list of double array_like elements
     A list of arrays with the observations of the scalar output to be predicted, 
     from lowest fidelity to highest fidelity.
 
-initial_range : float
+initial_range: float
     Initial range for the optimizer.
 
-tol : float
+tol: float
     Optimizer terminates when the tolerance tol is reached.
     
 """
@@ -443,22 +443,22 @@ equivalent to maximizing the likelihood of the assumed joint Gaussian
 distribution of the observations y evaluated onto the design of
 experiments X.
 
-Parameters
+*Parameters*
 
 self: Multi-Fidelity Co-Kriging object
 
 lvl: Integer
     Level of fidelity
 
-theta : array_like, optional
+theta: array_like, optional
     An array containing the autocorrelation parameters at which the
     Gaussian Process model parameters should be determined.
     Default uses the built-in autocorrelation parameters
     (ie ``theta = self.theta``).
 
-Returns
+`Returns`
 
-rlf_value : double
+rlf_value: double
     The value of the negative concentrated reduced likelihood function
     associated to the given autocorrelation parameters theta.
 """
@@ -524,30 +524,30 @@ rlf_value : double
         """
 This function estimates the autocorrelation parameter theta
 as the maximizer of the reduced likelihood function of the given level (lvl).
-(Minimization of the negative reduced likelihood function is used for convenience)
+(Minimization of the negative reduced likelihood function is used for convenience.)
 
-Parameters
+`Parameters`
 
-self : Most parameters are stored in the Gaussian Process model object.
+self: Most parameters are stored in the Gaussian Process model object.
 
-lvl : integer
+lvl: integer
     Level of fidelity
     
-initial_range : float
+initial_range: float
     Initial range of the optimizer 
     
-tol : float
+tol: float
     Optimizer terminates when the tolerance tol is reached.
 
-Returns
+`Returns`
 
-optimal_theta : array_like
-optimal_rlf_value : double
+optimal_theta: array_like
+optimal_rlf_value: double
     The optimal negative reduced likelihood function value.
 
-res : dict
-    res['theta'] : optimal theta
-    res['rlf_value'] : optimal value for likelihood
+res: dict
+    res['theta']: optimal theta
+    res['rlf_value']: optimal value for likelihood
 """
         # Initialize input
         thetaL = self.thetaL[lvl]
@@ -590,24 +590,24 @@ res : dict
         """
 This function performs the predictions of the kriging model on X.
 
-Parameters
+`Parameters`
 
-X : array_like
+X: array_like
     An array with shape (n_eval, n_features) giving the point(s) at
     which the prediction(s) should be made.
 
-eval_MSE : boolean, optional
+eval_MSE: boolean, optional
     A boolean specifying whether the Mean Squared Error should be
     evaluated or not. Default assumes evalMSE is True.
 
-Returns
+`Returns`
 
-y : array_like
+y: array_like
     An array with shape (n_eval, ) with the Best Linear Unbiased
     Prediction at X. If all_levels is set to True, an array
     with shape (n_eval, nlevel) giving the BLUP for all levels.
 
-MSE : array_like, optional (if eval_MSE is True)
+MSE: array_like, optional (if eval_MSE is True)
     An array with shape (n_eval, ) with the Mean Squared Error at X.
     If all_levels is set to True, an array with shape (n_eval, nlevel)
     giving the MSE for all levels.
@@ -880,7 +880,7 @@ class FloatMultiFiCoKrigingSurrogate(MultiFiCoKrigingSurrogate):
         return dist.mu
 
     def get_uncertain_value(self, value):
-        """Returns a float"""
+        """Returns a float."""
         return float(value)
     
 
