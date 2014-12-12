@@ -108,7 +108,6 @@ class RecordingOptionsTestCase(unittest.TestCase):
         # Specific variables.
         names = [ 'comp1.x',]
         vnames = cds.data.vars(names).var_names().fetch()
-        #self.assertEqual(vnames, names)
         self.assertFalse(set(vnames).symmetric_difference(set(names)))
 
         cases = cds.data.vars(names).fetch()
@@ -193,34 +192,6 @@ class RecordingOptionsTestCase(unittest.TestCase):
         expected = [u'recording_options.save_problem_formulation', u'recording_options.includes', u'comp1.y', u'recording_options.excludes']
         self.assertFalse(set(constants) - set(expected))
      
-        #sim_info_keys = cds.data.var_names().fetch()
-        #expected = ['_driver_id', '_id', '_parent_id', u'_pseudo_0.out0', 
-                    #u'_pseudo_1.out0', u'comp1.derivative_exec_count', u'comp1.exec_count', 
-                    #u'comp1.itername', u'comp1.x', u'comp1.z', u'comp2.derivative_exec_count', 
-                    #u'comp2.exec_count', u'comp2.itername', u'comp2.z', u'driver.workflow.itername', 
-                    #'error_message', 'error_status', 'timestamp']        
-        
-        #['_driver_id', '_id', '_parent_id', u'comp2.derivative_exec_count', 
-                    #u'comp2.exec_count', u'comp2.itername', u'comp2.z', 'error_message', 
-                    #'error_status', 'timestamp']
-        #self.assertFalse(set(vnames) - set(expected))
-        
-        ## Specific variables.
-        #names = [ 'comp2.z']
-        #vnames = cds.data.vars(names).var_names().fetch()
-        #self.assertEqual(vnames, names)
-
-        #cases = cds.data.vars(names).fetch()
-        #self.assertEqual(len(cases), 1)
-        #self.assertEqual(len(cases[0]), len(names))
-
-        #iteration_case_1 = {
-            #"comp2.z": 1.0,
-        #}
-        #for name, val in zip(names, cases[0]):
-            #self.assertAlmostEqual(val, iteration_case_1[name])
-
-        #self.verify_case_dump(expected, sout)
 
     def test_options_with_includes_excludes(self):
         """ verify options with includes and excludes (excludes are processed after includes):

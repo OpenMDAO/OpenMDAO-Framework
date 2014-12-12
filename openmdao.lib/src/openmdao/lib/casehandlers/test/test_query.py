@@ -118,8 +118,7 @@ def create_files():
 class TestCase(unittest.TestCase):
 
     def setUp(self):
-        create_files()  # Uncomment to create 'sellar.new'
-
+        # create_files()  # Uncomment to create 'sellar.new'
         path = os.path.join(os.path.dirname(__file__), 'sellar.json')
         self.cds = CaseDataset(path, 'json')
 
@@ -135,79 +134,50 @@ class TestCase(unittest.TestCase):
     def test_query(self):
         # Full dataset.
         vnames = self.cds.data.var_names().fetch()
-        #expected = [
-            #'_driver_id', '_id', '_parent_id', '_pseudo_0', '_pseudo_1',
-            #'_pseudo_2', 'driver.workflow.itername', 'error_message',
-            #'error_status', 'half.derivative_exec_count', 'half.exec_count',
-            #'half.itername', 'half.z2a', 'half.z2b', 'sub._pseudo_0',
-            #'sub.derivative_exec_count', 'sub.dis1.derivative_exec_count',
-            #'sub.dis1.exec_count', 'sub.dis1.itername', 'sub.dis1.y1',
-            #'sub.dis1.y2', 'sub.dis2.derivative_exec_count',
-            #'sub.dis2.exec_count', 'sub.dis2.itername', 'sub.dis2.y2',
-            #'sub.driver.workflow.itername', 'sub.exec_count', 'sub.globals.z1',
-            #'sub.itername', 'sub.states', 'sub.states.y[0]', 'sub.states.y[1]',
-            #'sub.x1', 'timestamp']
-        #expected = ['_driver_id', '_id', '_parent_id', u'_pseudo_0', u'_pseudo_1', u'_pseudo_2', u'driver.workflow.itername', 
-                    #'error_message', 'error_status', u'half.derivative_exec_count', u'half.exec_count', u'half.itername', 
-                    #u'half.z2a', u'sub._pseudo_0', u'sub.derivative_exec_count', u'sub.dis1.derivative_exec_count',
-                    #u'sub.dis1.exec_count', u'sub.dis1.itername', u'sub.dis1.y2', u'sub.dis2.derivative_exec_count',
-                    #u'sub.dis2.exec_count', u'sub.dis2.itername', u'sub.driver.workflow.itername', u'sub.exec_count',
-                    #u'sub.globals.z1', u'sub.itername', u'sub.x1', 'timestamp']
         expected = ['_driver_id', '_id', '_parent_id', 'error_message', 'error_status', 'timestamp', u'top._pseudo_0', u'top._pseudo_1', u'top._pseudo_2', u'top.driver.workflow.itername', u'top.half.derivative_exec_count', u'top.half.exec_count', u'top.half.itername', u'top.half.z2a', u'top.sub._pseudo_0', u'top.sub.derivative_exec_count', u'top.sub.dis1.derivative_exec_count', u'top.sub.dis1.exec_count', u'top.sub.dis1.itername', u'top.sub.dis1.y2', u'top.sub.dis2.derivative_exec_count', u'top.sub.dis2.exec_count', u'top.sub.dis2.itername', u'top.sub.driver.workflow.itername', u'top.sub.exec_count', u'top.sub.globals.z1', u'top.sub.itername', u'top.sub.x1']
 
         self.assertEqual(vnames, expected)
 
         cases = self.cds.data.fetch()
-        #self.assertEqual(len(cases), 142)
         self.assertEqual(len(cases), 242)
         self.assertEqual(len(cases[0]), len(expected))
 
         # Specific variables.
-        #names = ['half.z2a', 'sub.dis1.y1', 'sub.dis2.y2', 'sub.x1']
-        #names = ['half.z2a', 'sub.dis1.y2', 'sub.x1']
         names = ['top.half.z2a', 'top.sub.dis1.y2', 'top.sub.x1']
         vnames = self.cds.data.vars(names).var_names().fetch()
         self.assertEqual(vnames, names)
 
         cases = self.cds.data.vars(names).fetch()
-        #self.assertEqual(len(cases), 142)
         self.assertEqual(len(cases), 242)
         self.assertEqual(len(cases[0]), len(names))
 
-        #iteration_case_142 = {
         iteration_case_242 = {
             "half.z2a": 3.2649235987085278e-15,
             "sub.dis2.y2": 3.755280110989017,
             "sub.x1": 2.8984826597319301e-15
         }
         for name, val in zip(names, cases[-1]):
-            #self.assertAlmostEqual(val, iteration_case_142[name])
             self.assertAlmostEqual(val, iteration_case_242[name])
 
         # Local to driver.
         # For some reason the top-level driver isn't the last recorded.
         cases = self.cds.data.local().vars(names).fetch()
-        #self.assertEqual(len(cases), 142)
         self.assertEqual(len(cases), 130)
         last = cases[-1]
         self.assertEqual(len(last), len(names))
         for name in ('half.z2a', 'sub.x1'):
             self.assertTrue(isnan(last[name]))
         for name in ('sub.dis1.y1', 'sub.dis2.y2'):
-            #assert_rel_error(self, last[name], iteration_case_142[name], 0.001)
             assert_rel_error(self, last[name], iteration_case_130[name], 0.001)
 
         # Transposed.
         vars = self.cds.data.local().vars(names).by_variable().fetch()
         self.assertEqual(len(vars), len(names))
         for name in ('half.z2a', 'sub.x1'):
-            #self.assertEqual(len(vars[name]), 142)
             self.assertEqual(len(vars[name]), 130)
             self.assertTrue(isnan(vars[name][-1]))
         for name in ('sub.dis1.y1', 'sub.dis2.y2'):
-            #self.assertEqual(len(vars[name]), 142)
             self.assertEqual(len(vars[name]), 130)
-            #assert_rel_error(self, vars[name][-1], iteration_case_142[name], 0.001)
             assert_rel_error(self, vars[name][-1], iteration_case_130[name], 0.001)
 
     def test_parent(self):
@@ -314,11 +284,6 @@ class TestCase(unittest.TestCase):
     def test_bson(self):
         # Simple check of _BSONReader.
         names = ['half.z2a', 'sub.dis1.y1', 'sub.dis2.y2', 'sub.x1']
-        names = ['half.z2a', 'sub.dis1.y1', 'sub.dis2.y2', 'sub.x1']
-        
-        "", 
-        "sub.dis2.y2", 
-        
 
         path = os.path.join(os.path.dirname(__file__), 'sellar.json')
         json_cases = CaseDataset(path, 'json').data.vars(names).fetch()
@@ -346,7 +311,7 @@ class TestCase(unittest.TestCase):
     def test_restore(self):
         # Restore from case, run, verify outputs match expected.
         top = set_as_top(SellarMDF())
-        #top.name = 'top'
+        top.name = 'top'
         top.recorders = [JSONCaseRecorder()]
         top.run()
         assert_rel_error(self, top.sub.globals.z1, 1.977639, .0001)
@@ -358,7 +323,7 @@ class TestCase(unittest.TestCase):
 
         cds = CaseDataset('cases.json', 'json')
         cases = cds.data.fetch()
-        n_orig = len(cases)
+        n_orig = len(cases)  # Typically 142
 
         top = set_as_top(SellarMDF())
         cds.restore(top, cases[-1]['_id'])

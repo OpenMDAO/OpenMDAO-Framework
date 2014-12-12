@@ -975,8 +975,6 @@ class Zahle(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    #sys.argv.append('--cover-package=openmdao.lib.drivers')
-    #sys.argv.append('--cover-erase')
-    #nose.runmodule()
-    unittest.main()
-    
+    sys.argv.append('--cover-package=openmdao.lib.drivers')
+    sys.argv.append('--cover-erase')
+    nose.runmodule()

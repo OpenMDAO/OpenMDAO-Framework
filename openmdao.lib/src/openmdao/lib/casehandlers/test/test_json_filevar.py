@@ -98,8 +98,8 @@ class TestCase(unittest.TestCase):
 
         self.top.run()
 
-        with open('paraboloid.new', 'w') as out:
-            out.write(sout.getvalue())
+        # with open('paraboloid.new', 'w') as out:
+        #     out.write(sout.getvalue())
         self.verify(sout, 'paraboloid.json')
 
     def _dict_iter(self, dct):

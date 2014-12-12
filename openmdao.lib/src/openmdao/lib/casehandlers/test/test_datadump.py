@@ -85,14 +85,6 @@ class Data_Dump_TestCase(unittest.TestCase):
         self.top.recorders = [DumpCaseRecorder(sout)]
         self.top.run()
 
-        from openmdao.util.dotgraph import plot_graph 
-        #plot_graph(self.top._depgraph)
-        #plot_graph(self.top._reduced_graph)
-        #plot_graph(self.top.driver.workflow._collapsed_graph)
-        #plot_graph(prob.solver._reduced_graph)
-        #plot_graph(prob.driver._reduced_graph)
-
-
         expected = """\
 Constants:
    comp1.directory:
@@ -345,49 +337,6 @@ Constants:
    recording_options.includes: ['*']
    recording_options.save_problem_formulation: True
 Case:
-   uuid: 0a159cf8-5bc1-11e4-8001-080027a1f086
-   timestamp: 1414184538.397483
-   outputs:
-      comp1.derivative_exec_count: 0
-      comp1.exec_count: 1
-      comp1.itername: 1-comp1
-      comp1.y1: 1.0
-      comp2.derivative_exec_count: 0
-      comp2.exec_count: 1
-      comp2.itername: 1-comp2
-      comp2.y1: 101.0
-      driver.workflow.itername: 1
-"""
-
-        expected = """\
-Constants:
-   comp1.directory:
-   comp1.force_fd: False
-   comp1.missing_deriv_policy: error
-   comp1.x1: 0.0
-   comp2.directory:
-   comp2.force_fd: False
-   comp2.missing_deriv_policy: error
-   directory:
-   driver.directory:
-   driver.force_fd: False
-   driver.gradient_options.atol: 1e-09
-   driver.gradient_options.derivative_direction: auto
-   driver.gradient_options.directional_fd: False
-   driver.gradient_options.fd_blocks: []
-   driver.gradient_options.fd_form: forward
-   driver.gradient_options.fd_step: 1e-06
-   driver.gradient_options.fd_step_type: absolute
-   driver.gradient_options.force_fd: False
-   driver.gradient_options.lin_solver: scipy_gmres
-   driver.gradient_options.maxiter: 100
-   driver.gradient_options.rtol: 1e-09
-   force_fd: False
-   missing_deriv_policy: assume_zero
-   recording_options.excludes: []
-   recording_options.includes: ['*']
-   recording_options.save_problem_formulation: True
-Case:
    uuid: 73569abd-7fd6-11e4-8001-20c9d0478eff
    timestamp: 1418151976.277275
    outputs:
@@ -402,6 +351,7 @@ Case:
       comp2.y1: 101.0
       driver.workflow.itername: 1
 """
+
         expected = expected.split('\n')
         # print sout.getvalue()
         lines = sout.getvalue().split('\n')

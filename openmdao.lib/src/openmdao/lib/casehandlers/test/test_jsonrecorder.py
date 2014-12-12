@@ -71,19 +71,10 @@ class TestCase(unittest.TestCase):
 
         sout = StringIO()
         self.top.recorders = [JSONCaseRecorder(sout)]
-        #self.top.run() #qqqqqqqqqqqqq
-        #self.top._pre_execute() #qqqqqqqqqqqqq
-        
-        # self.top.setup_depgraph()
-        # self.top.setup_reduced_graph()
-        # self.top.setup_systems()
-        
-        #self.top._setup()
-
         self.top.record_configuration()
 
-        with open('jsonrecorder_norun.new', 'w') as out:
-            out.write(sout.getvalue())
+        # with open('jsonrecorder_norun.new', 'w') as out:
+        #      out.write(sout.getvalue())
         verify_json(self, sout, 'jsonrecorder_norun.json')
 
     def test_jsonrecorder(self):
@@ -91,9 +82,8 @@ class TestCase(unittest.TestCase):
         self.top.recorders = [JSONCaseRecorder(sout)]
         self.top.run()
 
-        with open('jsonrecorder.new', 'w') as out:
-            out.write(sout.getvalue())
-        #self.verify(sout, 'jsonrecorder.json')
+        # with open('jsonrecorder.new', 'w') as out:
+        #     out.write(sout.getvalue())
         verify_json(self, sout, 'jsonrecorder.json')
 
     def test_multiple_objectives(self):
@@ -107,10 +97,9 @@ class TestCase(unittest.TestCase):
         self.top.recorders = [JSONCaseRecorder(sout)]
         self.top.run()
 
-        with open('multiobj.new', 'w') as out:
-            out.write(sout.getvalue())
+        # with open('multiobj.new', 'w') as out:
+        #     out.write(sout.getvalue())
         verify_json(self, sout, 'multiobj.json')
-        #self.verify(sout, 'multiobj.json')
 
     def test_nested(self):
         asm3 = Assembly()
@@ -149,50 +138,11 @@ class TestCase(unittest.TestCase):
         asm1.recorders = [JSONCaseRecorder(sout)]
         asm1.run()
 
-        with open('nested.new', 'w') as out:
-            out.write(sout.getvalue())
+        #with open('nested.new', 'w') as out:
+        #    out.write(sout.getvalue())
         verify_json(self, sout, 'nested.json')
-        #self.verify(sout, 'nested.json')
 
-    #def _dict_iter(self, dct):
-        #for k,v in dct.items():
-            #if isinstance(v, dict):
-                #for kk,vv in self._dict_iter(v):
-                    #yield (kk, vv)
-            #else:
-                #yield (k, v)
 
-    #def verify(self, sout, filename):
-        #directory = os.path.dirname(__file__)
-        #path = os.path.join(directory, filename)
-        #with open(path, 'r') as inp:
-            #old_json = json.load(inp)
-
-        #new_json = json.loads(sout.getvalue())
-
-        #old = list(self._dict_iter(old_json))
-        #new = list(self._dict_iter(new_json))
-
-        #if len(old) != len(new):
-            #self.fail("Number of items (%d) != number of items expected (%d)" %
-                      #(len(old), len(new)))
-
-        #ignore = set([u'uuid', u'OpenMDAO_Version', u'_id',
-                      #u'_driver_id', u'_parent_id', u'timestamp', u'pcomp_name'])
-
-        #for (oldname, oldval), (newname, newval) in zip(old, new):
-            #if oldname.startswith('__length_'):
-                #continue
-            #if oldname in ignore: # don't care if these match
-                #continue
-            #if oldname == newname:
-                #if oldname == 'high' and newval == sys.maxint:
-                    #continue
-                #if oldname == 'low' and newval == -sys.maxint:
-                    #continue
-                #self.assertAlmostEqual(oldval, newval)
-            #else:
-                #self.assertEqual(oldname, newname) # just raises an exception
 
     def test_close(self):
         sout = StringIO()
@@ -281,8 +231,8 @@ class TestCase(unittest.TestCase):
 
         top.run()
 
-        with open('vtree.new', 'w') as out:
-            out.write(sout.getvalue())
+        # with open('vtree.new', 'w') as out:
+        #     out.write(sout.getvalue())
         verify_json(self, sout, 'vtree.json')
 
 
