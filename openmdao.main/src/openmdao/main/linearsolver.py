@@ -318,9 +318,9 @@ class PETSc_KSP(LinearSolver):
         system.applyJ(vnames)
 
         rhs_vec.array[:] = system.rhs_vec.array[:]
-        # mpiprint('names = %s' % system.sol_vec.keys())
-        #mpiprint('arg = %s, result=%s' % (sol_vec.array, rhs_vec.array))
-        #mpiprint('df, du, dp', system.vec['df'].array, system.vec['du'].array, system.vec['dp'].array)
+        mpiprint('names = %s' % system.sol_vec.keys())
+        mpiprint('arg = %s, result=%s' % (sol_vec.array, rhs_vec.array))
+        mpiprint('df, du, dp', system.vec['df'].array, system.vec['du'].array, system.vec['dp'].array)
 
     def apply(self, mat, sol_vec, rhs_vec):
         """ Applies preconditioner """

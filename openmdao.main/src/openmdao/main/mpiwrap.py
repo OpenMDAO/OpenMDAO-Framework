@@ -114,4 +114,5 @@ class MPI_info(object):
             return self.comm.rank
         return 0
 
-#use_proc_files()
+if os.environ.get('USE_PROC_FILES'):
+    use_proc_files()

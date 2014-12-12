@@ -94,6 +94,8 @@ class MPITests(MPITestCase):
         J = self.top.driver.workflow._system.get_combined_J(J)
         #mpiprint("final J: %s" % J)
 
+        self.top._system.dump()
+        
         collective_assert_rel_error(self, 
                                     J['_pseudo_0.out0']['comp.x'][0][0], 
                                     5.0, 0.0001)

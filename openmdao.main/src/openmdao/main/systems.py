@@ -477,7 +477,15 @@ class System(object):
             #if flat_idx and varmeta[name]['basevar'] in varmeta:  # var is an array index into a basevar
             #    self.arg_idx[name] = to_indices(flat_idx, self.scope.get(varmeta[name]['basevar']))
             #else:
-            self.arg_idx[name] = numpy.array(range(varmeta[name]['size']), 'i')
+            if name in self.vector_vars:
+                isrc = self.vector_vars.keys().index(name)
+                idxs = numpy.array(range(varmeta[name]['size']), 'i')
+            else:
+                base = name[0].split('[', 1)[0]
+                isrc = self.vector_vars.keys().index(self.scope.name2collapsed[base])
+                idxs = varmeta[name].get('flat_idx')
+                
+            self.arg_idx[name] = idxs + numpy.sum(self.local_var_sizes[:self.mpi.rank, isrc])
 
     def setup_vectors(self, arrays=None, state_resid_map=None):
         """Creates vector wrapper objects to manage local and
@@ -589,18 +597,11 @@ class System(object):
         else:
             world_rank = MPI.COMM_WORLD.rank
 
-        name_map = { 'SerialSystem': 'ser', 'ParallelSystem': 'par',
-                     'SimpleSystem': 'simp', 'FiniteDiffDriverSystem': 'drv',
-                     'TransparentDriverSystem': 'tdrv', 'OpaqueSystem': 'opaq',
-                     'InVarSystem': 'invar', 'VarSystem': 'outvar',
-                     'SolverSystem': 'slv',  'ParamSystem': 'param',
-                     'AssemblySystem': 'asm', }
-
         stream.write(" "*nest)
         stream.write(str(self.name).replace(' ','').replace("'",""))
         klass = self.__class__.__name__
         stream.write(" [%s](req=%d)(rank=%d)(vsize=%d)(isize=%d)\n" %
-                                          (name_map.get(klass, klass.lower()[:3]),
+                                          (klass.lower()[:5],
                                            self.get_req_cpus(),
                                            world_rank,
                                            self.vec['u'].array.size,
@@ -634,19 +635,6 @@ class System(object):
         for src, dest in noflats:
             stream.write(" "*(nest+2))
             stream.write("%s --> %s\n" % (src, dest))
-
-        # stream.write(" "*(nest+2))
-        # stream.write("_in_nodes: %s\n" % self._in_nodes)
-        # stream.write(" "*(nest+2))
-        # stream.write("_out_nodes: %s\n" % self._out_nodes)
-        # stream.write(" "*(nest+2))
-        # stream.write("list_inputs(): %s\n" % self.list_inputs())
-        # stream.write(" "*(nest+2))
-        # stream.write("list_outputs(): %s\n" % self.list_outputs())
-        # stream.write(" "*(nest+2))
-        # stream.write("list_states(): %s\n" % self.list_states())
-        # stream.write(" "*(nest+2))
-        # stream.write("list_residuals(): %s\n" % self.list_residuals())
 
         nest += 4
         if isinstance(self, OpaqueSystem):
@@ -882,13 +870,13 @@ class SimpleSystem(System):
     
     def setup_sizes(self):
         super(SimpleSystem, self).setup_sizes()
-        if self.is_active():
-            for var, metadata in self.vector_vars.iteritems():
-                if metadata['size'] == 0:
-                    msg = "{} was not initialized. OpenMDAO does not support uninitialized variables."
-                    msg = msg.format(var[0])
-
-                    self.scope.raise_exception(msg, ValueError)
+        # if self.is_active():
+        #     for var, metadata in self.vector_vars.iteritems():
+        #         if metadata['size'] == 0:
+        #             msg = "{} was not initialized. OpenMDAO does not support uninitialized variables."
+        #             msg = msg.format(var[0])
+        # 
+        #             self.scope.raise_exception(msg, ValueError)
             
 
     def inner(self):
@@ -1309,7 +1297,8 @@ class CompoundSystem(System):
 
             isrc = varkeys.index(node)
             src_idxs = numpy.sum(self.local_var_sizes[:, :isrc]) + self.arg_idx[node]
-            dest_idxs = dest_start + self.vec['p']._info[node].start + self.arg_idx[node]
+            dest_idxs = dest_start + self.vec['p']._info[node].start + \
+                        petsc_linspace(0, len(self.arg_idx[node]))
 
             return (src_idxs, dest_idxs, None)
 
@@ -1326,9 +1315,11 @@ class CompoundSystem(System):
                 else:
                     return (None, None, None)
             isrc = varkeys.index(base)
-            src_idxs = numpy.sum(self.local_var_sizes[:, :isrc]) + self.scope._var_meta[node]['flat_idx']
+            src_idxs = numpy.sum(self.local_var_sizes[:, :isrc]) + \
+                          self.scope._var_meta[node]['flat_idx']
 
-            dest_idxs = dest_start + self.vec['p']._info[node].start  + self.arg_idx[node]
+            dest_idxs = dest_start + self.vec['p']._info[node].start + \
+                          petsc_linspace(0, len(self.arg_idx[node]))
             return (src_idxs, dest_idxs, None)
 
         return (None, None, None)
@@ -1374,6 +1365,7 @@ class CompoundSystem(System):
                             continue
                         noflat_conns.add(node)
                     else:
+                        print node, src_idxs
                         src_partial.append(src_idxs)
                         dest_partial.append(dest_idxs)
 
@@ -1384,14 +1376,14 @@ class CompoundSystem(System):
                     scatter_conns.add(node)
                     scatter_conns_full.add(node)
 
-                if MPI or scatter_conns or noflat_conns:
-                    subsystem.scatter_partial = DataTransfer(self, src_partial,
-                                                             dest_partial,
-                                                             scatter_conns, noflat_conns)
+            if MPI or scatter_conns or noflat_conns:
+                subsystem.scatter_partial = DataTransfer(self, src_partial,
+                                                         dest_partial,
+                                                         scatter_conns, noflat_conns)
 
-            if MPI or scatter_conns_full or noflat_conns_full:
-                self.scatter_full = DataTransfer(self, src_full, dest_full,
-                                                 scatter_conns_full, noflat_conns_full)
+        if MPI or scatter_conns_full or noflat_conns_full:
+            self.scatter_full = DataTransfer(self, src_full, dest_full,
+                                             scatter_conns_full, noflat_conns_full)
 
         for sub in self.local_subsystems():
             sub.setup_scatters()
