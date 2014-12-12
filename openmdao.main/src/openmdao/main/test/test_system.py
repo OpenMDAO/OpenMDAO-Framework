@@ -2,7 +2,7 @@
 import unittest
 
 import time
-from numpy import array, ones
+from numpy import array, ones, eye
 
 from openmdao.main.api import Component, Driver, Assembly, set_as_top
 from openmdao.main.datatypes.api import Float, Array
@@ -12,6 +12,7 @@ from openmdao.main.hasconstraints import HasConstraints
 from openmdao.main.interfaces import IHasParameters, implements
 from openmdao.util.decorators import add_delegate
 from openmdao.util.testutil import assert_rel_error
+
 
 class Paraboloid(Component):
     """ Evaluates the equation f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3 """
@@ -153,3 +154,138 @@ class TestArrayComp(unittest.TestCase):
             self.assertEqual(str(err), "Subvars ['C1.c[3::]', 'C1.c[:5:]'] share overlapping indices. Try reformulating the problem to prevent this.")
         else:
             self.fail("Exception expected")
+
+class UninitializedArray(unittest.TestCase):
+    class C1(Component):
+        x = Array(iotype='out')
+
+        def execute(self):
+            pass
+
+    class C2(Component):
+        x = Array(iotype='in')
+
+        def execute(self):
+            pass
+
+    class C3(Component):
+        x = Array(iotype='out', noflat=True)
+
+        def execute(self):
+            pass
+
+    class C4(Component):
+        x = Array(iotype='out')
+
+        def __init__(self, x):
+            super(UninitializedArray.C4, self).__init__()
+            self.x = x
+
+        def execute(self):
+            pass
+
+    def test_uninitialized_array(self):
+        expected = ": out1.x was not initialized. OpenMDAO does not support uninitialized variables."
+
+        """
+        out1.x is:
+            - uninitialized
+            - flattenable
+            - the source of a connection
+            - not a slice
+        """
+
+        top = set_as_top(Assembly())
+        top.add('out1', self.C1())
+        top.add('in1', self.C2())
+        top.connect('out1.x', 'in1.x')
+        top.driver.workflow.add(['out1', 'in1'])
+
+        try:
+            top.run()
+        except ValueError as e:
+            self.assertEqual(str(e), expected)
+        else:
+            self.fail("Should have raised error message: {}".format(expected))
+
+        """
+        out1.x is:
+            - uninitialized
+            - not flattenable
+            - the source of a connection
+            - not a slice
+        """
+
+        top = set_as_top(Assembly())
+        top.add('out1', self.C3())
+        top.add('in1', self.C2())
+        top.connect('out1.x', 'in1.x')
+        top.driver.workflow.add(['out1', 'in1'])
+        
+        top.run()
+       
+        """
+        out1.x is:
+            - initialized
+            - flattenable
+            - the source of a connection
+            - not a slice
+        """
+
+        top = set_as_top(Assembly())
+        top.add('out1', self.C4(eye(2)))
+        top.add('in1', self.C2())
+        top.connect('out1.x', 'in1.x')
+        top.driver.workflow.add(['out1', 'in1'])
+        
+        top.run()
+
+        """
+        out1.x is:
+            - initialized
+            - flattenable
+            - the source of a connection
+            - not a slice
+
+        in1.x[::1] is:
+            - initialized
+            - flattenable
+            - the source of a connection
+            - a slice
+        """ 
+        
+        top = set_as_top(Assembly())
+        top.add('out1', self.C4(array(range(5))))
+        top.add('in1', self.C2())
+        top.add('in2', self.C2())
+        top.connect('out1.x', 'in1.x')
+        top.connect('in1.x[::1]', 'in2.x')
+        top.driver.workflow.add(['out1', 'in1', 'in2'])
+        
+        top.run()
+       
+        """
+        sub.out1.x is:
+            - not initialized
+            - flattenable
+            - source of a connection
+            - not a slice
+        """
+        expected = "sub: out1.x was not initialized. OpenMDAO does not support uninitialized variables."
+ 
+        top = set_as_top(Assembly())
+        top.add('sub', Assembly())
+        top.sub.add('out1', self.C1())
+        top.sub.add('in1', self.C2())
+
+        top.sub.connect('out1.x', 'in1.x')
+        top.sub.driver.workflow.add(['out1', 'in1'])
+        top.driver.workflow.add(['sub'])
+
+
+        try:
+            top.run()
+        except ValueError as e:
+            self.assertEqual(str(e), expected)
+        else:
+            self.fail("Should have raised error message: {}".format(expected))

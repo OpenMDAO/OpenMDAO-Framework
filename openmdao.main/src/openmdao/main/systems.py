@@ -878,6 +878,17 @@ class SimpleSystem(System):
         self.J = None
         self._mapped_resids = {}
 
+    def setup_sizes(self):
+        super(SimpleSystem, self).setup_sizes()
+        if self.is_active():
+            for var, metadata in self.vector_vars.iteritems():
+                if metadata['size'] == 0:
+                    msg = "{} was not initialized. OpenMDAO does not support uninitialized variables."
+                    msg = msg.format(var[0])
+
+                    self.scope.raise_exception(msg, ValueError)
+
+
     def inner(self):
         return self._comp
 
@@ -1352,7 +1363,7 @@ class CompoundSystem(System):
                     if node not in sub._in_nodes or node in scatter_conns:
                         continue
                     src_idxs, dest_idxs, nflat = self._get_node_scatter_idxs(node, noflats, dest_start, destsys=sub)
-                    if (src_idxs is None and dest_idxs is None and nflat is None):
+                    if (src_idxs is None) and (dest_idxs is None) and (nflat is None):
                         continue
 
                     if nflat:
