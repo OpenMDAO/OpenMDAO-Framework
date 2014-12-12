@@ -198,12 +198,15 @@ class PETSc_KSP(LinearSolver):
         pc_mat.setType('python')
         pc_mat.setPythonContext(self)
 
+        system.rhs_buf = np.zeros((lsize, ))
+        system.sol_buf = np.zeros((lsize, ))
+
         # # Set these in the system
         # #mpiprint("KSP: creating sol buf, size %d" % lsize)
-        system.sol_buf = PETSc.Vec().createWithArray(np.zeros(lsize),
+        system.sol_buf_petsc = PETSc.Vec().createWithArray(system.sol_buf,
                                                      comm=system.mpi.comm)
         # #mpiprint("KSP: creating rhs buf, size %d" % lsize)
-        system.rhs_buf = PETSc.Vec().createWithArray(np.zeros(lsize),
+        system.rhs_buf_petsc = PETSc.Vec().createWithArray(system.rhs_buf,
                                                      comm=system.mpi.comm)
 
     def calc_gradient(self, inputs, outputs, return_format='dict'):
@@ -245,7 +248,7 @@ class PETSc_KSP(LinearSolver):
             jbase = j
 
             for irhs in xrange(param_size):
-                
+
                 # Solve the system with PetSC KSP
                 solvec = system._compute_derivatives(param_tup, irhs)
 
@@ -292,8 +295,7 @@ class PETSc_KSP(LinearSolver):
                                rtol=options.rtol)
 
         system.rhs_buf[:] = arg[:]
-  
-        self.ksp.solve(system.rhs_buf, system.sol_buf)
+        self.ksp.solve(system.rhs_buf_petsc, system.sol_buf_petsc)
 
         #print 'newton solution vec', system.vec['df'].array[:]
         return system.sol_buf[:]
@@ -453,17 +455,21 @@ class LinearGS(LinearSolver):
                     sub_options = options if subsystem.options is None \
                                           else subsystem.options
                     subsystem.solve_linear(sub_options)
-                    
+
             elif system.mode == 'adjoint':
 
                 rev_systems = [item for item in reversed(system.subsystems(local=True))]
 
                 for subsystem in rev_systems:
                     system.sol_buf[:] = system.rhs_buf[:]
-                    #succs = system.graph.successors(subsystem.name)
+
+                    # Instead of a double loop, we can use the graph to only
+                    # call applyJ on the component behind us. This led to a
+                    # nice speedup.
+                    succs = system.graph.successors(subsystem.name)
+
                     for subsystem2 in rev_systems:
-                        if subsystem is not subsystem2:
-                        #if subsystem2.name in succs:
+                        if subsystem2.name in succs:
                             system.rhs_vec.array[:] = 0.0
                             args = subsystem.flat_vars.keys()
                             subsystem2.applyJ(args)

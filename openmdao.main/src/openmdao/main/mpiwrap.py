@@ -34,24 +34,7 @@ class PETSc(object):
     def __init__(self):
         self.needs_ksp = False # PETSc won't actually be imported unless this is True
         self._PETSc = None
-        self.PC = None
         
-    def IS(self):
-        if self.installed:
-            return self._PETSc.IS()
-        
-    def Vec(self):
-        if self.installed:
-            return self._PETSc.Vec()
-        
-    def Mat(self):
-        if self.installed:
-            return self._PETSc.Mat()
-    
-    def KSP(self):
-        if self.installed:
-            return self._PETSc.KSP()
-
     @property
     def installed(self):
         try:
@@ -59,16 +42,18 @@ class PETSc(object):
                 from petsc4py import PETSc
                 del sys.modules['petsc4py']
                 self._PETSc = PETSc
-                self.PC = self._PETSc.PC
             return True
         except ImportError:
             self._PETSc = None
             return False
+            
+    def __getattr__(self, name):
+        if self.installed:
+            return getattr(self._PETSc, name)
+        raise AttributeError(name)
     
-PETSc = PETSc()
-        
 def create_petsc_vec(comm, arr):
-    if MPI or PETSc.needs_ksp:
+    if _under_mpirun() or PETSc.needs_ksp:
         if PETSc.installed:
             return PETSc.Vec().createWithArray(arr, comm=comm)
 
@@ -76,6 +61,8 @@ def create_petsc_vec(comm, arr):
 
 if _under_mpirun():
     from mpi4py import MPI
+    from petsc4py import PETSc
+    PETSc.installed = True
 
     COMM_NULL = MPI.COMM_NULL
 
@@ -104,7 +91,8 @@ if _under_mpirun():
 else:
     MPI = None
     COMM_NULL = None
-
+    PETSc = PETSc()
+        
     def mpiprint(*args, **kwargs):
         for arg in args:
             if isinstance(arg, tuple):

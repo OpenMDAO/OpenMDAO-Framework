@@ -4,9 +4,11 @@ A simple unit testing framework for MPI programs.
 
 import os
 import sys
+import types
+import traceback
 
 from unittest import TestCase, SkipTest
-from openmdao.main.mpiwrap import mpiprint
+from openmdao.main.mpiwrap import mpiprint, _under_mpirun
 from openmdao.util.testutil import assert_rel_error
 
 try:
@@ -15,80 +17,86 @@ except ImportError:
     MPI = None
 
 
-def _under_mpirun():
-    """Return True if we're being executed under mpirun."""
-    # TODO: this is a bit of a hack and there appears to be
-    # no consistent set of environment vars between MPI 
-    # implementations.
-    for name in os.environ.keys():
-        if name.startswith('OMPI_COMM') or name.startswith('MPICH_'):
-            return True
-    return False
+def mpi_fail_if_any(f):
+    """In order to keep MPI tests from hanging when
+    a test fails in one process and succeeds in 
+    another, perform an allgather to check for any
+    failures in any of the processes running the test,
+    and fail if any of them fail.
+    """
+    def wrapper(self, *args, **kwargs):
+        try:
+            ret = f(self, *args, **kwargs)
+        except Exception:
+            exc = sys.exc_info()
+            fail = True
+        else:
+            fail = False
 
+        fails = MPI.COMM_WORLD.allgather(fail)
 
-## The following decorator doesn't work, and I'm not
-## sure why.  It hangs at the allgather, but I verified
-## that the allgather is being called in all processes
-## in the communicator.
-# def mpi_fail_if_any(f):
-#     """In order to keep MPI tests from hanging when
-#     a test fails in one process and succeeds in 
-#     another, perform an allgather to check for any
-#     failures in any of the processes running the test,
-#     and fail if any of them fail.
-#     """
-#     def wrapper(self, *args, **kwargs):
-#         try:
-#             ret = f(self, *args, **kwargs)
-#         except Exception as exc:
-#             fail = [True]
-#         else:
-#             fail = [False] 
+        if fail:
+            raise exc[0], exc[1], exc[2]
+        elif any(fails):
+            self.fail("a test failed in another rank")
 
-#         mpiprint('about to allgather. fail=%s'%fail)
-#         mpiprint("size = %d" % self.comm.size)
-#         try:
-#             fails = self.comm.allgather(fail)
-#         except:
-#             print "except"
-#         mpiprint("fails = %s" % fails)
+        return ret
 
-#         if fail:
-#             self.fail(str(exc))
-#         elif any(fails):
-#             self.fail("a test failed in another rank")
+    return wrapper
+    
+collective_assert_rel_error = mpi_fail_if_any(assert_rel_error)
+
+def wrapper(f):
+    if _under_mpirun():
+        return f
         
-#         return ret
+    else:
+        def wrap(self, *args, **kwargs):
+            if MPI is None:
+                raise SkipTest("mpi4py not installed")
+                
+            # loop over the results from all of the MPI procs we
+            # spawned and keep the first failure/error.
+            for i, info in enumerate(self.infos):
+                if info['failures']:
+                    if "a test failed in another rank" not in info['failures'][0]:
+                        self.fail("{process %d} %s" % (i, info['failures'][0]))
+                elif info['errors']:
+                    if "a test failed in another rank" not in info['errors'][0]:
+                        self.fail("{process %d} %s" % (i, info['errors'][0]))
+                    
+        wrap.__name__ = f.__name__ # nose won't find it unless __name__ starts with 'test_'
+        return wrap
 
-#     return wrapper
+        
+class MPITestCaseMeta(type):
+    """A metaclass to wrap all of the test_ methods to act appropriately
+    when run serially vs. under mpi.  Also creates collective versions of
+    all of the 'assert*' methods used for testing.
+    """
+    def __new__(meta, name, bases, dct):
+        newdict = {}
+        for n, obj in dct.items():
+            if n.startswith('test_') and isinstance(obj, types.FunctionType):
+                newdict[n] = wrapper(obj)
+            elif n.startswith('assert') or n == 'fail':
+                newdict['collective_'+n] = mpi_fail_if_any(obj)
+            else:
+                newdict[n] = obj
+                    
+        return type.__new__(meta, name, bases, newdict)
 
 
 class MPITestCase(TestCase):
     """A base class for all TestCases that are
     intended to run under MPI.
     """
+    __metaclass__ = MPITestCaseMeta
+    
     # A class attribute 'N_PROCS' must be defined
     # for each MPITestCase class in order to 
     # know how big to make the MPI communicator.
     # N_PROCS = 4
-    def __init__(self, methodName='runTest'):
-        super(MPITestCase, self).__init__(methodName)
-
-        # save the original test method so the wrapper
-        # will know what to call
-        self._orig_testmethod_name = self._testMethodName
-
-        if not _under_mpirun():
-            self._testMethodName = '_test_non_mpi_method_wrapper'
-            
-    def _test_non_mpi_method_wrapper(self):
-        """A wrapper we put around every test method
-        when we're run normally (non-MPI), so that we can
-        then kick off N mpi processes running that test
-        method.
-        """
-        if MPI is None:
-            raise SkipTest("mpi4py not installed")
 
     def run(self, result=None):
         info = {
@@ -96,6 +104,7 @@ class MPITestCase(TestCase):
             'errors': [],
             'skipped': [],
         }
+        self.infos = []
 
         if result is None:
             result = self.defaultTestResult()
@@ -104,13 +113,14 @@ class MPITestCase(TestCase):
                 startTestRun()
 
         try:
+            exc_info = None
             if _under_mpirun():
                 self.comm = MPI.Comm.Get_parent()
 
                 try:
                     super(MPITestCase, self).run(result)
-                except Exception as err:
-                    print str(err)
+                except Exception:
+                    exc_info = sys.exc_info()
 
                 for key in info.keys():
                     for tcase, data in getattr(result, key):
@@ -118,56 +128,32 @@ class MPITestCase(TestCase):
 
                 # send results back to the mothership
                 self.comm.gather(info, root=0)
+                
+                if exc_info is not None:
+                    raise exc_info[0], exc_info[1], exc_info[2]
                     
             else:
                 testpath = '.'.join((self.__class__.__module__, 
                                      self.__class__.__name__,
-                                     self._orig_testmethod_name))
+                                     self._testMethodName))
 
                 self.comm = MPI.COMM_SELF.Spawn(sys.executable, 
-                                    args=['-m', 'openmdao.test.mpiunittest', testpath], 
+                                    args=['-m', 'openmdao.test.mpiunittest', 
+                                          testpath], 
                                     maxprocs=self.N_PROCS)
 
                 # gather results from spawned MPI processes
-                infos = self.comm.gather(info, root=MPI.ROOT)
+                self.infos = self.comm.gather(info, root=MPI.ROOT)
 
                 try:
                     super(MPITestCase, self).run(result)
-                except Exception as err:
-                    print str(err)
+                except Exception:
+                    exc_info = sys.exc_info()
 
-                self._testMethodName = self._orig_testmethod_name
-
-                # for each type of error or skip, loop over
-                # the results from all of the MPI procs we
-                # spawned and keep the unique ones.
-                for key in info.keys():
-                    rset = set()
-                    for i,rmap in enumerate(infos):
-                        val = rmap[key]
-                        for v in val:
-                            if v and v not in rset:
-                                rset.add(v)
-                                getattr(result, key).append((self, "{%d} %s" % (i, v)))
+                if exc_info is not None:
+                    raise exc_info[0], exc_info[1], exc_info[2]
         finally:
             self.comm.Disconnect()
-
-    # @mpi_fail_if_any
-    # def mpi_assert_rel_error(self, actual, desired, tolerance):
-    #     assert_rel_error(self, actual, desired, tolerance)
-
-    # @mpi_fail_if_any
-    # def mpiAssertEqual(self, val1, val2):
-    #     self.assertEqual(val1, val2)
-
-    # @mpi_fail_if_any
-    # def mpiAssertTrue(self, arg):
-    #     self.assertTrue(arg)
-
-    # @mpi_fail_if_any
-    # def mpiAsserFalse(self, arg):
-    #     self.assertFalse(arg)
-
 
 
 if __name__ == '__main__':
@@ -200,19 +186,19 @@ if __name__ == '__main__':
 
             result = tcase.defaultTestResult()
 
-        except Exception as err:
-            print str(err)
+        except Exception:
+            exc_info = sys.exc_info()
             if _under_mpirun():
                 MPI.Comm.Get_parent().Disconnect()
+            raise exc_info[0], exc_info[1], exc_info[2]
 
         # run the test case, which will report its
         # results back to the process that spawned this
         # MPI process.
         try:
             tcase.run(result)
-        except Exception as err:
+        except Exception:
+            exc_info = sys.exc_info()
             if _under_mpirun():
                 MPI.Comm.Get_parent().Disconnect()
-            raise
-
-    
+            raise exc_info[0], exc_info[1], exc_info[2]

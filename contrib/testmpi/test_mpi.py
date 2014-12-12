@@ -3,7 +3,7 @@ import time
 
 import numpy as np
 
-from openmdao.test.mpiunittest import MPITestCase
+from openmdao.test.mpiunittest import MPITestCase, collective_assert_rel_error
 from openmdao.util.testutil import assert_rel_error
 
 from openmdao.main.api import Assembly, Component, set_as_top
@@ -78,10 +78,9 @@ class MPITests1(MPITestCase):
         top.run()
         return
 
-        if self.comm.rank == 0:
-            for name, expval in expected.items():
-                val = top.get(name)
-                assert_rel_error(self, val, expval, 0.001)
+        for name, expval in expected.items():
+            val = top.get(name)
+            collective_assert_rel_error(self, val, expval, 0.001)
 
     def test_sellar_params2(self):
         top = set_as_top(SellarMDF())
@@ -95,10 +94,9 @@ class MPITests1(MPITestCase):
 
         top.run()
 
-        if self.comm.rank == 0:
-            for name, expval in expected.items():
-                val = top.get(name)
-                assert_rel_error(self, val, expval, 0.001)
+        for name, expval in expected.items():
+            val = top.get(name)
+            collective_assert_rel_error(self, val, expval, 0.001)
 
     def test_fan_in(self):
         size = 5
@@ -207,10 +205,9 @@ class MPITests2(MPITestCase):
 
         expected = { 'C1.y1': 3.160068, 'C2.y2': 3.755315 }
 
-        top.driver.system_type = 'parallel'
+        #top.driver.system_type = 'parallel'
 
         top.run()
-
         if self.comm.rank == 0:
             for name, expval in expected.items():
                 val = top.get(name)

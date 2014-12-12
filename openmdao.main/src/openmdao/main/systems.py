@@ -169,6 +169,9 @@ class System(object):
         """
 
         comm = self.mpi.comm
+        if comm is None:
+            return
+            
         myrank = comm.rank
 
         tups = []
@@ -842,7 +845,7 @@ class System(object):
         self.sol_buf[:] = self.sol_vec.array[:]
         self.rhs_buf[:] = self.rhs_vec.array[:]
 
-        self.ln_solver.ksp.solve(self.rhs_buf, self.sol_buf)
+        self.ln_solver.ksp.solve(self.rhs_buf_petsc, self.sol_buf_petsc)
 
         self.sol_vec.array[:] = self.sol_buf[:]
 
@@ -876,6 +879,17 @@ class SimpleSystem(System):
         self._comp = comp
         self.J = None
         self._mapped_resids = {}
+    
+    def setup_sizes(self):
+        super(SimpleSystem, self).setup_sizes()
+        if self.is_active():
+            for var, metadata in self.vector_vars.iteritems():
+                if metadata['size'] == 0:
+                    msg = "{} was not initialized. OpenMDAO does not support uninitialized variables."
+                    msg = msg.format(var[0])
+
+                    self.scope.raise_exception(msg, ValueError)
+            
 
     def inner(self):
         return self._comp
@@ -1014,7 +1028,7 @@ class SimpleSystem(System):
                 applyJ(self, variables)
             else:
                 self._comp.applyJ(self, variables)
-                
+
             vec['df'].array[:] *= -1.0
 
             for var in self.list_outputs():
@@ -1036,6 +1050,11 @@ class SimpleSystem(System):
             vec['df'].array[:] *= -1.0
 
             for var in self.list_outputs():
+
+                #collapsed = self.scope.name2collapsed.get(var)
+                #if collapsed not in variables:
+                #    continue
+
                 vec['du'][var][:] += vec['df'][var][:]
 
     def solve_linear(self, options=None):
@@ -1280,20 +1299,20 @@ class CompoundSystem(System):
 
     def _get_node_scatter_idxs(self, node, noflats, dest_start, destsys=None):
         varkeys = self.vector_vars.keys()
-        
+
         if node in noflats:
             return (None, None, node)
-    
+
         elif node in self.vector_vars: # basevar or non-duped subvar
             if node not in self.vec['p']:
                 return (None, None, None)
-            
+
             isrc = varkeys.index(node)
             src_idxs = numpy.sum(self.local_var_sizes[:, :isrc]) + self.arg_idx[node]
             dest_idxs = dest_start + self.vec['p']._info[node].start + self.arg_idx[node]
-    
+
             return (src_idxs, dest_idxs, None)
-    
+
         elif node in self.flat_vars:  # duped subvar
             if node not in self.vec['p']:
                 return (None, None, None)
@@ -1308,10 +1327,10 @@ class CompoundSystem(System):
                     return (None, None, None)
             isrc = varkeys.index(base)
             src_idxs = numpy.sum(self.local_var_sizes[:, :isrc]) + self.scope._var_meta[node]['flat_idx']
-    
+
             dest_idxs = dest_start + self.vec['p']._info[node].start  + self.arg_idx[node]
             return (src_idxs, dest_idxs, None)
-    
+
         return (None, None, None)
 
 
@@ -1347,9 +1366,9 @@ class CompoundSystem(System):
                     if node not in sub._in_nodes or node in scatter_conns:
                         continue
                     src_idxs, dest_idxs, nflat = self._get_node_scatter_idxs(node, noflats, dest_start, destsys=sub)
-                    if (src_idxs, dest_idxs, nflat) == (None, None, None):
+                    if (src_idxs is None) and (dest_idxs is None) and (nflat is None):
                         continue
-                    
+
                     if nflat:
                         if node in noflat_conns or node not in subsystem._in_nodes or node not in self._owned_args:
                             continue
@@ -1357,19 +1376,19 @@ class CompoundSystem(System):
                     else:
                         src_partial.append(src_idxs)
                         dest_partial.append(dest_idxs)
-                        
+
                         if node not in scatter_conns_full:
                             src_full.append(src_idxs)
                             dest_full.append(dest_idxs)
-                        
+
                     scatter_conns.add(node)
                     scatter_conns_full.add(node)
-        
+
                 if MPI or scatter_conns or noflat_conns:
                     subsystem.scatter_partial = DataTransfer(self, src_partial,
                                                              dest_partial,
                                                              scatter_conns, noflat_conns)
-                    
+
             if MPI or scatter_conns_full or noflat_conns_full:
                 self.scatter_full = DataTransfer(self, src_full, dest_full,
                                                  scatter_conns_full, noflat_conns_full)
@@ -1886,7 +1905,15 @@ class TransparentDriverSystem(DriverSystem):
         """ Evalutes a component's residuals without invoking its
         internal solve (for implicit comps.)
         """
-        self.run(iterbase, case_label=case_label, case_uuid=case_uuid)
+        if self.is_active():
+            self._stop = False
+
+            for sub in self.local_subsystems():
+                self.scatter('u', 'p', sub)
+
+                sub.evaluate(iterbase, case_label, case_uuid)
+                if self._stop:
+                    raise RunStopped('Stop requested')
 
     def clear_dp(self):
         """ Recusively sets the dp vector to zero."""
