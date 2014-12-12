@@ -866,14 +866,13 @@ class SimpleSystem(System):
     
     def setup_sizes(self):
         super(SimpleSystem, self).setup_sizes()
-        # if self.is_active():
-        #     for var, metadata in self.vector_vars.iteritems():
-        #         if metadata['size'] == 0:
-        #             msg = "{} was not initialized. OpenMDAO does not support uninitialized variables."
-        #             msg = msg.format(var[0])
-        # 
-        #             self.scope.raise_exception(msg, ValueError)
-            
+        if self.is_active():
+            for var, metadata in self.vector_vars.iteritems():
+                if len(self.scope.get_flattened_value(var[0])) == 0 :
+                    msg = "{} was not initialized. OpenMDAO does not support uninitialized variables."
+                    msg = msg.format(var[0])
+                    
+                    self.scope.raise_exception(msg, ValueError)
 
     def inner(self):
         return self._comp
