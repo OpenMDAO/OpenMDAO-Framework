@@ -1314,7 +1314,7 @@ class CompoundSystem(System):
                           self.scope._var_meta[node]['flat_idx']
 
             dest_idxs = dest_start + self.vec['p']._info[node].start + \
-                          petsc_linspace(0, len(self.arg_idx[node]))
+                          petsc_linspace(0, len(self.scope._var_meta[node]['flat_idx']))
             return (src_idxs, dest_idxs, None)
 
         return (None, None, None)
