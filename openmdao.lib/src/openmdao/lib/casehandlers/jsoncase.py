@@ -13,7 +13,6 @@ import json
 import bson
 
 import cPickle
-#from pymongodb_bson_binary_util import dumps, Binary, loads
 
 from openmdao.lib.casehandlers.pymongo_bson.json_util import loads, dumps
 from openmdao.lib.casehandlers.pymongo_bson.binary import Binary

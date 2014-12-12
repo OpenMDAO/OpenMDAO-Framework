@@ -1,13 +1,16 @@
 import bson
 import json
 import logging
-
+import cPickle
 import StringIO
-
 from struct import pack, unpack
 from weakref import ref
 
+from numpy import ndarray
+
 from openmdao.main.api import Assembly, VariableTree
+from openmdao.lib.casehandlers.pymongo_bson.json_util import loads, dumps
+from openmdao.lib.casehandlers.pymongo_bson.binary import Binary
 
 _GLOBAL_DICT = dict(__builtins__=None)
 
@@ -657,7 +660,6 @@ class _JSONReader(_Reader):
         return json.loads(data,object_hook=object_hook)
         #return loads(data)
 
-import cPickle
 def object_hook(dct, compile_re=True):
     if "$binary" in dct:
         if isinstance(dct["$type"], int):
@@ -732,10 +734,6 @@ class _Encoder(json.JSONEncoder):
             super(_Encoder, self).default(obj)
         return fixed
 
-from numpy import ndarray
-from openmdao.lib.casehandlers.pymongo_bson.json_util import loads, dumps
-from openmdao.lib.casehandlers.pymongo_bson.binary import Binary
-import cPickle
 
 def _fixup(value):
     """

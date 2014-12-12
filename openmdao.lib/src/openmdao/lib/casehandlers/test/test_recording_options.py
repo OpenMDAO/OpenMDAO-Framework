@@ -99,15 +99,17 @@ class RecordingOptionsTestCase(unittest.TestCase):
         sout.seek(0) # need to go back to the front of the "file"
         cds = CaseDataset(sout, 'json')
         vnames = cds.data.var_names().fetch()
-        expected = ['_driver_id', '_id', '_parent_id', u'_pseudo_0.out0',
-                    u'_pseudo_1.out0', u'comp1.x', 'error_message', 'error_status', 'timestamp']
+        expected = ['_driver_id', '_id', '_parent_id', u'_pseudo_0',
+                    u'_pseudo_1', u'comp1.x', 'error_message', 'error_status', 'timestamp']
 
-        self.assertFalse(set(vnames) - set(expected))
+        self.assertFalse(set(vnames).symmetric_difference(set(expected)))
+        #self.assertFalse(set(vnames) - set(expected))
         
         # Specific variables.
         names = [ 'comp1.x',]
         vnames = cds.data.vars(names).var_names().fetch()
-        self.assertEqual(vnames, names)
+        #self.assertEqual(vnames, names)
+        self.assertFalse(set(vnames).symmetric_difference(set(names)))
 
         cases = cds.data.vars(names).fetch()
         self.assertEqual(len(cases), 1)
@@ -240,15 +242,16 @@ class RecordingOptionsTestCase(unittest.TestCase):
         
         constants = cds.simulation_info['constants'].keys()
         expected = [u'comp1.y']
-        #self.assertFalse(set(constants) - set(expected))
+        self.assertFalse(set(constants) - set(expected))
 
 
         vnames = cds.data.var_names().fetch()
-        expected = ['_driver_id', '_id', '_parent_id', u'_pseudo_0.out0', u'_pseudo_1.out0', 
+        expected = ['_driver_id', '_id', '_parent_id', u'_pseudo_0', u'_pseudo_1', 
                     u'comp1.derivative_exec_count', u'comp1.exec_count', u'comp1.itername', 
                     u'comp1.x', u'comp1.z', 'error_message', 'error_status', 'timestamp']
         
-        self.assertFalse(set(vnames) - set(expected))
+        #self.assertFalse(set(vnames) - set(expected))
+        self.assertFalse(set(vnames).symmetric_difference(set(expected)))
     
         # Specific variables are there
         names = [ 'comp1.z', 'comp1.x']

@@ -503,19 +503,6 @@ class Workflow(object):
         """Called at start of top-level run to configure case recording.
         Returns set of paths for changing inputs."""
 
-        # driver = self.parent
-        # scope = driver.parent
-        # top = scope
-        # while top.parent:
-        #     top = top.parent
-        # top._setup()
-        # for comp in driver.workflow: 
-        #     print "comp", comp
-        #     if driver._reduced_graph:
-        #         successors = driver._reduced_graph.successors(comp.name)
-        #         for output_name, aliases in successors:
-        #             print output_name, aliases
-
         if recording_options:
             includes = recording_options.includes
             excludes = recording_options.excludes
@@ -529,11 +516,6 @@ class Workflow(object):
 
         driver = self.parent
         scope = driver.parent
-        #top = scope
-        #while top.parent:
-        #    top = top.parent
-        #prefix_drop = len(top.name)+1 if top.name else 0
-        #prefix = '' if scope is top else scope.get_pathname()[prefix_drop:]
         prefix = scope.get_pathname()
         if prefix:
             prefix += '.'
@@ -566,8 +548,6 @@ class Workflow(object):
                    self._check_path(path, includes, excludes):
                     self._rec_objectives.append(key)
                     outputs.append(name)
-                    #outputs.append(path + '.out0')
-
 
         # Responses
         self._rec_responses = []
@@ -579,7 +559,6 @@ class Workflow(object):
                    self._check_path(path, includes, excludes):
                     self._rec_responses.append(key)
                     outputs.append(name)
-                    #outputs.append(path+'.out0')
 
         # Constraints
         self._rec_constraints = []
@@ -591,7 +570,6 @@ class Workflow(object):
                    self._check_path(path, includes, excludes):
                     self._rec_constraints.append(con)
                     outputs.append(name)
-                    #outputs.append(path + '.out0')
         if hasattr(driver, 'get_ineq_constraints'):
             for con in driver.get_ineq_constraints().values():
                 name = con.pcomp_name
@@ -666,28 +644,11 @@ class Workflow(object):
         #         self._rec_outputs.append(src)
         #         #qqq outputs.append(src)
 
-        ##### Not sure I need this ! 
-        #for comp in self.get_components():
-            #for name in comp.list_outputs():
-                #src = '%s.%s' % (comp.name, name)
-                #path = prefix+src
-                #if src not in outputs and \
-                   #self._check_path(path, includes, excludes):
-                    #if scope.get_metadata(src).has_key('framework_var') and scope.get_metadata(src)['framework_var']:
-                        #self._rec_outputs.append(src)
-                        ##self._rec_outputs.append(path)
-                        ##self._rec_all_outputs.append(path)
-                        ##outputs.append(path)
-                        #outputs.append(src)
 
         name = '%s.workflow.itername' % driver.name
         path = prefix+name
         if self._check_path(path, includes, excludes):
-            #self._rec_outputs.append(path)
-            #self._rec_all_outputs.append(path)
-            #outputs.append(path)
             self._rec_outputs.append(name)
-            #self._rec_all_outputs.append(name)
             outputs.append(name)
 
         # If recording required, register names in recorders.
@@ -770,7 +731,6 @@ class Workflow(object):
         # Other outputs.
         for name in self._rec_outputs:
             try:
-                #outputs.append(top.get(name))
                 outputs.append(scope.get(name))
             except Exception as exc:
                 scope.raise_exception("Can't get '%s' for recording: %s"

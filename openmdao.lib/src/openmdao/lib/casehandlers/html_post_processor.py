@@ -11,7 +11,6 @@ import webbrowser
 #from  pymongodb_bson_binary_util import loads
 #from  bson.json_util import loads
 
-
 def caseset_query_to_html(query, filename='cases.html'):
 
     # get case data as serialized json string
