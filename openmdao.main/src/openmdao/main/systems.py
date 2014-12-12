@@ -473,10 +473,6 @@ class System(object):
             # FIXME: this needs to use the actual indices for this
             #        process' version of the arg once we have distributed
             #        components...
-            #flat_idx = varmeta[name].get('flat_idx')
-            #if flat_idx and varmeta[name]['basevar'] in varmeta:  # var is an array index into a basevar
-            #    self.arg_idx[name] = to_indices(flat_idx, self.scope.get(varmeta[name]['basevar']))
-            #else:
             if name in self.vector_vars:
                 isrc = self.vector_vars.keys().index(name)
                 idxs = numpy.array(range(varmeta[name]['size']), 'i')
@@ -2062,7 +2058,7 @@ def partition_subsystems(scope, graph, cgraph):
         if len(zero_in_nodes) > 1: # start of parallel chunk
             parallel_group = []
             for node in zero_in_nodes:
-                brnodes = get_branch(gcopy, node)
+                brnodes = sorted(get_branch(gcopy, node))
                 if len(brnodes) > 1:
                     parallel_group.append(tuple(brnodes))
                 else:
@@ -2070,7 +2066,7 @@ def partition_subsystems(scope, graph, cgraph):
 
             for branch in parallel_group:
                 if isinstance(branch, tuple):
-                    branch = tuple(sorted(branch))
+                    branch = tuple(branch)
                     to_remove.extend(branch)
                     subg = cgraph.subgraph(branch)
                     partition_subsystems(scope, graph, subg)
@@ -2081,7 +2077,6 @@ def partition_subsystems(scope, graph, cgraph):
                 else: # single comp system
                     gcopy.remove_node(branch)
 
-            #parallel_group = tuple(sorted(parallel_group))
             parallel_group = tuple(sorted(parallel_group))
             to_remove.extend(parallel_group)
             subg = cgraph.subgraph(parallel_group)
