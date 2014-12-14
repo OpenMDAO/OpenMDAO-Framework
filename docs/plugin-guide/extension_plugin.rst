@@ -270,8 +270,8 @@ Auto-generated docstring starting with Numpy 1.8.0
 
     Wrapper for ``runbar3truss``.
 
-    Parameters
-    ----------
+    *Parameters*
+    
     pvec : input rank-1 array('d') with bounds (2)
     m0 : input float
     a1 : input float
@@ -281,8 +281,8 @@ Auto-generated docstring starting with Numpy 1.8.0
     el : input float
     rho : input float
 
-    Returns
-    -------
+    *Returns*
+    
     s1 : float
     s2 : float
     s3 : float
