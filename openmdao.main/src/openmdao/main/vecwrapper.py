@@ -439,7 +439,11 @@ class DataTransfer(object):
         if not (MPI or scatter_conns or noflat_vars):
             return  # no data to xfer
 
-        var_idxs, input_idxs = merge_idxs(var_idxs, input_idxs)
+        try:
+            var_idxs, input_idxs = merge_idxs(var_idxs, input_idxs)
+        except Exception as err:
+            raise RuntimeError("ERROR creating scatter for system %s in scope %s" %
+                                (system.name, str(system.scope), str(err)))
 
         if len(var_idxs) != len(input_idxs):
             raise RuntimeError("ERROR: creating scatter (index size mismatch): (%d != %d) srcs: %s,  dest: %s in %s" %
