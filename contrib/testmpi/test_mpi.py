@@ -27,9 +27,6 @@ class ABCDArrayComp(Component):
         time.sleep(self.delay)
         self.c = self.a + self.b
         self.d = self.a - self.b
-        # mpiprint("%s.a = %s" % (self.name, self.a))
-        # mpiprint("%s.b = %s" % (self.name, self.b))
-
 
 class SellarMDF(Assembly):
     """ Optimization of the Sellar problem using MDF
@@ -76,7 +73,6 @@ class MPITests1(MPITestCase):
         expected = { 'C1.y1': 3.160068, 'C2.y2': 3.755315 }
 
         top.run()
-        return
 
         for name, expval in expected.items():
             val = top.get(name)
