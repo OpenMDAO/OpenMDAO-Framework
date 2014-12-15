@@ -1671,6 +1671,11 @@ class ParallelSystem(CompoundSystem):
         else:
             return []
 
+    def set_ordering(self, ordering, opaque_map):
+        """Return the execution order of our subsystems."""
+        for s in self.all_subsystems():
+            s.set_ordering(ordering, opaque_map)
+
 
 class OpaqueSystem(SimpleSystem):
     """A system with an external interface like that
