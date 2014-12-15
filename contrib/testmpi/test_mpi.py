@@ -206,8 +206,6 @@ class MPITests2(MPITestCase):
 
         expected = { 'C1.y1': 3.160068, 'C2.y2': 3.755315 }
 
-        top.driver.system_type = 'parallel'
-
         top.run()
 
         if self.comm.rank == 0:
