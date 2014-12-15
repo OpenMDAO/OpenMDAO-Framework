@@ -23,12 +23,9 @@ class MPIContext(object):
     multiple MPI processes so that if any of the blocks raise an
     exception, all processes sharing that communicator will fail.
     """
-    def __init__(self,):
-        pass
-
     def __enter__(self):
         pass
-
+    
     def __exit__(self, exc_type, exc_val, exc_tb):
         if exc_val is not None:
             fail = True
@@ -37,8 +34,8 @@ class MPIContext(object):
         
         fails = MPI.COMM_WORLD.allgather(fail)
         
-        if fail:
-            return None  # exception will be re-raised for us
+        if fail or not any(fails):
+            return False  # exception will be re-raised for us
         else:
             raise RuntimeError("a test failed in another rank")
 

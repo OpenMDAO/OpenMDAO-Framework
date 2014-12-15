@@ -1303,7 +1303,7 @@ class CompoundSystem(System):
 
             isrc = varkeys.index(node)
             src_idxs = numpy.sum(self.local_var_sizes[:, :isrc]) + self.arg_idx[node]
-            if numpy.sum(self.local_var_sizes[:, isrc]) > 1: # self.local_var_sizes[self.mpi.rank, isrc]:
+            if self.local_var_sizes[self.mpi.rank, isrc]:
                 src_idxs += numpy.sum(self.local_var_sizes[:self.mpi.rank, isrc])
             dest_idxs = dest_start + self.vec['p']._info[node].start + \
                         petsc_linspace(0, len(self.arg_idx[node]))

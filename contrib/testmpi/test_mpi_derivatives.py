@@ -95,8 +95,8 @@ class MPITests(MPITestCase):
         J = self.top.driver.workflow._system.get_combined_J(J)
         #mpiprint("final J: %s" % J)
 
-        #with MPIContext():
-        self.top._system.dump()
+        # with MPIContext():
+        #     self.top._system.dump()
            
         print "FOO"
         
