@@ -80,6 +80,7 @@ class System(object):
         self.vec = {}
         self.app_ordering = None
         self.scatter_full = None
+        self.scatter_rev_full = None
         self.scatter_partial = None
 
         # Derivatives stuff
@@ -473,11 +474,17 @@ class System(object):
             # FIXME: this needs to use the actual indices for this
             #        process' version of the arg once we have distributed
             #        components...
-            #flat_idx = varmeta[name].get('flat_idx')
-            #if flat_idx and varmeta[name]['basevar'] in varmeta:  # var is an array index into a basevar
-            #    self.arg_idx[name] = to_indices(flat_idx, self.scope.get(varmeta[name]['basevar']))
-            #else:
-            self.arg_idx[name] = numpy.array(range(varmeta[name]['size']), 'i')
+            if name in self.vector_vars:
+                isrc = self.vector_vars.keys().index(name)
+                idxs = numpy.array(range(varmeta[name]['size']), 'i')
+            else:
+                base = name[0].split('[', 1)[0]
+                if base == name[0]:
+                    continue
+                isrc = self.vector_vars.keys().index(self.scope.name2collapsed[base])
+                idxs = varmeta[name].get('flat_idx')
+                
+            self.arg_idx[name] = idxs# + numpy.sum(self.local_var_sizes[:self.mpi.rank, isrc])
 
     def setup_vectors(self, arrays=None, state_resid_map=None):
         """Creates vector wrapper objects to manage local and
@@ -541,7 +548,10 @@ class System(object):
         float array.
         """
         if subsystem is None:
-            scatter = self.scatter_full
+            if self.mode == 'adjoint' and srcvecname == 'du':
+                scatter = self.scatter_rev_full
+            else:
+                scatter = self.scatter_full
         else:
             scatter = subsystem.scatter_partial
 
@@ -589,25 +599,18 @@ class System(object):
         else:
             world_rank = MPI.COMM_WORLD.rank
 
-        name_map = { 'SerialSystem': 'ser', 'ParallelSystem': 'par',
-                     'SimpleSystem': 'simp', 'FiniteDiffDriverSystem': 'drv',
-                     'TransparentDriverSystem': 'tdrv', 'OpaqueSystem': 'opaq',
-                     'InVarSystem': 'invar', 'VarSystem': 'outvar',
-                     'SolverSystem': 'slv',  'ParamSystem': 'param',
-                     'AssemblySystem': 'asm', }
-
         stream.write(" "*nest)
         stream.write(str(self.name).replace(' ','').replace("'",""))
         klass = self.__class__.__name__
         stream.write(" [%s](req=%d)(rank=%d)(vsize=%d)(isize=%d)\n" %
-                                          (name_map.get(klass, klass.lower()[:3]),
+                                          (klass.lower()[:5],
                                            self.get_req_cpus(),
                                            world_rank,
                                            self.vec['u'].array.size,
                                            self.input_sizes[self.mpi.rank]))
 
-        for v, (arr, start) in self.vec['u']._info.items():
-            if verbose or v not in self.vec['u']._subviews:
+        for v, info in self.vec['u']._info.items():
+            if verbose or not info.hide:
                 stream.write(" "*(nest+2))
                 if v in self.vec['p']:
                     stream.write("u (%s)  p (%s): %s\n" %
@@ -616,8 +619,8 @@ class System(object):
                 else:
                     stream.write("u (%s): %s\n" % (list(self.vec['u'].bounds([v])), v))
 
-        for v, (arr, start) in self.vec['p']._info.items():
-            if v not in self.vec['u'] and (verbose or v not in self.vec['p']._subviews):
+        for v, info in self.vec['p']._info.items():
+            if v not in self.vec['u'] and (verbose or not info.hide):
                 stream.write(" "*(nest+2))
                 stream.write("           p (%s): %s\n" %
                                  (list(self.vec['p'].bounds([v])), v))
@@ -635,27 +638,19 @@ class System(object):
             stream.write(" "*(nest+2))
             stream.write("%s --> %s\n" % (src, dest))
 
-        stream.write(" "*(nest+2))
-        stream.write("_in_nodes: %s\n" % self._in_nodes)
-        stream.write(" "*(nest+2))
-        stream.write("_out_nodes: %s\n" % self._out_nodes)
-        stream.write(" "*(nest+2))
-        stream.write("list_inputs(): %s\n" % self.list_inputs())
-        stream.write(" "*(nest+2))
-        stream.write("list_outputs(): %s\n" % self.list_outputs())
-        stream.write(" "*(nest+2))
-        stream.write("list_states(): %s\n" % self.list_states())
-        stream.write(" "*(nest+2))
-        stream.write("list_residuals(): %s\n" % self.list_residuals())
-
         nest += 4
         if isinstance(self, OpaqueSystem):
             self._inner_system.dump(nest, stream)
         elif isinstance(self, AssemblySystem):
             self._comp._system.dump(nest, stream)
         else:
+            if self.scatter_full:
+                self.scatter_full.dump(self, self.vec['u'], self.vec['p'], nest)
+            partial_subs = [s for s in self.local_subsystems() if s.scatter_partial]
             for sub in self.local_subsystems():
                 sub.dump(nest, stream)
+                if sub in partial_subs:
+                    sub.scatter_partial.dump(self, self.vec['u'], self.vec['p'], nest+4, stream)
 
         return stream.getvalue() if getval else None
 
@@ -889,7 +884,6 @@ class SimpleSystem(System):
                     msg = msg.format(var[0])
                     
                     self.scope.raise_exception(msg, ValueError)
-            
 
     def inner(self):
         return self._comp
@@ -1309,7 +1303,10 @@ class CompoundSystem(System):
 
             isrc = varkeys.index(node)
             src_idxs = numpy.sum(self.local_var_sizes[:, :isrc]) + self.arg_idx[node]
-            dest_idxs = dest_start + self.vec['p']._info[node].start + self.arg_idx[node]
+            if self.local_var_sizes[self.mpi.rank, isrc]:
+                src_idxs += numpy.sum(self.local_var_sizes[:self.mpi.rank, isrc])
+            dest_idxs = dest_start + self.vec['p']._info[node].start + \
+                        petsc_linspace(0, len(self.arg_idx[node]))
 
             return (src_idxs, dest_idxs, None)
 
@@ -1326,9 +1323,11 @@ class CompoundSystem(System):
                 else:
                     return (None, None, None)
             isrc = varkeys.index(base)
-            src_idxs = numpy.sum(self.local_var_sizes[:, :isrc]) + self.scope._var_meta[node]['flat_idx']
+            src_idxs = numpy.sum(self.local_var_sizes[:, :isrc]) + \
+                          self.scope._var_meta[node]['flat_idx']
 
-            dest_idxs = dest_start + self.vec['p']._info[node].start  + self.arg_idx[node]
+            dest_idxs = dest_start + self.vec['p']._info[node].start + \
+                          petsc_linspace(0, len(self.scope._var_meta[node]['flat_idx']))
             return (src_idxs, dest_idxs, None)
 
         return (None, None, None)
@@ -1348,6 +1347,9 @@ class CompoundSystem(System):
 
         src_full = []
         dest_full = []
+        src_rev_full = []
+        dest_rev_full = []
+        scatter_conns_rev = set()
         scatter_conns_full = set()
         noflat_conns_full = set()
         noflats = set([k for k,v in self.variables.items()
@@ -1374,8 +1376,14 @@ class CompoundSystem(System):
                             continue
                         noflat_conns.add(node)
                     else:
+                        #print node, src_idxs
                         src_partial.append(src_idxs)
                         dest_partial.append(dest_idxs)
+                        
+                        if node in self.vec['u']:
+                            src_rev_full.append(src_idxs)
+                            dest_rev_full.append(dest_idxs)
+                            scatter_conns_rev.add(node)
 
                         if node not in scatter_conns_full:
                             src_full.append(src_idxs)
@@ -1384,14 +1392,23 @@ class CompoundSystem(System):
                     scatter_conns.add(node)
                     scatter_conns_full.add(node)
 
-                if MPI or scatter_conns or noflat_conns:
-                    subsystem.scatter_partial = DataTransfer(self, src_partial,
-                                                             dest_partial,
-                                                             scatter_conns, noflat_conns)
+            if MPI or scatter_conns or noflat_conns:
+                subsystem.scatter_partial = DataTransfer(self, src_partial,
+                                                         dest_partial,
+                                                         scatter_conns, noflat_conns)
+                                                         
+            # if subsystem in list(self.local_subsystems()):
+            #     src_full.extend(src_partial)
+            #     dest_full.extend(dest_partial)
+            #     scatter_conns_full.update(scatter_conns)
 
-            if MPI or scatter_conns_full or noflat_conns_full:
-                self.scatter_full = DataTransfer(self, src_full, dest_full,
-                                                 scatter_conns_full, noflat_conns_full)
+        if MPI or scatter_conns_full or noflat_conns_full:
+            self.scatter_full = DataTransfer(self, src_full, dest_full,
+                                             scatter_conns_full, noflat_conns_full)
+                                             
+        if scatter_conns_rev:
+            self.scatter_rev_full = DataTransfer(self, src_rev_full, dest_rev_full, 
+                                                 scatter_conns_rev, [])
 
         for sub in self.local_subsystems():
             sub.setup_scatters()
@@ -2070,7 +2087,7 @@ def partition_subsystems(scope, graph, cgraph):
         if len(zero_in_nodes) > 1: # start of parallel chunk
             parallel_group = []
             for node in zero_in_nodes:
-                brnodes = get_branch(gcopy, node)
+                brnodes = sorted(get_branch(gcopy, node))
                 if len(brnodes) > 1:
                     parallel_group.append(tuple(brnodes))
                 else:
@@ -2078,7 +2095,7 @@ def partition_subsystems(scope, graph, cgraph):
 
             for branch in parallel_group:
                 if isinstance(branch, tuple):
-                    branch = tuple(sorted(branch))
+                    branch = tuple(branch)
                     to_remove.extend(branch)
                     subg = cgraph.subgraph(branch)
                     partition_subsystems(scope, graph, subg)
@@ -2089,7 +2106,6 @@ def partition_subsystems(scope, graph, cgraph):
                 else: # single comp system
                     gcopy.remove_node(branch)
 
-            #parallel_group = tuple(sorted(parallel_group))
             parallel_group = tuple(sorted(parallel_group))
             to_remove.extend(parallel_group)
             subg = cgraph.subgraph(parallel_group)
