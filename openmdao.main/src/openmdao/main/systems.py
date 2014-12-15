@@ -80,6 +80,7 @@ class System(object):
         self.vec = {}
         self.app_ordering = None
         self.scatter_full = None
+        self.scatter_rev_full = None
         self.scatter_partial = None
 
         # Derivatives stuff
@@ -478,10 +479,12 @@ class System(object):
                 idxs = numpy.array(range(varmeta[name]['size']), 'i')
             else:
                 base = name[0].split('[', 1)[0]
+                if base == name[0]:
+                    continue
                 isrc = self.vector_vars.keys().index(self.scope.name2collapsed[base])
                 idxs = varmeta[name].get('flat_idx')
                 
-            self.arg_idx[name] = idxs + numpy.sum(self.local_var_sizes[:self.mpi.rank, isrc])
+            self.arg_idx[name] = idxs# + numpy.sum(self.local_var_sizes[:self.mpi.rank, isrc])
 
     def setup_vectors(self, arrays=None, state_resid_map=None):
         """Creates vector wrapper objects to manage local and
@@ -545,7 +548,10 @@ class System(object):
         float array.
         """
         if subsystem is None:
-            scatter = self.scatter_full
+            if self.mode == 'adjoint' and srcvecname == 'du':
+                scatter = self.scatter_rev_full
+            else:
+                scatter = self.scatter_full
         else:
             scatter = subsystem.scatter_partial
 
@@ -638,6 +644,8 @@ class System(object):
         elif isinstance(self, AssemblySystem):
             self._comp._system.dump(nest, stream)
         else:
+            if self.scatter_full:
+                self.scatter_full.dump(self, self.vec['u'], self.vec['p'], nest)
             partial_subs = [s for s in self.local_subsystems() if s.scatter_partial]
             for sub in self.local_subsystems():
                 sub.dump(nest, stream)
@@ -1295,6 +1303,8 @@ class CompoundSystem(System):
 
             isrc = varkeys.index(node)
             src_idxs = numpy.sum(self.local_var_sizes[:, :isrc]) + self.arg_idx[node]
+            if numpy.sum(self.local_var_sizes[:, isrc]) > 1: # self.local_var_sizes[self.mpi.rank, isrc]:
+                src_idxs += numpy.sum(self.local_var_sizes[:self.mpi.rank, isrc])
             dest_idxs = dest_start + self.vec['p']._info[node].start + \
                         petsc_linspace(0, len(self.arg_idx[node]))
 
@@ -1337,6 +1347,9 @@ class CompoundSystem(System):
 
         src_full = []
         dest_full = []
+        src_rev_full = []
+        dest_rev_full = []
+        scatter_conns_rev = set()
         scatter_conns_full = set()
         noflat_conns_full = set()
         noflats = set([k for k,v in self.variables.items()
@@ -1366,6 +1379,11 @@ class CompoundSystem(System):
                         #print node, src_idxs
                         src_partial.append(src_idxs)
                         dest_partial.append(dest_idxs)
+                        
+                        if node in self.vec['u']:
+                            src_rev_full.append(src_idxs)
+                            dest_rev_full.append(dest_idxs)
+                            scatter_conns_rev.add(node)
 
                         if node not in scatter_conns_full:
                             src_full.append(src_idxs)
@@ -1378,10 +1396,19 @@ class CompoundSystem(System):
                 subsystem.scatter_partial = DataTransfer(self, src_partial,
                                                          dest_partial,
                                                          scatter_conns, noflat_conns)
+                                                         
+            # if subsystem in list(self.local_subsystems()):
+            #     src_full.extend(src_partial)
+            #     dest_full.extend(dest_partial)
+            #     scatter_conns_full.update(scatter_conns)
 
         if MPI or scatter_conns_full or noflat_conns_full:
             self.scatter_full = DataTransfer(self, src_full, dest_full,
                                              scatter_conns_full, noflat_conns_full)
+                                             
+        if scatter_conns_rev:
+            self.scatter_rev_full = DataTransfer(self, src_rev_full, dest_rev_full, 
+                                                 scatter_conns_rev, [])
 
         for sub in self.local_subsystems():
             sub.setup_scatters()

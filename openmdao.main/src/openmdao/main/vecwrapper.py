@@ -156,6 +156,21 @@ class VecWrapperBase(object):
                 raise ValueError("end index %d exceeds size of target array" % (end-1))
             self[name] = arr[start:end]
             start += size
+            
+    def _is_var_idx(self, info, idx):
+        if isinstance(info.idxs, slice):
+            if info.idxs.step == 1 or info.idxs.step is None:
+                return idx >= info.idxs.start and idx < info.idxs.stop
+            return idx in to_indices(info.idxs, info.view)
+        return idx in info.idxs
+        
+    def find_var(self, idx):
+        for name, info in self._info.items():
+            if not info.hide and self._is_var_idx(info, idx):
+                return name
+        for name, info in self._info.items():
+            if info.hide and self._is_var_idx(info, idx):
+                return name
 
     def dump(self, verbose=False, stream=sys.stdout):
         for name, info in self._info.items():
@@ -509,15 +524,16 @@ class DataTransfer(object):
             return
         stream.write("\n")
         stream.write(" "*nest)
-        stream.write("scatter vars: %s\n" % sorted(self.scatter_conns)
-               )
+        stream.write("scatter vars: %s\n" % sorted(self.scatter_conns))
         stream.write(" "*nest)
-        stream.write("%s --> %s\n" % (self.var_idxs, self.input_idxs))
+        var_idxs = to_indices(self.var_idxs, srcvec.array)
+        input_idxs = self.input_idxs
+        stream.write("%s --> %s\n" % (var_idxs, input_idxs))
+        
         if MPI and system.app_ordering:
-            var_idxs = to_indices(self.var_idxs, srcvec.array)
             var_idx_set = system.app_ordering.app2petsc(var_idxs)
             stream.write(" "*nest)
-            stream.write("(petsc): %s --> %s\n" % (var_idx_set, self.input_idxs))
+            stream.write("(petsc): %s --> %s\n" % (var_idx_set, input_idxs))
         if self.noflat_vars:
             stream.write(" "*nest)
             stream.write("no-flats: %s\n" % self.noflat_vars)
