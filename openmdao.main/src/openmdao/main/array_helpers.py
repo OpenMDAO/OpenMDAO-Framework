@@ -102,25 +102,32 @@ def idx_size(idxs, size=None):
                             str(type(idxs)))
 
 def to_slice(idxs):
-    """Convert an index array to a slice if possible. Otherwise,
-    return the index array.
+    """Convert an index array or list to a slice if possible. Otherwise,
+    return the index array or list.
     """
     if isinstance(idxs, slice):
         return idxs
-    elif isinstance(idxs, ndarray):
+    elif isinstance(idxs, ndarray) or isinstance(idxs, list):
         if len(idxs) == 1:
             return slice(idxs[0], idxs[0]+1)
         elif len(idxs) == 0:
             return slice(0,0)
 
-        imin = idxs.min()
-        imax = idxs.max()
+        if isinstance(idxs, ndarray):
+            imin = idxs.min()
+            imax = idxs.max()
+        else:
+            imin = min(idxs)
+            imax = max(idxs)
+            
         stride = idxs[1]-idxs[0]
+        
+        if stride == 0:
+            return idxs
 
         for i in xrange(len(idxs)):
             if i and idxs[i] - idxs[i-1] != stride:
                 return idxs
-
 
         if stride < 0:
             ## negative strides cause some failures, so just do positive for now
@@ -134,7 +141,7 @@ def to_slice(idxs):
         raise RuntimeError("can't convert indices of type '%s' to a slice" %
                             str(type(idxs)))
 
-def to_indices(idxs, val):
+def to_indices(idxs, val=None):
     """Convert an slice or simple index into an index array.
     index arrays are just returned unchanged.
     """

@@ -2,7 +2,8 @@
 import numpy as np
 
 from openmdao.util.testutil import assert_rel_error
-from openmdao.test.mpiunittest import MPITestCase, collective_assert_rel_error
+from openmdao.test.mpiunittest import MPITestCase, collective_assert_rel_error, \
+                                      MPIContext
 from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.main.datatypes.api import Float
 from openmdao.main.mpiwrap import mpiprint
@@ -94,6 +95,9 @@ class MPITests(MPITestCase):
         J = self.top.driver.workflow._system.get_combined_J(J)
         #mpiprint("final J: %s" % J)
 
+        # with MPIContext():
+        #     self.top._system.dump()
+           
         collective_assert_rel_error(self, 
                                     J['_pseudo_0.out0']['comp.x'][0][0], 
                                     5.0, 0.0001)
