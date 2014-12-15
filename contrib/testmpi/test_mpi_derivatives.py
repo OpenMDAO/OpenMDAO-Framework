@@ -98,8 +98,6 @@ class MPITests(MPITestCase):
         # with MPIContext():
         #     self.top._system.dump()
            
-        print "FOO"
-        
         collective_assert_rel_error(self, 
                                     J['_pseudo_0.out0']['comp.x'][0][0], 
                                     5.0, 0.0001)
