@@ -2503,7 +2503,6 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
 
         assert_rel_error(self, J[0, 0], 313.0, .001)
 
-        self.assertTrue(len(self.top.driver.workflow._system.subsystems()) == 4)
         comp_list = simple_node_iter(self.top.driver.workflow._system.subsystems()[1]._nodes)
         self.assertTrue(len(comp_list) == 3)
         self.assertTrue('comp1' in comp_list)
@@ -2531,7 +2530,6 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
 
         assert_rel_error(self, J[0, 0], 313.0, .001)
 
-        self.assertTrue(len(self.top.driver.workflow._system.subsystems()) == 2)
         comp_list = simple_node_iter(self.top.driver.workflow._system.subsystems()[1]._nodes)
         self.assertTrue(len(comp_list) == 5)
         self.assertTrue('comp1' in comp_list)
@@ -2558,7 +2556,6 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
 
         assert_rel_error(self, J[0, 0], 313.0, .001)
 
-        self.assertTrue(len(self.top.driver.workflow._system.subsystems()) == 3)
         comp_list = simple_node_iter(self.top.driver.workflow._system.subsystems()[1]._nodes)
         self.assertTrue(len(comp_list) == 4)
         self.assertTrue('comp1' in comp_list)
@@ -2585,7 +2582,6 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
 
         assert_rel_error(self, J[0, 0], 313.0, .001)
 
-        self.assertTrue(len(self.top.driver.workflow._system.subsystems()) == 5)
         comp_list = simple_node_iter(self.top.driver.workflow._system.subsystems()[3]._nodes)
         self.assertTrue(len(comp_list) == 2)
         self.assertTrue('comp2' in comp_list)
