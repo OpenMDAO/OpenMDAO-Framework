@@ -18,6 +18,30 @@ except ImportError:
     MPI = None
 
 
+class MPIContext(object):
+    """Supports using the 'with' statement when executing code in
+    multiple MPI processes so that if any of the blocks raise an
+    exception, all processes sharing that communicator will fail.
+    """
+    def __init__(self,):
+        pass
+
+    def __enter__(self):
+        pass
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_val is not None:
+            fail = True
+        else:
+            fail = False
+        
+        fails = MPI.COMM_WORLD.allgather(fail)
+        
+        if fail:
+            return None  # exception will be re-raised for us
+        else:
+            raise RuntimeError("a test failed in another rank")
+
 def mpi_fail_if_any(f):
     """In order to keep MPI tests from hanging when
     a test fails in one process and succeeds in 

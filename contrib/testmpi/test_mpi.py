@@ -143,7 +143,7 @@ class MPITests1(MPITestCase):
 
         top.run()
         
-        top._system.dump()
+        #top._system.dump()
         
         if self.comm.rank == 0:
             self.assertTrue(all(top.C4.a==np.ones(size, float)*11.))

@@ -8,6 +8,7 @@ from openmdao.main.array_helpers import offset_flat_index, \
                                         get_flat_index_start, get_val_and_index, get_shape, \
                                         get_flattened_index, to_slice, to_indices
 from openmdao.main.interfaces import IImplicitComponent
+from openmdao.main.array_helpers import to_indices
 from openmdao.util.typegroups import int_types
 from openmdao.util.graph import base_var
 
@@ -425,6 +426,9 @@ class DataTransfer(object):
         #print "var_idxs", var_idxs
         #print "input_idxs", input_idxs
         var_idxs, input_idxs = merge_idxs(var_idxs, input_idxs)
+        
+        self.var_idxs = to_slice(var_idxs)
+        self.input_idxs = to_slice(input_idxs)
 
         if len(var_idxs) != len(input_idxs):
             raise RuntimeError("ERROR: creating scatter (index size mismatch): (%d != %d) srcs: %s,  dest: %s in %s" %
@@ -437,10 +441,10 @@ class DataTransfer(object):
             input_idx_set = PETSc.IS().createGeneral(input_idxs,
                                                      comm=system.mpi.comm)
 
-            print 'before', var_idx_set.indices
+            #print 'before', var_idx_set.indices
             if system.app_ordering is not None:
                 var_idx_set = system.app_ordering.app2petsc(var_idx_set)
-                print 'after', var_idx_set.indices
+                #print 'after', var_idx_set.indices
 
             try:
                 # note that scatter created here can be reused for other vectors as long
@@ -491,12 +495,32 @@ class DataTransfer(object):
                     for dest in dests:
                         if src != dest:
                             try:
-                                system.scope.set(dest, system.scope.get_attr_w_copy(src))
+                                system.scope.set(dest, 
+                                                 system.scope.get_attr_w_copy(src))
                             except Exception:
-                                system.scope.reraise_exception("cannot set '%s' from '%s'" % (dest, src))
+                                system.scope.reraise_exception("cannot set '%s' from '%s'" % 
+                                                               (dest, src))
                                 
-    def dump(self):
-        pass
+    def dump(self, system, srcvec, destvec, nest=0, stream=sys.stdout):
+        stream.write(" "*nest)
+        stream.write("Scatters: ")
+        if not self.scatter_conns:
+            stream.write("(empty)\n")
+            return
+        stream.write("\n")
+        stream.write(" "*nest)
+        stream.write("scatter vars: %s\n" % sorted(self.scatter_conns)
+               )
+        stream.write(" "*nest)
+        stream.write("%s --> %s\n" % (self.var_idxs, self.input_idxs))
+        if MPI and system.app_ordering:
+            var_idxs = to_indices(self.var_idxs, srcvec.array)
+            var_idx_set = system.app_ordering.app2petsc(var_idxs)
+            stream.write(" "*nest)
+            stream.write("(petsc): %s --> %s\n" % (var_idx_set, self.input_idxs))
+        if self.noflat_vars:
+            stream.write(" "*nest)
+            stream.write("no-flats: %s\n" % self.noflat_vars)
 
 
 class SerialScatter(object):

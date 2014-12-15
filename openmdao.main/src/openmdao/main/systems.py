@@ -638,8 +638,11 @@ class System(object):
         elif isinstance(self, AssemblySystem):
             self._comp._system.dump(nest, stream)
         else:
+            partial_subs = [s for s in self.local_subsystems() if s.scatter_partial]
             for sub in self.local_subsystems():
                 sub.dump(nest, stream)
+                if sub in partial_subs:
+                    sub.scatter_partial.dump(self, self.vec['u'], self.vec['p'], nest+4, stream)
 
         return stream.getvalue() if getval else None
 
@@ -1360,7 +1363,7 @@ class CompoundSystem(System):
                             continue
                         noflat_conns.add(node)
                     else:
-                        print node, src_idxs
+                        #print node, src_idxs
                         src_partial.append(src_idxs)
                         dest_partial.append(dest_idxs)
 
