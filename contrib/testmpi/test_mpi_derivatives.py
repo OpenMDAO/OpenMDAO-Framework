@@ -8,6 +8,7 @@ from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.main.datatypes.api import Float
 from openmdao.main.mpiwrap import mpiprint
 from openmdao.main.test.simpledriver import SimpleDriver
+from openmdao.test.execcomp import ExecCompWithDerivatives
 
 class Paraboloid(Component):
     """ Evaluates the equation f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3 """
@@ -117,8 +118,63 @@ class MPITests(MPITestCase):
         collective_assert_rel_error(self, 
                                     J['_pseudo_0.out0']['comp.y'][0][0], 
                                     21.0, 0.0001)
+        
+    def test_two_to_one_forward(self):
+        
+        top = set_as_top(Assembly())
+        
+        exp1 = ["y = 3.0*x"]
+        exp2 = ["y = -2.0*x"]
+        exp3 = ["y = 5.0*x1 + 4.0*x2"]
+        
+        deriv1 = ["dy_dx = 3.0"]
+        deriv2 = ["dy_dx = -2.0"]
+        deriv3 = ["dy_dx1 = 5.0", "dy_dx2 = 4.0"]
+        
+        top.add('comp1', ExecCompWithDerivatives(exp1, deriv1))
+        top.add('comp2', ExecCompWithDerivatives(exp2, deriv2))
+        top.add('comp3', ExecCompWithDerivatives(exp3, deriv3))
+        top.add('driver', SimpleDriver())
+        
+        top.driver.workflow.add(['comp1', 'comp2'])
+        top.connect('comp1.y', 'comp3.x1')
+        top.connect('comp2.y', 'comp3.x2')
+        top.driver.add_parameter('comp1.x', low=-100, high=100)
+        top.driver.add_parameter('comp2.x', low=-100, high=100)
+        top.driver.add_constraint('comp3.y < 1000')
+        top.run()
 
+        J = top.driver.calc_gradient(mode='forward')
+        print J
 
+    def test_one_to_two_forward(self):
+        
+        top = set_as_top(Assembly())
+        
+        exp1 = ["y1 = 3.0*x", "y2 = 4.0*x"]
+        exp2 = ["y = -2.0*x"]
+        exp3 = ["y = 5.0*x"]
+        
+        deriv1 = ["dy1_dx = 3.0", "dy2_dx = 4.0"]
+        deriv2 = ["dy_dx = -2.0"]
+        deriv3 = ["dy_dx = 5.0"]
+        
+        top.add('comp1', ExecCompWithDerivatives(exp1, deriv1))
+        top.add('comp2', ExecCompWithDerivatives(exp2, deriv2))
+        top.add('comp3', ExecCompWithDerivatives(exp3, deriv3))
+        top.add('driver', SimpleDriver())
+        
+        top.driver.workflow.add(['comp1', 'comp2'])
+        top.connect('comp1.y1', 'comp2.x')
+        top.connect('comp1.y2', 'comp3.x')
+        top.driver.add_parameter('comp1.x', low=-100, high=100)
+        top.driver.add_constraint('comp2.y < 1000')
+        top.driver.add_constraint('comp3.y < 1000')
+        top.run()
+
+        J = top.driver.calc_gradient(mode='forward')
+        print J
+        
 if __name__ == '__main__':
     import unittest
     unittest.main()
