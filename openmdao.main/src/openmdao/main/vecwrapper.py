@@ -3,7 +3,7 @@ from collections import OrderedDict, namedtuple
 import numpy
 from numpy import ndarray
 
-from openmdao.main.mpiwrap import MPI, mpiprint, create_petsc_vec, PETSc
+from openmdao.main.mpiwrap import MPI, create_petsc_vec, PETSc
 from openmdao.main.array_helpers import offset_flat_index, \
                                         get_flat_index_start, get_val_and_index, get_shape, \
                                         get_flattened_index, to_slice, to_indices
@@ -175,13 +175,11 @@ class VecWrapperBase(object):
     def dump(self, verbose=False, stream=sys.stdout):
         for name, info in self._info.items():
             if verbose or not info.hide:
-                mpiprint("%s - %s: (%d,%d) %s" %
+                stream.write("%s - %s: (%d,%d) %s\n" %
                            (self.name, info.view[info.idxs], info.start,
-                            info.start+len(info.view[info.idxs]), name),
-                           stream=stream)
+                            info.start+len(info.view[info.idxs]), name))
         if self.petsc_vec is not None:
-            mpiprint("%s - petsc sizes: %s" % (self.name, self.petsc_vec.sizes),
-                     stream=stream)
+            stream.write("%s - petsc sizes: %s\n" % (self.name, self.petsc_vec.sizes))
 
 
 class VecWrapper(VecWrapperBase):
