@@ -139,7 +139,8 @@ class MPITests(MPITestCase):
         top.driver.add_constraint('comp3.y < 1000')
         top.run()
 
-        J = top.driver.workflow.calc_gradient(mode='forward')
+        J = top.driver.workflow.calc_gradient(mode='forward',
+                                              return_format='dict')
         print J
 
     def test_one_to_two_forward(self):
