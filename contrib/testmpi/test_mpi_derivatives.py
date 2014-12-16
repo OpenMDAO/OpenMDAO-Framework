@@ -166,7 +166,9 @@ class MPITests(MPITestCase):
         top.driver.add_constraint('comp2.y < 1000')
         top.driver.add_constraint('comp3.y < 1000')
         top.run()
-
+        
+        #from openmdao.util.dotgraph import plot_system_tree
+        #plot_system_tree(top.driver._system)
         J = top.driver.workflow.calc_gradient(mode='forward')
         print J
         
