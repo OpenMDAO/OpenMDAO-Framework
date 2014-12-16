@@ -43,6 +43,12 @@ class ABCDArrayComp(Component):
         time.sleep(self.delay)
         self.c = self.a + self.b
         self.d = self.a - self.b
+        
+    def dump(self, comm):
+        print "%d: %s.a = %s" % (comm.rank, self.name, self.a)
+        print "%d: %s.b = %s" % (comm.rank, self.name, self.b)
+        print "%d: %s.c = %s" % (comm.rank, self.name, self.c)
+        print "%d: %s.d = %s" % (comm.rank, self.name, self.d)
 
 class SellarMDF(Assembly):
     """ Optimization of the Sellar problem using MDF
@@ -90,9 +96,10 @@ class MPITests1(MPITestCase):
 
         top.run()
 
-        for name, expval in expected.items():
-            val = top.get(name)
-            collective_assert_rel_error(self, val, expval, 0.001)
+        if self.comm.rank == 0:
+            for name, expval in expected.items():
+                val = top.get(name)
+                assert_rel_error(self, val, expval, 0.001)
 
     def test_sellar_params2(self):
         top = set_as_top(SellarMDF())
@@ -106,10 +113,34 @@ class MPITests1(MPITestCase):
 
         top.run()
 
-        for name, expval in expected.items():
-            val = top.get(name)
-            collective_assert_rel_error(self, val, expval, 0.001)
+        if self.comm.rank == 0:
+            for name, expval in expected.items():
+                val = top.get(name)
+                assert_rel_error(self, val, expval, 0.001)
 
+    def test_simple_opaque(self):
+        size = 5
+
+        # 2 parallel comps feeding another comp
+        top = set_as_top(Assembly())
+        top.add('driver', SimpleDriver())
+        top.add("C1", ABCDArrayComp(size))
+        top.add("C2", ABCDArrayComp(size))
+        top.driver.workflow.add(['C1', 'C2'])
+        top.connect('C1.c', 'C2.a')
+
+        top.C1.a = np.ones(size, float) * 3.0
+        top.C1.b = np.ones(size, float) * 7.0
+        top.C2.b = np.ones(size, float) * 5.0
+
+        top.run()
+
+        if self.comm.rank == 0:
+            self.assertTrue(all(top.C2.a==np.ones(size, float)*10.))
+            self.assertTrue(all(top.C2.b==np.ones(size, float)*5.))
+            self.assertTrue(all(top.C2.c==np.ones(size, float)*15.))
+            self.assertTrue(all(top.C2.d==np.ones(size, float)*5.))
+        
     def test_fan_in(self):
         size = 5
 
@@ -135,6 +166,44 @@ class MPITests1(MPITestCase):
         self.collective_assertTrue(all(top.C3.d==np.ones(size, float)*11.))
 
     def test_fan_in_simpledriver(self):
+        size = 5
+
+        # 2 parallel comps feeding another comp
+        top = set_as_top(Assembly())
+        top.add('driver', SimpleDriver())
+        
+        top.add("C1", ABCDArrayComp(size))
+        top.add("C2", ABCDArrayComp(size))
+        top.add("C3", ABCDArrayComp(size))
+        top.driver.workflow.add(['C1', 'C2', 'C3'])
+        top.connect('C1.c', 'C3.a')
+        top.connect('C2.d', 'C3.b')
+
+        top.C1.a = np.ones(size, float) * 3.0
+        top.C1.b = np.ones(size, float) * 7.0
+        top.C2.a = np.ones(size, float) * 4.0
+        top.C2.b = np.ones(size, float) * 5.0
+
+        top.driver.add_parameter('C1.a', low=-1000, high=1000)
+        top.driver.add_parameter('C2.a', low=-1000, high=1000)
+        top.driver.add_objective('C3.d')
+
+        top.run()
+
+        # if self.comm.rank == 0:
+        #     from openmdao.util.dotgraph import plot_system_tree
+        #     plot_system_tree(top._system)
+            
+        # top.C1.dump(self.comm)
+        # top.C2.dump(self.comm)
+
+        if self.comm.rank == 0:
+            self.assertTrue(all(top.C3.a==np.ones(size, float)*10.))
+            self.assertTrue(all(top.C3.b==np.ones(size, float)*-1.))
+            self.assertTrue(all(top.C3.c==np.ones(size, float)*9.))
+            self.assertTrue(all(top.C3.d==np.ones(size, float)*11.))
+    
+    def test_fan_in_simpledriver_noderiv(self):
         size = 5
 
         # 2 parallel comps feeding another comp
@@ -219,9 +288,6 @@ class MPITests1(MPITestCase):
 
         top.run()
         
-        from openmdao.util.dotgraph import plot_system_tree
-        plot_system_tree(top._system)
-        
         self.collective_assertTrue(all(top.C4.a==np.ones(size, float)*11.))
         self.collective_assertTrue(all(top.C4.b==np.ones(size, float)*5.))
 
@@ -284,7 +350,7 @@ class MPITests2(MPITestCase):
 
         top.run()
         
-        top._system.dump()
+        #top._system.dump()
 
         if self.comm.rank == 0:
             #from openmdao.util.dotgraph import plot_graph, plot_system_tree
@@ -308,7 +374,7 @@ class TestCaseSerial(TestCase):
 
         top.run()
         
-        top._system.dump()
+        #top._system.dump()
 
         #from openmdao.util.dotgraph import plot_graph, plot_system_tree
         #plot_graph(top.driver.workflow._reduced_graph, 'rgraph.pdf')
