@@ -190,10 +190,12 @@ class MPITests1(MPITestCase):
 
         top.run()
 
-        self.collective_assertTrue(all(top.C3.a==np.ones(size, float)*10.))
-        self.collective_assertTrue(all(top.C3.b==np.ones(size, float)*-1.))
-        self.collective_assertTrue(all(top.C3.c==np.ones(size, float)*9.))
-        self.collective_assertTrue(all(top.C3.d==np.ones(size, float)*11.))
+        print top.C3.a
+        
+        self.collective_assertTrue(all(top.C3.a==np.ones(size, float)*6.))
+        self.collective_assertTrue(all(top.C3.b==np.ones(size, float)*4.))
+        self.collective_assertTrue(all(top.C3.c==np.ones(size, float)*10.))
+        self.collective_assertTrue(all(top.C3.d==np.ones(size, float)*2.))
 
 
     def test_fan_out_in(self):
