@@ -80,11 +80,14 @@ class FixedPointIterator(Driver):
         uvec = system.vec['u']
         fvec = system.vec['f']
 
+        mpiprint('old u', uvec.array)
+        mpiprint('f', fvec.array)
         cycle_vars = self.workflow._cycle_vars
         for name in uvec.keys():
             if name not in cycle_vars:
                 uvec[name] -= fvec[name]
 
+        mpiprint('new u', uvec.array)
         self.workflow.run()
 
     def continue_iteration(self):
@@ -97,7 +100,7 @@ class FixedPointIterator(Driver):
     def post_iteration(self):
         """Runs after each iteration"""
         self.normval = self.norm()
-        #mpiprint("iter %d, norm = %s" % (self.current_iteration, self.normval))
+        mpiprint("iter %d, norm = %s" % (self.current_iteration, self.normval))
 
     def _mpi_norm(self):
         """ Compute the norm of the f Vec using petsc. """

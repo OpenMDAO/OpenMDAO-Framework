@@ -1511,7 +1511,11 @@ class SerialSystem(CompoundSystem):
             self._stop = False
 
             for sub in self.local_subsystems():
+                mpiprint('scatter time', sub.name)
+                mpiprint(sub.vec['u'].keys(), sub.vec['p'].keys())
+                mpiprint('Before', sub.vec['u'].array, sub.vec['p'].array)
                 self.scatter('u', 'p', sub)
+                mpiprint('After', sub.vec['u'].array, sub.vec['p'].array)
 
                 sub.run(iterbase, case_label=case_label, case_uuid=case_uuid)
                 if self._stop:
@@ -1561,7 +1565,11 @@ class ParallelSystem(CompoundSystem):
         if not self.local_subsystems() or not self.is_active():
             return
 
+        #mpiprint('scatter time')
+        #mpiprint(self.vec['u'].keys(), self.vec['p'].keys())
+        #mpiprint('Before', self.vec['u'].array, self.vec['p'].array)
         self.scatter('u', 'p')
+        #mpiprint('After', self.vec['u'].array, self.vec['p'].array)
 
         for sub in self.local_subsystems():
             sub.run(iterbase, case_label=case_label, case_uuid=case_uuid)
