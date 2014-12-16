@@ -18,7 +18,7 @@ import networkx as nx
 from networkx.algorithms.components import strongly_connected_components
 from networkx.algorithms.dag import is_directed_acyclic_graph
 
-from openmdao.main.mpiwrap import MPI, mpiprint
+from openmdao.main.mpiwrap import MPI
 
 from openmdao.main.exceptions import NoFlatError
 from openmdao.main.interfaces import implements, IAssembly, IDriver, \
@@ -1464,22 +1464,16 @@ class Assembly(Component):
 
         self._var_meta = {}
 
-        try:
-            self.pre_setup()
-            self.setup_depgraph()
-            self.setup_reduced_graph(inputs=inputs, outputs=outputs)
-            self.setup_systems()
-            self.setup_communicators(comm)
-            self.setup_variables()
-            self.setup_sizes()
-            self.setup_vectors()
-            self.setup_scatters()
-        except Exception:
-            if MPI:
-                mpiprint(traceback.format_exc())
-            raise
-        else:
-            self.post_setup()
+        self.pre_setup()
+        self.setup_depgraph()
+        self.setup_reduced_graph(inputs=inputs, outputs=outputs)
+        self.setup_systems()
+        self.setup_communicators(comm)
+        self.setup_variables()
+        self.setup_sizes()
+        self.setup_vectors()
+        self.setup_scatters()
+        self.post_setup()
 
 
 def dump_iteration_tree(obj, f=sys.stdout, full=True, tabsize=4, derivs=False):

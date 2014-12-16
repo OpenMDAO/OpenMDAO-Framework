@@ -1921,7 +1921,6 @@ def get_nondiff_groups(graph, cgraph, scope):
             flattened_size(var[0], scope.get(var[0]), scope=scope)
         except NoFlatError:
             nondiff.add(comp)
-            #print "Non-differentiable connection: ", src, target
 
     # TODO: add pseudocomps to nondiff groups if they're
     # connected to nondiff systems on both sides

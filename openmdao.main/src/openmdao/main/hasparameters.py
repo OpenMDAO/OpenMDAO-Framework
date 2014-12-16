@@ -13,7 +13,7 @@ from openmdao.util.typegroups import real_types, int_types
 from openmdao.util.graph import fix_single_tuple
 
 from numpy import array, ndarray, ndindex, ones
-from openmdao.main.mpiwrap import mpiprint, MPI
+from openmdao.main.mpiwrap import MPI
 
 __missing = object()
 

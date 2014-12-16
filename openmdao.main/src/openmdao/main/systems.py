@@ -8,7 +8,7 @@ import networkx as nx
 from zope.interface import implements
 
 # pylint: disable-msg=E0611,F0401
-from openmdao.main.mpiwrap import MPI, MPI_info, mpiprint, PETSc
+from openmdao.main.mpiwrap import MPI, MPI_info, PETSc
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.finite_difference import FiniteDifference, DirectionalFD
 from openmdao.main.linearsolver import ScipyGMRES, PETSc_KSP, LinearGS
@@ -830,7 +830,6 @@ class System(object):
             if self.app_ordering is not None:
                 ind_set = self.app_ordering.app2petsc(ind_set)
             ind = ind_set.indices[0]
-            #mpiprint("setting 1.0 into index %d for %s" % (ind, str(vname)))
             self.rhs_vec.petsc_vec.setValue(ind, 1.0, addv=False)
         else:
             # creating an IS is a collective call, so must do it
@@ -844,7 +843,7 @@ class System(object):
 
         self.sol_vec.array[:] = self.sol_buf[:]
 
-        #mpiprint('dx', self.sol_vec.array)
+        #print 'dx', self.sol_vec.array
         return self.sol_vec
 
 
@@ -1670,6 +1669,11 @@ class ParallelSystem(CompoundSystem):
             return lsys[0].simple_subsystems()
         else:
             return []
+
+    def set_ordering(self, ordering, opaque_map):
+        """Return the execution order of our subsystems."""
+        for s in self.all_subsystems():
+            s.set_ordering(ordering, opaque_map)
 
 
 class OpaqueSystem(SimpleSystem):
