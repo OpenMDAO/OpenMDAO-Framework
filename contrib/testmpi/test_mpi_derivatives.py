@@ -169,9 +169,17 @@ class MPITests(MPITestCase):
         
         #from openmdao.util.dotgraph import plot_system_tree
         #plot_system_tree(top.driver._system)
-        J = top.driver.workflow.calc_gradient(mode='forward')
-        print J
+        J = top.driver.workflow.calc_gradient(mode='forward',
+                                              return_format='dict')
         
+        J = top.driver.workflow._system.get_combined_J(J)
+        
+        collective_assert_rel_error(self, 
+                                    J['_pseudo_0.out0']['comp1.x'][0][0], 
+                                    -6.0, 0.0001)
+        collective_assert_rel_error(self,
+                                    J['_pseudo_1.out0']['comp1.x'][0][0], 
+                                    20.0, 0.0001)        
 if __name__ == '__main__':
     import unittest
     unittest.main()

@@ -273,12 +273,13 @@ class PETSc_KSP(LinearSolver):
                                 del J[param][out]
 
                     else:
-                        nk = len(solvec[out])
-                        if system.mode == 'forward':
-                            J[i:i+nk, j] = solvec[out]
-                        else:
-                            J[j, i:i+nk] = solvec[out]
-                        i += nk
+                        if out in solvec:
+                            nk = len(solvec[out])
+                            if system.mode == 'forward':
+                                J[i:i+nk, j] = solvec[out]
+                            else:
+                                J[j, i:i+nk] = solvec[out]
+                            i += nk
                 j += 1
 
         return J

@@ -769,7 +769,6 @@ class System(object):
         self.vec['du'].array[:] = 0.0
         self.clear_dp()
 
-        self.sol_vec.dump()
         J = self.ln_solver.calc_gradient(inputs, outputs, return_format)
         self.sol_vec.array[:] = 0.0
         return J
