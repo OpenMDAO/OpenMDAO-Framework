@@ -1509,6 +1509,7 @@ class SerialSystem(CompoundSystem):
     def run(self, iterbase, case_label='', case_uuid=None):
         if self.is_active():
             self._stop = False
+            mpiprint('serial sys', self.name, self.vec['u'].array, self.vec['p'].array)
 
             for sub in self.local_subsystems():
                 mpiprint('scatter time', sub.name)
