@@ -544,7 +544,6 @@ class Driver(Component):
     @rbac(('owner', 'user'))
     def get_req_cpus(self):
         """Return requested_cpus."""
-        #mpiprint("driver %s reports %s cpus" % (self.name,self.workflow.get_req_cpus()))
         return self.workflow.get_req_cpus()
 
     def setup_communicators(self, comm):

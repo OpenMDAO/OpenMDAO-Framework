@@ -9,7 +9,7 @@ import traceback
 from inspect import getmro
 
 from unittest import TestCase, SkipTest
-from openmdao.main.mpiwrap import mpiprint, _under_mpirun
+from openmdao.main.mpiwrap import under_mpirun
 from openmdao.util.testutil import assert_rel_error
 
 try:
@@ -29,6 +29,7 @@ class MPIContext(object):
     def __exit__(self, exc_type, exc_val, exc_tb):
         if exc_val is not None:
             fail = True
+            traceback.print_exception(exc_type, exc_val, exc_tb)
         else:
             fail = False
         
@@ -37,7 +38,9 @@ class MPIContext(object):
         if fail or not any(fails):
             return False  # exception will be re-raised for us
         else:
-            raise RuntimeError("a test failed in another rank")
+            for i,f in enumerate(fails):
+                if f:
+                    raise RuntimeError("a test failed in (at least) rank %d" % i)
 
 def mpi_fail_if_any(f):
     """In order to keep MPI tests from hanging when
@@ -69,7 +72,7 @@ def mpi_fail_if_any(f):
 collective_assert_rel_error = mpi_fail_if_any(assert_rel_error)
 
 def wrapper(f):
-    if _under_mpirun():
+    if under_mpirun():
         return f
         
     else:
@@ -132,6 +135,7 @@ class MPITestCase(TestCase):
             'skipped': [],
         }
         self.infos = []
+        junk = 0
 
         if result is None:
             result = self.defaultTestResult()
@@ -141,7 +145,7 @@ class MPITestCase(TestCase):
 
         try:
             exc_info = None
-            if _under_mpirun():
+            if under_mpirun():
                 self.comm = MPI.Comm.Get_parent()
 
                 try:
@@ -156,6 +160,8 @@ class MPITestCase(TestCase):
                 # send results back to the mothership
                 self.comm.gather(info, root=0)
                 
+                self.comm.gather(junk, root=0)
+
                 if exc_info is not None:
                     raise exc_info[0], exc_info[1], exc_info[2]
                     
@@ -177,14 +183,17 @@ class MPITestCase(TestCase):
                 except Exception:
                     exc_info = sys.exc_info()
 
+                self.junks = self.comm.gather(junk, root=MPI.ROOT)
+                
                 if exc_info is not None:
                     raise exc_info[0], exc_info[1], exc_info[2]
+                
         finally:
             self.comm.Disconnect()
 
 
 if __name__ == '__main__':
-    if _under_mpirun():
+    if under_mpirun():
         args = sys.argv[1:]
         testpath = args[0]
 
@@ -215,7 +224,7 @@ if __name__ == '__main__':
 
         except Exception:
             exc_info = sys.exc_info()
-            if _under_mpirun():
+            if under_mpirun():
                 MPI.Comm.Get_parent().Disconnect()
             raise exc_info[0], exc_info[1], exc_info[2]
 
@@ -226,6 +235,6 @@ if __name__ == '__main__':
             tcase.run(result)
         except Exception:
             exc_info = sys.exc_info()
-            if _under_mpirun():
+            if under_mpirun():
                 MPI.Comm.Get_parent().Disconnect()
             raise exc_info[0], exc_info[1], exc_info[2]
