@@ -136,7 +136,7 @@ class MPITests(MPITestCase):
         top.add('comp3', ExecCompWithDerivatives(exp3, deriv3))
         top.add('driver', SimpleDriver())
         
-        top.driver.workflow.add(['comp1', 'comp2'])
+        top.driver.workflow.add(['comp1', 'comp2', 'comp3'])
         top.connect('comp1.y', 'comp3.x1')
         top.connect('comp2.y', 'comp3.x2')
         top.driver.add_parameter('comp1.x', low=-100, high=100)
@@ -144,7 +144,7 @@ class MPITests(MPITestCase):
         top.driver.add_constraint('comp3.y < 1000')
         top.run()
 
-        J = top.driver.calc_gradient(mode='forward')
+        J = top.driver.workflow.calc_gradient(mode='forward')
         print J
 
     def test_one_to_two_forward(self):
@@ -164,7 +164,7 @@ class MPITests(MPITestCase):
         top.add('comp3', ExecCompWithDerivatives(exp3, deriv3))
         top.add('driver', SimpleDriver())
         
-        top.driver.workflow.add(['comp1', 'comp2'])
+        top.driver.workflow.add(['comp1', 'comp2', 'comp3'])
         top.connect('comp1.y1', 'comp2.x')
         top.connect('comp1.y2', 'comp3.x')
         top.driver.add_parameter('comp1.x', low=-100, high=100)
@@ -172,7 +172,7 @@ class MPITests(MPITestCase):
         top.driver.add_constraint('comp3.y < 1000')
         top.run()
 
-        J = top.driver.calc_gradient(mode='forward')
+        J = top.driver.workflow.calc_gradient(mode='forward')
         print J
         
 if __name__ == '__main__':
