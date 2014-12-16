@@ -1780,11 +1780,12 @@ class OpaqueSystem(SimpleSystem):
         # internal system will create new vectors
         self._inner_system.setup_vectors(None)
 
-        # Preload all inputs and outputs along to our inner system.
-        # This was needed for the case where you regenerate the system
-        # hierarchy on the first calc_gradient call.
-        inner_u = self._inner_system.vec['u']
-        inner_u.set_from_scope(self.scope)
+        if self._inner_system.is_active():
+            # Preload all inputs and outputs along to our inner system.
+            # This was needed for the case where you regenerate the system
+            # hierarchy on the first calc_gradient call.
+            inner_u = self._inner_system.vec['u']
+            inner_u.set_from_scope(self.scope)
 
     def setup_scatters(self):
         self._inner_system.setup_scatters()
@@ -1800,6 +1801,9 @@ class OpaqueSystem(SimpleSystem):
         self._inner_system.pre_run()
 
     def run(self, iterbase, case_label='', case_uuid=None):
+        if not self.is_active() or not self._inner_system.is_active():
+            return
+            
         self_u = self.vec['u']
         self_du = self.vec['du']
         inner_u = self._inner_system.vec['u']
