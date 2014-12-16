@@ -437,9 +437,6 @@ class DataTransfer(object):
         if not (MPI or scatter_conns or noflat_vars):
             return  # no data to xfer
 
-        #print "scatter_conns", scatter_conns
-        #print "var_idxs", var_idxs
-        #print "input_idxs", input_idxs
         var_idxs, input_idxs = merge_idxs(var_idxs, input_idxs)
         
         self.var_idxs = to_slice(var_idxs)
@@ -456,10 +453,8 @@ class DataTransfer(object):
             input_idx_set = PETSc.IS().createGeneral(input_idxs,
                                                      comm=system.mpi.comm)
 
-            #print 'before', var_idx_set.indices
             if system.app_ordering is not None:
                 var_idx_set = system.app_ordering.app2petsc(var_idx_set)
-                #print 'after', var_idx_set.indices
 
             try:
                 # note that scatter created here can be reused for other vectors as long
@@ -478,7 +473,6 @@ class DataTransfer(object):
     def __call__(self, system, srcvec, destvec, complex_step=False):
 
         if self.scatter is None and not self.noflat_vars:
-            #mpiprint("dataxfer is a noop for system %s" % system.name)
             return
 
         if MPI:
