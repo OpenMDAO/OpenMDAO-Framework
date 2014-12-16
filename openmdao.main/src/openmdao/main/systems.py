@@ -63,6 +63,7 @@ class System(object):
         # get our input nodes from the depgraph
         ins, _ = get_node_boundary(graph, all_outs)
 
+        #print "%s: ins = %s" % (self.name, ins)
         self._in_nodes = []
         for i in ins:
             if 'comp' not in graph.node[i]:
@@ -94,6 +95,11 @@ class System(object):
         self.rhs_buf = None
         self._parent_system = None
         self.complex_step = False
+        
+        #print "%s: nodes: %s" % (self.name, nodes)
+        #print "%s: edges: %s" % (self.name, graph.edges())
+        #print "%s: in_nodes: %s" % (self.name, self._in_nodes)
+        #print "%s: out_nodes: %s" % (self.name, self._out_nodes)
 
     def __getitem__(self, key):
         """A convenience method to allow easy access to descendant
@@ -397,6 +403,7 @@ class System(object):
             self.variables.update(sub.variables)
 
         self._create_var_dicts(resid_state_map)
+        #print "%s: my vars = %s" % (self.name, [(n,self.variables[n]['size']) for n in self.variables])
 
     def _create_var_dicts(self, resid_state_map):
         # now figure out all of the inputs we 'own'
@@ -1089,6 +1096,7 @@ class ParamSystem(VarSystem):
             del self.flat_vars[to_remove[0]]
         else:
             self._dup_in_subdriver = False
+        #print "%s: my vars = %s" % (self.name, [(n,self.variables[n]['size']) for n in self.variables])
 
     def applyJ(self, variables):
         """ Set to zero """
@@ -1264,7 +1272,7 @@ class CompoundSystem(System):
 
     def __init__(self, scope, graph, subg, name=None):
         super(CompoundSystem, self).__init__(scope, graph,
-                                             subg.nodes(), name)
+                                             simple_node_iter(subg.nodes()), name)
         self.driver = None
         self.graph = subg
         self._local_subsystems = []  # subsystems in the same process
@@ -1331,7 +1339,6 @@ class CompoundSystem(System):
 
         return (None, None, None)
 
-
     def setup_scatters(self):
         """ Defines scatters for args at this system's level """
         if not self.is_active():
@@ -1363,6 +1370,7 @@ class CompoundSystem(System):
             scatter_conns = set()
             noflat_conns = set()  # non-flattenable vars
             for sub in subsystem.simple_subsystems():
+                print "%s: _in_nodes: %s" % (sub.name, sub._in_nodes)
                 for node in self.variables:
                     if node not in sub._in_nodes or node in scatter_conns:
                         continue
@@ -1662,6 +1670,8 @@ class ParallelSystem(CompoundSystem):
                 self.variables[name] = var
 
         self._create_var_dicts(resid_state_map)
+        
+        #print "%s: my vars = %s" % (self.name, [(n,self.variables[n]['size']) for n in self.variables])
 
     def simple_subsystems(self):
         lsys = self.local_subsystems()
