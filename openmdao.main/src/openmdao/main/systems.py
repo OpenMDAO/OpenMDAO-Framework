@@ -188,7 +188,9 @@ class System(object):
             for output, value in dct.items():
                 tups.append((param, output))
 
+        print "tups", tups
         dist_tups = comm.gather(tups, root=0)
+        print "dist_tups", dist_tups
 
         tupdict = {}
         if myrank == 0:
@@ -202,15 +204,19 @@ class System(object):
                 if rank == 0:
                     del tupdict[tup]
 
+        print 'tupdict 1', tupdict
         tupdict = comm.bcast(tupdict, root=0)
 
+        print 'tupdict 2', tupdict
         if myrank == 0:
             for (param, output), rank in tupdict.items():
                 J[param][output] = comm.recv(source=rank, tag=0)
+                print rank, param, output, J[param][output]
         else:
             for (param, output), rank in tupdict.items():
                 if rank == myrank:
                     comm.send(J[param][output], dest=0, tag=0)
+                    print rank, param, output, J[param][output]
 
 
         # FIXME: rework some of this using knowledge of local_var_sizes in order
