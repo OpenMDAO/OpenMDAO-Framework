@@ -8,7 +8,7 @@ import networkx as nx
 from zope.interface import implements
 
 # pylint: disable-msg=E0611,F0401
-from openmdao.main.mpiwrap import MPI, MPI_info, mpiprint, PETSc
+from openmdao.main.mpiwrap import MPI, MPI_info, PETSc
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.finite_difference import FiniteDifference, DirectionalFD
 from openmdao.main.linearsolver import ScipyGMRES, PETSc_KSP, LinearGS
@@ -63,6 +63,7 @@ class System(object):
         # get our input nodes from the depgraph
         ins, _ = get_node_boundary(graph, all_outs)
 
+        #print "%s: ins = %s" % (self.name, ins)
         self._in_nodes = []
         for i in ins:
             if 'comp' not in graph.node[i]:
@@ -94,6 +95,11 @@ class System(object):
         self.rhs_buf = None
         self._parent_system = None
         self.complex_step = False
+        
+        #print "%s: nodes: %s" % (self.name, nodes)
+        #print "%s: edges: %s" % (self.name, graph.edges())
+        #print "%s: in_nodes: %s" % (self.name, self._in_nodes)
+        #print "%s: out_nodes: %s" % (self.name, self._out_nodes)
 
     def __getitem__(self, key):
         """A convenience method to allow easy access to descendant
@@ -396,6 +402,7 @@ class System(object):
             self.variables.update(sub.variables)
 
         self._create_var_dicts(resid_state_map)
+        #print "%s: my vars = %s" % (self.name, [(n,self.variables[n]['size']) for n in self.variables])
 
     def _create_var_dicts(self, resid_state_map):
         # now figure out all of the inputs we 'own'
@@ -828,7 +835,6 @@ class System(object):
             if self.app_ordering is not None:
                 ind_set = self.app_ordering.app2petsc(ind_set)
             ind = ind_set.indices[0]
-            #mpiprint("setting 1.0 into index %d for %s" % (ind, str(vname)))
             self.rhs_vec.petsc_vec.setValue(ind, 1.0, addv=False)
         else:
             # creating an IS is a collective call, so must do it
@@ -842,7 +848,7 @@ class System(object):
 
         self.sol_vec.array[:] = self.sol_buf[:]
 
-        #mpiprint('dx', self.sol_vec.array)
+        #print 'dx', self.sol_vec.array
         return self.sol_vec
 
 
@@ -1087,6 +1093,7 @@ class ParamSystem(VarSystem):
             del self.flat_vars[to_remove[0]]
         else:
             self._dup_in_subdriver = False
+        #print "%s: my vars = %s" % (self.name, [(n,self.variables[n]['size']) for n in self.variables])
 
     def applyJ(self, variables):
         """ Set to zero """
@@ -1262,7 +1269,7 @@ class CompoundSystem(System):
 
     def __init__(self, scope, graph, subg, name=None):
         super(CompoundSystem, self).__init__(scope, graph,
-                                             subg.nodes(), name)
+                                             simple_node_iter(subg.nodes()), name)
         self.driver = None
         self.graph = subg
         self._local_subsystems = []  # subsystems in the same process
@@ -1360,6 +1367,7 @@ class CompoundSystem(System):
             scatter_conns = set()
             noflat_conns = set()  # non-flattenable vars
             for sub in subsystem.simple_subsystems():
+                print "%s: _in_nodes: %s" % (sub.name, sub._in_nodes)
                 for node in self.variables:
                     if node not in sub._in_nodes or node in scatter_conns:
                         continue
@@ -1659,6 +1667,8 @@ class ParallelSystem(CompoundSystem):
                 self.variables[name] = var
 
         self._create_var_dicts(resid_state_map)
+        
+        #print "%s: my vars = %s" % (self.name, [(n,self.variables[n]['size']) for n in self.variables])
 
     def simple_subsystems(self):
         lsys = self.local_subsystems()
@@ -1666,6 +1676,11 @@ class ParallelSystem(CompoundSystem):
             return lsys[0].simple_subsystems()
         else:
             return []
+
+    def set_ordering(self, ordering, opaque_map):
+        """Return the execution order of our subsystems."""
+        for s in self.all_subsystems():
+            s.set_ordering(ordering, opaque_map)
 
 
 class OpaqueSystem(SimpleSystem):
@@ -1762,11 +1777,12 @@ class OpaqueSystem(SimpleSystem):
         # internal system will create new vectors
         self._inner_system.setup_vectors(None)
 
-        # Preload all inputs and outputs along to our inner system.
-        # This was needed for the case where you regenerate the system
-        # hierarchy on the first calc_gradient call.
-        inner_u = self._inner_system.vec['u']
-        inner_u.set_from_scope(self.scope)
+        if self._inner_system.is_active():
+            # Preload all inputs and outputs along to our inner system.
+            # This was needed for the case where you regenerate the system
+            # hierarchy on the first calc_gradient call.
+            inner_u = self._inner_system.vec['u']
+            inner_u.set_from_scope(self.scope)
 
     def setup_scatters(self):
         self._inner_system.setup_scatters()
@@ -1782,6 +1798,9 @@ class OpaqueSystem(SimpleSystem):
         self._inner_system.pre_run()
 
     def run(self, iterbase, case_label='', case_uuid=None):
+        if not self.is_active() or not self._inner_system.is_active():
+            return
+            
         self_u = self.vec['u']
         self_du = self.vec['du']
         inner_u = self._inner_system.vec['u']

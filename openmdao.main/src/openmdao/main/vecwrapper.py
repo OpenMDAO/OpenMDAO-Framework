@@ -3,7 +3,7 @@ from collections import OrderedDict, namedtuple
 import numpy
 from numpy import ndarray
 
-from openmdao.main.mpiwrap import MPI, mpiprint, create_petsc_vec, PETSc
+from openmdao.main.mpiwrap import MPI, create_petsc_vec, PETSc
 from openmdao.main.array_helpers import offset_flat_index, \
                                         get_flat_index_start, get_val_and_index, get_shape, \
                                         get_flattened_index, to_slice, to_indices
@@ -178,13 +178,11 @@ class VecWrapperBase(object):
     def dump(self, verbose=False, stream=sys.stdout):
         for name, info in self._info.items():
             if verbose or not info.hide:
-                mpiprint("%s - %s: (%d,%d) %s" %
+                stream.write("%s - %s: (%d,%d) %s\n" %
                            (self.name, info.view[info.idxs], info.start,
-                            info.start+len(info.view[info.idxs]), name),
-                           stream=stream)
+                            info.start+len(info.view[info.idxs]), name))
         if self.petsc_vec is not None:
-            mpiprint("%s - petsc sizes: %s" % (self.name, self.petsc_vec.sizes),
-                     stream=stream)
+            stream.write("%s - petsc sizes: %s\n" % (self.name, self.petsc_vec.sizes))
 
 
 class VecWrapper(VecWrapperBase):
@@ -338,7 +336,9 @@ class InputVecWrapper(VecWrapperBase):
         start, end = 0, 0
         arg_idx = system.arg_idx
 
+        #print "%s: %s: %s" % (system.name, type(system), flat_ins)
         for sub in system.simple_subsystems():
+            #print "SUB %s: %s  _in_nodes = %s" % (sub.name, type(sub),sub._in_nodes)
             for name in [n for n in system.vector_vars if n in sub._in_nodes]:
                 if name in flat_ins and name not in self._info:
                     sz = len(arg_idx[name])
@@ -459,10 +459,8 @@ class DataTransfer(object):
             input_idx_set = PETSc.IS().createGeneral(input_idxs,
                                                      comm=system.mpi.comm)
 
-            #print 'before', var_idx_set.indices
             if system.app_ordering is not None:
                 var_idx_set = system.app_ordering.app2petsc(var_idx_set)
-                #print 'after', var_idx_set.indices
 
             try:
                 # note that scatter created here can be reused for other vectors as long
@@ -481,7 +479,6 @@ class DataTransfer(object):
     def __call__(self, system, srcvec, destvec, complex_step=False):
 
         if self.scatter is None and not self.noflat_vars:
-            #mpiprint("dataxfer is a noop for system %s" % system.name)
             return
 
         if MPI:

@@ -16,7 +16,7 @@ from openmdao.main.mp_support import has_interface
 from openmdao.main.case import Case
 from openmdao.main.mpiwrap import MPI, MPI_info
 from openmdao.main.systems import SerialSystem, ParallelSystem, \
-                                  OpaqueSystem, VarSystem, \
+                                  OpaqueSystem, VarSystem, CompoundSystem, \
                                   partition_subsystems, ParamSystem, \
                                   get_comm_if_active, collapse_to_system_node
 from openmdao.main.depgraph import _get_inner_connections, get_nondiff_groups, \
@@ -946,6 +946,9 @@ def get_cycle_vars(system):
     # examine the graph to see if we have any cycles that we need to
     # deal with
     cycle_vars = []
+    if not isinstance(system, CompoundSystem):
+        return cycle_vars
+        
     graph = system.graph
     varmeta = system.scope._var_meta
 
