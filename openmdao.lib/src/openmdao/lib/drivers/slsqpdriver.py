@@ -185,7 +185,6 @@ class SLSQPdriver(Driver):
         if self.iprint > 0:
             pyflush(self.iout)
 
-        print 'function', xnew, f, g
         return f, g
 
     def _grad(self, m, me, la, n, f, g, df, dg, xnew):
@@ -201,7 +200,6 @@ class SLSQPdriver(Driver):
         if self.ncon > 0:
             dg[0:self.ncon, 0:self.nparam] = -J[1:1+self.ncon, :]
 
-        print 'deriv', df, dg
         return df, dg
 
     def requires_derivs(self):
