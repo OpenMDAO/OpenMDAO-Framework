@@ -20,7 +20,7 @@ from argparse import ArgumentParser, RawDescriptionHelpFormatter
 from subprocess import call, check_call, STDOUT
 import fnmatch
 
-from ordereddict import OrderedDict
+from collections import OrderedDict
 
 from setuptools import find_packages
 from pkg_resources import WorkingSet, Requirement, resource_stream
@@ -1118,7 +1118,7 @@ def _get_plugin_parser():
     parser.epilog = "example: get the plugin pyopt_driver from github \n" \
                     ">plugin install pyopt_driver --github\n\n" \
                     "example: install all OpenMDAO-compatible plugins from GithubMember's repo.\n" \
-                    ">plugin install --github GithubMember --all" 
+                    ">plugin install --github GithubMember --all"
 
     #can't do a single component and --all in same command, make them m.e.
     group = parser.add_mutually_exclusive_group()

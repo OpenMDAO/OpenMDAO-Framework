@@ -51,7 +51,7 @@ Component, Driver, Variable and other plugins for OpenMDAO
           'Pyevolve==0.6',
           'pytz>=2011',  # To avoid problems with 2010o vs. 2010b in bson req.
           'bson',
-          'ordereddict',
+          'collections',
           'conmin==1.0.1',
           'newsumt==1.1.0',
           'cobyla==1.0.1',

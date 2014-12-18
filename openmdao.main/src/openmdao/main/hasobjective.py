@@ -1,5 +1,5 @@
 
-import ordereddict
+from collections import OrderedDict
 import weakref
 
 from openmdao.main.expreval import ConnectedExprEvaluator
@@ -45,7 +45,7 @@ class HasObjectives(object):
                        'get_referenced_varpaths']
 
     def __init__(self, parent, max_objectives=0):
-        self._objectives = ordereddict.OrderedDict()
+        self._objectives = OrderedDict()
         # max_objectives of 0 means unlimited objectives
         self._max_objectives = max_objectives
         self._parent = None if parent is None else weakref.ref(parent)
@@ -152,7 +152,7 @@ class HasObjectives(object):
         name: string
             Name of component being removed.
         """
-        refs = ordereddict.OrderedDict()
+        refs = OrderedDict()
         for oname, obj in self._objectives.items():
             if name in obj.get_referenced_compnames():
                 refs[oname] = obj
@@ -283,4 +283,3 @@ class HasObjective(HasObjectives):
             return super(HasObjective, self).eval_objectives()[0]
         else:
             self.parent.raise_exception("no objective specified", Exception)
-
