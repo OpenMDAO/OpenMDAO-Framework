@@ -8,7 +8,6 @@ from openmdao.main.array_helpers import offset_flat_index, \
                                         get_flat_index_start, get_val_and_index, get_shape, \
                                         get_flattened_index, to_slice, to_indices
 from openmdao.main.interfaces import IImplicitComponent
-from openmdao.main.array_helpers import to_indices
 from openmdao.util.typegroups import int_types
 from openmdao.util.graph import base_var
 
@@ -78,7 +77,11 @@ class VecWrapperBase(object):
     def __setitem__(self, name, value):
         view, _, idxs, _, _ = self._info[name]
         if isinstance(value, ndarray):
-            view[idxs] = value.flat
+            try:
+                view[idxs] = value.flat
+            except Exception as err:
+                raise RuntimeError("cannot set array %s to value:\n %s\n %s" %
+                                    (name, str(value), str(err)))
         else:
             view[idxs] = value
 
@@ -156,14 +159,14 @@ class VecWrapperBase(object):
                 raise ValueError("end index %d exceeds size of target array" % (end-1))
             self[name] = arr[start:end]
             start += size
-            
+
     def _is_var_idx(self, info, idx):
         if isinstance(info.idxs, slice):
             if info.idxs.step == 1 or info.idxs.step is None:
                 return idx >= info.idxs.start and idx < info.idxs.stop
             return idx in to_indices(info.idxs, info.view)
         return idx in info.idxs
-        
+
     def find_var(self, idx):
         for name, info in self._info.items():
             if not info.hide and self._is_var_idx(info, idx):
@@ -253,7 +256,6 @@ class VecWrapper(VecWrapperBase):
         else:
             states = []
             resids = []
-
         states = [s for s in states if nodemap[s] in system.variables]
         if states:
             start, end = self.bounds(states)
@@ -435,8 +437,12 @@ class DataTransfer(object):
         if not (MPI or scatter_conns or noflat_vars):
             return  # no data to xfer
 
-        var_idxs, input_idxs = merge_idxs(var_idxs, input_idxs)
-        
+        try:
+            var_idxs, input_idxs = merge_idxs(var_idxs, input_idxs)
+        except Exception as err:
+            raise RuntimeError("ERROR creating scatter for system %s in scope %s" %
+                                (system.name, str(system.scope), str(err)))
+
         self.var_idxs = to_slice(var_idxs)
         self.input_idxs = to_slice(input_idxs)
 
@@ -487,9 +493,9 @@ class DataTransfer(object):
             dest, src = src, dest
 
         if self.scatter:
-            #print "%s for %s\n%s <-- %s" % (destvec.name.rsplit('.', 1)[1], 
-                                            #destvec.name.rsplit('.',1)[0], 
-                                            #list(self.scatter_conns), 
+            #print "%s for %s\n%s <-- %s" % (destvec.name.rsplit('.', 1)[1],
+                                            #destvec.name.rsplit('.',1)[0],
+                                            #list(self.scatter_conns),
                                             #src[self.scatter.dest_idxs if addv else self.scatter.src_idxs])
             self.scatter.scatter(src, dest, addv=addv, mode=mode)
 
@@ -502,12 +508,12 @@ class DataTransfer(object):
                     for dest in dests:
                         if src != dest:
                             try:
-                                system.scope.set(dest, 
+                                system.scope.set(dest,
                                                  system.scope.get_attr_w_copy(src))
                             except Exception:
-                                system.scope.reraise_exception("cannot set '%s' from '%s'" % 
+                                system.scope.reraise_exception("cannot set '%s' from '%s'" %
                                                                (dest, src))
-                                
+
     def dump(self, system, srcvec, destvec, nest=0, stream=sys.stdout):
         stream.write(" "*nest)
         stream.write("Scatters: ")
@@ -521,7 +527,7 @@ class DataTransfer(object):
         var_idxs = to_indices(self.var_idxs, srcvec.array)
         input_idxs = self.input_idxs
         stream.write("%s --> %s\n" % (var_idxs, input_idxs))
-        
+
         if MPI and system.app_ordering:
             var_idx_set = system.app_ordering.app2petsc(var_idxs)
             stream.write(" "*nest)
