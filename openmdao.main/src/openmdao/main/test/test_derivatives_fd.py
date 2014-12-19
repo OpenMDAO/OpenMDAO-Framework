@@ -370,7 +370,6 @@ class TestFiniteDifference(unittest.TestCase):
 
         top = set_as_top(Assembly())
         top.add('nest', Assembly())
-        top.nest.add('comp0', ExecComp(['y=x1']))
         top.nest.add('comp1', ExecComp(['y=7.0*x1']))
         top.nest.add('comp2', ExecComp(['y=5.0*x1 + 2.0*x2']))
         top.driver.workflow.add(['nest'])
@@ -378,9 +377,8 @@ class TestFiniteDifference(unittest.TestCase):
 
         top.nest.add('x1', Float(3.0, iotype='in'))
         top.nest.add('y2', Float(3.0, iotype='out'))
-        top.nest.connect('comp0.y', 'comp1.x1')
         top.nest.connect('comp1.y', 'comp2.x2')
-        top.nest.connect('x1', 'comp0.x1')
+        top.nest.connect('x1', 'comp1.x1')
         top.nest.connect('x1', 'comp2.x1')
         top.nest.create_passthrough('comp1.y')
         top.nest.connect('comp2.y', 'y2')
