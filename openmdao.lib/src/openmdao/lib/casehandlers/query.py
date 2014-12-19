@@ -128,8 +128,9 @@ class CaseDataset(object):
             prefix = self._drivers[case_driver_id]['prefix']
             if prefix:
                 # Make names absolute.
-                data = dict([(prefix+name, value)
-                             for name, value in data.items()])
+                pass
+                #data = dict([(prefix+name, value)
+                 #            for name, value in data.items()])
             else:
                 data = data.copy()  # Don't modify reader version.
 
