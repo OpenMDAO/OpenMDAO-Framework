@@ -1308,7 +1308,7 @@ class Assembly(Component):
                 if data.get('iotype') == 'in' and collapsed_graph.in_degree(node) == 0: # input boundary node
                     collapsed_graph.add_node(node[0].split('[',1)[0], comp='invar')
                     collapsed_graph.add_edge(node[0].split('[',1)[0], node)
-                elif data.get('iotype') == 'out' and collapsed_graph.out_degree(node) == 0: # output bndry node
+                elif data.get('iotype') == 'out': # output bndry node
                     collapsed_graph.add_node(node[1][0].split('[',1)[0], comp='outvar')
                     collapsed_graph.add_edge(node, node[1][0].split('[',1)[0])
 
