@@ -1366,7 +1366,7 @@ class CompoundSystem(System):
             scatter_conns = set()
             noflat_conns = set()  # non-flattenable vars
             for sub in subsystem.simple_subsystems():
-                print "%s: _in_nodes: %s" % (sub.name, sub._in_nodes)
+                #print "%s: _in_nodes: %s" % (sub.name, sub._in_nodes)
                 for node in self.variables:
                     if node not in sub._in_nodes or node in scatter_conns:
                         continue
