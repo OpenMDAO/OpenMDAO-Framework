@@ -259,16 +259,15 @@ class System(object):
                 for tup in system._in_nodes:
                     # need this to prevent paramgroup inputs on same comp to be
                     # counted more than once
-                    seen = set()
                     for dest in tup[1]:
                         comp = dest.split('.', 1)[0]
-                        if comp in comps and comp not in seen:
+                        if comp in comps:
                             inputs.add(dest)
                             # Since Opaque systems do finite difference on the
                             # full param groups, we should only include one input
                             # from each group.
                             if is_opaque:
-                                seen.add(comp)
+                                break
 
             self._inputs = _filter(self.scope, inputs)
 

@@ -339,6 +339,30 @@ class TestFiniteDifference(unittest.TestCase):
         assert_rel_error(self, J[0, 2], 6.0, 0.001)
         assert_rel_error(self, J[0, 3], 5.0, 0.001)
 
+    def test_broadcast_input_to_opaque_system(self):
+
+        # This test replicates a bug when finite differencing a boundary variable that
+        # broadcasts to multiple places.
+
+        top = set_as_top(Assembly())
+        top.add('comp1', ExecComp(['y=7.0*x1']))
+        top.add('comp2', ExecComp(['y=5.0*x1 + 2.0*x2']))
+        top.add('driver', SimpleDriver())
+        top.driver.workflow.add(['comp1', 'comp2'])
+
+        top.add('x1', Float(3.0, iotype='in'))
+        top.connect('comp1.y', 'comp2.x2')
+        top.connect('x1', 'comp1.x1')
+        top.connect('x1', 'comp2.x1')
+
+        top.run()
+
+        J = top.driver.calc_gradient(inputs=['x1'],
+                                     outputs=['comp2.y'],
+                                     mode='forward')
+
+        assert_rel_error(self, J[0, 0], 19.0, .001)
+
 if __name__ == '__main__':
     import nose
     import sys
