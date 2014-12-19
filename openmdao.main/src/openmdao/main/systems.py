@@ -178,7 +178,7 @@ class System(object):
         comm = self.mpi.comm
         if comm is None:
             return
-            
+
         myrank = comm.rank
 
         tups = []
@@ -211,7 +211,6 @@ class System(object):
             for (param, output), rank in tupdict.items():
                 if rank == myrank:
                     comm.send(J[param][output], dest=0, tag=0)
-
 
         # FIXME: rework some of this using knowledge of local_var_sizes in order
         # to avoid any unnecessary data passing
@@ -260,16 +259,15 @@ class System(object):
                 for tup in system._in_nodes:
                     # need this to prevent paramgroup inputs on same comp to be
                     # counted more than once
-                    seen = set()
                     for dest in tup[1]:
                         comp = dest.split('.', 1)[0]
-                        if comp in comps and comp not in seen:
+                        if comp in comps:
                             inputs.add(dest)
                             # Since Opaque systems do finite difference on the
                             # full param groups, we should only include one input
                             # from each group.
                             if is_opaque:
-                                seen.add(comp)
+                                break
 
             self._inputs = _filter(self.scope, inputs)
 
@@ -310,7 +308,7 @@ class System(object):
                                       for s in system._comp.list_states()])
                 except AttributeError:
                     pass
-                out_nodes = [node for node in system._out_nodes \
+                out_nodes = [node for node in system._out_nodes
                              if node not in self._mapped_resids]
                 comps = self._all_comp_nodes()
                 for src, _ in out_nodes:
@@ -490,7 +488,7 @@ class System(object):
                     continue
                 isrc = self.vector_vars.keys().index(self.scope.name2collapsed[base])
                 idxs = varmeta[name].get('flat_idx')
-                
+
             self.arg_idx[name] = idxs# + numpy.sum(self.local_var_sizes[:self.mpi.rank, isrc])
 
     def setup_vectors(self, arrays=None, state_resid_map=None):
@@ -572,7 +570,7 @@ class System(object):
 
                 if self.complex_step is True:
                     scatter(self, self.vec['du'], self.vec['dp'],
-                            complex_step = True)
+                            complex_step=True)
 
                 if scatter is self.scatter_full:
                     destvec.set_to_scope(self.scope)
@@ -584,7 +582,6 @@ class System(object):
                         if self.complex_step is True:
                             self.vec['dp'].set_to_scope_complex(self.scope,
                                                                 subsystem._in_nodes)
-
 
     def dump(self, nest=0, stream=sys.stdout, verbose=False):
         """Prints out a textual representation of the collapsed
@@ -668,6 +665,7 @@ class System(object):
         use a subview of the view corresponding to their base var)
         """
         keep_srcs = set(_filter_subs([n[0] for n in vardict]))
+
         return OrderedDict([(k,v) for k,v in vardict.items() if k[0] in keep_srcs])
 
     def set_options(self, mode, options):
@@ -688,7 +686,6 @@ class System(object):
 
         for subsystem in self.local_subsystems():
             subsystem.set_options(mode, options)
-
 
     # ------- derivative stuff -----------
 
@@ -880,15 +877,14 @@ class SimpleSystem(System):
         self._comp = comp
         self.J = None
         self._mapped_resids = {}
-    
+
     def setup_sizes(self):
         super(SimpleSystem, self).setup_sizes()
         if self.is_active():
             for var, metadata in self.vector_vars.iteritems():
-                if len(self.scope.get_flattened_value(var[0])) == 0 :
+                if len(self.scope.get_flattened_value(var[0])) == 0:
                     msg = "{} was not initialized. OpenMDAO does not support uninitialized variables."
                     msg = msg.format(var[0])
-                    
                     self.scope.raise_exception(msg, ValueError)
 
     def inner(self):
@@ -1370,7 +1366,7 @@ class CompoundSystem(System):
             scatter_conns = set()
             noflat_conns = set()  # non-flattenable vars
             for sub in subsystem.simple_subsystems():
-                print "%s: _in_nodes: %s" % (sub.name, sub._in_nodes)
+                #print "%s: _in_nodes: %s" % (sub.name, sub._in_nodes)
                 for node in self.variables:
                     if node not in sub._in_nodes or node in scatter_conns:
                         continue
@@ -1386,7 +1382,7 @@ class CompoundSystem(System):
                         #print node, src_idxs
                         src_partial.append(src_idxs)
                         dest_partial.append(dest_idxs)
-                        
+
                         if node in self.vec['u']:
                             src_rev_full.append(src_idxs)
                             dest_rev_full.append(dest_idxs)
@@ -1403,7 +1399,7 @@ class CompoundSystem(System):
                 subsystem.scatter_partial = DataTransfer(self, src_partial,
                                                          dest_partial,
                                                          scatter_conns, noflat_conns)
-                                                         
+
             # if subsystem in list(self.local_subsystems()):
             #     src_full.extend(src_partial)
             #     dest_full.extend(dest_partial)
@@ -1412,9 +1408,9 @@ class CompoundSystem(System):
         if MPI or scatter_conns_full or noflat_conns_full:
             self.scatter_full = DataTransfer(self, src_full, dest_full,
                                              scatter_conns_full, noflat_conns_full)
-                                             
+
         if scatter_conns_rev:
-            self.scatter_rev_full = DataTransfer(self, src_rev_full, dest_rev_full, 
+            self.scatter_rev_full = DataTransfer(self, src_rev_full, dest_rev_full,
                                                  scatter_conns_rev, [])
 
         for sub in self.local_subsystems():
@@ -1752,7 +1748,7 @@ class OpaqueSystem(SimpleSystem):
 
         self._inner_system = SerialSystem(scope, graph,
                                           graph.component_graph(),
-                                          name = "FD_" + str(name))
+                                          name="FD_" + str(name))
 
         self._inner_system._provideJ_bounds = None
         self._comp = None

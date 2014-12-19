@@ -66,7 +66,7 @@ def get_closest_proxy(obj, pathname):
     """Returns a tuple of the form (val, restofpath), where val
     is either the object specified by dotted name 'pathname'
     within obj, or the closest in-process proxy object that can be
-    resolved.  If val is a proxy, restofpath will contain the 
+    resolved.  If val is a proxy, restofpath will contain the
     remaining part of pathname needed to resolve the desired attribute
     within the proxy.  Otherwise, val is the actual desired attribute
     and restofpath is the empty string.
@@ -92,7 +92,7 @@ def proxy_parent(obj, pathname):
     """Returns a tuple of the form (par, restofpath), where par
     is either the parent of the object specified by dotted name 'pathname'
     within obj, or the closest in-process proxy object that can be
-    resolved.  restofpath will contain the 
+    resolved.  restofpath will contain the
     remaining part of pathname needed to resolve the desired attribute
     within the parent or proxy object.
     """
@@ -915,7 +915,7 @@ class Container(SafeHasTraits):
         expr = self._getcache.get(path)
         if expr is not None:
             return eval(expr, self.__dict__)
-        
+
         obj, restofpath = get_closest_proxy(self, path)
         # if restofpath is truthy, it means either that path
         # contains a proxy or it contains some syntax that causes
@@ -954,7 +954,7 @@ class Container(SafeHasTraits):
         if restofpath and IContainerProxy.providedBy(obj):
             obj.set_flattened_value(restofpath, value)
             return
-        
+
         # get current value
         val = self.get(path)
         if not isinstance(val, int_types) and isinstance(val, complex_or_real_types):
@@ -964,13 +964,17 @@ class Container(SafeHasTraits):
             val.set_flattened_value(value)
             return
         elif isinstance(val, ndarray):
-            self.set(path, value.reshape(val.shape))
+            try:
+                self.set(path, value.reshape(val.shape))
+            except Exception as err:
+                self.reraise_exception("ERROR setting flattened value for '%s.%s'"
+                                       % (self.get_pathname(), path), sys.exc_info())
             return
-        
+
         # now get the non-indexed value and the index
         val = self.get(path.split('[',1)[0])
         idx = get_index(path)
-        
+
         if isinstance(val, int_types):
             pass  # fall through to exception
         elif hasattr(val, '__setitem__') and idx is not None:
@@ -994,14 +998,14 @@ class Container(SafeHasTraits):
     def set(self, path, value):
         """Set the value of the Variable specified by the given path, which
         may contain '.' characters. The Variable will be set to the given
-        value, subject to validation and constraints. 
+        value, subject to validation and constraints.
         """
         _local_setter_ = value
         expr = self._setcache.get(path)
         if expr is not None:
             exec(expr)
             return
-        
+
         obj, restofpath = proxy_parent(self, path)
         # if restofpath is truthy, it means either that path
         # contains a proxy or it contains some syntax that causes
@@ -1382,7 +1386,6 @@ class Container(SafeHasTraits):
             If `trait` is not None, use that trait rather than building one.
         """
         self.raise_exception('build_trait()', NotImplementedError)
-
 
 
 # By default we always proxy Containers and FileRefs.

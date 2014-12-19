@@ -267,7 +267,7 @@ class PETSc_KSP(LinearSolver):
                         else:
                             if out in solvec:
                                 if J[param][out] is None:
-                                    J[param][out] = np.zeros((out_size, param_size))
+                                    J[param][out] = np.zeros((param_size, out_size))
                                 J[param][out][j-jbase, :] = solvec[out]
                             else:
                                 del J[param][out]
