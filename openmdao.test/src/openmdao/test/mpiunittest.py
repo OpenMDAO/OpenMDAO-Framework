@@ -9,7 +9,7 @@ import traceback
 from inspect import getmro
 
 from unittest import TestCase, SkipTest
-from openmdao.main.mpiwrap import mpiprint, _under_mpirun
+from openmdao.main.mpiwrap import under_mpirun
 from openmdao.util.testutil import assert_rel_error
 
 try:
@@ -69,7 +69,7 @@ def mpi_fail_if_any(f):
 collective_assert_rel_error = mpi_fail_if_any(assert_rel_error)
 
 def wrapper(f):
-    if _under_mpirun():
+    if under_mpirun():
         return f
         
     else:
@@ -141,7 +141,7 @@ class MPITestCase(TestCase):
 
         try:
             exc_info = None
-            if _under_mpirun():
+            if under_mpirun():
                 self.comm = MPI.Comm.Get_parent()
 
                 try:
@@ -184,7 +184,7 @@ class MPITestCase(TestCase):
 
 
 if __name__ == '__main__':
-    if _under_mpirun():
+    if under_mpirun():
         args = sys.argv[1:]
         testpath = args[0]
 
@@ -215,7 +215,7 @@ if __name__ == '__main__':
 
         except Exception:
             exc_info = sys.exc_info()
-            if _under_mpirun():
+            if under_mpirun():
                 MPI.Comm.Get_parent().Disconnect()
             raise exc_info[0], exc_info[1], exc_info[2]
 
@@ -226,6 +226,6 @@ if __name__ == '__main__':
             tcase.run(result)
         except Exception:
             exc_info = sys.exc_info()
-            if _under_mpirun():
+            if under_mpirun():
                 MPI.Comm.Get_parent().Disconnect()
             raise exc_info[0], exc_info[1], exc_info[2]
