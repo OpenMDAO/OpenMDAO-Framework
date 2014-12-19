@@ -585,7 +585,7 @@ class DirectionalFD(object):
                 srcs = (srcs,)
 
             direction = fd_step*arg[srcs[0]].flatten()
-            
+
             du = self.system.vec['du']
             for src in srcs:
                 if src in du:

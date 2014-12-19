@@ -363,6 +363,37 @@ class TestFiniteDifference(unittest.TestCase):
 
         assert_rel_error(self, J[0, 0], 19.0, .001)
 
+    def test_branch_output_in_opaque_system(self):
+
+        # This test replicates a bug where an interior output was missing in
+        # an opaque system.
+
+        top = set_as_top(Assembly())
+        top.add('nest', Assembly())
+        top.nest.add('comp0', ExecComp(['y=x1']))
+        top.nest.add('comp1', ExecComp(['y=7.0*x1']))
+        top.nest.add('comp2', ExecComp(['y=5.0*x1 + 2.0*x2']))
+        top.driver.workflow.add(['nest'])
+        top.nest.driver.workflow.add(['comp1', 'comp2'])
+
+        top.nest.add('x1', Float(3.0, iotype='in'))
+        top.nest.add('y2', Float(3.0, iotype='out'))
+        top.nest.connect('comp0.y', 'comp1.x1')
+        top.nest.connect('comp1.y', 'comp2.x2')
+        top.nest.connect('x1', 'comp0.x1')
+        top.nest.connect('x1', 'comp2.x1')
+        top.nest.create_passthrough('comp1.y')
+        top.nest.connect('comp2.y', 'y2')
+
+        top.run()
+
+        J = top.driver.calc_gradient(inputs=['nest.x1'],
+                                     outputs=['nest.y', 'nest.y2'],
+                                     mode='forward')
+
+        assert_rel_error(self, J[0, 0], 7.0, .001)
+        assert_rel_error(self, J[1, 0], 19.0, .001)
+
 if __name__ == '__main__':
     import nose
     import sys

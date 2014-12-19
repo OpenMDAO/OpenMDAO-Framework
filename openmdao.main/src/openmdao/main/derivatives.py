@@ -1,4 +1,4 @@
-import sys 
+import sys
 
 """ Some functions and objects that support the component-side derivative API.
 """
