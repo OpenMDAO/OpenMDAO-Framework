@@ -1,4 +1,4 @@
-from ordereddict import OrderedDict
+from collections import OrderedDict
 import weakref
 import sys
 
@@ -721,9 +721,9 @@ class ArrayParameter(ParameterBase):
                                  % (value.size, self._size))
         else:
             value = value * ones(self.shape, self.dtype)
-            
+
         transval = self._transform(value)
-        
+
         try:
             param_owner._system.vec['u'][self._expreval.text] = transval.flatten()
         except (KeyError, AttributeError):
@@ -958,7 +958,7 @@ class HasParameters(object):
         if IDriver.providedBy(self.parent):
             # remove param connections from dep graph
             dgraph = self.parent.get_depgraph()
-            dgraph.remove_param(self.parent.name, 
+            dgraph.remove_param(self.parent.name,
                                 tuple(param.targets))
 
             self.parent.config_changed()
