@@ -1,9 +1,9 @@
-
+import sys
 from collections import OrderedDict, namedtuple
 import numpy
 from numpy import ndarray
 
-from openmdao.main.mpiwrap import MPI, MPI_STREAM, mpiprint, create_petsc_vec, PETSc
+from openmdao.main.mpiwrap import MPI, mpiprint, create_petsc_vec, PETSc
 from openmdao.main.array_helpers import offset_flat_index, \
                                         get_flat_index_start, get_val_and_index, get_shape, \
                                         get_flattened_index, to_slice, to_indices
@@ -77,7 +77,11 @@ class VecWrapperBase(object):
     def __setitem__(self, name, value):
         view, _, idxs, _, _ = self._info[name]
         if isinstance(value, ndarray):
-            view[idxs] = value.flat
+            try:
+                view[idxs] = value.flat
+            except Exception as err:
+                raise RuntimeError("cannot set array %s to value:\n %s\n %s" %
+                                    (name, str(value), str(err)))
         else:
             view[idxs] = value
 
@@ -156,7 +160,22 @@ class VecWrapperBase(object):
             self[name] = arr[start:end]
             start += size
 
-    def dump(self, verbose=False, stream=MPI_STREAM):
+    def _is_var_idx(self, info, idx):
+        if isinstance(info.idxs, slice):
+            if info.idxs.step == 1 or info.idxs.step is None:
+                return idx >= info.idxs.start and idx < info.idxs.stop
+            return idx in to_indices(info.idxs, info.view)
+        return idx in info.idxs
+
+    def find_var(self, idx):
+        for name, info in self._info.items():
+            if not info.hide and self._is_var_idx(info, idx):
+                return name
+        for name, info in self._info.items():
+            if info.hide and self._is_var_idx(info, idx):
+                return name
+
+    def dump(self, verbose=False, stream=sys.stdout):
         for name, info in self._info.items():
             if verbose or not info.hide:
                 mpiprint("%s - %s: (%d,%d) %s" %
@@ -239,7 +258,6 @@ class VecWrapper(VecWrapperBase):
         else:
             states = []
             resids = []
-
         states = [s for s in states if nodemap[s] in system.variables]
         if states:
             start, end = self.bounds(states)
@@ -337,21 +355,6 @@ class InputVecWrapper(VecWrapperBase):
             for arg in sub._in_nodes:
                 all_ins.add(arg)
 
-        #all_ins = set()
-        #for sub in system.all_subsystems(): #system.simple_subsystems():
-        #    all_ins.update(sub._in_nodes)
-
-        #for name in [n for n in system.vector_vars if n in all_ins]:
-        #    if name in flat_ins and name not in self._info:
-        #        sz = len(arg_idx[name])
-        #        end += sz
-        #        self._info[name] = ViewInfo(self.array[start:end], start,
-        #                                    slice(None), end-start, False)
-        #        if end-start > self.array[start:end].size:
-        #            raise RuntimeError("size mismatch: in system %s view for %s is %s, size=%d" %
-        #                         (system.name, name, [start,end],self[name].size))
-        #        start += sz
-
         # now add views for subvars that are subviews of their
         # basevars
         for name in all_ins:
@@ -436,7 +439,14 @@ class DataTransfer(object):
         if not (MPI or scatter_conns or noflat_vars):
             return  # no data to xfer
 
-        var_idxs, input_idxs = merge_idxs(var_idxs, input_idxs)
+        try:
+            var_idxs, input_idxs = merge_idxs(var_idxs, input_idxs)
+        except Exception as err:
+            raise RuntimeError("ERROR creating scatter for system %s in scope %s" %
+                                (system.name, str(system.scope), str(err)))
+
+        self.var_idxs = to_slice(var_idxs)
+        self.input_idxs = to_slice(input_idxs)
 
         if len(var_idxs) != len(input_idxs):
             raise RuntimeError("ERROR: creating scatter (index size mismatch): (%d != %d) srcs: %s,  dest: %s in %s" %
@@ -449,8 +459,10 @@ class DataTransfer(object):
             input_idx_set = PETSc.IS().createGeneral(input_idxs,
                                                      comm=system.mpi.comm)
 
+            #print 'before', var_idx_set.indices
             if system.app_ordering is not None:
                 var_idx_set = system.app_ordering.app2petsc(var_idx_set)
+                #print 'after', var_idx_set.indices
 
             try:
                 # note that scatter created here can be reused for other vectors as long
@@ -486,9 +498,9 @@ class DataTransfer(object):
             dest, src = src, dest
 
         if self.scatter:
-            #print "%s for %s\n%s <-- %s" % (destvec.name.rsplit('.', 1)[1], 
-                                            #destvec.name.rsplit('.',1)[0], 
-                                            #list(self.scatter_conns), 
+            #print "%s for %s\n%s <-- %s" % (destvec.name.rsplit('.', 1)[1],
+                                            #destvec.name.rsplit('.',1)[0],
+                                            #list(self.scatter_conns),
                                             #src[self.scatter.dest_idxs if addv else self.scatter.src_idxs])
             self.scatter.scatter(src, dest, addv=addv, mode=mode)
 
@@ -501,9 +513,33 @@ class DataTransfer(object):
                     for dest in dests:
                         if src != dest:
                             try:
-                                system.scope.set(dest, system.scope.get_attr_w_copy(src))
+                                system.scope.set(dest,
+                                                 system.scope.get_attr_w_copy(src))
                             except Exception:
-                                system.scope.reraise_exception("cannot set '%s' from '%s'" % (dest, src))
+                                system.scope.reraise_exception("cannot set '%s' from '%s'" %
+                                                               (dest, src))
+
+    def dump(self, system, srcvec, destvec, nest=0, stream=sys.stdout):
+        stream.write(" "*nest)
+        stream.write("Scatters: ")
+        if not self.scatter_conns:
+            stream.write("(empty)\n")
+            return
+        stream.write("\n")
+        stream.write(" "*nest)
+        stream.write("scatter vars: %s\n" % sorted(self.scatter_conns))
+        stream.write(" "*nest)
+        var_idxs = to_indices(self.var_idxs, srcvec.array)
+        input_idxs = self.input_idxs
+        stream.write("%s --> %s\n" % (var_idxs, input_idxs))
+
+        if MPI and system.app_ordering:
+            var_idx_set = system.app_ordering.app2petsc(var_idxs)
+            stream.write(" "*nest)
+            stream.write("(petsc): %s --> %s\n" % (var_idx_set, input_idxs))
+        if self.noflat_vars:
+            stream.write(" "*nest)
+            stream.write("no-flats: %s\n" % self.noflat_vars)
 
 
 class SerialScatter(object):

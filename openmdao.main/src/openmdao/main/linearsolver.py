@@ -267,7 +267,7 @@ class PETSc_KSP(LinearSolver):
                         else:
                             if out in solvec:
                                 if J[param][out] is None:
-                                    J[param][out] = np.zeros((out_size, param_size))
+                                    J[param][out] = np.zeros((param_size, out_size))
                                 J[param][out][j-jbase, :] = solvec[out]
                             else:
                                 del J[param][out]
@@ -318,7 +318,7 @@ class PETSc_KSP(LinearSolver):
         system.applyJ(vnames)
 
         rhs_vec.array[:] = system.rhs_vec.array[:]
-        # mpiprint('names = %s' % system.sol_vec.keys())
+        #mpiprint('names = %s' % system.sol_vec.keys())
         #mpiprint('arg = %s, result=%s' % (sol_vec.array, rhs_vec.array))
         #mpiprint('df, du, dp', system.vec['df'].array, system.vec['du'].array, system.vec['dp'].array)
 
