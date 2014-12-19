@@ -74,7 +74,7 @@ REQUIRED_MODULES = ['os', 'posix', 'posixpath', 'nt', 'ntpath', 'genericpath',
                     'fnmatch', 'locale', 'encodings', 'codecs',
                     'stat', 'UserDict', 'readline', 'copy_reg', 'types',
                     're', 'sre', 'sre_parse', 'sre_constants', 'sre_compile',
-                    'zlib']
+                    'zlib', 'collections', 'argparse']
 
 REQUIRED_FILES = ['lib-dynload', 'config']
 
@@ -91,7 +91,7 @@ elif majver == 3:
     # for different versions.
     REQUIRED_MODULES.extend(['_abcoll', 'warnings', 'linecache', 'abc', 'io',
                              '_weakrefset', 'copyreg', 'tempfile', 'random',
-                             '__future__', 'collections', 'keyword', 'tarfile',
+                             '__future__', 'keyword', 'tarfile',
                              'shutil', 'struct', 'copy', 'tokenize', 'token',
                              'functools', 'heapq', 'bisect', 'weakref',
                              'reprlib'])
@@ -2183,7 +2183,7 @@ def after_install(options, home_dir, activated=False):
     if(os.path.exists(setuptools_egg)):
         os.remove(setuptools_egg)
 
-    reqs = ['Fabric==0.9.3', 'Jinja2==2.4', 'Pyevolve==0.6', 'Pygments==1.3.1', 'SetupDocs==1.0.5', 'Sphinx==1.2.2', 'argparse', 'boto==2.0rc1', 'bson==0.3.3', 'cobyla==1.0.1', 'conmin==1.0.1', 'decorator==3.2.0', 'docutils==0.10', 'mock==1.0.1', 'networkx==1.8.1', 'newsumt==1.1.0', 'nose==1.3.3', 'paramiko==1.7.7.1', 'pycrypto==2.3', 'pyparsing==1.5.7', 'pytz==2011k', 'requests==2.2.1', 'slsqp==1.0.1', 'traits==4.3.0', 'virtualenv==1.9.1', 'zope.interface==3.6.1']
+    reqs = ['Fabric==0.9.3', 'Jinja2==2.4', 'Pyevolve==0.6', 'Pygments==1.3.1', 'SetupDocs==1.0.5', 'Sphinx==1.2.2','boto==2.0rc1', 'bson==0.3.3', 'cobyla==1.0.1', 'conmin==1.0.1', 'decorator==3.2.0', 'docutils==0.10', 'mock==1.0.1', 'networkx==1.8.1', 'newsumt==1.1.0', 'nose==1.3.3', 'paramiko==1.7.7.1', 'pycrypto==2.3', 'pyparsing==1.5.7', 'pytz==2011k', 'requests==2.2.1', 'slsqp==1.0.1', 'traits==4.3.0', 'virtualenv==1.9.1', 'zope.interface==3.6.1']
 
     if options.findlinks is None:
         url = 'http://openmdao.org/dists'
