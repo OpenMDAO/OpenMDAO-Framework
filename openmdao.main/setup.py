@@ -46,7 +46,6 @@ setup(name='openmdao.main',
       test_suite='nose.collector',
       zip_safe=False,
       install_requires=[
-          'argparse',
           'decorator',
           'mock',
           'networkx<1.9.1',
