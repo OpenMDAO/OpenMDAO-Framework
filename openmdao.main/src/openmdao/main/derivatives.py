@@ -6,7 +6,6 @@ from numpy import zeros, vstack, hstack
 
 # pylint: disable=E0611,F0401
 from openmdao.main.array_helpers import flatten_slice, flattened_size
-from openmdao.main.mpiwrap import mpiprint
 from openmdao.main.interfaces import ISystem, IAssembly
 from openmdao.util.graph import list_deriv_vars
 
@@ -334,7 +333,6 @@ def applyJT(system, variables):
             break
 
     if nonzero is False:
-        #mpiprint('applyJT %s: %s, %s' % (obj.name, arg, result))
         return
 
     # If storage of the local Jacobian is a problem, the user can
@@ -381,8 +379,6 @@ def applyJT(system, variables):
                        for item in system.list_outputs()]
     else:
         input_keys, output_keys = list_deriv_vars(obj)
-
-    #mpiprint( 'J', input_keys, output_keys, J)
 
     # The Jacobian from provideJ is a 2D array containing the derivatives of
     # the flattened output_keys with respect to the flattened input keys. We

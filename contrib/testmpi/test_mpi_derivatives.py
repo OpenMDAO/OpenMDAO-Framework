@@ -6,7 +6,6 @@ from openmdao.test.mpiunittest import MPITestCase, collective_assert_rel_error, 
                                       MPIContext
 from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.main.datatypes.api import Float
-from openmdao.main.mpiwrap import mpiprint
 from openmdao.main.test.simpledriver import SimpleDriver
 from openmdao.test.execcomp import ExecCompWithDerivatives
 
@@ -74,10 +73,8 @@ class MPITests(MPITestCase):
 
         J = self.top.driver.calc_gradient(mode='forward',
                                           return_format='dict')
-        #mpiprint("J local: %s" % J)
 
         J = self.top.driver.workflow._system.get_combined_J(J)
-        #mpiprint("final J: %s" % J)
 
         collective_assert_rel_error(self, 
                                     J['_pseudo_0.out0']['comp.x'][0][0], 
@@ -91,10 +88,8 @@ class MPITests(MPITestCase):
 
         J = self.top.driver.calc_gradient(mode='adjoint',
                                           return_format='dict')
-        #mpiprint("J local: %s" % J)
 
         J = self.top.driver.workflow._system.get_combined_J(J)
-        #mpiprint("final J: %s" % J)
 
         # with MPIContext():
         #     self.top._system.dump()

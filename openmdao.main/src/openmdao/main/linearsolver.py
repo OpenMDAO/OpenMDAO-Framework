@@ -6,7 +6,7 @@
 import numpy as np
 from scipy.sparse.linalg import gmres, LinearOperator
 
-from openmdao.main.mpiwrap import MPI, mpiprint, PETSc
+from openmdao.main.mpiwrap import MPI, PETSc
 from openmdao.util.graph import fix_single_tuple
 from openmdao.util.log import logger
 
@@ -201,11 +201,11 @@ class PETSc_KSP(LinearSolver):
         system.rhs_buf = np.zeros((lsize, ))
         system.sol_buf = np.zeros((lsize, ))
 
-        # # Set these in the system
-        # #mpiprint("KSP: creating sol buf, size %d" % lsize)
+        # Set these in the system
+        #print "KSP: creating sol buf, size %d" % lsize
         system.sol_buf_petsc = PETSc.Vec().createWithArray(system.sol_buf,
                                                      comm=system.mpi.comm)
-        # #mpiprint("KSP: creating rhs buf, size %d" % lsize)
+        #print "KSP: creating rhs buf, size %d" % lsize
         system.rhs_buf_petsc = PETSc.Vec().createWithArray(system.rhs_buf,
                                                      comm=system.mpi.comm)
 
@@ -267,7 +267,7 @@ class PETSc_KSP(LinearSolver):
                         else:
                             if out in solvec:
                                 if J[param][out] is None:
-                                    J[param][out] = np.zeros((out_size, param_size))
+                                    J[param][out] = np.zeros((param_size, out_size))
                                 J[param][out][j-jbase, :] = solvec[out]
                             else:
                                 del J[param][out]
@@ -318,9 +318,9 @@ class PETSc_KSP(LinearSolver):
         system.applyJ(vnames)
 
         rhs_vec.array[:] = system.rhs_vec.array[:]
-        #mpiprint('names = %s' % system.sol_vec.keys())
-        #mpiprint('arg = %s, result=%s' % (sol_vec.array, rhs_vec.array))
-        #mpiprint('df, du, dp', system.vec['df'].array, system.vec['du'].array, system.vec['dp'].array)
+        #print 'names = %s' % system.sol_vec.keys()
+        #print 'arg = %s, result=%s' % (sol_vec.array, rhs_vec.array)
+        #print 'df, du, dp', system.vec['df'].array, system.vec['du'].array, system.vec['dp'].array
 
     def apply(self, mat, sol_vec, rhs_vec):
         """ Applies preconditioner """
