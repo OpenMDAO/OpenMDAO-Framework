@@ -6,7 +6,6 @@ import re, time
 from openmdao.main.api import Component
 from openmdao.main.datatypes.api import Float
 from openmdao.main.expreval import ExprEvaluator, _expr_dict
-from openmdao.main.mpiwrap import mpiprint
 
 from numpy import zeros
 
@@ -69,9 +68,9 @@ class ExecComp(Component):
         global _expr_dict
         if self.trace:
             for var in self.list_inputs(connected=True):
-                mpiprint("%s.%s = %s" % (self.name,var,getattr(self,var)))
+                print "%s.%s = %s" % (self.name,var,getattr(self,var))
             for var in self.list_outputs(connected=True):
-                mpiprint("%s.%s = %s" % (self.name,var,getattr(self,var)))
+                print "%s.%s = %s" % (self.name,var,getattr(self,var))
         for expr in self.codes:
             exec(expr, _expr_dict, self.__dict__ )
             
@@ -80,9 +79,9 @@ class ExecComp(Component):
 
         if self.trace:
             for var in self.list_inputs(connected=True):
-                mpiprint("%s.%s = %s" % (self.name,var,getattr(self,var)))
+                print "%s.%s = %s" % (self.name,var,getattr(self,var))
             for var in self.list_outputs(connected=True):
-                mpiprint("%s.%s = %s" % (self.name,var,getattr(self,var)))
+                print "%s.%s = %s" % (self.name,var,getattr(self,var))
 
 
 class ExecCompWithDerivatives(Component):
