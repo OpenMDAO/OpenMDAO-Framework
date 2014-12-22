@@ -657,7 +657,6 @@ class Assembly(Component):
         if isinstance(dest, ndarray) and dest.size == 0:
             destexpr.set(srcexpr.evaluate(), self)
 
-
         self.config_changed(update_parent=False)
 
     @rbac(('owner', 'user'))
@@ -1123,11 +1122,11 @@ class Assembly(Component):
         rgraph.collapse_subdrivers([], [self._top_driver])
 
         drvname = self._top_driver.name
-        
+
         if len(rgraph) > 1:
             self._system = SerialSystem(self, rgraph, rgraph.component_graph(),
                                         self.name+'._inner_asm')
-            # see if there's a driver cycle (happens when driver has params and 
+            # see if there's a driver cycle (happens when driver has params and
             # constraints/objectives that are boundary vars.)
             # FIXME: if we modify the graph to have to/from edges between a driver and
             # all of its workflow comps, then use strongly connected components to
@@ -1309,7 +1308,7 @@ class Assembly(Component):
                 if data.get('iotype') == 'in' and collapsed_graph.in_degree(node) == 0: # input boundary node
                     collapsed_graph.add_node(node[0].split('[',1)[0], comp='invar')
                     collapsed_graph.add_edge(node[0].split('[',1)[0], node)
-                elif data.get('iotype') == 'out' and collapsed_graph.out_degree(node) == 0: # output bndry node
+                elif data.get('iotype') == 'out': # output bndry node
                     collapsed_graph.add_node(node[1][0].split('[',1)[0], comp='outvar')
                     collapsed_graph.add_edge(node, node[1][0].split('[',1)[0])
 

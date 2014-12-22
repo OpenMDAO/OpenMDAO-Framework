@@ -315,7 +315,6 @@ class Component(Container):
                     self.raise_exception("required plugin '%s' is not"
                                          " present" % name, RuntimeError)
 
-
             if has_interface(obj, IComponent) and id(obj) not in visited:
                 visited.add(id(obj))
                 obj.check_config(strict=strict)
@@ -331,7 +330,7 @@ class Component(Container):
             val = self.get(var_name)
         except AttributeError:
             msg = "'{var_name}' was given in 'list_deriv_vars'"\
-            "but '{var_name}' is undefined"
+                  "but '{var_name}' is undefined"
 
             msg = msg.format(var_name=var_name, comp_name=self.__class__.__name__)
             self.raise_exception(msg)
@@ -340,7 +339,7 @@ class Component(Container):
 
         if var_type_name == 'VarTree':
             msg = "'{var_name}', of type '{var_type}', was given in 'list_deriv_vars' but you must declare "\
-            "sub-vars of a vartree individually"
+                  "sub-vars of a vartree individually"
 
             msg = msg.format(var_name=var_name, var_type=var_type_name)
             self.raise_exception(msg)
@@ -349,11 +348,10 @@ class Component(Container):
             flattened_value(var_name, val)
         except Exception:
             msg = "'{var_name}', of type '{var_type}', was given in 'list_deriv_vars' "\
-            "but variables must be of a type convertable to a 1D float array"
+                  "but variables must be of a type convertable to a 1D float array"
 
             msg = msg.format(var_name=var_name, var_type=var_type_name)
             self.raise_exception(msg)
-
 
     def _check_deriv_vars(self):
         try:
@@ -476,7 +474,6 @@ class Component(Container):
         """
         applyJ(system, variables)
 
-
     def applyJT(self, system, variables):
         """ Wrapper for component derivative specification methods.
         Adjoint Mode.
@@ -512,6 +509,7 @@ class Component(Container):
 
         if self.parent is None:
             self._run_begins()
+
         try:
             self._pre_execute()
             self._set_exec_state('RUNNING')
@@ -527,7 +525,6 @@ class Component(Container):
             self.execute()
             self._post_execute()
             self._post_run()
-
         except Exception:
             info = sys.exc_info()
             self._set_exec_state('INVALID')
