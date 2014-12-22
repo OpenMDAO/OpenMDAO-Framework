@@ -80,14 +80,14 @@ class FixedPointIterator(Driver):
         uvec = system.vec['u']
         fvec = system.vec['f']
 
-        mpiprint('old u', uvec.array)
-        mpiprint('f', fvec.array)
+        print 'old u', uvec.array, uvec.keys()
+        print 'f', fvec.array
         cycle_vars = self.workflow._cycle_vars
         for name in uvec.keys():
             if name not in cycle_vars:
                 uvec[name] -= fvec[name]
 
-        mpiprint('new u', uvec.array)
+        print 'new u', uvec.array
         self.workflow.run()
 
     def continue_iteration(self):

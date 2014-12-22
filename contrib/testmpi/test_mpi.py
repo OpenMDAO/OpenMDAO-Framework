@@ -6,10 +6,12 @@ import numpy as np
 from openmdao.test.mpiunittest import MPITestCase, collective_assert_rel_error
 from openmdao.util.testutil import assert_rel_error
 
-from openmdao.main.api import Assembly, Component, set_as_top
+from openmdao.main.api import Assembly, Component, set_as_top, Driver
 from openmdao.main.datatypes.api import Float, Array
 from openmdao.main.mpiwrap import MPI
 from openmdao.lib.drivers.iterate import FixedPointIterator
+from openmdao.test.execcomp import ExecComp
+from openmdao.main.test.test_derivatives import SimpleDriver
 
 from openmdao.lib.optproblems import sellar
 
@@ -169,8 +171,58 @@ class MPITests1(MPITestCase):
         if self.comm.rank == 0:
             self.assertTrue(all(top.C4.a==np.ones(size, float)*11.))
             self.assertTrue(all(top.C4.b==np.ones(size, float)*5.))
+            
+    def test_serial_under_par(self):
+        
+        class MyDriver(SimpleDriver):
 
+            def pre_iteration(self):
+               # Direct uvec setting
+                uvec = self._system.vec['u']
+                print uvec.keys()
+                # Only can interact with the var that is in our node
+                if 'branch0_comp0.x' in uvec:
+                    uvec['branch0_comp0.x'] = 1.0
+                if 'branch1_comp0.x' in uvec:
+                    uvec['branch1_comp0.x'] = 1.0
 
+            def requires_derivs(self):
+                return False               
+        
+        top = set_as_top(Assembly())
+        top.add('driver', MyDriver())
+        top.add('branch0_comp0', ExecComp(['y = 2.0*x']))
+        top.add('branch0_comp1', ExecComp(['y = 1.0*x']))
+        top.add('branch1_comp0', ExecComp(['y = 3.0*x']))
+        top.add('branch1_comp1', ExecComp(['y = 1.0*x']))
+        top.add('sum', ExecComp(['y = x1 + x2']))
+        top.driver.workflow.add(['branch0_comp0', 'branch0_comp1',
+                                 'branch1_comp0', 'branch1_comp1',
+                                 'sum'])
+        top.driver.add_parameter('branch0_comp0.x', low=-100, high=100)
+        top.driver.add_parameter('branch1_comp0.x', low=-100, high=100)
+        top.driver.add_objective('sum.y')
+        
+        # These lock up the process
+        #top.driver.add_constraint('branch1_comp1.y < branch0_comp0.x')
+        #top.driver.add_constraint('branch0_comp1.y < branch1_comp0.x')
+
+        # So do these
+        #top.driver.add_constraint('branch1_comp0.x < sum.y')
+        #top.driver.add_constraint('branch0_comp0.x < sum.y')
+        
+        top.connect('branch0_comp0.y', 'branch0_comp1.x')
+        top.connect('branch1_comp0.y', 'branch1_comp1.x')
+        top.connect('branch0_comp1.y', 'sum.x1')
+        top.connect('branch1_comp1.y', 'sum.x2')
+        
+        top.run()
+        print top.sum.y
+        from openmdao.util.dotgraph import plot_system_tree
+        plot_system_tree(top.driver.workflow._system)
+
+        self.collective_assertTrue(top.sum.y==5.0)
+        
 class MPITests2(MPITestCase):
 
     N_PROCS = 6
