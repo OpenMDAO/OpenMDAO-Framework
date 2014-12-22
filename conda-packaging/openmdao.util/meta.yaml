@@ -1,0 +1,25 @@
+package:
+ name: openmdao.util
+
+source:
+ path:  ../../openmdao.util
+
+requirements:
+  build:
+    - python
+    - setuptools
+    - pycrypto
+    - pyparsing
+    - traits ==4.3.0
+
+  run:
+    - python
+    - setuptools
+    - pycrypto
+    - pyparsing
+    - traits ==4.3.0
+
+about:
+  home:  http://openmdao.org
+  license:  Apache 2.0
+  summary:  "Open-source Multidisciplinary Design, Analysis and Optimazation framework in Python."
