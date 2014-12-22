@@ -246,7 +246,10 @@ def plot_system_tree(system, outfile=None, fmt='pdf'):
     else:
         webbrowser.get().open(outfile)
 
-    os.remove(dotfile)
+    try:
+        os.remove(dotfile)
+    except:
+        pass
 
 
 def plot_graph(G, outfile=None, fmt='pdf', pseudos=True, workflow=False, scope=None,

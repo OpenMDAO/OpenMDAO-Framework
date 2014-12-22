@@ -6,7 +6,7 @@ iterations are used as termination criteria.
 
 # pylint: disable=E0611,F0401
 
-from openmdao.main.mpiwrap import MPI, mpiprint
+from openmdao.main.mpiwrap import MPI
 if not MPI:
     from numpy.linalg import norm
 
@@ -97,7 +97,7 @@ class FixedPointIterator(Driver):
     def post_iteration(self):
         """Runs after each iteration"""
         self.normval = self.norm()
-        #mpiprint("iter %d, norm = %s" % (self.current_iteration, self.normval))
+        #print "iter %d, norm = %s" % (self.current_iteration, self.normval)
 
     def _mpi_norm(self):
         """ Compute the norm of the f Vec using petsc. """
@@ -176,4 +176,3 @@ class IterateUntil(Driver):
             return True
 
         return False
-

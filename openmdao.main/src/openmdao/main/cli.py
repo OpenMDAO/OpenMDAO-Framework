@@ -174,6 +174,16 @@ def _get_openmdao_parser():
     except ImportError:
         pass
 
+    # case data viewer (i.e. html_post_processor)
+    try:
+        import openmdao.lib.casehandlers.html_post_processor as viewer
+        parser = subparsers.add_parser('view_case_data', help='visualize JSON case data')
+        parser.add_argument('json_file', type=str, metavar='json_file',
+                            help='JSON format case data file')
+        parser.set_defaults(func=viewer.run)
+    except ImportError:
+        pass
+
     return top_parser
 
 
