@@ -8,12 +8,7 @@ requirements:
   build:
     - python
     - setuptools
-    - sphinx
-    - fabric >=0.9.3
-    - openmdao.util
-    - boto
-    - paramiko >=1.7.7
-    - requests
+    
   run:
     - python
     - setuptools
