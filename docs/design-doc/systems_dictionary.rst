@@ -10,7 +10,7 @@ SimpleSystem
 +++++++++++++
 
 In the System Hierarchy, the ``SimpleSystem`` is analogous to a ``Component``
-in the iteration hierarhcy. Every component in your model will have a
+in the iteration hierarchy. Every component in your model will have a
 corresponding ``SimpleSystem`` in the system tree, provided that it's in a
 workflow. A SimpleSystem can execute the component and can provide the matrix
 vector product of the Jacobian for the derivative solver.
@@ -194,8 +194,40 @@ these, the state/residual behavior only occurs under solvers.
 AssemblySystem
 +++++++++++++++
 
+Finally, let's take the "solver" driver and put it in an assembly. In the
+system hierarchy, an assembly is represented by an AssemblySystem. An
+assembly is opaque in nature, with a scope that is inaccessable from the
+outside, so the AssemblySystem has an inward and an outward facing system.
+The outer system is the AssemblySystem, and it is opaque. Variables must be
+passed between the inner and outer scope before and after execution, though
+the only ones that need to be passed are the variables on the assembly
+boundary. The inner assembly system is either a SerialSystem or a
+ParallelSystem. The gradient of an AssemblySystem must be calculated by
+asking the inner system for the gradient of the boundary variables. This
+invokes a separate linear solution from the outer solve, though it is solved
+during ``linearize`` and cached. Note that this may incur a higher memory
+footprint over just putting everything in one assembly, but assemblies are
+useful for encapsulation.
+
 .. _`AssemblySystem`:
 
 .. figure:: arch_assemblysystem-1.png
    :align: center
    :alt: Sub assembly scope.
+
+For this final figure, we have taken the subdriver 'solver' and placed it
+(along with 'Comp1' and 'Comp2') into a subassembly. Since it's the first
+driver in the assembly now, the solver's name is now 'driver'. Now the System
+Hierarchy has the inner and outer systems for the assembly. Since we kept the
+top driver in the top, we needed to create passthroughs for the 'Comp1.x' and
+'Comp2.y' variables; these are called 'Sub.x' and 'Sub.y'. Boundary variables
+that are relevant in gradient calculations of the outer system show up as the
+InVarSystem 'x' and the VarSystem 'y'. Everything below driver is as above,
+though the EqConstraintSystem's name is now '_pseudo_0' because each assembly
+has a separate counter for PseudoComps.
+
+VarSystem
+++++++++++++
+
+A ``VarSystem`` is a system that is created for an assembly boundary output
+for which a derivative is required in an outer scope.
