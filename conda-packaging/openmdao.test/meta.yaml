@@ -1,17 +1,21 @@
 package:
-  name: openmdao.units
+ name: openmdao.test
 
 source:
-  path:  ../../openmdao.units
+ path:  ../../openmdao.test
 
 requirements:
   build:
     - python
     - setuptools
+    #- openmdao.main
+    #- nose
 
   run:
     - python
     - setuptools
+    - openmdao.main
+    - nose
 
 about:
   home:  http://openmdao.org
