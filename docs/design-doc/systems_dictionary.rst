@@ -159,12 +159,20 @@ SolverSystem
 +++++++++++++
 
 Solvers are a special case, and form a subclass of
-``TransparentDriverSystem`` called the ``SolverSystem``.
-
-The SolverSystem always contains the workflow's system as a subsystem.
+``TransparentDriverSystem`` called the ``SolverSystem``. As before, the
+SolverSystem always contains the workflow's system as a subsystem, and these
+components contribute variables and equations to the gradient solution. In
+addition, the solver's equality constraint is given a special system called
+the "EqConstraintSystem". This system houses the solver's implicit
+relationship.
 
 EqConstraintSystem
 +++++++++++++++++++
+
+Every ``Solver`` system has a corresponding ``EqConstraintSystem``. This
+system defines the implicit relationship between the solver's parameters
+(which behave as implicit states in the coupled gradient solution) and the
+solver's equality constraint output (which behaves as a residual.)
 
 .. _`SolverSystem`:
 
@@ -172,8 +180,22 @@ EqConstraintSystem
    :align: center
    :alt: Coupled derivatives for subsolvers.
 
+In this figure, we have replaced the undifferentiable "sub" with a solver
+such as ``NewtonSolver``. Hence, there are no more OpaqueSystems. The
+solver's outer system is represented by the upsidedown home plate symbol, and
+it contains a SerialSystem for its workflow. We've given 'Comp1' another
+input to be varied by the solver to drive the output to zero. The final
+item in the solver's SerialSystem is the EqConstraintSystem '_pseudo_1'.
+
+Note that equality constraints can also be added to non-differentiable
+drivers such as optimizers. While the EqConstraintSystem is still created for
+these, the state/residual behavior only occurs under solvers.
 
 AssemblySystem
 +++++++++++++++
 
+.. _`AssemblySystem`:
 
+.. figure:: arch_assemblysystem-1.png
+   :align: center
+   :alt: Sub assembly scope.
