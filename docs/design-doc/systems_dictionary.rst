@@ -230,4 +230,4 @@ VarSystem
 ++++++++++++
 
 A ``VarSystem`` is a system that is created for an assembly boundary output
-for which a derivative is required in an outer scope.
+for which a derivative is required in an outer scope. It performs little calculation.
