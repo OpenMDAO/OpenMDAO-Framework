@@ -1,0 +1,31 @@
+package:
+ name: openmdao.devtools
+
+source:
+ path:  ../../openmdao.devtools
+
+requirements:
+  build:
+    - python
+    - setuptools
+    - sphinx
+    - fabric >=0.9.3
+    - openmdao.util
+    - boto
+    - paramiko >=1.7.7
+    - requests
+
+  run:
+    - python
+    - setuptools
+    - sphinx
+    - fabric >=0.9.3
+    - openmdao.util
+    - boto
+    - paramiko >=1.7.7
+    - requests
+
+about:
+  home:  http://openmdao.org
+  license:  Apache 2.0
+  summary:  "Open-source Multidisciplinary Design, Analysis and Optimazation framework in Python."

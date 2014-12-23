@@ -1,0 +1,39 @@
+package:
+ name: openmdao.lib
+
+source:
+ path:  ../../openmdao.lib
+
+requirements:
+  build:
+    - python
+    - setuptools
+    - openmdao.main
+    #- pyevolve ==0.6
+    - pytz >=2011
+    - bson
+    #- conmin ==1.0.1
+    #- newsumt ==1.1.0
+    #- cobyla ==1.0.1
+    #- slsqp ==1.0.1
+    - numpy
+    - scipy >=0.11.0
+
+  run:
+    - python
+    - setuptools
+    - openmdao.main
+    #- pyevolve ==0.6
+    - pytz >=2011
+    - bson
+    #- conmin ==1.0.1
+    #- newsumt ==1.1.0
+    #- cobyla ==1.0.1
+    #- slsqp ==1.0.1
+    - numpy
+    - scipy >=0.11.0
+
+about:
+  home:  http://openmdao.org
+  license:  Apache 2.0
+  summary:  "Open-source Multidisciplinary Design, Analysis and Optimazation framework in Python."

@@ -1,0 +1,41 @@
+package:
+ name: openmdao.main
+
+source:
+ path:  ../../openmdao.main
+
+requirements:
+  build:
+    - python
+    - decorator
+    - mock
+    - networkx <1.9.1
+    - openmdao.units
+    - openmdao.util
+    - pycrypto
+    - pyparsing
+    - requests
+    - setuptools
+    - sphinx
+    - traits ==4.3.0
+    - zope.interface
+
+  run:
+    - python
+    - decorator
+    - mock
+    - networkx <1.9.1
+    - openmdao.units
+    - openmdao.util
+    - pycrypto
+    - pyparsing
+    - requests
+    - setuptools
+    - sphinx
+    - traits ==4.3.0
+    - zope.interface
+
+about:
+  home:  http://openmdao.org
+  license:  Apache 2.0
+  summary:  "Open-source Multidisciplinary Design, Analysis and Optimazation framework in Python."
