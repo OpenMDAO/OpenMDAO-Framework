@@ -13,12 +13,13 @@ In the System Hierarchy, the ``SimpleSystem`` is analogous to a ``Component``
 in the iteration hierarchy. Every component in your model will have a
 corresponding ``SimpleSystem`` in the system tree, provided that it's in a
 workflow. A SimpleSystem can execute the component and can provide the matrix
-vector product of the Jacobian for the derivative solver.
+vector product of the Jacobian for the derivative solver. Both implicit and
+explicit components are represented by SimpleSystems.
 
 SerialSystem
 +++++++++++++
 
-A ``SerialSystem`` is a container system for collections of SimpleSystems. As
+A ``SerialSystem`` is a container system for one or more SimpleSystems. As
 the name implies, the component subsystems are executed sequentially in the
 order directed by the connectivity graph. Every driver's workflow has a
 corresponding SerialSystem in the system hierarchy. These SerialSystems can
@@ -138,7 +139,8 @@ As before, we also get an InVarSystem for the gradient input because of the
 OpaqueSystem scope change.
 
 Note that if our "sub" driver also needed derivatives (a nested Optimizer
-might), then an additional OpaqueSystem layer would be required there.
+might), then an additional OpaqueSystem layer would be required there. This
+is the only situation that allows "nested" OpaqueSystems.
 
 FiniteDiffDriverSystem is derived from ``DriverSystem``, but that class is
 never used on its own.
@@ -146,14 +148,14 @@ never used on its own.
 TransparentDriverSystem
 ++++++++++++++++++++++++
 
-Some drivers can be differentiated by including the components in their
-workflow in the parent driver's gradient solution in some manner. These
-drivers inherit from ``TransparentDriverSystem``. Presently, the
-``TransparentDriverSystem`` is only found when using ``Driver`` as a
-subdriver. Driver runs it's workflow once, so for derivative calculation, its
-variables can be added to the system of equations and solved together.
-The matrix vector product operation proceeds across the
-TransparentDriverSystem boundary, hence it is called "transparent".
+Some drivers can be differentiated by including their workflow's components in
+the parent driver's gradient solution in some manner. These drivers inherit
+from ``TransparentDriverSystem``. Presently, the ``TransparentDriverSystem``
+is only found when using ``Driver`` as a subdriver. Driver runs it's workflow
+once, so for derivative calculation, its variables can be added to the system
+of equations and solved together. The matrix vector product operation
+proceeds across the TransparentDriverSystem boundary, hence it is called
+"transparent".
 
 SolverSystem
 +++++++++++++
@@ -163,7 +165,7 @@ Solvers are a special case, and form a subclass of
 SolverSystem always contains the workflow's system as a subsystem, and these
 components contribute variables and equations to the gradient solution. In
 addition, the solver's equality constraint is given a special system called
-the "EqConstraintSystem". This system houses the solver's implicit
+the ``EqConstraintSystem``. This system houses the solver's implicit
 relationship.
 
 EqConstraintSystem
@@ -184,7 +186,7 @@ In this figure, we have replaced the undifferentiable "sub" with a solver
 such as ``NewtonSolver``. Hence, there are no more OpaqueSystems. The
 solver's outer system is represented by the upsidedown home plate symbol, and
 it contains a SerialSystem for its workflow. We've given 'Comp1' another
-input to be varied by the solver to drive the output to zero. The final
+input 'Comp1.z' to be varied by the solver to drive the output to zero. The final
 item in the solver's SerialSystem is the EqConstraintSystem '_pseudo_1'.
 
 Note that equality constraints can also be added to non-differentiable
