@@ -1,0 +1,16 @@
+package:
+    name: conmin
+    version: dev
+
+source:
+    path: ../../contrib/conmin
+
+requirements:
+    build:
+        - python
+        - setuptools
+        - numpy
+
+    run:
+        - python
+        - numpy
