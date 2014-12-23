@@ -120,9 +120,6 @@ class RecordingOptionsTestCase(unittest.TestCase):
         for name, val in zip(names, cases[0]):
             self.assertAlmostEqual(val, iteration_case_1[name])
 
-        #verify_json( self, sout, 'test_problem_formulation_only.json')
-        #self.verify_case_dump(expected, sout)
-
     def test_includes_only(self):
         """ verify options with includes but not problem formulation:
                 save_problem_formulation = False
@@ -163,11 +160,6 @@ class RecordingOptionsTestCase(unittest.TestCase):
         }
         for name, val in zip(names, cases[0]):
             self.assertAlmostEqual(val, iteration_case_1[name])
-
-
-        #print sout.getvalue()
-        #verify_json( self, sout, 'test_includes_only.json')
-        #self.verify_case_dump(expected, sout)
 
     def test_options_with_excludes(self):
         """ verify options with excludes:

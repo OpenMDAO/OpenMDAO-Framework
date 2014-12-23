@@ -444,7 +444,6 @@ class MyCont(Container):
 
 
 if __name__ == '__main__':
-    #sys.argv.append('--cover-package=openmdao.main')
-    #sys.argv.append('--cover-erase')
-    #nose.runmodule()
-    unittest.main()
+    sys.argv.append('--cover-package=openmdao.main')
+    sys.argv.append('--cover-erase')
+    nose.runmodule()

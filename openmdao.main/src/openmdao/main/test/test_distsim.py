@@ -352,7 +352,7 @@ class TestCase(unittest.TestCase):
 
         factory = self.start_factory()
 
-         # List available types.
+        # List available types.
         types = factory.get_available_types()
         logging.debug('Available types:')
         for typname, version in types:
@@ -608,7 +608,6 @@ class TestCase(unittest.TestCase):
             model = set_as_top(Model(box))
             model.run()
 
-            #import pdb; pdb.set_trace()
             # Check results.
             for width in range(1, 2):
                 for height in range(1, 3):
@@ -700,9 +699,9 @@ class TestCase(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    #logging.getLogger().setLevel(logging.DEBUG)
-    unittest.main()
+    logging.getLogger().setLevel(logging.DEBUG)
+    #unittest.main()
     #sys.argv.append('--cover-package=openmdao.main')
     #sys.argv.append('--cover-erase')
-    #import nose
-    #nose.runmodule()
+    import nose
+    nose.runmodule()
