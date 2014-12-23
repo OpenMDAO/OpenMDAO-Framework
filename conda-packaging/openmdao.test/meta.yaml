@@ -17,6 +17,12 @@ requirements:
     - openmdao.main
     - nose
 
+entry_points:
+  - openmdao.test.execcomp.ExecComp = openmdao.test.execcomp:ExecComp
+  - nosetimerplugin = openmdao.test.nosetimer:TestTimer
+  - nosesummaryplugin = openmdao.test.testing:TestFailureSummary
+  - noseearlyplugin = openmdao.test.early_report:EarlyTestInfo
+
 about:
   home:  http://openmdao.org
   license:  Apache 2.0
