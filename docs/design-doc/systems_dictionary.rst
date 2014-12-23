@@ -85,7 +85,8 @@ subsystems that can't provide derivatives and group them into an
 number of OpaqueSystems it can based on their connectivity. An OpaqueSystem
 contains its own vectors, so when it executes, it must copy its variables
 between the outer and inner scope before and after it executes its
-subsystems.
+subsystems. The adjective "opaque" refers to how this system essentially
+hides its internal variables from the systems above it in the hierarchy.
 
 When an OpaqueSystem is linearized, it performs a finite difference between
 its boundary inputs and boundary outputs, and then caches that Jacobian for
@@ -149,7 +150,10 @@ Some drivers can be differentiated by including the components in their
 workflow in the parent driver's gradient solution in some manner. These
 drivers inherit from ``TransparentDriverSystem``. Presently, the
 ``TransparentDriverSystem`` is only found when using ``Driver`` as a
-subdriver.
+subdriver. Driver runs it's workflow once, so for derivative calculation, its
+variables can be added to the system of equations and solved together.
+The matrix vector product operation proceeds across the
+TransparentDriverSystem boundary, hence it is called "transparent".
 
 SolverSystem
 +++++++++++++
@@ -161,6 +165,13 @@ The SolverSystem always contains the workflow's system as a subsystem.
 
 EqConstraintSystem
 +++++++++++++++++++
+
+.. _`SolverSystem`:
+
+.. figure:: arch_solversystem-1.png
+   :align: center
+   :alt: Coupled derivatives for subsolvers.
+
 
 AssemblySystem
 +++++++++++++++
