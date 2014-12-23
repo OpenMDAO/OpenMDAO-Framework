@@ -8,7 +8,9 @@ create from your model when the System Hierarchy is formed.
 SimpleSystem
 +++++++++++++
 
-
+In the System Hierarchy, the ``SimpleSystem`` is analogous to a ``Component``
+in the iteration hierarhcy. Every component in your model will have a
+corresponding ``SimpleSystem`` in the system tree, provide that it's in a workflow.
 
 .. _`SimpleSystem`:
 
