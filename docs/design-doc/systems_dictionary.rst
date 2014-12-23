@@ -109,14 +109,55 @@ because of the scope change across the OpaqueSystem boundary.
 FiniteDiffDriverSystem
 +++++++++++++++++++++++
 
+Each drivers actually contains two relevant systems. So far we've discussed
+the "inner" one, which is the SerialSystem (or ParallelSystem) that is owned
+by its workflow. The driver also contains a system that defines it's behavior
+when placed as a subdriver into a larger model. For the majority of drivers
+(such as Optimizers), there isnt an easy anlytical way to calculate
+derivatives across it without executing it via a finite difference. These
+drivers contain a ``FiniteDiffDriverSystem`` to define their external
+behavior, essentially marking them to be included into any OpaqueSystems that
+are generated.
+
+The FiniteDiffDriverSystem always contains the workflow's system as a
+subsystem. It executes by running it's workflow system, but it cannot provide
+derivatives and relies on the being contained in an OpaqueSystem.
+
 .. _`FiniteDiffDriverSystem`:
 
 .. figure:: arch_finitedifferencesystem-1.png
    :align: center
    :alt: Some drivers must be finite differenced.
 
+In this figure, we have taken the previous model and moved the components
+into a subdriver called "sub" (denoted by the upsidedown home plate). This
+driver cannot calculate its derivatives, so it is placed in the OpaqueSystem
+"('sub',)", which contains a SerialSystem "FD_('sub',)" that contains 'sub'.
+As before, we also get an InVarSystem for the gradient input because of the
+OpaqueSystem scope change.
+
+Note that if our "sub" driver also needed derivatives (a nested Optimizer
+might), then an additional OpaqueSystem layer would be required there.
+
+FiniteDiffDriverSystem is derived from ``DriverSystem``, but that class is
+never used on its own.
+
+TransparentDriverSystem
+++++++++++++++++++++++++
+
+Some drivers can be differentiated by including the components in their
+workflow in the parent driver's gradient solution in some manner. These
+drivers inherit from ``TransparentDriverSystem``. Presently, the
+``TransparentDriverSystem`` is only found when using ``Driver`` as a
+subdriver.
+
 SolverSystem
 +++++++++++++
+
+Solvers are a special case, and form a subclass of
+``TransparentDriverSystem`` called the ``SolverSystem``.
+
+The SolverSystem always contains the workflow's system as a subsystem.
 
 EqConstraintSystem
 +++++++++++++++++++
