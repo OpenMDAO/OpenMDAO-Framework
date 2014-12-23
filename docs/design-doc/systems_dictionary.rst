@@ -64,6 +64,12 @@ objective also gives us another SimpleSystem that executes last.
 OpaqueSystem
 +++++++++++++
 
+.. _`OpaqueSystem`:
+
+.. figure:: arch_opaquesystem-1.png
+   :align: center
+   :alt: Opaque systems allow finite difference on submodels.
+
 SolverSystem
 +++++++++++++
 
