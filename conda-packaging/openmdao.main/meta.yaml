@@ -7,17 +7,33 @@ source:
 requirements:
   build:
     - python
-    - setuptools
+    - decorator
+    - mock
+    - networkx <1.9.1
+    - openmdao.units
+    - openmdao.util
     - pycrypto
     - pyparsing
+    - requests
+    - setuptools
+    - sphinx
     - traits ==4.3.0
+    - zope.interface
 
   run:
     - python
-    - setuptools
+    - decorator
+    - mock
+    - networkx <1.9.1
+    - openmdao.units
+    - openmdao.util
     - pycrypto
     - pyparsing
+    - requests
+    - setuptools
+    - sphinx
     - traits ==4.3.0
+    - zope.interface
 
 about:
   home:  http://openmdao.org
