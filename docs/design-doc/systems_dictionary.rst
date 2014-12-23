@@ -106,11 +106,20 @@ which can now provide derivatives by finite difference. There is also an
 additional ``InVarSystem`` for 'Comp1.x' in the OpaqueSystem's SerialSystem
 because of the scope change across the OpaqueSystem boundary.
 
+FiniteDiffDriverSystem
++++++++++++++++++++++++
+
+.. _`FiniteDiffDriverSystem`:
+
+.. figure:: arch_finitedifferencesystem-1.png
+   :align: center
+   :alt: Some drivers must be finite differenced.
+
 SolverSystem
 +++++++++++++
 
-FiniteDiffDriverSystem
-+++++++++++++++++++++++
+EqConstraintSystem
++++++++++++++++++++
 
 AssemblySystem
 +++++++++++++++
