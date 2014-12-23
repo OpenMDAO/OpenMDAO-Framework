@@ -277,10 +277,6 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         line = '"",2.0,4.3,1.9,"","","","",""\r\n'
         self.assertTrue(csv_data[1].endswith(line))
 
-
-
-
-    
     def test_CSVCaseRecorder_messages(self):
         rec = CSVCaseRecorder(filename=self.filename)
         rec.startup()

@@ -598,7 +598,8 @@ class Workflow(object):
                     #self._rec_all_outputs.append(output_name)
                     
         #####
-        # also need get any outputs of comps that are not connected vars and therefore not in the graph
+        # also need get any outputs of comps that are not connected vars 
+		#   and therefore not in the graph
         # could use 
         #   scope._depgraph
         #      there's 'iotype' metadata in the var nodes
@@ -642,7 +643,7 @@ class Workflow(object):
         #     if src not in inputs and src not in outputs and \
         #        self._check_path(path, includes, excludes):
         #         self._rec_outputs.append(src)
-        #         #qqq outputs.append(src)
+        #         #outputs.append(src)
 
 
         name = '%s.workflow.itername' % driver.name

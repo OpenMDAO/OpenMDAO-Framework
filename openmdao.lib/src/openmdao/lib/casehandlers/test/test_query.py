@@ -120,7 +120,7 @@ def create_files():
 class TestCase(unittest.TestCase):
 
     def setUp(self):
-        create_files()  # Uncomment to create 'sellar.new'
+        #create_files()  # Uncomment to create 'sellar.new'
         path = os.path.join(os.path.dirname(__file__), 'sellar.json')
         self.cds = CaseDataset(path, 'json')
 
@@ -137,7 +137,6 @@ class TestCase(unittest.TestCase):
     def test_query(self):
         # Full dataset.
         vnames = self.cds.data.var_names().fetch()
-        expected = ['_driver_id', '_id', '_parent_id', 'error_message', 'error_status', 'timestamp', u'top._pseudo_0', u'top._pseudo_1', u'top._pseudo_2', u'top.driver.workflow.itername', u'top.half.derivative_exec_count', u'top.half.exec_count', u'top.half.itername', u'top.half.z2a', u'top.sub._pseudo_0', u'top.sub.derivative_exec_count', u'top.sub.dis1.derivative_exec_count', u'top.sub.dis1.exec_count', u'top.sub.dis1.itername', u'top.sub.dis1.y2', u'top.sub.dis2.derivative_exec_count', u'top.sub.dis2.exec_count', u'top.sub.dis2.itername', u'top.sub.driver.workflow.itername', u'top.sub.exec_count', u'top.sub.globals.z1', u'top.sub.itername', u'top.sub.x1']
         expected = ['_driver_id', '_id', '_parent_id', u'_pseudo_0', u'_pseudo_0.out0', u'_pseudo_1', u'_pseudo_1.out0', u'_pseudo_2', u'_pseudo_2.out0', u'driver.workflow.itername', 'error_message', 'error_status', u'half.derivative_exec_count', u'half.exec_count', u'half.itername', u'half.z2a', u'half.z2b', u'sub._pseudo_0', u'sub._pseudo_0.out0', u'sub.derivative_exec_count', u'sub.dis1.derivative_exec_count', u'sub.dis1.exec_count', u'sub.dis1.itername', u'sub.dis1.y1', u'sub.dis1.y2', u'sub.dis2.derivative_exec_count', u'sub.dis2.exec_count', u'sub.dis2.itername', u'sub.dis2.y2', u'sub.driver.workflow.itername', u'sub.exec_count', u'sub.globals.z1', u'sub.itername', u'sub.states', u'sub.states.y[0]', u'sub.states.y[1]', u'sub.x1', 'timestamp']
 
         self.assertEqual(vnames, expected)
@@ -175,23 +174,9 @@ class TestCase(unittest.TestCase):
 
     def test_parent(self):
         # Full dataset names by specifying a top-level case.
-        #parent = 'e52a477a-588e-11e4-8355-080027a1f086'  # iteration_case_6
         parent = 'a00d3f9e-86ba-11e4-8001-20c9d0478eff'  # iteration_case_6
         
         vnames = self.cds.data.parent_case(parent).var_names().fetch()
-        expected = [
-            '_driver_id', '_id', '_parent_id', '_pseudo_0', '_pseudo_1',
-            '_pseudo_2', 'driver.workflow.itername', 'error_message',
-            'error_status', 'half.derivative_exec_count', 'half.exec_count',
-            'half.itername', 'half.z2a', 'half.z2b', 'sub._pseudo_0',
-            'sub.derivative_exec_count', 'sub.dis1.derivative_exec_count',
-            'sub.dis1.exec_count', 'sub.dis1.itername', 'sub.dis1.y1',
-            'sub.dis1.y2', 'sub.dis2.derivative_exec_count',
-            'sub.dis2.exec_count', 'sub.dis2.itername', 'sub.dis2.y2',
-            'sub.driver.workflow.itername', 'sub.exec_count', 'sub.globals.z1',
-            'sub.itername', 'sub.states', 'sub.states.y[0]', 'sub.states.y[1]',
-            'sub.x1', 'timestamp']
-        
         expected = [u'half.z2a', u'half.z2b', u'sub.dis1.y1',
                     u'sub.itername', u'_pseudo_1', u'sub.dis1.itername',
                     u'sub.globals.z1', u'sub.dis1.derivative_exec_count', u'sub.dis1.y2',
@@ -209,12 +194,8 @@ class TestCase(unittest.TestCase):
         #####self.assertEqual(vnames, expected)
 
         
-        cases = self.cds.data.fetch() #qqq
         cases = self.cds.data.parent_case(parent).fetch()
-        
-        
         self.assertEqual(len(cases), 6)
-        #self.assertEqual(len(cases), 66)
         self.assertEqual(len(cases[0]), len(expected))
 
         iteration_case_1 = {
@@ -288,14 +269,13 @@ class TestCase(unittest.TestCase):
     def test_driver(self):
         # Dataset of a driver.
         vnames = self.cds.data.driver('sub.driver').var_names().fetch()
-        expected = [
-            '_driver_id', '_id', '_parent_id', 'error_message', 'error_status',
-            'sub._pseudo_0', 'sub.dis1.derivative_exec_count',
-            'sub.dis1.exec_count', 'sub.dis1.itername', 'sub.dis1.y1',
-            'sub.dis1.y2', 'sub.dis2.derivative_exec_count',
-            'sub.dis2.exec_count', 'sub.dis2.itername', 'sub.dis2.y2',
-            'sub.driver.workflow.itername', 'timestamp']
-        expected = ['_driver_id', '_id', '_parent_id', 'error_message', 'error_status', u'sub._pseudo_0', u'sub._pseudo_0.out0', u'sub.dis1.derivative_exec_count', u'sub.dis1.exec_count', u'sub.dis1.itername', u'sub.dis1.y1', u'sub.dis1.y2', u'sub.dis2.derivative_exec_count', u'sub.dis2.exec_count', u'sub.dis2.itername', u'sub.dis2.y2', u'sub.driver.workflow.itername', 'timestamp']
+        expected = ['_driver_id', '_id', '_parent_id', 'error_message', 
+				'error_status', u'sub._pseudo_0', u'sub._pseudo_0.out0', 
+				'sub.dis1.derivative_exec_count', u'sub.dis1.exec_count', 
+				u'sub.dis1.itername', u'sub.dis1.y1', u'sub.dis1.y2', 
+				'sub.dis2.derivative_exec_count', u'sub.dis2.exec_count', 
+				u'sub.dis2.itername', u'sub.dis2.y2', 
+				u'sub.driver.workflow.itername', 'timestamp']
         self.assertEqual(vnames, expected)
 
         cases = self.cds.data.driver('sub.driver').fetch()

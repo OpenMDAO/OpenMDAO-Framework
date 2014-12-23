@@ -8,8 +8,6 @@ import StringIO
 import json
 import webbrowser
 
-#from  pymongodb_bson_binary_util import loads
-#from  bson.json_util import loads
 
 def caseset_query_to_html(query, filename='cases.html'):
 
@@ -18,7 +16,6 @@ def caseset_query_to_html(query, filename='cases.html'):
     query.write(q_str)
     case_data = q_str.getvalue()
     json_data = json.loads(case_data)
-    #json_data = loads(case_data)
 
     # get dependency graph from case data and render it to SVG
     graph = json_data['simulation_info']['graph']

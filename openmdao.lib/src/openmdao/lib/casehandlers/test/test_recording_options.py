@@ -7,8 +7,7 @@ import StringIO
 
 from openmdao.main.api import Assembly, set_as_top
 from openmdao.test.execcomp import ExecComp
-from openmdao.lib.casehandlers.api import DumpCaseRecorder
-from openmdao.lib.casehandlers.api import JSONCaseRecorder, verify_json, CaseDataset
+from openmdao.lib.casehandlers.api import JSONCaseRecorder, CaseDataset
 from openmdao.lib.drivers.sensitivity import SensitivityDriver
 
 
@@ -49,23 +48,16 @@ class RecordingOptionsTestCase(unittest.TestCase):
         sout.seek(0) # need to go back to the front of the "file"
         cds = CaseDataset(sout, 'json')
         vnames = cds.data.var_names().fetch()
-        expected = ['_driver_id', '_id', '_parent_id', u'_pseudo_0.out0', u'_pseudo_1.out0', 
-                    u'comp1.derivative_exec_count', u'comp1.exec_count', u'comp1.itername',
-                    u'comp1.x', u'comp1.z', u'comp2.derivative_exec_count', u'comp2.exec_count',
-                    u'comp2.itername', u'comp2.z', u'driver.workflow.itername', 
-                    'error_message', 'error_status', 'timestamp']
-        expected = ['_driver_id', '_id', '_parent_id', u'_pseudo_0', u'_pseudo_1', 
-                    u'comp1.derivative_exec_count', u'comp1.exec_count', u'comp1.itername', 
-                    u'comp1.x', u'comp2.derivative_exec_count', u'comp2.exec_count', u'comp2.itername', 
-                    u'driver.workflow.itername', 'error_message', 'error_status', 'timestamp']
-        expected = ['_driver_id', '_id', '_parent_id', u'_pseudo_0', u'_pseudo_1', u'comp1.derivative_exec_count', 
-                    u'comp1.exec_count', u'comp1.itername', u'comp1.x', u'comp2.derivative_exec_count', u'comp2.exec_count', 
-                    u'comp2.itername', u'driver.workflow.itername', 'error_message', 'error_status', 'timestamp']
-        expected = ['_driver_id', '_id', '_parent_id', u'_pseudo_0', u'_pseudo_0.out0', u'_pseudo_1', u'_pseudo_1.out0', u'comp1.derivative_exec_count', u'comp1.exec_count', u'comp1.itername', u'comp1.x', u'comp1.z', u'comp2.derivative_exec_count', u'comp2.exec_count', u'comp2.itername', u'comp2.z', u'driver.workflow.itername', 'error_message', 'error_status', 'timestamp']
+        expected = ['_driver_id', '_id', '_parent_id', u'_pseudo_0', 
+				u'_pseudo_0.out0', u'_pseudo_1', u'_pseudo_1.out0',
+				u'comp1.derivative_exec_count', u'comp1.exec_count', 
+				u'comp1.itername', u'comp1.x', u'comp1.z', 
+				u'comp2.derivative_exec_count', u'comp2.exec_count', 
+				u'comp2.itername', u'comp2.z', u'driver.workflow.itername', 
+				'error_message', 'error_status', 'timestamp']
 
 
         self.assertFalse(set(vnames).symmetric_difference(set(expected)))
-        #self.assertFalse(set(vnames) - set(expected))
         
         # Specific variables.
         names = [ 'comp1.x', '_pseudo_0', '_pseudo_1']
@@ -103,7 +95,6 @@ class RecordingOptionsTestCase(unittest.TestCase):
                     u'_pseudo_1', u'comp1.x', 'error_message', 'error_status', 'timestamp']
 
         self.assertFalse(set(vnames).symmetric_difference(set(expected)))
-        #self.assertFalse(set(vnames) - set(expected))
         
         # Specific variables.
         names = [ 'comp1.x',]
@@ -181,7 +172,8 @@ class RecordingOptionsTestCase(unittest.TestCase):
         cds = CaseDataset(sout, 'json')
         
         constants = cds.simulation_info['constants'].keys()
-        expected = [u'recording_options.save_problem_formulation', u'recording_options.includes', u'comp1.y', u'recording_options.excludes']
+        expected = [u'recording_options.save_problem_formulation', 
+			u'recording_options.includes', u'comp1.y', u'recording_options.excludes']
         self.assertFalse(set(constants) - set(expected))
      
 
@@ -232,9 +224,6 @@ class RecordingOptionsTestCase(unittest.TestCase):
         for name, val in zip(names, cases[0]):
             self.assertAlmostEqual(val, iteration_case_1[name])
 
-
-        ## print sout.getvalue()
-        #self.verify_case_dump(expected, sout)
 
 
 if __name__ == '__main__':

@@ -749,11 +749,6 @@ def _fixup(value):
         return [_fixup(val) for val in value]
     elif isinstance(value, ndarray):
         return value.tolist()
-        #qqq = dumps(Binary( cPickle.dumps( value, protocol=2) ) )
-        #return json.loads(qqq)
-        #return dumps(Binary( cPickle.dumps( value, protocol=2) ) )
-        #print Binary( cPickle.dumps( value, protocol=2) )
-        #return Binary( cPickle.dumps( value, protocol=2) )
     elif isinstance(value, VariableTree):
         return dict([(name, _fixup(getattr(value, name)))
                      for name in value.list_vars()])

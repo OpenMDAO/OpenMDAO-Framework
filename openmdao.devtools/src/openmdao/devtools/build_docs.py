@@ -133,6 +133,8 @@ def _pkg_sphinx_info(startdir, pkg, outfile, show_undoc=False,
 
     #excluding traits now since they need to be sorted separately
     #also excluding gui-related files, in case of non-gui build
+    # Also do not want to build docs for pymongo bson code. Even if we wanted to
+	#  if fails because the doctests need the full pymongo to pass
     _names = list(_get_resource_files(dist,
                                     ['*__init__.py', '*setup.py', '*datatypes*.py', '*/lib/casehandlers/pymongo_bson/*'],
                                     ['*.py']))

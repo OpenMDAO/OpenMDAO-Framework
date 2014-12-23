@@ -8,16 +8,16 @@ import logging
 import sys
 import time
 import os
+import inspect
+
 
 import json
 import bson
 
 import cPickle
 
-from openmdao.lib.casehandlers.pymongo_bson.json_util import loads, dumps
+from openmdao.lib.casehandlers.pymongo_bson.json_util import dumps
 from openmdao.lib.casehandlers.pymongo_bson.binary import Binary
-
-from openmdao.lib.casehandlers.util import driver_map
 
 from numpy  import ndarray
 from struct import pack
@@ -38,6 +38,8 @@ class _BaseRecorder(object):
         self._uuid = None
         self._cases = None
         
+		# not used yet but for getting values of variables
+		#     from subcases
         self._last_child_case_uuids = {} # keyed by driver id
 
     def startup(self):
@@ -54,7 +56,7 @@ class _BaseRecorder(object):
         top = self._cfg_map.keys()[0].parent
         while top.parent:
             top = top.parent
-        prefix_drop = len(top.name)+1 if top.name else 0
+        #prefix_drop = len(top.name)+1 if top.name else 0
         prefix_drop = 0
 
         # Collect variable metadata.
@@ -143,7 +145,7 @@ class _BaseRecorder(object):
         top = self._cfg_map.keys()[0].parent
         while top.parent:
             top = top.parent
-        prefix_drop = len(top.name) + 1 if top.name else 0
+        #prefix_drop = len(top.name) + 1 if top.name else 0
         prefix_drop = 0 
         
         driver_info = []
@@ -352,12 +354,9 @@ def _fixup(value):
     elif isinstance(value, (list, tuple, set, frozenset)):
         return [_fixup(val) for val in value]
     elif isinstance(value, ndarray):
-        #return value.tolist()
-        qqq = dumps(Binary( cPickle.dumps( value, protocol=2) ) )
-        return json.loads(qqq)
-        return dumps(Binary( cPickle.dumps( value, protocol=2) ) )
-        #print Binary( cPickle.dumps( value, protocol=2) )
-        #return Binary( cPickle.dumps( value, protocol=2) )
+        d = dumps(Binary( cPickle.dumps( value, protocol=2) ) )
+        return json.loads(d)
+        #return dumps(Binary( cPickle.dumps( value, protocol=2) ) )
     elif isinstance(value, VariableTree):
         return dict([(name, _fixup(getattr(value, name)))
                      for name in value.list_vars()])
@@ -461,9 +460,6 @@ class BSONCaseRecorder(_BaseRecorder):
         """ Just returns None. """
         return None
 
-
-
-
 def dict_iter(dct):
     for k,v in dct.items():
         if isinstance(v, dict):
@@ -473,7 +469,6 @@ def dict_iter(dct):
             yield (k, v)
 
 def verify_json(test, sout, filename):
-    import inspect
 
     directory = os.path.dirname(inspect.getfile(test.__class__))
     path = os.path.join(directory, filename)
