@@ -11,7 +11,7 @@ SimpleSystem
 
 In the System Hierarchy, the ``SimpleSystem`` is analogous to a ``Component``
 in the iteration hierarhcy. Every component in your model will have a
-corresponding ``SimpleSystem`` in the system tree, provide that it's in a
+corresponding ``SimpleSystem`` in the system tree, provided that it's in a
 workflow. A SimpleSystem can execute the component and can provide the matrix
 vector product of the Jacobian for the derivative solver.
 
@@ -61,14 +61,50 @@ has a parameter and an objective. The parameter gives us a ParamSystem called
 'Comp1.x' which comes before 'Comp1' in the subsystem execution order. The
 objective also gives us another SimpleSystem that executes last.
 
+InVarSystem
+++++++++++++
+
+An ``InvarSystem`` is a system that is created for an input for which a
+gradient has been requested when there is not a corresponding parameter, and
+hence no ParamSystem. These will be generated whenever you have a change in
+scope, such as the presence of a subasembly, for which a gradient needs to be
+calculated in the inner scope and given to the outer scope. In those cases,
+the InVarSystem marks the input variables in the subscope, much as the
+ParamSystem marks them for a driver with parameters. InVarSystems are also
+creeated when you call calc_gradient manually on a driver and give it inputs
+that are not already parameters. This system also does little calculation.
+
 OpaqueSystem
 +++++++++++++
+
+If a Driver requires derivatives from its workflow system, and if analytic
+derivatives are not defined for all of its components or subdrivers, then the
+System Hierarchy is generated differently. OpenMDAO will identify all of the
+subsystems that can't provide derivatives and group them into an
+``OpaqueSystem``. The algorithm attempts to group them into the smallest
+number of OpaqueSystems it can based on their connectivity. An OpaqueSystem
+contains its own vectors, so when it executes, it must copy its variables
+between the outer and inner scope before and after it executes its
+subsystems.
+
+When an OpaqueSystem is linearized, it performs a finite difference between
+its boundary inputs and boundary outputs, and then caches that Jacobian for
+use in the linear equations solution.
 
 .. _`OpaqueSystem`:
 
 .. figure:: arch_opaquesystem-1.png
    :align: center
    :alt: Opaque systems allow finite difference on submodels.
+
+For this figure, we have expanded our model to contain two components
+connected in series. We also have one parameter and one objective. The System
+Hierarchy that results contains two more levels. The SimpleSystems for Comp1
+and Comp2 are grouped together in the SerialSystem "FD_('Comp1', 'Comp2')."
+This SerialSystem is contained in an OpaqueSystem called ('Comp1', 'Comp2')
+which can now provide derivatives by finite difference. There is also an
+additional ``InVarSystem`` for 'Comp1.x' in the OpaqueSystem's SerialSystem
+because of the scope change across the OpaqueSystem boundary.
 
 SolverSystem
 +++++++++++++
@@ -79,6 +115,4 @@ FiniteDiffDriverSystem
 AssemblySystem
 +++++++++++++++
 
-InVarSystem
-++++++++++++
 
