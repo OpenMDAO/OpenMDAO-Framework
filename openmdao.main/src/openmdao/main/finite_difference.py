@@ -7,7 +7,6 @@ from sys import float_info
 from openmdao.main.array_helpers import flattened_size
 from openmdao.main.interfaces import IVariableTree
 from openmdao.main.mp_support import has_interface
-from openmdao.main.mpiwrap import mpiprint
 from openmdao.util.graph import base_var
 
 from numpy import ndarray, zeros, ones, unravel_index, complex128
@@ -300,7 +299,7 @@ class FiniteDifference(object):
 
                         sz = uvec[okey].size
                         end += sz
-                        #mpiprint(Jfd, start, end, i, self.J)
+                        #print Jfd, start, end, i, self.J
                         self.J[okey][src][:, i-i1] = Jfd[start:end]
                         start += sz
                 else:
@@ -585,7 +584,7 @@ class DirectionalFD(object):
                 srcs = (srcs,)
 
             direction = fd_step*arg[srcs[0]].flatten()
-            
+
             du = self.system.vec['du']
             for src in srcs:
                 if src in du:
