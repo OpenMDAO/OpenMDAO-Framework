@@ -9,7 +9,7 @@ requirements:
     build:
         - python
         - setuptools
-        - pytz >=2010b
 
     run:
         - python
+        - pytz >=2010b

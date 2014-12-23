@@ -1,35 +1,36 @@
 package:
- name: openmdao.lib
+  name: openmdao.lib
+  version: dev
 
 source:
- path:  ../../openmdao.lib
+  path:  ../../openmdao.lib
 
 requirements:
   build:
     - python
     - setuptools
-    - openmdao.main
-    #- pyevolve ==0.6
-    - pytz >=2011
-    - bson
-    #- conmin ==1.0.1
-    #- newsumt ==1.1.0
-    #- cobyla ==1.0.1
-    #- slsqp ==1.0.1
-    - numpy
-    - scipy >=0.11.0
+    #- openmdao.main
+    #- pyevolve
+    #- pytz >=2011
+    #- bson 
+    #- conmin 
+    #- newsumt
+    #- cobyla
+    #- slsqp
+    #- numpy
+    #- scipy >=0.11.0
 
   run:
     - python
     - setuptools
     - openmdao.main
-    #- pyevolve ==0.6
+    - pyevolve
     - pytz >=2011
-    - bson
-    #- conmin ==1.0.1
-    #- newsumt ==1.1.0
-    #- cobyla ==1.0.1
-    #- slsqp ==1.0.1
+    - bson   
+    - conmin 
+    - newsumt
+    - cobyla
+    - slsqp
     - numpy
     - scipy >=0.11.0
 
