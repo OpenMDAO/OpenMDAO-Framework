@@ -9,17 +9,19 @@ requirements:
     - python
     - setuptools
 
-    entry_points:
-      - openmdao.test.execcomp.ExecComp = openmdao.test.execcomp:ExecComp
-      - nosetimerplugin = openmdao.test.nosetimer:TestTimer
-      - nosesummaryplugin = openmdao.test.testing:TestFailureSummary
-      - noseearlyplugin = openmdao.test.early_report:EarlyTestInfo
   run:
     - python
     - setuptools
     - openmdao.main
     - nose
-    
+
+build:
+  entry_points:
+    - openmdao.test.execcomp.ExecComp = openmdao.test.execcomp:ExecComp
+    - nosetimerplugin = openmdao.test.nosetimer:TestTimer
+    - nosesummaryplugin = openmdao.test.testing:TestFailureSummary
+    - noseearlyplugin = openmdao.test.early_report:EarlyTestInfo
+
 about:
   home:  http://openmdao.org
   license:  Apache 2.0
