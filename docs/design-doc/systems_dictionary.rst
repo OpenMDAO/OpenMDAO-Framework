@@ -46,7 +46,7 @@ OpenMDAO is run under MPI.
 
 .. _`ParallelSystem`:
 
-.. figure:: arch_simplesystem-1.png
+.. figure:: arch_parallelsystem-1.png
    :align: center
    :alt: For a model containing a two components executed in parallel.
 
