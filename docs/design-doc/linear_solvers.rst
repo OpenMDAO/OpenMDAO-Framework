@@ -13,15 +13,13 @@ Whenever an optimizer requests a gradient, it is calculated by a
 LinearSolver. It is also used to calculate the direction to take the next
 step during iteration of a Newton solver.
 
-A LinearSolver has 3 methods that are called by the systems:
+A LinearSolver has 2 methods that are called by the systems:
 
-  *calc_gradient* -- return a Jacobian of outputs with respect to inputs. The
-  return format can be an array or a dict as specified by return_format.
+**calc_gradient** -- return a Jacobian of outputs with respect to inputs. The
+return format can be an array or a dict as specified by return_format.
 
-  solve
-
-  _norm
-
+solve -- solve the current linear system with a custom right hand side
+vector. This is used by Newton solvers
 
 There are currently 3 linear solvers in OpenMDAO, selectable in any
 ``Driver`` by changing the ``lin_solver`` enum in ``gradient_options``.
