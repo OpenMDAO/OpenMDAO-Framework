@@ -18,8 +18,8 @@ A LinearSolver has 2 methods that are called by the systems:
 **calc_gradient** -- return a Jacobian of outputs with respect to inputs. The
 return format can be an array or a dict as specified by return_format.
 
-solve -- solve the current linear system with a custom right hand side
-vector. This is used by Newton solvers
+**solve** -- solve the current linear system with a custom right hand side
+vector. This is used by Newton solvers.
 
 There are currently 3 linear solvers in OpenMDAO, selectable in any
 ``Driver`` by changing the ``lin_solver`` enum in ``gradient_options``.
@@ -39,7 +39,8 @@ You can specify the tolerance for GMRES by setting ``atol`` in the
 gradient_options. The value of atol tells GMRES what values of the matrix
 vector product return to ignore when determining the next direction to go. If
 you have very small derivatives at any point in your model, you may need to
-decrease this number.
+decrease this number. If you have a large number of components, you may also
+need to increase ``maxiter``.
 
 Scipy GMRES is not supported in MPI. If you select it for a driver that is
 running under MPI, the PetSC KSP solver will be used instead.
@@ -47,5 +48,25 @@ running under MPI, the PetSC KSP solver will be used instead.
 PetSC KSP
 ++++++++++
 
+This linear solver uses PetSC's KSP solver. KSP support a number of differnt
+Krylov Space methods, but we are just using GMRES, so the solution method is
+the same as the Scipy GMRES solver. However, the PetSC package provides
+support for solving a linear problem when the incoming and solution vectors
+are distributed across multiple processes in MPI.
+
+You can specify the tolerance for KSP by setting ``atol`` or ``rtol`` in the
+gradient_options (i.e., absolute and relative tolerances). I expect they
+function the same way as in GMRES. If you have a large number of components,
+you may also need to increase ``maxiter``.
+
+The KSP solvers also add formal support for preconditioning; this will be
+supported in OpenMDAO soon.
+
+PetSC KSP is the default linear solver for any driver executing under MPI.
+However, you can also use it for serial execution provided that you have
+installed PetSC and PetSC4py (openMPI and MPI4py may also be needed).
+
 Linear Gauss-Seidel
 ++++++++++++++++++++
+
+The Linear Gauss-Seidel linear solver is essentially a chain rule solver.
