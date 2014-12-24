@@ -19,7 +19,7 @@ explicit components are represented by SimpleSystems.
 SerialSystem
 +++++++++++++
 
-A ``SerialSystem`` is a container system for one or more SimpleSystems. As
+A ``SerialSystem`` is a container system for one or more systems. As
 the name implies, the component subsystems are executed sequentially in the
 order directed by the connectivity graph. Every driver's workflow has a
 corresponding SerialSystem in the system hierarchy. These SerialSystems can
@@ -39,6 +39,22 @@ The figure above shows the System Hierarchy for a model that has a single
 
 ParallelSystem
 +++++++++++++++
+
+Conversely, a ``ParallelSystem`` is a container system for two or more
+systems that will be executed in parallel. These systems are only used when
+OpenMDAO is run under MPI.
+
+.. _`ParallelSystem`:
+
+.. figure:: arch_simplesystem-1.png
+   :align: center
+   :alt: For a model containing a two components executed in parallel.
+
+For this figure, we've built a model with two components that are not
+connected, hence they can be exeucted in parallel. In this case, we have two
+SimpleSystems that will be run in parallel, but in more complicated models,
+groups of components that execute in parallel with each other are
+encapsulated in SerialSystems.
 
 Both SerialSystem and ParallelSystem inherit from ``CompoundSystem``, which
 is never used in the System Hierarchy.
