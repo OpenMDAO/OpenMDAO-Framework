@@ -25,5 +25,4 @@ passing.
 A custom data object can be converted into a flattenable variable by defining
 three methods on the object: ``get_flattened_size``, ``get_flattened_value``,
 and ``set_flattened_value``. Similarly, a flattenable variable can be
-excluded from the distributed vector by giving it the metadata ``noflat =
-True``.
+excluded from the distributed vector by giving it the metadata ``noflat=True``.
