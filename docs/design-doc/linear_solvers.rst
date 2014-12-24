@@ -22,7 +22,10 @@ return format can be an array or a dict as specified by return_format.
 vector. This is used by Newton solvers.
 
 There are currently 3 linear solvers in OpenMDAO, selectable in any
-``Driver`` by changing the ``lin_solver`` enum in ``gradient_options``.
+``Driver`` by changing the ``lin_solver`` enum in ``gradient_options``. All
+linear solvers can be run in either forward or adjoint mode by setting
+``derivative_direction``. If you don't set this, OpenMDAO will pick the best
+direction based on the width of the parameter and response spaces.
 
 Scipy GMRES
 ++++++++++++
@@ -69,4 +72,10 @@ installed PetSC and PetSC4py (openMPI and MPI4py may also be needed).
 Linear Gauss-Seidel
 ++++++++++++++++++++
 
-The Linear Gauss-Seidel linear solver is essentially a chain rule solver.
+The Linear Gauss-Seidel linear solver is essentially a chain rule solver. It
+iterates over a workflow in dataflow order and calls the matrix vector
+product. For a model without cycles, one iteration is enough for an accurate
+derivative, and you should set maxiter to 1 in this case.
+
+This currently doesn't work in MPI, and it might require enough modifications
+that we just implement a new linear solver to use under MPI.
