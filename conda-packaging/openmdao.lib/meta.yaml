@@ -9,18 +9,18 @@ requirements:
   build:
     - python
     - setuptools
+    - bson
+    - pyevolve
+    - cobyla
+    - conmin
+    - newsumt
+    - slsqp
 
   run:
     - python
     - setuptools
     - openmdao.main
-    - pyevolve
     - pytz >=2011
-    - bson
-    - conmin
-    - newsumt
-    - cobyla
-    - slsqp
     - numpy
     - scipy >=0.11.0
 

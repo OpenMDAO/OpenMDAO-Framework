@@ -26,8 +26,3 @@ build:
     - release = openmdao.devtools.releasetools:release
     - push_dists = openmdao.devtools.push_dists:main
     - remote_build = openmdao.devtools.remote_build:main
-
-    about:
-  home:  http://openmdao.org
-  license:  Apache 2.0
-  summary:  "Open-source Multidisciplinary Design, Analysis and Optimazation framework in Python."
