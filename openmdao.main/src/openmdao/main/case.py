@@ -54,7 +54,7 @@ def _flatten_lst(name, lst):
                 _recurse_flatten(ret, name, new_idx, entry)
             else:
                 idxstr = ''.join(["[%d]" % j for j in new_idx])
-                # qqq returns the current flattened list if items
+                # returns the current flattened list if items
                 # idxstr is a string representing what element in the list this is referring to, e.g. '[3][0]'
                 ret.append(("%s%s" % (name, idxstr), entry))
 
