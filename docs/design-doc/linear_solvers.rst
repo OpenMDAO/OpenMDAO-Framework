@@ -15,7 +15,8 @@ step during iteration of a Newton solver.
 
 A LinearSolver has 3 methods that are called by the systems:
 
-  calc_gradient
+  *calc_gradient* -- return a Jacobian of outputs with respect to inputs. The
+  return format can be an array or a dict as specified by return_format.
 
   solve
 
