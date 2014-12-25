@@ -23,6 +23,12 @@ requirements:
     - pytz >=2011
     - numpy
     - scipy >=0.11.0
+    - bson
+    - pyevolve
+    - cobyla
+    - conmin
+    - newsumt
+    - slsqp
 
 build:
   entry_points:

@@ -1,5 +1,6 @@
 package:
   name: openmdao.units
+  version: dev
 
 source:
   path:  ../../openmdao.units

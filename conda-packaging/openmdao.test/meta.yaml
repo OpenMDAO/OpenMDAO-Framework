@@ -1,5 +1,6 @@
 package:
  name: openmdao.test
+ version: dev
 
 source:
  path:  ../../openmdao.test

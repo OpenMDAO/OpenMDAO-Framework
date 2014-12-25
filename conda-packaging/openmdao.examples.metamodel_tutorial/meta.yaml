@@ -1,0 +1,17 @@
+package:
+    name: openmdao.examples.metamodel_tutorial
+    version: dev
+    
+source:
+    path: ../../examples/openmdao.examples.metamodel_tutorial
+    
+requirements:
+    build:
+        - python
+        - setuptools
+        
+    run:
+        - python
+        - setuptools
+        - openmdao.main
+        - openmdao.lib

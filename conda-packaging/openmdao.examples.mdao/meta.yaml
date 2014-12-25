@@ -1,0 +1,17 @@
+package:
+    name: openmdao.examples.mdao
+    version: dev
+    
+source:
+    path: ../../examples/openmdao.examples.mdao
+    
+requirements:
+    build:
+        - python
+        - setuptools
+        
+    run:
+        - python
+        - setuptools
+        - openmdao.main
+        - openmdao.lib
