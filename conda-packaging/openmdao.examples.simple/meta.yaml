@@ -4,11 +4,16 @@ package:
     
 source:
     path: ../../examples/openmdao.examples.simple
+
+build:
+    preserve_egg_dir: yes
     
 requirements:
     build:
         - python
         - setuptools
+        - openmdao.main
+        - openmdao.lib
         
     run:
         - python

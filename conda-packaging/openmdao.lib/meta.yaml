@@ -5,16 +5,23 @@ package:
 source:
   path:  ../../openmdao.lib
 
+build:
+    preserve_egg_dir: yes
+    
 requirements:
   build:
     - python
     - setuptools
+    - numpy
     - bson
     - pyevolve
     - cobyla
     - conmin
     - newsumt
     - slsqp
+    - pytz >=2011
+    - scipy >=0.11.0
+    - openmdao.main
 
   run:
     - python

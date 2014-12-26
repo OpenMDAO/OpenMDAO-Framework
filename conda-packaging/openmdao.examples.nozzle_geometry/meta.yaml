@@ -4,12 +4,17 @@ package:
     
 source:
     path: ../../examples/openmdao.examples.nozzle_geometry_doe
-    
+
+build:
+    preserve_egg_dir: yes
+        
 requirements:
     build:
         - python
         - setuptools
-        
+        - openmdao.main
+        - openmdao.lib
+                
     run:
         - python
         - setuptools

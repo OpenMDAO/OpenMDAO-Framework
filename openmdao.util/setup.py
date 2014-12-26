@@ -54,4 +54,3 @@ setup(name='openmdao.util',
       combine_paths=openmdao.util.lib:combine_paths
       """
       )
-

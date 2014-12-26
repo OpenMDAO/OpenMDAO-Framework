@@ -48,13 +48,13 @@ Component, Driver, Variable and other plugins for OpenMDAO
       install_requires=[
           'setuptools',
           'openmdao.main',
-          'Pyevolve==0.6',
+          'Pyevolve',
           'pytz>=2011',  # To avoid problems with 2010o vs. 2010b in bson req.
           'bson',
-          'conmin==1.0.1',
-          'newsumt==1.1.0',
-          'cobyla==1.0.1',
-          'slsqp==1.0.1',
+          'conmin==1.0.2',
+          'newsumt==1.1.1',
+          'cobyla==1.0.2',
+          'slsqp==1.0.2',
           'numpy',
           'scipy>=0.11.0',
           ],

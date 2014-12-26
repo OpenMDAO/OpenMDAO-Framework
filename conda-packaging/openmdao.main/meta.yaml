@@ -4,20 +4,31 @@ package:
 
 source:
  path:  ../../openmdao.main
-
+    
 requirements:
   build:
     - python
     - setuptools
+    - decorator
+    - mock
+    - networkx ==1.8.1
+    - openmdao.units
+    - openmdao.util
+    - pycrypto ==2.3
+    - pyparsing
+    - requests
+    - sphinx
+    - traits ==4.3.0
+    - zope.interface
 
   run:
     - python
     - decorator
     - mock
-    - networkx <1.9.1
+    - networkx ==1.8.1
     - openmdao.units
     - openmdao.util
-    - pycrypto
+    - pycrypto ==2.3
     - pyparsing
     - requests
     - setuptools

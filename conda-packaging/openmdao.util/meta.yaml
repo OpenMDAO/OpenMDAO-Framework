@@ -5,6 +5,9 @@ package:
 source:
  path:  ../../openmdao.util
 
+build:
+    preserve_egg_dir: True
+    
 requirements:
   build:
     - python

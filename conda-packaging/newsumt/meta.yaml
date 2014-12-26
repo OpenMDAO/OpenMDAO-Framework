@@ -5,6 +5,9 @@ package:
 source:
     path: ../../contrib/newsumt
 
+build:
+    preserve_egg_dir: yes
+    
 requirements:
     build:
         - python

@@ -5,6 +5,9 @@ package:
 source:
     path: ../../contrib/slsqp
 
+build:
+    preserve_egg_dir: no
+    
 requirements:
     build:
         - python

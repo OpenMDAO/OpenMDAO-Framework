@@ -5,10 +5,15 @@ package:
 source:
  path:  ../../openmdao.test
 
+build:
+    preserve_egg_dir: yes
+    
 requirements:
   build:
     - python
     - setuptools
+    - openmdao.main
+    - nose
 
   run:
     - python
