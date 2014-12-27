@@ -5,9 +5,6 @@ package:
 source:
   path:  ../../openmdao.lib
 
-build:
-    preserve_egg_dir: yes
-    
 requirements:
   build:
     - python
@@ -38,6 +35,7 @@ requirements:
     - slsqp
 
 build:
+  preserve_egg_dir: True
   entry_points:
     - openmdao.lib.drivers.adaptivesampledriver.AdaptiveSampleDriver = openmdao.lib.drivers.adaptivesampledriver:AdaptiveSampleDriver
     - openmdao.lib.drivers.broydensolver.BroydenSolver = openmdao.lib.drivers.broydensolver:BroydenSolver

@@ -5,9 +5,6 @@ package:
 source:
  path:  ../../openmdao.devtools
 
-build:
-    preserve_egg_dir: yes
-    
 requirements:
   build:
     - python
@@ -32,6 +29,7 @@ requirements:
     - virtualenv
 
 build:
+  preserve_egg_dir: True
   entry_points:
     - wingproj = openmdao.devtools.wingproj:run_wing
     - make_installer = openmdao.devtools.mkinstaller:main

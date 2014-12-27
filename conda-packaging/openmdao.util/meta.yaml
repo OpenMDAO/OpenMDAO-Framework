@@ -4,9 +4,6 @@ package:
 
 source:
  path:  ../../openmdao.util
-
-build:
-    preserve_egg_dir: True
     
 requirements:
   build:
@@ -24,6 +21,7 @@ requirements:
     - traits ==4.3.0
 
 build:
+  preserve_egg_dir: True
   entry_points:
     - xyplot = openmdao.util.casedb:cmdlineXYplot
     - plotgraph = openmdao.util.graphplot:main

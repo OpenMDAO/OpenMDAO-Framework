@@ -6,7 +6,7 @@ source:
     path: ../../examples/openmdao.examples.bar3simulation
 
 build:
-    preserve_egg_dir: yes
+    preserve_egg_dir: True
     
 requirements:
     build:

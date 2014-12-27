@@ -6,7 +6,7 @@ source:
     path: ../../examples/openmdao.examples.nozzle_geometry_doe
 
 build:
-    preserve_egg_dir: yes
+    preserve_egg_dir: True
         
 requirements:
     build:

@@ -5,9 +5,6 @@ package:
 source:
  path:  ../../openmdao.test
 
-build:
-    preserve_egg_dir: yes
-    
 requirements:
   build:
     - python
@@ -22,6 +19,7 @@ requirements:
     - nose
 
 build:
+  preserve_egg_dir: True
   entry_points:
     - openmdao.test.execcomp.ExecComp = openmdao.test.execcomp:ExecComp
     - nosetimerplugin = openmdao.test.nosetimer:TestTimer
