@@ -1,6 +1,6 @@
 package:
     name: pyevolve
-    version: dev
+    version: !!str {{environ['PKG_VERSION']}}
 
 source:
     git_url: https://github.com/perone/Pyevolve.git

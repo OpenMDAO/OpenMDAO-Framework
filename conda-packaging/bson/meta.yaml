@@ -1,6 +1,6 @@
 package:
     name: bson
-    version: dev
+    version: !!str {{environ['PKG_VERSION']}}
 
 source:
     git_url: https://github.com/martinkou/bson.git
