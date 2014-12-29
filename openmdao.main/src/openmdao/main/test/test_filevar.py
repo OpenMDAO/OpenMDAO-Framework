@@ -145,18 +145,14 @@ class TestCase(unittest.TestCase):
     def tearDown(self):
         """ Called after each test in this class. """
         self.model.pre_delete()
-        # for directory in ('Source', 'Middle', 'Sink'):
-        #     try:
-        #         shutil.rmtree(directory, onerror=onerror)
-        #     except OSError:
-        #         pass
         self.model = None
         os.chdir(self.startdir)
         SimulationRoot.chroot(self.startdir)
-        try:
-            shutil.rmtree(self.tempdir)
-        except OSError:
-            pass
+        if not os.environ.get('OPENMDAO_KEEPDIRS', False):
+            try:
+                shutil.rmtree(self.tempdir)
+            except OSError:
+                pass
 
     def test_connectivity(self):
         logging.debug('')
