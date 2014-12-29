@@ -12,13 +12,13 @@ requirements:
     - python
     - setuptools
     - pycrypto ==2.3
-    - paramiko ==1.7.7.7
+    - paramiko ==1.7.7.1
 
   run:
     - python
     - setuptools
     - pycrypto ==2.3
-    - paramiko ==1.7.7.7
+    - paramiko ==1.7.7.1
 
 build:
   preserve_egg_dir: True
