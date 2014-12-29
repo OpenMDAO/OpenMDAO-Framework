@@ -24,6 +24,10 @@ SET DEPENDENCIES=%DEPENDENCIES% networkx==1.8.1
 SET DEPENDENCIES=%DEPENDENCIES% zope.interface
 SET DEPENDENCIES=%DEPENDENCIES% "pytz>=2011"
 SET DEPENDENCIES=%DEPENDENCIES% pycrypto==2.3
+SET DEPENDENCIES=%DEPENDENCIES% cobyla
+SET DEPENDENCIES=%DEPENDENCIES% conmin
+SET DEPENDENCIES=%DEPENDENCIES% newsumt
+SET DEPENDENCIES=%DEPENDENCIES% slsqp
 
 @ECHO ON
 
@@ -43,30 +47,6 @@ conda install --yes --name openmdao pyevolve
 IF %ERRORLEVEL% GTR 0 (
    conda build conda-packaging\pyevolve
    conda install --yes --name openmdao pyevolve
-)
-REM cobyla
-conda install --yes --name openmdao cobyla
-IF %ERRORLEVEL% GTR 0 (
-   conda build conda-packaging\cobyla
-   conda install --force --yes --name openmdao cobyla
-)
-REM conmin
-conda install --yes --name openmdao conmin
-IF %ERRORLEVEL% GTR 0 (
-   conda build conda-packaging\conmin
-   conda install --force --yes --name openmdao conmin
-)
-REM newsumt
-conda install --yes --name openmdao newsumt
-IF %ERRORLEVEL% GTR 0 (
-   conda build conda-packaging\newsumt
-   conda install --force --yes --name openmdao newsumt
-)
-REM slsqp
-conda install --yes --name openmdao slsqp
-IF %ERRORLEVEL% GTR 0 (
-   conda build conda-packaging\slsqp
-   conda install --force --yes --name openmdao slsqp
 )
 
 REM Get the root directory of anaconda
