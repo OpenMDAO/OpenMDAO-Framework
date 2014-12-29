@@ -4,6 +4,8 @@ Test query of case recorder file.
 
 import glob
 import os.path
+import tempfile
+import shutil
 import unittest
 
 from math import isnan
@@ -121,14 +123,17 @@ class TestCase(unittest.TestCase):
         # create_files()  # Uncomment to create 'sellar.new'
         path = os.path.join(os.path.dirname(__file__), 'sellar.json')
         self.cds = CaseDataset(path, 'json')
+        self.startdir = os.getcwd()
+        self.tempdir = tempfile.mkdtemp(prefix='test_query-')
+        os.chdir(self.tempdir)
 
     def tearDown(self):
         self.cds = None
-        for path in glob.glob('cases.*'):
+        os.chdir(self.startdir)
+        if not os.environ.get('OPENMDAO_KEEPDIR', False):
             try:
-                os.remove(path)
-            except WindowsError:
-                # Still in use (recorder or dataset hasn't been deleted yet).
+                shutil.rmtree(self.tempdir)
+            except OSError:
                 pass
 
     def test_query(self):

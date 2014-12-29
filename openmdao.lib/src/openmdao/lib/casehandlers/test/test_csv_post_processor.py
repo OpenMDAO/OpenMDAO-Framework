@@ -1,6 +1,8 @@
 import os.path
 import unittest
 import StringIO
+import tempfile
+import shutil
 
 from numpy import array, isnan
 
@@ -19,6 +21,10 @@ from openmdao.test.execcomp import ExecComp
 class CSVPostProcessorTestCase(unittest.TestCase):
 
     def setUp(self):
+        self.startdir = os.getcwd()
+        self.tempdir = tempfile.mkdtemp(prefix='test_phx-')
+        os.chdir(self.tempdir)
+
         self.top = top = set_as_top(Assembly())
 
         driver = top.add('driver', SimpleCaseIterDriver())
@@ -54,10 +60,12 @@ class CSVPostProcessorTestCase(unittest.TestCase):
     def tearDown(self):
         for recorder in self.top.recorders:
             recorder.close()
-        if os.path.exists(self.filename_csv):
-            os.remove(self.filename_csv)
-        if os.path.exists(self.filename_json):
-            os.remove(self.filename_json)
+        os.chdir(self.startdir)
+        if not os.environ.get('OPENMDAO_KEEPDIR', False):
+            try:
+                shutil.rmtree(self.tempdir)
+            except OSError:
+                pass
 
     def test_simple(self):
         # Make sure the CSV file can be read and has the correct number of cases

@@ -8,6 +8,7 @@ import pkg_resources
 import shutil
 import sys
 import time
+import tempfile
 import unittest
 import nose
 
@@ -33,6 +34,7 @@ ORIG_DIR = os.getcwd()
 
 # Directory where we can find sleep.py.
 DIRECTORY = pkg_resources.resource_filename('openmdao.lib.components', 'test')
+TMPDIR = os.getcwd()  # we'll set this for each test
 
 ENV_FILE = 'env-data'
 INP_FILE = 'input-data'
@@ -49,9 +51,10 @@ class Sleeper(ExternalCode):
 
     def __init__(self):
         super(Sleeper, self).__init__()
-        self.directory = DIRECTORY
+        self.directory = TMPDIR
         self.external_files = [
-            FileMetadata(path='sleep.py', input=True, constant=True),
+            FileMetadata(path='sleep.py', 
+                         input=True, constant=True),
         ]
 
     def execute(self):
@@ -89,34 +92,26 @@ class TestCase(unittest.TestCase):
     """ Test the ExternalCode component. """
 
     def setUp(self):
-        SimulationRoot.chroot(DIRECTORY)
-        for directory in ('a', 'b'):
-            if os.path.exists(directory):
-                shutil.rmtree(directory, onerror=onerror)
+        global TMPDIR
+        self.startdir = os.getcwd()
+        self.tempdir = tempfile.mkdtemp(prefix='test_extcode-')
+        TMPDIR = self.tempdir
+        os.chdir(self.tempdir)
+        SimulationRoot.chroot(self.tempdir)
+        shutil.copy(os.path.join(DIRECTORY, 'sleep.py'), 
+                    os.path.join(self.tempdir, 'sleep.py'))
         with open(INP_FILE, 'w') as out:
             out.write(INP_DATA)
-        if os.path.exists(ENV_FILE):
-            os.remove(ENV_FILE)
         dum = Assembly()  # create this here to prevent any Assemblies in tests to be 'first'
 
     def tearDown(self):
-        for directory in ('a', 'b'):
-            if os.path.exists(directory):
-                shutil.rmtree(directory, onerror=onerror)
-        for name in (ENV_FILE, INP_FILE, 'input', 'output',
-                     'sleep.in', 'sleep.out', 'sleep.err'):
-            if os.path.exists(name):
-                os.remove(name)
-        if os.path.exists("error.out"):
+        SimulationRoot.chroot(self.startdir)
+        os.chdir(self.startdir)
+        if not os.environ.get('OPENMDAO_KEEPDIR', False):
             try:
-                os.remove("error.out")
-
-            # Windows processes greedily clutch files. I see no
-            # way to delete this file in test_timeout
-            except WindowsError:
+                shutil.rmtree(self.tempdir)
+            except OSError:
                 pass
-
-        SimulationRoot.chroot(ORIG_DIR)
 
     def test_normal(self):
         logging.debug('')

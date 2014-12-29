@@ -546,7 +546,7 @@ class CaseIteratorDriver(Driver):
             if server.exception is None:
                 in_use = self._start_next_case(server)
             else:
-                exc, tback = server.exception
+                typ, exc, tback = server.exception
                 self._logger.debug('    exception while loading: %r', exc)
                 if self.error_policy == 'ABORT':
                     if self._abort_exc is None:
