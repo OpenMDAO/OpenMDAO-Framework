@@ -585,7 +585,7 @@ class Rethore(unittest.TestCase):
         sequential = [(cid.case_inputs.c1.i[i], cid.case_outputs.c1.val[i])
                       for i in range(len(cid.case_inputs.c1.i))]
 
-    def test_1_concurrent(self):
+    def test_l_concurrent(self):
         raise SkipTest("concurrent CaseIterDriver execution currently not supported")
         # Now run concurrent and verify.
         logging.debug('')
