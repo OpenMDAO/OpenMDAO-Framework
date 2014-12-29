@@ -1,9 +1,13 @@
 package:
   name: openmdao.units
+  version: dev
 
 source:
   path:  ../../openmdao.units
 
+build:
+    preserve_egg_dir: True
+    
 requirements:
   build:
     - python

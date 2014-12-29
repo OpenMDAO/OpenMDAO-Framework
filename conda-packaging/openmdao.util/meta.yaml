@@ -1,9 +1,10 @@
 package:
  name: openmdao.util
+ version: dev
 
 source:
  path:  ../../openmdao.util
-
+    
 requirements:
   build:
     - python
@@ -17,6 +18,7 @@ requirements:
     - traits ==4.3.0
 
 build:
+  preserve_egg_dir: True
   entry_points:
     - xyplot = openmdao.util.casedb:cmdlineXYplot
     - plotgraph = openmdao.util.graphplot:main

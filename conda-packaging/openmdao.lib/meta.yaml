@@ -9,22 +9,33 @@ requirements:
   build:
     - python
     - setuptools
+    - numpy
+    - bson
+    - pyevolve
+    - cobyla
+    - conmin
+    - newsumt
+    - slsqp
+    - pytz >=2011
+    - scipy >=0.11.0
+    - openmdao.main
 
   run:
     - python
     - setuptools
     - openmdao.main
-    - pyevolve
     - pytz >=2011
-    - bson
-    - conmin
-    - newsumt
-    - cobyla
-    - slsqp
     - numpy
     - scipy >=0.11.0
+    - bson
+    - pyevolve
+    - cobyla
+    - conmin
+    - newsumt
+    - slsqp
 
 build:
+  preserve_egg_dir: True
   entry_points:
     - openmdao.lib.drivers.adaptivesampledriver.AdaptiveSampleDriver = openmdao.lib.drivers.adaptivesampledriver:AdaptiveSampleDriver
     - openmdao.lib.drivers.broydensolver.BroydenSolver = openmdao.lib.drivers.broydensolver:BroydenSolver
