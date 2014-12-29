@@ -290,10 +290,13 @@ class Model(Assembly):
 class TestCase(unittest.TestCase):
     """ Test saving and loading of simulations as eggs. """
 
+    directory = os.path.realpath(
+                pkg_resources.resource_filename('openmdao.main', 'test'))
+
     def setUp(self):
         """ Called before each test in this class. """
         self.startdir = os.getcwd()
-        self.tempdir = tempfile.mkdtemp(prefix='omdao-')
+        self.tempdir = tempfile.mkdtemp(prefix='test_eggsave-')
         os.chdir(self.tempdir)
         SimulationRoot.chroot(self.tempdir)
         
@@ -1041,7 +1044,8 @@ comp.run()
         orig_dir = os.getcwd()
         os.chdir(PY_DIR)
         try:
-            cmdline = [python, 'test_egg_save.py']
+            cmdline = [python, os.path.join(TestCase.directory, 
+                                           'test_egg_save.py')]
             stdout = open('main_handling.out', 'w')
             retcode = subprocess.call(cmdline, stdout=stdout,
                                       stderr=subprocess.STDOUT)
