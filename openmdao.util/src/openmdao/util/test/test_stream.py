@@ -66,13 +66,12 @@ class TestCase(unittest.TestCase):
         os.chdir(self.tempdir)
 
     def tearDown(self):
-        # if os.path.exists(self.filename):
-        #     os.remove(self.filename)
         os.chdir(self.startdir)
-        try:
-            shutil.rmtree(self.tempdir)
-        except OSError:
-            pass
+        if not os.environ.get('OPENMDAO_KEEPDIR', False):
+            try:
+                shutil.rmtree(self.tempdir)
+            except OSError:
+                pass
 
     def test_int32(self):
         logging.debug('')

@@ -10,10 +10,12 @@ import pkg_resources
 import shutil
 import subprocess
 import sys
+import tempfile
 import unittest
 import nose
 
-from openmdao.main.api import Assembly, Component, Container, VariableTree, set_as_top
+from openmdao.main.api import Assembly, Component, Container, VariableTree, \
+                              set_as_top, SimulationRoot
 from openmdao.main.file_supp import FileMetadata
 
 from openmdao.main.pkg_res_factory import PkgResourcesFactory
@@ -290,6 +292,11 @@ class TestCase(unittest.TestCase):
 
     def setUp(self):
         """ Called before each test in this class. """
+        self.startdir = os.getcwd()
+        self.tempdir = tempfile.mkdtemp(prefix='omdao-')
+        os.chdir(self.tempdir)
+        SimulationRoot.chroot(self.tempdir)
+        
         self.model = set_as_top(Model())
         self.model.name = 'Egg_TestModel'
         self.child_objs = [self.model.Source, self.model.Sink,
@@ -301,16 +308,13 @@ class TestCase(unittest.TestCase):
         """ Called after each test in this class. """
         self.model.pre_delete()  # Paranoia.  Only needed by NPSS I think.
         self.model = None
-        for path in glob.glob('Egg_TestModel*.egg'):
-            os.remove(path)
-
-        if os.path.exists('Egg'):
-            # Wonderful Windows sometimes doesn't remove...
-            shutil.rmtree('Egg', onerror=self.onerror)
-
-        if os.path.exists('Oddball'):
-            # Wonderful Windows sometimes doesn't remove...
-            shutil.rmtree('Oddball', onerror=self.onerror)
+        os.chdir(self.startdir)
+        SimulationRoot.chroot(self.startdir)
+        if not os.environ.get('OPENMDAO_KEEPDIR', False):
+            try:
+                shutil.rmtree(self.tempdir)
+            except OSError:
+                pass
 
         # Not always added, but we need to ensure the egg is not in sys.path.
         if self.egg_name is not None:
