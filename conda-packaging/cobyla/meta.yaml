@@ -1,13 +1,13 @@
 package:
     name: cobyla
-    version: dev
+    version: !!str {{environ['PKG_VERSION']}}
 
 source:
     path: ../../contrib/cobyla
 
 build:
     preserve_egg_dir: True
-    
+
 requirements:
     build:
         - python

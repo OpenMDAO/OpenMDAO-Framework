@@ -1,6 +1,6 @@
 package:
     name: slsqp
-    version: dev
+    version: !!str {{environ['PKG_VERSION']}}
 
 source:
     path: ../../contrib/slsqp
@@ -8,13 +8,13 @@ source:
 build:
     preserve_egg_dir: True
 
-    
+
 requirements:
     build:
         - python
         - setuptools
         - numpy
-    
+
     run:
         - python
         - numpy

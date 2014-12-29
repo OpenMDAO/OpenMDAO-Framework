@@ -1,13 +1,13 @@
 package:
     name: newsumt
-    version: dev
+    version: !!str {{environ['PKG_VERSION']}}
 
 source:
     path: ../../contrib/newsumt
 
 build:
     preserve_egg_dir: True
-    
+
 requirements:
     build:
         - python

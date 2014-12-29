@@ -1,13 +1,13 @@
 package:
     name: conmin
-    version: dev
+    version: !!str {{environ['PKG_VERSION']}}
 
 source:
     path: ../../contrib/conmin
 
 build:
     preserve_egg_dir: True
-    
+
 requirements:
     build:
         - python
