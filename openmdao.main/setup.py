@@ -48,7 +48,7 @@ setup(name='openmdao.main',
       install_requires=[
           'decorator',
           'mock',
-          'networkx<1.9.1',
+          'networkx==1.8.1',
           'openmdao.units',
           'openmdao.util',
           'pycrypto',
