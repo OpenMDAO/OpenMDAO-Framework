@@ -12,7 +12,7 @@ source:
 requirements:
   build:
     - python
-    - libpython
+    - libpython # [win]
 
   run:
     - python
