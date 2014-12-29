@@ -1,5 +1,9 @@
 #!/bin/bash
 
+if [ -n "$OSX_ARCH" ]; then
+    export LDFLAGS="$LDFLAGS  -undefined dynamic_lookup"
+fi
+
 $PYTHON setup.py install
 
 # Add more build steps here, if they are necessary.
