@@ -5,6 +5,8 @@ Testing the namelist writer.
 import os.path
 import sys
 import unittest
+import tempfile
+import shutil
 
 from numpy import float32 as numpy_float32
 from numpy import int32 as numpy_int32
@@ -58,10 +60,18 @@ class TestCase(unittest.TestCase):
 
     def setUp(self):
         self.filename = 'test_namelist.dat'
+        self.startdir = os.getcwd()
+        self.tempdir = tempfile.mkdtemp(prefix='omdao-')
+        os.chdir(self.tempdir)
 
     def tearDown(self):
-        if os.path.exists(self.filename):
-            os.remove(self.filename)
+        # if os.path.exists(self.filename):
+        #     os.remove(self.filename)
+        os.chdir(self.startdir)
+        try:
+            shutil.rmtree(self.tempdir)
+        except OSError:
+            pass
 
     def test_forgot_to_read(self):
         
@@ -498,4 +508,3 @@ if __name__ == '__main__':
     sys.argv.append('--cover-package=openmdao.util')
     sys.argv.append('--cover-erase')
     nose.runmodule()
-

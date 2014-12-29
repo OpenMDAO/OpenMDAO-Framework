@@ -8,10 +8,11 @@ import os.path
 import shutil
 import sys
 import unittest
+import tempfile
 
 from traits.api import TraitError
 
-from openmdao.main.api import Assembly, Component, set_as_top
+from openmdao.main.api import Assembly, Component, set_as_top, SimulationRoot
 from openmdao.main.datatypes.api import Bool, File, FileRef, Str, List
 from openmdao.util.fileutil import onerror
 from openmdao.util.testutil import assert_raises
@@ -135,17 +136,27 @@ class TestCase(unittest.TestCase):
 
     def setUp(self):
         """ Called before each test in this class. """
+        self.startdir = os.getcwd()
+        self.tempdir = tempfile.mkdtemp(prefix='omdao-')
+        os.chdir(self.tempdir)
+        SimulationRoot.chroot(self.tempdir)
         self.model = set_as_top(Model())
 
     def tearDown(self):
         """ Called after each test in this class. """
         self.model.pre_delete()
-        for directory in ('Source', 'Middle', 'Sink'):
-            try:
-                shutil.rmtree(directory, onerror=onerror)
-            except OSError:
-                pass
+        # for directory in ('Source', 'Middle', 'Sink'):
+        #     try:
+        #         shutil.rmtree(directory, onerror=onerror)
+        #     except OSError:
+        #         pass
         self.model = None
+        os.chdir(self.startdir)
+        SimulationRoot.chroot(self.startdir)
+        try:
+            shutil.rmtree(self.tempdir)
+        except OSError:
+            pass
 
     def test_connectivity(self):
         logging.debug('')

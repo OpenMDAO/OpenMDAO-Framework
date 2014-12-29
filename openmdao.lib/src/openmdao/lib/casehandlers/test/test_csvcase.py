@@ -1,8 +1,12 @@
 """
 Test for CSVCaseRecorder and CSVCaseIterator.
 """
-import glob, os, time
+import glob
+import os
+import time
 import StringIO
+import tempfile
+import shutil
 import unittest
 
 from numpy import array
@@ -20,6 +24,10 @@ from openmdao.main.test.test_vartree import DumbVT
 class CSVCaseRecorderTestCase(unittest.TestCase):
 
     def setUp(self):
+        self.startdir = os.getcwd()
+        self.tempdir = tempfile.mkdtemp(prefix='omdao-')
+        os.chdir(self.tempdir)
+        
         self.top = top = set_as_top(Assembly())
         driver = top.add('driver', SimpleCaseIterDriver())
         top.add('comp1', ExecComp(exprs=['z=x+y']))
@@ -49,8 +57,13 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
     def tearDown(self):
         for recorder in self.top.recorders:
             recorder.close()
-        if os.path.exists(self.filename):
-            os.remove(self.filename)
+        # if os.path.exists(self.filename):
+        #     os.remove(self.filename)
+        os.chdir(self.startdir)
+        try:
+            shutil.rmtree(self.tempdir)
+        except OSError:
+            pass
 
     def test_inoutCSV(self):
 

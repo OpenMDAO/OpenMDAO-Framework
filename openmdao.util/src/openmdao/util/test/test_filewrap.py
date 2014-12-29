@@ -2,7 +2,11 @@
 Testing the file wrapping utilities.
 """
 
-import unittest, os
+import os
+import tempfile
+import shutil
+
+import unittest
 
 from numpy import array, isnan, isinf
 
@@ -15,12 +19,20 @@ class TestCase(unittest.TestCase):
     def setUp(self):
         self.templatename = 'template.dat'
         self.filename = 'filename.dat'
+        self.startdir = os.getcwd()
+        self.tempdir = tempfile.mkdtemp(prefix='omdao-')
+        os.chdir(self.tempdir)
 
     def tearDown(self):
-        if os.path.exists(self.filename):
-            os.remove(self.filename)
-        if os.path.exists(self.templatename):
-            os.remove(self.templatename)
+        # if os.path.exists(self.filename):
+        #     os.remove(self.filename)
+        # if os.path.exists(self.templatename):
+        #     os.remove(self.templatename)
+        os.chdir(self.startdir)
+        try:
+            shutil.rmtree(self.tempdir)
+        except OSError:
+            pass
 
     def test_templated_input(self):
 
@@ -593,4 +605,3 @@ if __name__ == '__main__':
     sys.argv.append('--cover-package=openmdao')
     sys.argv.append('--cover-erase')
     nose.runmodule()
-

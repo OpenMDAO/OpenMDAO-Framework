@@ -13,6 +13,7 @@ import shutil
 import socket
 import sys
 import traceback
+import tempfile
 import unittest
 
 from Crypto.Random import get_random_bytes
@@ -267,16 +268,19 @@ class TestCase(unittest.TestCase):
 
     def setUp(self):
         """ Called before each test. """
-        self.n_errors = len(self.test_result.errors)
-        self.n_failures = len(self.test_result.failures)
+        self.startdir = os.getcwd()
+        self.tempdir = tempfile.mkdtemp(prefix='omdao-')
+        os.chdir(self.tempdir)
+        # self.n_errors = len(self.test_result.errors)
+        # self.n_failures = len(self.test_result.failures)
 
         self.factories = []
         self.servers = []
         self.server_dirs = []
 
-        # Ensure we control directory cleanup.
-        self.keepdirs = os.environ.get('OPENMDAO_KEEPDIRS', '0')
-        os.environ['OPENMDAO_KEEPDIRS'] = '1'
+        # # Ensure we control directory cleanup.
+        # self.keepdirs = os.environ.get('OPENMDAO_KEEPDIRS', '0')
+        # os.environ['OPENMDAO_KEEPDIRS'] = '1'
 
     def start_factory(self, port=None, allowed_users=None):
         """ Start each factory process in a unique directory. """
@@ -330,21 +334,28 @@ class TestCase(unittest.TestCase):
 
     def tearDown(self):
         """ Shut down server process. """
-        try:
-            for factory in self.factories:
-                factory.cleanup()
-            for server in self.servers:
-                logging.debug('terminating server pid %s', server.pid)
-                server.terminate(timeout=10)
+        #try:
+        for factory in self.factories:
+            factory.cleanup()
+        for server in self.servers:
+            logging.debug('terminating server pid %s', server.pid)
+            server.terminate(timeout=10)
 
-            # Cleanup only if there weren't any new errors or failures.
-            if len(self.test_result.errors) == self.n_errors and \
-               len(self.test_result.failures) == self.n_failures and \
-               not int(self.keepdirs):
-                for server_dir in self.server_dirs:
-                    shutil.rmtree(server_dir, onerror=onerror)
-        finally:
-            os.environ['OPENMDAO_KEEPDIRS'] = self.keepdirs
+        os.chdir(self.startdir)
+        if not os.environ.get('OPENMDAO_KEEPDIRS', False):
+            try:
+                shutil.rmtree(self.tempdir)
+            except OSError:
+                pass
+
+        # # Cleanup only if there weren't any new errors or failures.
+        # if len(self.test_result.errors) == self.n_errors and \
+        #    len(self.test_result.failures) == self.n_failures and \
+        #    not int(self.keepdirs):
+        #     for server_dir in self.server_dirs:
+        #         shutil.rmtree(server_dir, onerror=onerror)
+        # finally:
+        #     os.environ['OPENMDAO_KEEPDIRS'] = self.keepdirs
 
     def test_1_client(self):
         logging.debug('')
