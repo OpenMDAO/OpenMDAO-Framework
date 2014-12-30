@@ -30,9 +30,9 @@ conda create --name openmdao \
   pyevolve \
 
 # Get the root directory of anaconda
-# source activate openmdao
-# PYTHON=`python -c "import sys; print sys.executable"`
-#deactivate
+source activate openmdao
+PYTHON=`python -c "import sys; print sys.executable"`
+source deactivate
 
 # install openmdao packages
 cd openmdao.units
