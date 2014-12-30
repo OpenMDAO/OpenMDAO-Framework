@@ -30,7 +30,7 @@ in a file being created called `doe.json`.
     class Analysis(Assembly):
 
         def configure(self):
-            self.add('parabloid', Paraboloid)
+            self.add('paraboloid', Paraboloid())
 
             self.add('driver', DOEdriver())
             self.driver.DOEgenerator = Uniform(1000)
@@ -71,7 +71,7 @@ let you interpret your data. The next script just prints the data to your screen
     class Analysis(Assembly):
 
         def configure(self):
-            self.add('parabloid', Paraboloid)
+            self.add('paraboloid', Paraboloid())
 
             self.add('driver', DOEdriver())
             self.driver.DOEgenerator = Uniform(1000)
