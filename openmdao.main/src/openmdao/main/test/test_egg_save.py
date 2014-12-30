@@ -313,7 +313,7 @@ class TestCase(unittest.TestCase):
         self.model = None
         os.chdir(self.startdir)
         SimulationRoot.chroot(self.startdir)
-        if not os.environ.get('OPENMDAO_KEEPDIR', False):
+        if not os.environ.get('OPENMDAO_KEEPDIRS', False):
             try:
                 shutil.rmtree(self.tempdir)
             except OSError:

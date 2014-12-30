@@ -60,7 +60,7 @@ class TestCase(unittest.TestCase):
         for recorder in self.top.recorders:
             recorder.close()
         os.chdir(self.startdir)
-        if not os.environ.get('OPENMDAO_KEEPDIR', False):
+        if not os.environ.get('OPENMDAO_KEEPDIRS', False):
             try:
                 shutil.rmtree(self.tempdir)
             except OSError:
@@ -182,6 +182,10 @@ class TestCase(unittest.TestCase):
 class CSVCaseRecorderTestCase(unittest.TestCase):
 
     def setUp(self):
+        self.startdir = os.getcwd()
+        self.tempdir = tempfile.mkdtemp(prefix='test_csv-')
+        os.chdir(self.tempdir)
+
         self.top = top = set_as_top(Assembly())
         driver = top.add('driver', SimpleCaseIterDriver())
         top.add('comp1', ExecComp(exprs=['z=x+y']))
@@ -211,8 +215,12 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
     def tearDown(self):
         for recorder in self.top.recorders:
             recorder.close()
-        if os.path.exists(self.filename):
-            os.remove(self.filename)
+        os.chdir(self.startdir)
+        if not os.environ.get('OPENMDAO_KEEPDIRS', False):
+            try:
+                shutil.rmtree(self.tempdir)
+            except OSError:
+                pass
 
     def test_CSVCaseIterator_read_external_file_with_header(self):
 
