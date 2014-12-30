@@ -278,9 +278,9 @@ def run_openmdao_suite(argv=None):
             covpkg = True
         if (i > 0 and not arg.startswith('-')) or arg in break_check:
             break
-
-    if '--mpi' not in args:
-        args.append('--all')
+    else:
+        if '--mpi' not in args:
+            args.append("--all")
 
     args.append('--exe')  # by default, nose will skip any .py files that are
                           # executable. --exe prevents this behavior
@@ -315,7 +315,7 @@ def run_openmdao_suite(argv=None):
         args.remove('--enable_console')
         os.environ['OPENMDAO_ENABLE_CONSOLE'] = '1'
 
-    if '--all' in args:
+    if '--mpi' not in args and '--all' in args:
         args.remove('--all')
         args.extend(tlist)
 
