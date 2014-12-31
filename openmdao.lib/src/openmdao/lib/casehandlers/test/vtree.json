@@ -1,7 +1,7 @@
 {
-"__length_1": 13462
+"__length_1": 15248
 , "simulation_info": {
-    "OpenMDAO_Version": "0.10.2", 
+    "OpenMDAO_Version": "0.10.3.2", 
     "comp_graph": "{\"directed\": true, \"graph\": [], \"nodes\": [{\"comp\": true, \"driver\": true, \"id\": \"driver\"}, {\"comp\": true, \"id\": \"sub\"}], \"links\": [], \"multigraph\": false}", 
     "constants": {
         "directory": "", 
@@ -45,21 +45,18 @@
         "sub.force_fd": false, 
         "sub.loads_in.loads": [
             {
-                "Fx": [
-                    1, 
-                    2, 
-                    3
-                ], 
-                "Fy": [
-                    4, 
-                    5, 
-                    6
-                ], 
-                "Fz": [
-                    7, 
-                    8, 
-                    9
-                ]
+                "Fx": {
+                    "$binary": "gAJjbnVtcHkuY29yZS5tdWx0aWFycmF5Cl9yZWNvbnN0cnVjdApxAWNudW1weQpuZGFycmF5CnECSwCFVQFih1JxAyhLAUsDhWNudW1weQpkdHlwZQpxBFUCaThLAEsBh1JxBShLA1UBPE5OTkr/////Sv////9LAHRiiVUYAQAAAAAAAAACAAAAAAAAAAMAAAAAAAAAdGIu", 
+                    "$type": "00"
+                }, 
+                "Fy": {
+                    "$binary": "gAJjbnVtcHkuY29yZS5tdWx0aWFycmF5Cl9yZWNvbnN0cnVjdApxAWNudW1weQpuZGFycmF5CnECSwCFVQFih1JxAyhLAUsDhWNudW1weQpkdHlwZQpxBFUCaThLAEsBh1JxBShLA1UBPE5OTkr/////Sv////9LAHRiiVUYBAAAAAAAAAAFAAAAAAAAAAYAAAAAAAAAdGIu", 
+                    "$type": "00"
+                }, 
+                "Fz": {
+                    "$binary": "gAJjbnVtcHkuY29yZS5tdWx0aWFycmF5Cl9yZWNvbnN0cnVjdApxAWNudW1weQpuZGFycmF5CnECSwCFVQFih1JxAyhLAUsDhWNudW1weQpkdHlwZQpxBFUCaThLAEsBh1JxBShLA1UBPE5OTkr/////Sv////9LAHRiiVUYBwAAAAAAAAAIAAAAAAAAAAkAAAAAAAAAdGIu", 
+                    "$type": "00"
+                }
             }
         ], 
         "sub.missing_deriv_policy": "assume_zero", 
@@ -72,7 +69,7 @@
     "expressions": {}, 
     "graph": "{\"directed\": true, \"graph\": [[\"title\", \"unknown\"]], \"nodes\": [{\"short\": \"sub\", \"color_idx\": 1, \"full\": \"sub\", \"title\": \"{}\", \"comp\": true, \"id\": \"sub\"}, {\"full\": \"sub.loads_in\", \"color_idx\": 1, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"loads_in\", \"var\": true, \"iotype\": \"in\", \"id\": \"sub.loads_in\"}, {\"short\": \"driver\", \"color_idx\": 0, \"full\": \"driver\", \"title\": \"{'driver': True}\", \"comp\": true, \"driver\": true, \"id\": \"driver\"}, {\"full\": \"sub.loads_out\", \"color_idx\": 1, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"loads_out\", \"var\": true, \"iotype\": \"out\", \"id\": \"sub.loads_out\"}], \"links\": [{\"source\": 0, \"target\": 3}, {\"source\": 1, \"target\": 0}], \"multigraph\": false}", 
     "name": "", 
-    "uuid": "f2ba4636-5bbc-11e4-badb-080027a1f086", 
+    "uuid": "290f2b54-800d-11e4-8ec6-20c9d0478eff", 
     "variable_metadata": {
         "directory": {
             "deriv_ignore": true, 
@@ -434,9 +431,9 @@
         }
     }
 }
-, "__length_2": 231
+, "__length_2": 226
 , "driver_info_1": {
-    "_id": 140669886797584, 
+    "_id": 4517755312, 
     "name": "driver", 
     "recording": [
         "sub.derivative_exec_count", 
@@ -446,59 +443,56 @@
         "driver.workflow.itername"
     ]
 }
-, "__length_3": 239
+, "__length_3": 234
 , "driver_info_2": {
-    "_id": 140669886796240, 
+    "_id": 4517756464, 
     "name": "sub.driver", 
     "recording": [
-        "comp.loads_out", 
         "comp.derivative_exec_count", 
         "comp.exec_count", 
         "comp.itername", 
+        "comp.loads_out", 
         "driver.workflow.itername"
     ]
 }
-, "__length_4": 933
+, "__length_4": 1549
 , "iteration_case_1": {
-    "_driver_id": 140669886796240, 
-    "_id": "f2bb2951-5bbc-11e4-805a-080027a1f086", 
-    "_parent_id": "f2bb227a-5bbc-11e4-8059-080027a1f086", 
+    "_driver_id": 4517756464, 
+    "_id": "290fde47-800d-11e4-807b-20c9d0478eff", 
+    "_parent_id": "290f8d26-800d-11e4-807a-20c9d0478eff", 
     "data": {
-        "comp.derivative_exec_count": 0, 
-        "comp.exec_count": 1, 
-        "comp.itername": "1-sub.1-comp", 
-        "comp.loads_out": {
+        "sub.comp.derivative_exec_count": 0, 
+        "sub.comp.exec_count": 1, 
+        "sub.comp.itername": "1-sub.1-comp", 
+        "sub.comp.loads_out": {
             "loads": [
                 {
-                    "Fx": [
-                        1, 
-                        2, 
-                        3
-                    ], 
-                    "Fy": [
-                        4, 
-                        5, 
-                        6
-                    ], 
-                    "Fz": [
-                        7, 
-                        8, 
-                        9
-                    ]
+                    "Fx": {
+                        "$binary": "gAJjbnVtcHkuY29yZS5tdWx0aWFycmF5Cl9yZWNvbnN0cnVjdApxAWNudW1weQpuZGFycmF5CnECSwCFVQFih1JxAyhLAUsDhWNudW1weQpkdHlwZQpxBFUCaThLAEsBh1JxBShLA1UBPE5OTkr/////Sv////9LAHRiiVUYAQAAAAAAAAACAAAAAAAAAAMAAAAAAAAAdGIu", 
+                        "$type": "00"
+                    }, 
+                    "Fy": {
+                        "$binary": "gAJjbnVtcHkuY29yZS5tdWx0aWFycmF5Cl9yZWNvbnN0cnVjdApxAWNudW1weQpuZGFycmF5CnECSwCFVQFih1JxAyhLAUsDhWNudW1weQpkdHlwZQpxBFUCaThLAEsBh1JxBShLA1UBPE5OTkr/////Sv////9LAHRiiVUYBAAAAAAAAAAFAAAAAAAAAAYAAAAAAAAAdGIu", 
+                        "$type": "00"
+                    }, 
+                    "Fz": {
+                        "$binary": "gAJjbnVtcHkuY29yZS5tdWx0aWFycmF5Cl9yZWNvbnN0cnVjdApxAWNudW1weQpuZGFycmF5CnECSwCFVQFih1JxAyhLAUsDhWNudW1weQpkdHlwZQpxBFUCaThLAEsBh1JxBShLA1UBPE5OTkr/////Sv////9LAHRiiVUYBwAAAAAAAAAIAAAAAAAAAAkAAAAAAAAAdGIu", 
+                        "$type": "00"
+                    }
                 }
             ]
         }, 
-        "driver.workflow.itername": "1-sub.1"
+        "sub.driver.workflow.itername": "1-sub.1"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1414182781.23062
+    "timestamp": 1418175473.979685
 }
-, "__length_5": 917
+, "__length_5": 1511
 , "iteration_case_2": {
-    "_driver_id": 140669886797584, 
-    "_id": "f2bb227a-5bbc-11e4-8059-080027a1f086", 
-    "_parent_id": "f2ba4636-5bbc-11e4-badb-080027a1f086", 
+    "_driver_id": 4517755312, 
+    "_id": "290f8d26-800d-11e4-807a-20c9d0478eff", 
+    "_parent_id": "290f2b54-800d-11e4-8ec6-20c9d0478eff", 
     "data": {
         "driver.workflow.itername": "1", 
         "sub.derivative_exec_count": 0, 
@@ -507,27 +501,24 @@
         "sub.loads_out": {
             "loads": [
                 {
-                    "Fx": [
-                        1, 
-                        2, 
-                        3
-                    ], 
-                    "Fy": [
-                        4, 
-                        5, 
-                        6
-                    ], 
-                    "Fz": [
-                        7, 
-                        8, 
-                        9
-                    ]
+                    "Fx": {
+                        "$binary": "gAJjbnVtcHkuY29yZS5tdWx0aWFycmF5Cl9yZWNvbnN0cnVjdApxAWNudW1weQpuZGFycmF5CnECSwCFVQFih1JxAyhLAUsDhWNudW1weQpkdHlwZQpxBFUCaThLAEsBh1JxBShLA1UBPE5OTkr/////Sv////9LAHRiiVUYAQAAAAAAAAACAAAAAAAAAAMAAAAAAAAAdGIu", 
+                        "$type": "00"
+                    }, 
+                    "Fy": {
+                        "$binary": "gAJjbnVtcHkuY29yZS5tdWx0aWFycmF5Cl9yZWNvbnN0cnVjdApxAWNudW1weQpuZGFycmF5CnECSwCFVQFih1JxAyhLAUsDhWNudW1weQpkdHlwZQpxBFUCaThLAEsBh1JxBShLA1UBPE5OTkr/////Sv////9LAHRiiVUYBAAAAAAAAAAFAAAAAAAAAAYAAAAAAAAAdGIu", 
+                        "$type": "00"
+                    }, 
+                    "Fz": {
+                        "$binary": "gAJjbnVtcHkuY29yZS5tdWx0aWFycmF5Cl9yZWNvbnN0cnVjdApxAWNudW1weQpuZGFycmF5CnECSwCFVQFih1JxAyhLAUsDhWNudW1weQpkdHlwZQpxBFUCaThLAEsBh1JxBShLA1UBPE5OTkr/////Sv////9LAHRiiVUYBwAAAAAAAAAIAAAAAAAAAAkAAAAAAAAAdGIu", 
+                        "$type": "00"
+                    }
                 }
             ]
         }
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1414182781.234172
+    "timestamp": 1418175473.98056
 }
 }

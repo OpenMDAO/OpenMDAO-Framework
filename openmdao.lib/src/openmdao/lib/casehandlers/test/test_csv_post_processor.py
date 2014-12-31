@@ -1,6 +1,8 @@
 import os.path
 import unittest
 import StringIO
+import tempfile
+import shutil
 
 from numpy import array, isnan
 
@@ -19,6 +21,10 @@ from openmdao.test.execcomp import ExecComp
 class CSVPostProcessorTestCase(unittest.TestCase):
 
     def setUp(self):
+        self.startdir = os.getcwd()
+        self.tempdir = tempfile.mkdtemp(prefix='test_csv-')
+        os.chdir(self.tempdir)
+
         self.top = top = set_as_top(Assembly())
 
         driver = top.add('driver', SimpleCaseIterDriver())
@@ -54,10 +60,12 @@ class CSVPostProcessorTestCase(unittest.TestCase):
     def tearDown(self):
         for recorder in self.top.recorders:
             recorder.close()
-        if os.path.exists(self.filename_csv):
-            os.remove(self.filename_csv)
-        if os.path.exists(self.filename_json):
-            os.remove(self.filename_json)
+        os.chdir(self.startdir)
+        if not os.environ.get('OPENMDAO_KEEPDIRS', False):
+            try:
+                shutil.rmtree(self.tempdir)
+            except OSError:
+                pass
 
     def test_simple(self):
         # Make sure the CSV file can be read and has the correct number of cases
@@ -97,11 +105,12 @@ class CSVPostProcessorTestCase(unittest.TestCase):
         sout = StringIO.StringIO()
         for case in cases:
             print >>sout, case
+
         expected = [
             'Case:',
-            '   uuid: ad4c1b76-64fb-11e0-95a8-001e8cf75fe',
-            '   timestamp: 1383238593.781986',
-            '   parent_uuid: ad4c1b76-64fb-11e0-95a8-001e8cf75fe',
+            '   uuid: ae79e023-8006-11e4-800d-20c9d0478eff',
+            '   timestamp: 1418172691.333990',
+            '   parent_uuid: ae735561-8006-11e4-ac35-20c9d0478eff',
             '   inputs:',
             '      comp1.x_array[0]: 2.0',
             '      comp1.x_array[1]: 2.0',
@@ -119,10 +128,22 @@ class CSVPostProcessorTestCase(unittest.TestCase):
             '      Response(comp1.vt).vt2.vt3.data: ',
             '      Response(comp1.vt).vt2.x: -1.0',
             '      Response(comp1.vt).vt2.y: -2.0',
+            '      _pseudo_4.out0[0]: 1.0',
+            '      _pseudo_4.out0[1]: 3.0',
+            '      _pseudo_4.out0[2]: 5.5',
+            '      _pseudo_5.out0.data: ',
+            '      _pseudo_5.out0.v1: 1.0',
+            '      _pseudo_5.out0.v2: 2.0',
+            '      _pseudo_5.out0.vt2.data: ',
+            '      _pseudo_5.out0.vt2.vt3.a: 1.0',
+            '      _pseudo_5.out0.vt2.vt3.b: 12.0',
+            '      _pseudo_5.out0.vt2.vt3.data: ',
+            '      _pseudo_5.out0.vt2.x: -1.0',
+            '      _pseudo_5.out0.vt2.y: -2.0',
             '      comp1.a_array[0]: 1.0',
             '      comp1.a_array[1]: 3.0',
             '      comp1.a_array[2]: 5.5',
-            "      comp1.a_string: Hello',;','",
+            "      comp1.a_string: Hello',;','",                                                                                                                       
             '      comp1.derivative_exec_count: 0.0',
             '      comp1.exec_count: 1.0',
             '      comp1.itername: 1-comp1',

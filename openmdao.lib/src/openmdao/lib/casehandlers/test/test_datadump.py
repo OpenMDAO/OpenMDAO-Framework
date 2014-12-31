@@ -169,10 +169,12 @@ Constants:
    recording_options.includes: ['*']
    recording_options.save_problem_formulation: True
 Case:
-   uuid: d3f91eee-5bc0-11e4-8005-080027a1f086
-   timestamp: 1414184447.614453
-   parent_uuid: d3f8c4ee-5bc0-11e4-8004-080027a1f086
+   uuid: d4e0148c-8000-11e4-8003-20c9d0478eff
+   timestamp: 1418170213.031533
+   parent_uuid: d4de3f42-8000-11e4-8002-20c9d0478eff
    outputs:
+      nested.doublenest._pseudo_0.out0: 100.0
+      nested.doublenest._pseudo_1.out0: 10100.0
       nested.doublenest.comp1.derivative_exec_count: 0
       nested.doublenest.comp1.exec_count: 1
       nested.doublenest.comp1.itername: 1-nested.1-doublenest.1-comp1
@@ -187,10 +189,12 @@ Case:
       nested.doublenest.comp3.y1: 10101.0
       nested.doublenest.driver.workflow.itername: 1-nested.1-doublenest.1
 Case:
-   uuid: d3f8c4ee-5bc0-11e4-8004-080027a1f086
-   timestamp: 1414184447.614583
-   parent_uuid: d3f8bfbd-5bc0-11e4-8003-080027a1f086
+   uuid: d4de3f42-8000-11e4-8002-20c9d0478eff
+   timestamp: 1418170213.032066
+   parent_uuid: d4dbeecc-8000-11e4-8001-20c9d0478eff
    outputs:
+      nested._pseudo_0.out0: 100.0
+      nested._pseudo_1.out0: 10100.0
       nested.comp1.derivative_exec_count: 0
       nested.comp1.exec_count: 1
       nested.comp1.itername: 1-nested.1-comp1
@@ -208,8 +212,8 @@ Case:
       nested.doublenest.itername: 1-nested.1-doublenest
       nested.driver.workflow.itername: 1-nested.1
 Case:
-   uuid: d3f8bfbd-5bc0-11e4-8003-080027a1f086
-   timestamp: 1414184447.614670
+   uuid: d4dbeecc-8000-11e4-8001-20c9d0478eff
+   timestamp: 1418170213.032490
    outputs:
       driver.workflow.itername: 1
       nested.derivative_exec_count: 0
@@ -258,18 +262,18 @@ Constants:
    nested.doublenest.comp1.missing_deriv_policy: error
    nested.doublenest.comp1.x1: 0.0
 Case:
-   uuid: 84c2195c-e043-11e3-8008-005056000100
-   timestamp: 1400606634.601406
-   parent_uuid: 84c1b666-e043-11e3-8007-005056000100
+   uuid: f08eea75-8004-11e4-8003-20c9d0478eff
+   timestamp: 1418171943.211238
+   parent_uuid: f08d0147-8004-11e4-8002-20c9d0478eff
    outputs:
       nested.doublenest.comp1.derivative_exec_count: 0
       nested.doublenest.comp1.exec_count: 1
       nested.doublenest.comp1.itername: 1-nested.1-doublenest.1-comp1
       nested.doublenest.comp1.y1: 1.0
 Case:
-   uuid: 84c1b666-e043-11e3-8007-005056000100
-   timestamp: 1400606634.601622
-   parent_uuid: 84c1b0f8-e043-11e3-8006-005056000100
+   uuid: f08d0147-8004-11e4-8002-20c9d0478eff
+   timestamp: 1418171943.211432
+   parent_uuid: f08aa2b8-8004-11e4-8001-20c9d0478eff
    outputs:
       nested.comp1.derivative_exec_count: 0
       nested.comp1.exec_count: 1
@@ -333,9 +337,10 @@ Constants:
    recording_options.includes: ['*']
    recording_options.save_problem_formulation: True
 Case:
-   uuid: 0a159cf8-5bc1-11e4-8001-080027a1f086
-   timestamp: 1414184538.397483
+   uuid: 73569abd-7fd6-11e4-8001-20c9d0478eff
+   timestamp: 1418151976.277275
    outputs:
+      _pseudo_0.out0: 100.0
       comp1.derivative_exec_count: 0
       comp1.exec_count: 1
       comp1.itername: 1-comp1
@@ -396,15 +401,14 @@ Constants:
    recording_options.includes: ['*']
    recording_options.save_problem_formulation: True
 Case:
-   uuid: 22e98e75-5bc1-11e4-8002-080027a1f086
-   timestamp: 1414184580.050823
+   uuid: 53ffa7b3-8005-11e4-8001-20c9d0478eff
+   timestamp: 1418172110.042416
    outputs:
       comp1.derivative_exec_count: 0
       comp1.exec_count: 1
       comp1.itername: 1-comp1
       comp1.string: Testing
       driver.workflow.itername: 1
-
 """
 
         expected = expected.split('\n')

@@ -187,6 +187,21 @@ class Assembly(Component):
 
         self.add('recording_options', RecordingOptions())
 
+    def _pre_execute(self):
+        """Prepares for execution by calling various initialization methods
+        if necessary.
+
+        Overrides of this function must call this version.
+        """
+        new_config = self._new_config
+        super(Assembly, self)._pre_execute()
+
+        if new_config and self.parent is None:
+            self._setup()  # only call _setup from top level
+
+        if self.parent is None:
+            self.configure_recording(self.recording_options)
+
     @property
     def _top_driver(self):
         if self._pre_driver:
@@ -827,6 +842,10 @@ class Assembly(Component):
     def record_configuration(self):
         """ record model configuration without running the model
         """
+        top = self
+        while top.parent:
+            top = top.parent
+        top._setup()
         self.configure_recording()
         for recorder in self.recorders:
             recorder.close()
@@ -1308,7 +1327,7 @@ class Assembly(Component):
                 if data.get('iotype') == 'in' and collapsed_graph.in_degree(node) == 0: # input boundary node
                     collapsed_graph.add_node(node[0].split('[',1)[0], comp='invar')
                     collapsed_graph.add_edge(node[0].split('[',1)[0], node)
-                elif data.get('iotype') == 'out' and collapsed_graph.out_degree(node) == 0: # output bndry node
+                elif data.get('iotype') == 'out': # output bndry node
                     collapsed_graph.add_node(node[1][0].split('[',1)[0], comp='outvar')
                     collapsed_graph.add_edge(node, node[1][0].split('[',1)[0])
 
@@ -1464,28 +1483,18 @@ class Assembly(Component):
         self._var_meta = {}
 
         try:
-            #print "PRE_SETUP"
             self.pre_setup()
-            #print "SETUP_DEPGRAPH"
             self.setup_depgraph()
-            #print "SETUP_REDUCED"
             self.setup_reduced_graph(inputs=inputs, outputs=outputs)
-            #print "SETUP_SYSTEMS"
             self.setup_systems()
-            #print "SETUP COMMS"
             self.setup_communicators(comm)
-            #print "SETUP_VARS"
             self.setup_variables()
-            #print "SETUP SIZES"
             self.setup_sizes()
-            #print "SETUP VECS"
             self.setup_vectors()
-            #print "SETUP SCATTERS"
             self.setup_scatters()
         except Exception:
             traceback.print_exc()
             raise
-        #print "POST SETUP"
         self.post_setup()
 
 
