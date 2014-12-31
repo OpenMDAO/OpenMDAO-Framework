@@ -80,8 +80,8 @@ class TraitsTestCase(unittest.TestCase):
         self.assertEqual(mht2.dyntrait, mht.dyntrait)
 
     def test_deepcopy(self):
-        # when run under multiprocessing, this test fails about 80% of 
-        # the time.  Could be a test ordering issue, but not sure...
+        # when run under multiprocessing, this test fails sometimes. 
+        # Could be a test ordering issue, but not sure...
         mht = MyHasTraits()
         mht.add_trait('dyntrait', Int(9))
         getattr(mht, 'dyntrait')
