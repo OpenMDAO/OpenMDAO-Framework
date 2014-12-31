@@ -668,6 +668,8 @@ class TestCase(unittest.TestCase):
         except RuntimeError as exc:
             if str(exc)[:len(msg1)] != msg1 and str(exc)[:len(msg2)] != msg2:
                 self.fail('Expected send/connect error, got %r' % exc)
+        except EOFError: # this can happen when testing concurrently
+            pass
         else:
             self.fail('Expected RuntimeError')
 
