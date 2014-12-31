@@ -12,7 +12,6 @@ conda create --name openmdao \
   nose \
   sphinx \
   fabric==0.9.3 \
-  virtualenv \
   boto \
   paramiko==1.7.7.1 \
   requests \
@@ -22,10 +21,10 @@ conda create --name openmdao \
   zope.interface \
   "pytz>=2011" \
   pycrypto==2.3 \
-  cobyla \
-  conmin \
-  newsumt \
-  slsqp \
+  cobyla==1.0.2 \
+  conmin==1.0.2 \
+  newsumt==1.1.1 \
+  slsqp==1.0.2 \
   bson \
   pyevolve \
 
