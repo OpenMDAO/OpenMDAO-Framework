@@ -18,3 +18,4 @@ requirements:
     run:
         - python
         - numpy
+        - libgfortran ==4.8.3 #[osx]
