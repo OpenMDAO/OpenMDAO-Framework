@@ -1,0 +1,6 @@
+package:
+  name: libgfortran
+  version: 4.8.3
+
+build:
+  string: gcc
