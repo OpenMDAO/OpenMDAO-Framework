@@ -9,6 +9,8 @@ import re
 import subprocess
 import sys
 import time
+import tempfile
+import shutil
 import unittest
 import nose
 from nose import SkipTest
@@ -19,7 +21,8 @@ import numpy.random as numpy_random
 from math import isnan
 from numpy import asarray, linspace, mean
 
-from openmdao.main.api import Assembly, Component, VariableTree, set_as_top
+from openmdao.main.api import Assembly, Component, VariableTree, set_as_top, \
+                              SimulationRoot
 from openmdao.main.eggchecker import check_save_load
 
 from openmdao.main.datatypes.api import Float, Bool, Array, Int, Str, \
@@ -181,7 +184,12 @@ class TestCase(unittest.TestCase):
         random.seed(10)
         numpy_random.seed(10)
 
-        os.chdir(self.directory)
+        self.startdir = os.getcwd()
+        self.tempdir = tempfile.mkdtemp(prefix='test_caseiter-')
+        os.chdir(self.tempdir)
+        SimulationRoot.chroot(self.tempdir)
+        
+        #os.chdir(self.directory)
         self.model = set_as_top(MyModel())
         self.generate_cases()
 
@@ -198,11 +206,13 @@ class TestCase(unittest.TestCase):
         self.model.pre_delete()
         self.model = None
 
-        # Verify we didn't mess-up working directory.
-        end_dir = os.getcwd()
-        os.chdir(ORIG_DIR)
-        if os.path.realpath(end_dir).lower() != os.path.realpath(self.directory).lower():
-            self.fail('Ended in %s, expected %s' % (end_dir, self.directory))
+        os.chdir(self.startdir)
+        SimulationRoot.chroot(self.startdir)
+        if not os.environ.get('OPENMDAO_KEEPDIRS', False):
+            try:
+                shutil.rmtree(self.tempdir)
+            except OSError:
+                pass
 
     def test_sequential(self):
         logging.debug('')
@@ -585,7 +595,7 @@ class Rethore(unittest.TestCase):
         sequential = [(cid.case_inputs.c1.i[i], cid.case_outputs.c1.val[i])
                       for i in range(len(cid.case_inputs.c1.i))]
 
-    def test_1_concurrent(self):
+    def test_l_concurrent(self):
         raise SkipTest("concurrent CaseIterDriver execution currently not supported")
         # Now run concurrent and verify.
         logging.debug('')
