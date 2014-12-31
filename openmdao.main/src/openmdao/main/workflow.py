@@ -20,7 +20,7 @@ from openmdao.main.systems import SerialSystem, ParallelSystem, \
                                   partition_subsystems, ParamSystem, \
                                   get_comm_if_active, collapse_to_system_node
 from openmdao.main.depgraph import _get_inner_connections, get_nondiff_groups, \
-                                   collapse_nodes, simple_node_iter
+                                   collapse_nodes, simple_node_iter, CollapsedGraph
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.interfaces import IVariableTree, IDriver
 
@@ -773,6 +773,29 @@ class Workflow(object):
         for comp in self:
             comp.pre_setup()
 
+    def _add_param_systems(self, params, parent_graph, reduced):
+
+        if params:
+            # we need to connect a param comp node to all param nodes
+            for node in params:
+                param = node[0]
+                reduced.add_node(param, comp='param')
+                reduced.add_node(node, **(parent_graph.node[node]))
+                reduced.add_edge(param, node)
+                reduced.add_edge(node, nodes)
+                reduced.node[param]['system'] = \
+                           ParamSystem(scope, reduced, param)
+                           
+            self._reduced_graph = reduced
+            wf_cgraph = reduced.component_graph()
+            # from openmdao.util.dotgraph import plot_graph
+            # plot_graph(reduced)
+            self._system = SerialSystem(scope, reduced, wf_cgraph,
+                                        tuple(sorted(wf_cgraph.nodes())))
+        else:
+            self._system = system
+            self._reduced_graph = reduced
+    
     def setup_systems(self, system_type):
         """Get the subsystem for this workflow. Each
         subsystem contains a subgraph of this workflow's component
@@ -843,8 +866,8 @@ class Workflow(object):
                 for c in gtup:
                     opaque_map[c] = gtup
 
-            # get rid of any back edges for opaque boundary nodes that originate inside
-            # of the opaque system
+            # get rid of any back edges for opaque boundary nodes that 
+            # originate inside of the opaque system
             to_remove = []
             for node in systems:
                 for s in reduced.successors(node):

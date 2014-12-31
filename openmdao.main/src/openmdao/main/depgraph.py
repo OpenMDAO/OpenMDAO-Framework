@@ -1673,11 +1673,18 @@ def get_node_boundary(g, nodes):
 
     return set([u for u,v in ins]), set([v for u,v in outs])
 
-def collapse_nodes(g, collapsed_name, nodes, remove=True):
+def collapse_nodes(g, collapsed_name, nodes, remove=True, add=False):
     """Collapse the given set of nodes into a single
     node with the specified name. The node for the collapsed
-    name must be preexisting.
+    name must be preexisting unless add is True.
     """
+    if add:
+        if isinstance(nodes, basestring):
+            newnode = nodes
+        else:
+            newnode = tuple(sorted(nodes))
+        g.add_node(newnode, comp=True)
+        
     in_edges, out_edges = \
                   get_edge_boundary(g, nodes)
 
