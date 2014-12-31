@@ -87,7 +87,7 @@ class TestCase(unittest.TestCase):
 
     def setUp(self):
         self.startdir = os.getcwd()
-        self.tempdir = tempfile.mkdtemp(prefix='test_csv-')
+        self.tempdir = tempfile.mkdtemp(prefix='test_json_filevar-')
         os.chdir(self.tempdir)
         self.top = set_as_top(Top())
 

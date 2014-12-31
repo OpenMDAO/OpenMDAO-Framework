@@ -19,7 +19,7 @@ class TestCase(unittest.TestCase):
 
     def setUp(self):
         self.startdir = os.getcwd()
-        self.tempdir = tempfile.mkdtemp(prefix='test_phx-')
+        self.tempdir = tempfile.mkdtemp(prefix='test_shellproc-')
         os.chdir(self.tempdir)
 
     def tearDown(self):

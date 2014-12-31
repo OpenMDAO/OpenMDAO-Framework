@@ -137,7 +137,7 @@ class TestCase(unittest.TestCase):
     def setUp(self):
         """ Called before each test in this class. """
         self.startdir = os.getcwd()
-        self.tempdir = tempfile.mkdtemp(prefix='omdao-')
+        self.tempdir = tempfile.mkdtemp(prefix='test_filevar-')
         os.chdir(self.tempdir)
         SimulationRoot.chroot(self.tempdir)
         self.model = set_as_top(Model())

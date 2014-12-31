@@ -22,7 +22,7 @@ class CSVPostProcessorTestCase(unittest.TestCase):
 
     def setUp(self):
         self.startdir = os.getcwd()
-        self.tempdir = tempfile.mkdtemp(prefix='test_phx-')
+        self.tempdir = tempfile.mkdtemp(prefix='test_csv-')
         os.chdir(self.tempdir)
 
         self.top = top = set_as_top(Assembly())

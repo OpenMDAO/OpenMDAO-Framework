@@ -1483,28 +1483,18 @@ class Assembly(Component):
         self._var_meta = {}
 
         try:
-            #print "PRE_SETUP"
             self.pre_setup()
-            #print "SETUP_DEPGRAPH"
             self.setup_depgraph()
-            #print "SETUP_REDUCED"
             self.setup_reduced_graph(inputs=inputs, outputs=outputs)
-            #print "SETUP_SYSTEMS"
             self.setup_systems()
-            #print "SETUP COMMS"
             self.setup_communicators(comm)
-            #print "SETUP_VARS"
             self.setup_variables()
-            #print "SETUP SIZES"
             self.setup_sizes()
-            #print "SETUP VECS"
             self.setup_vectors()
-            #print "SETUP SCATTERS"
             self.setup_scatters()
         except Exception:
             traceback.print_exc()
             raise
-        #print "POST SETUP"
         self.post_setup()
 
 

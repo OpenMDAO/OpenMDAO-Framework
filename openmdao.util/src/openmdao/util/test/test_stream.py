@@ -62,7 +62,7 @@ class TestCase(unittest.TestCase):
     def setUp(self):
         self.filename = 'test_stream.dat'
         self.startdir = os.getcwd()
-        self.tempdir = tempfile.mkdtemp(prefix='omdao-')
+        self.tempdir = tempfile.mkdtemp(prefix='test_stream-')
         os.chdir(self.tempdir)
 
     def tearDown(self):
