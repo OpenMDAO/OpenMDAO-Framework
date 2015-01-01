@@ -1,4 +1,4 @@
-import ordereddict
+from collections import OrderedDict
 
 from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.assembly import Assembly
@@ -63,7 +63,7 @@ class HasCouplingVars(object):
 
     def __init__(self, parent):
         self._parent = parent
-        self._couples = ordereddict.OrderedDict()
+        self._couples = OrderedDict()
 
     def add_coupling_var(self, indep_dep, name=None, start=None):
         """Adds a new coupling var to the assembly.
@@ -150,7 +150,7 @@ class HasCouplingVars(object):
                 couple.indep.set(couple.start, self._parent.get_expr_scope())
 
     def mimic(self, target):
-        self._couples = ordereddict.OrderedDict()
+        self._couples = OrderedDict()
         for key, val in target._couples.items():
             self._couples[key] = val.copy()
 

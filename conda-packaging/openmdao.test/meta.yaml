@@ -1,0 +1,32 @@
+package:
+ name: openmdao.test
+ version: dev
+
+source:
+ path:  ../../openmdao.test
+
+requirements:
+  build:
+    - python
+    - setuptools
+    - openmdao.main
+    - nose
+
+  run:
+    - python
+    - setuptools
+    - openmdao.main
+    - nose
+
+build:
+  preserve_egg_dir: True
+  entry_points:
+    - openmdao.test.execcomp.ExecComp = openmdao.test.execcomp:ExecComp
+    - nosetimerplugin = openmdao.test.nosetimer:TestTimer
+    - nosesummaryplugin = openmdao.test.testing:TestFailureSummary
+    - noseearlyplugin = openmdao.test.early_report:EarlyTestInfo
+
+about:
+  home:  http://openmdao.org
+  license:  Apache 2.0
+  summary:  "Open-source Multidisciplinary Design, Analysis and Optimazation framework in Python."

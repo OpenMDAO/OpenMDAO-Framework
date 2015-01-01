@@ -72,8 +72,8 @@ class DBCaseRecorderTestCase(unittest.TestCase):
         self.top.run()
         expected = [
             'Case:',
-            '   uuid: ad4c1b76-64fb-11e0-95a8-001e8cf75fe',
-            '   timestamp: 1383239074.309192',
+            '   uuid: c10bc60c-8009-11e4-801d-20c9d0478eff',
+            '   timestamp: 1418174010.980570',
             '   inputs:',
             "      comp1.a_dict: {'a': 'b'}",
             "      comp1.a_list: ['a', 'b']",
@@ -82,6 +82,17 @@ class DBCaseRecorderTestCase(unittest.TestCase):
             '   outputs:',
             '      Response(comp1.z): 24.0',
             '      Response(comp2.z): 25.0',
+            '      _pseudo_0.out0: 24.0',
+            '      _pseudo_1.out0: 25.0',
+            '      comp1.derivative_exec_count: 0',
+            '      comp1.exec_count: 19',
+            '      comp1.itername: 9-comp1',
+            '      comp1.z: 24.0',
+            '      comp2.derivative_exec_count: 0',
+            '      comp2.exec_count: 19',
+            '      comp2.itername: 9-comp2',
+            '      comp2.z: 25.0',
+            '      driver.workflow.itername: 9',
         ]
 #        print sout.getvalue()
         lines = sout.getvalue().split('\n')

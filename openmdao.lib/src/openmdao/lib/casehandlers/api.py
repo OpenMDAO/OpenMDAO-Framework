@@ -14,7 +14,7 @@ from openmdao.lib.casehandlers.dbcase import DBCaseIterator, DBCaseRecorder, \
 from openmdao.lib.casehandlers.dumpcase import DumpCaseRecorder
 
 from openmdao.lib.casehandlers.jsoncase import JSONCaseRecorder, \
-                                               BSONCaseRecorder
+                                               BSONCaseRecorder, verify_json
 
 from openmdao.lib.casehandlers.listcase import ListCaseRecorder, \
                                                ListCaseIterator

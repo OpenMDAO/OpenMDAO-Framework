@@ -8,7 +8,7 @@ from openmdao.util.testutil import assert_rel_error
 
 from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.main.datatypes.api import Float, Array
-from openmdao.main.mpiwrap import MPI, mpiprint, set_print_rank
+from openmdao.main.mpiwrap import MPI
 from openmdao.lib.drivers.iterate import FixedPointIterator
 
 from openmdao.lib.optproblems import sellar
@@ -27,9 +27,6 @@ class ABCDArrayComp(Component):
         time.sleep(self.delay)
         self.c = self.a + self.b
         self.d = self.a - self.b
-        # mpiprint("%s.a = %s" % (self.name, self.a))
-        # mpiprint("%s.b = %s" % (self.name, self.b))
-
 
 class SellarMDF(Assembly):
     """ Optimization of the Sellar problem using MDF
@@ -76,7 +73,6 @@ class MPITests1(MPITestCase):
         expected = { 'C1.y1': 3.160068, 'C2.y2': 3.755315 }
 
         top.run()
-        return
 
         for name, expval in expected.items():
             val = top.get(name)
@@ -117,11 +113,10 @@ class MPITests1(MPITestCase):
 
         top.run()
 
-        if self.comm.rank == 0:
-            self.assertTrue(all(top.C3.a==np.ones(size, float)*10.))
-            self.assertTrue(all(top.C3.b==np.ones(size, float)*-1.))
-            self.assertTrue(all(top.C3.c==np.ones(size, float)*9.))
-            self.assertTrue(all(top.C3.d==np.ones(size, float)*11.))
+        self.collective_assertTrue(all(top.C3.a==np.ones(size, float)*10.))
+        self.collective_assertTrue(all(top.C3.b==np.ones(size, float)*-1.))
+        self.collective_assertTrue(all(top.C3.c==np.ones(size, float)*9.))
+        self.collective_assertTrue(all(top.C3.d==np.ones(size, float)*11.))
 
     def test_fan_out_in(self):
         size = 5   # array var size
@@ -143,7 +138,9 @@ class MPITests1(MPITestCase):
         top.C1.b = np.ones(size, float) * 7.0
 
         top.run()
-
+        
+        #top._system.dump()
+        
         if self.comm.rank == 0:
             self.assertTrue(all(top.C4.a==np.ones(size, float)*11.))
             self.assertTrue(all(top.C4.b==np.ones(size, float)*5.))
@@ -205,9 +202,8 @@ class MPITests2(MPITestCase):
 
         expected = { 'C1.y1': 3.160068, 'C2.y2': 3.755315 }
 
-        #top.driver.system_type = 'parallel'
-
         top.run()
+
         if self.comm.rank == 0:
             for name, expval in expected.items():
                 val = top.get(name)

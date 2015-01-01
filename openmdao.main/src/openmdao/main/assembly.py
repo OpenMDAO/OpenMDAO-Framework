@@ -18,7 +18,7 @@ import networkx as nx
 from networkx.algorithms.components import strongly_connected_components
 from networkx.algorithms.dag import is_directed_acyclic_graph
 
-from openmdao.main.mpiwrap import MPI, mpiprint
+from openmdao.main.mpiwrap import MPI
 
 from openmdao.main.exceptions import NoFlatError
 from openmdao.main.interfaces import implements, IAssembly, IDriver, \
@@ -186,6 +186,21 @@ class Assembly(Component):
         self.missing_deriv_policy = 'assume_zero'
 
         self.add('recording_options', RecordingOptions())
+
+    def _pre_execute(self):
+        """Prepares for execution by calling various initialization methods
+        if necessary.
+
+        Overrides of this function must call this version.
+        """
+        new_config = self._new_config
+        super(Assembly, self)._pre_execute()
+
+        if new_config and self.parent is None:
+            self._setup()  # only call _setup from top level
+
+        if self.parent is None:
+            self.configure_recording(self.recording_options)
 
     @property
     def _top_driver(self):
@@ -657,7 +672,6 @@ class Assembly(Component):
         if isinstance(dest, ndarray) and dest.size == 0:
             destexpr.set(srcexpr.evaluate(), self)
 
-
         self.config_changed(update_parent=False)
 
     @rbac(('owner', 'user'))
@@ -828,6 +842,10 @@ class Assembly(Component):
     def record_configuration(self):
         """ record model configuration without running the model
         """
+        top = self
+        while top.parent:
+            top = top.parent
+        top._setup()
         self.configure_recording()
         for recorder in self.recorders:
             recorder.close()
@@ -1123,11 +1141,11 @@ class Assembly(Component):
         rgraph.collapse_subdrivers([], [self._top_driver])
 
         drvname = self._top_driver.name
-        
+
         if len(rgraph) > 1:
             self._system = SerialSystem(self, rgraph, rgraph.component_graph(),
                                         self.name+'._inner_asm')
-            # see if there's a driver cycle (happens when driver has params and 
+            # see if there's a driver cycle (happens when driver has params and
             # constraints/objectives that are boundary vars.)
             # FIXME: if we modify the graph to have to/from edges between a driver and
             # all of its workflow comps, then use strongly connected components to
@@ -1309,7 +1327,7 @@ class Assembly(Component):
                 if data.get('iotype') == 'in' and collapsed_graph.in_degree(node) == 0: # input boundary node
                     collapsed_graph.add_node(node[0].split('[',1)[0], comp='invar')
                     collapsed_graph.add_edge(node[0].split('[',1)[0], node)
-                elif data.get('iotype') == 'out' and collapsed_graph.out_degree(node) == 0: # output bndry node
+                elif data.get('iotype') == 'out': # output bndry node
                     collapsed_graph.add_node(node[1][0].split('[',1)[0], comp='outvar')
                     collapsed_graph.add_edge(node, node[1][0].split('[',1)[0])
 
@@ -1464,22 +1482,16 @@ class Assembly(Component):
 
         self._var_meta = {}
 
-        try:
-            self.pre_setup()
-            self.setup_depgraph()
-            self.setup_reduced_graph(inputs=inputs, outputs=outputs)
-            self.setup_systems()
-            self.setup_communicators(comm)
-            self.setup_variables()
-            self.setup_sizes()
-            self.setup_vectors()
-            self.setup_scatters()
-        except Exception:
-            if MPI:
-                mpiprint(traceback.format_exc())
-            raise
-        else:
-            self.post_setup()
+        self.pre_setup()
+        self.setup_depgraph()
+        self.setup_reduced_graph(inputs=inputs, outputs=outputs)
+        self.setup_systems()
+        self.setup_communicators(comm)
+        self.setup_variables()
+        self.setup_sizes()
+        self.setup_vectors()
+        self.setup_scatters()
+        self.post_setup()
 
 
 def dump_iteration_tree(obj, f=sys.stdout, full=True, tabsize=4, derivs=False):

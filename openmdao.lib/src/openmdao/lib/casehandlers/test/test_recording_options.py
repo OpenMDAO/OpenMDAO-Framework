@@ -7,7 +7,7 @@ import StringIO
 
 from openmdao.main.api import Assembly, set_as_top
 from openmdao.test.execcomp import ExecComp
-from openmdao.lib.casehandlers.api import DumpCaseRecorder
+from openmdao.lib.casehandlers.api import JSONCaseRecorder, CaseDataset
 from openmdao.lib.drivers.sensitivity import SensitivityDriver
 
 
@@ -26,19 +26,6 @@ class RecordingOptionsTestCase(unittest.TestCase):
         self.top.driver.add_objective('comp1.z')
         self.top.driver.add_objective('comp2.z')
 
-    def verify_case_dump(self, expected, dump):
-        """ verify that the case dump is as expected
-        """
-        expected = expected.split('\n')
-        lines = dump.getvalue().split('\n')
-        for i in range(len(expected)):
-            if expected[i].startswith('   uuid:'):
-                self.assertTrue(lines[i].startswith('   uuid:'))
-            elif expected[i].startswith('   timestamp:'):
-                self.assertTrue(lines[i].startswith('   timestamp:'))
-            else:
-                self.assertEqual(lines[i].rstrip(), expected[i])
-
     def test_no_recorder(self):
         # verify recording options are ignored if there are no recorders
         #    (i.e. the Assembly runs without errors)
@@ -55,58 +42,39 @@ class RecordingOptionsTestCase(unittest.TestCase):
         #        excludes = []
         
         sout = StringIO.StringIO()
-        self.top.recorders = [DumpCaseRecorder(sout)]
+        self.top.recorders = [JSONCaseRecorder(sout)]
         self.top.run()
 
-        expected = """\
-Constants:
-   comp1.directory:
-   comp1.force_fd: False
-   comp1.missing_deriv_policy: error
-   comp1.y: 0.0
-   comp2.directory:
-   comp2.force_fd: False
-   comp2.missing_deriv_policy: error
-   directory:
-   driver.directory:
-   driver.force_fd: False
-   driver.gradient_options.atol: 1e-09
-   driver.gradient_options.derivative_direction: auto
-   driver.gradient_options.directional_fd: False
-   driver.gradient_options.fd_blocks: []
-   driver.gradient_options.fd_form: forward
-   driver.gradient_options.fd_step: 1e-06
-   driver.gradient_options.fd_step_type: absolute
-   driver.gradient_options.force_fd: False
-   driver.gradient_options.lin_solver: scipy_gmres
-   driver.gradient_options.maxiter: 100
-   driver.gradient_options.rtol: 1e-09
-   force_fd: False
-   missing_deriv_policy: assume_zero
-   recording_options.excludes: []
-   recording_options.includes: ['*']
-   recording_options.save_problem_formulation: True
-Case:
-   uuid: 578b2d91-5b94-11e4-8001-08002764016b
-   timestamp: 1414165341.001852
-   inputs:
-      comp1.x: 0.0
-   outputs:
-      Objective(comp1.z): 0.0
-      Objective(comp2.z): 1.0
-      comp1.derivative_exec_count: 0
-      comp1.exec_count: 1
-      comp1.itername: 1-comp1
-      comp1.z: 0.0
-      comp2.derivative_exec_count: 0
-      comp2.exec_count: 1
-      comp2.itername: 1-comp2
-      comp2.z: 1.0
-      driver.workflow.itername: 1
-"""
+        sout.seek(0) # need to go back to the front of the "file"
+        cds = CaseDataset(sout, 'json')
+        vnames = cds.data.var_names().fetch()
+        expected = ['_driver_id', '_id', '_parent_id', u'_pseudo_0', 
+				u'_pseudo_0.out0', u'_pseudo_1', u'_pseudo_1.out0',
+				u'comp1.derivative_exec_count', u'comp1.exec_count', 
+				u'comp1.itername', u'comp1.x', u'comp1.z', 
+				u'comp2.derivative_exec_count', u'comp2.exec_count', 
+				u'comp2.itername', u'comp2.z', u'driver.workflow.itername', 
+				'error_message', 'error_status', 'timestamp']
 
-        # print sout.getvalue()
-        self.verify_case_dump(expected, sout)
+
+        self.assertFalse(set(vnames).symmetric_difference(set(expected)))
+        
+        # Specific variables.
+        names = [ 'comp1.x', '_pseudo_0', '_pseudo_1']
+        vnames = cds.data.vars(names).var_names().fetch()
+        self.assertEqual(vnames, names)
+
+        cases = cds.data.vars(names).fetch()
+        self.assertEqual(len(cases), 1)
+        self.assertEqual(len(cases[0]), len(names))
+
+        iteration_case_1 = {
+            "comp1.x": 0.0,
+            "_pseudo_0": 0.0,
+            "_pseudo_1": 1.0,
+        }
+        for name, val in zip(names, cases[0]):
+            self.assertAlmostEqual(val, iteration_case_1[name])
 
     def test_problem_formulation_only(self):
         """ verify options with no includes:
@@ -115,25 +83,33 @@ Case:
                 excludes = []
         """
         sout = StringIO.StringIO()
-        self.top.recorders = [DumpCaseRecorder(sout)]
+        self.top.recorders = [JSONCaseRecorder(sout)]
         self.top.recording_options.save_problem_formulation = True
         self.top.recording_options.includes = []
         self.top.run()
 
-        expected = """\
-Constants:
-Case:
-   uuid: ad4c1b76-64fb-11e0-95a8-001e8cf75fe
-   timestamp: 1383239074.309192
-   inputs:
-      comp1.x: 0.0
-   outputs:
-      Objective(comp1.z): 0.0
-      Objective(comp2.z): 1.0
-"""
+        sout.seek(0) # need to go back to the front of the "file"
+        cds = CaseDataset(sout, 'json')
+        vnames = cds.data.var_names().fetch()
+        expected = ['_driver_id', '_id', '_parent_id', u'_pseudo_0',
+                    u'_pseudo_1', u'comp1.x', 'error_message', 'error_status', 'timestamp']
 
-        # print sout.getvalue()
-        self.verify_case_dump(expected, sout)
+        self.assertFalse(set(vnames).symmetric_difference(set(expected)))
+        
+        # Specific variables.
+        names = [ 'comp1.x',]
+        vnames = cds.data.vars(names).var_names().fetch()
+        self.assertFalse(set(vnames).symmetric_difference(set(names)))
+
+        cases = cds.data.vars(names).fetch()
+        self.assertEqual(len(cases), 1)
+        self.assertEqual(len(cases[0]), len(names))
+
+        iteration_case_1 = {
+            "comp1.x": 0.0,
+        }
+        for name, val in zip(names, cases[0]):
+            self.assertAlmostEqual(val, iteration_case_1[name])
 
     def test_includes_only(self):
         """ verify options with includes but not problem formulation:
@@ -142,28 +118,39 @@ Case:
                 excludes = []
         """
         sout = StringIO.StringIO()
-        self.top.recorders = [DumpCaseRecorder(sout)]
+        self.top.recorders = [JSONCaseRecorder(sout)]
         self.top.recording_options.save_problem_formulation = False
         self.top.recording_options.includes = ['comp2*']
         self.top.run()
 
-        expected = """\
-Constants:
-   comp2.directory:
-   comp2.force_fd: False
-   comp2.missing_deriv_policy: error
-Case:
-   uuid: ad4c1b76-64fb-11e0-95a8-001e8cf75fe
-   timestamp: 1383239074.309192
-   outputs:
-      comp2.derivative_exec_count: 0
-      comp2.exec_count: 1
-      comp2.itername: 1-comp2
-      comp2.z: 1.0
-"""
+        sout.seek(0) # need to go back to the front of the "file"
+        cds = CaseDataset(sout, 'json')
+        vnames = cds.data.var_names().fetch()
+        expected = ['_driver_id', '_id', '_parent_id', u'comp2.derivative_exec_count', 
+                    u'comp2.exec_count', u'comp2.itername', u'comp2.z', 'error_message', 
+                    'error_status', 'timestamp']
+        self.assertFalse(set(vnames) - set(expected))
+        
+        
+        constants = cds.simulation_info['constants'].keys()
+        expected = [u'comp2.directory', u'comp2.force_fd', u'comp2.missing_deriv_policy']
+        self.assertFalse(set(constants) - set(expected))
+        
+        
+        # Specific variables.
+        names = [ 'comp2.z']
+        vnames = cds.data.vars(names).var_names().fetch()
+        self.assertEqual(vnames, names)
 
-        # print sout.getvalue()
-        self.verify_case_dump(expected, sout)
+        cases = cds.data.vars(names).fetch()
+        self.assertEqual(len(cases), 1)
+        self.assertEqual(len(cases[0]), len(names))
+
+        iteration_case_1 = {
+            "comp2.z": 1.0,
+        }
+        for name, val in zip(names, cases[0]):
+            self.assertAlmostEqual(val, iteration_case_1[name])
 
     def test_options_with_excludes(self):
         """ verify options with excludes:
@@ -172,7 +159,7 @@ Case:
                 excludes = ['*directory', '*force_fd', '*missing_deriv_policy', '*gradient_options*']
         """
         sout = StringIO.StringIO()
-        self.top.recorders = [DumpCaseRecorder(sout)]
+        self.top.recorders = [JSONCaseRecorder(sout)]
         self.top.recording_options.excludes = [
             '*directory',
             '*force_fd',
@@ -181,33 +168,14 @@ Case:
         ]
         self.top.run()
 
-        expected = """\
-Constants:
-   comp1.y: 0.0
-   recording_options.excludes: ['*directory', '*force_fd', '*missing_deriv_policy', '*gradient_options*']
-   recording_options.includes: ['*']
-   recording_options.save_problem_formulation: True
-Case:
-   uuid: 80dd42d1-5b94-11e4-8004-08002764016b
-   timestamp: 1414165410.332183
-   inputs:
-      comp1.x: 0.0
-   outputs:
-      Objective(comp1.z): 0.0
-      Objective(comp2.z): 1.0
-      comp1.derivative_exec_count: 0
-      comp1.exec_count: 1
-      comp1.itername: 1-comp1
-      comp1.z: 0.0
-      comp2.derivative_exec_count: 0
-      comp2.exec_count: 1
-      comp2.itername: 1-comp2
-      comp2.z: 1.0
-      driver.workflow.itername: 1
-"""
-
-        # print sout.getvalue()
-        self.verify_case_dump(expected, sout)
+        sout.seek(0) # need to go back to the front of the "file"
+        cds = CaseDataset(sout, 'json')
+        
+        constants = cds.simulation_info['constants'].keys()
+        expected = [u'recording_options.save_problem_formulation', 
+			u'recording_options.includes', u'comp1.y', u'recording_options.excludes']
+        self.assertFalse(set(constants) - set(expected))
+     
 
     def test_options_with_includes_excludes(self):
         """ verify options with includes and excludes (excludes are processed after includes):
@@ -216,7 +184,7 @@ Case:
                 excludes = ['*directory', '*force_fd', '*missing_deriv_policy']
         """
         sout = StringIO.StringIO()
-        self.top.recorders = [DumpCaseRecorder(sout)]
+        self.top.recorders = [JSONCaseRecorder(sout)]
         self.top.recording_options.includes = ['comp1*']
         self.top.recording_options.excludes = [
             '*directory',
@@ -224,26 +192,38 @@ Case:
             '*missing_deriv_policy'
         ]
         self.top.run()
+        sout.seek(0) # need to go back to the front of the "file"
+        cds = CaseDataset(sout, 'json')
+        
+        constants = cds.simulation_info['constants'].keys()
+        expected = [u'comp1.y']
+        self.assertFalse(set(constants) - set(expected))
 
-        expected = """\
-Constants:
-   comp1.y: 0.0
-Case:
-   uuid: ad4c1b76-64fb-11e0-95a8-001e8cf75fe
-   timestamp: 1383239074.309192
-   inputs:
-      comp1.x: 0.0
-   outputs:
-      Objective(comp1.z): 0.0
-      Objective(comp2.z): 1.0
-      comp1.derivative_exec_count: 0
-      comp1.exec_count: 1
-      comp1.itername: 1-comp1
-      comp1.z: 0.0
-"""
 
-        # print sout.getvalue()
-        self.verify_case_dump(expected, sout)
+        vnames = cds.data.var_names().fetch()
+        expected = ['_driver_id', '_id', '_parent_id', u'_pseudo_0', u'_pseudo_1', 
+                    u'comp1.derivative_exec_count', u'comp1.exec_count', u'comp1.itername', 
+                    u'comp1.x', u'comp1.z', 'error_message', 'error_status', 'timestamp']
+        
+        #self.assertFalse(set(vnames) - set(expected))
+        self.assertFalse(set(vnames).symmetric_difference(set(expected)))
+    
+        # Specific variables are there
+        names = [ 'comp1.z', 'comp1.x']
+        vnames = cds.data.vars(names).var_names().fetch()
+        self.assertEqual(vnames, names)
+
+        cases = cds.data.vars(names).fetch()
+        self.assertEqual(len(cases), 1)
+        self.assertEqual(len(cases[0]), len(names))
+
+        iteration_case_1 = {
+            "comp1.x": 0.0,
+            "comp1.z": 0.0,
+        }
+        for name, val in zip(names, cases[0]):
+            self.assertAlmostEqual(val, iteration_case_1[name])
+
 
 
 if __name__ == '__main__':
