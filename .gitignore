@@ -68,3 +68,5 @@ junk.out
 ##########################
 *.swp
 *.bak
+learning_sellar.py
+engineCmodule.c

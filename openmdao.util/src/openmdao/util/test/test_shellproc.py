@@ -6,6 +6,8 @@ import logging
 import os.path
 import signal
 import sys
+import tempfile
+import shutil
 import unittest
 
 from openmdao.util.shellproc import call, check_call, CalledProcessError, \
@@ -14,6 +16,19 @@ from openmdao.util.shellproc import call, check_call, CalledProcessError, \
 
 class TestCase(unittest.TestCase):
     """ Test ShellProc functions. """
+
+    def setUp(self):
+        self.startdir = os.getcwd()
+        self.tempdir = tempfile.mkdtemp(prefix='test_shellproc-')
+        os.chdir(self.tempdir)
+
+    def tearDown(self):
+        os.chdir(self.startdir)
+        if not os.environ.get('OPENMDAO_KEEPDIRS', False):
+            try:
+                shutil.rmtree(self.tempdir)
+            except OSError:
+                pass
 
     def test_call(self):
         logging.debug('')
@@ -86,4 +101,3 @@ if __name__ == '__main__':
     sys.argv.append('--cover-package=openmdao.util')
     sys.argv.append('--cover-erase')
     nose.runmodule()
-

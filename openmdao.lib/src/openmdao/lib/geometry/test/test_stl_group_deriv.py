@@ -4,11 +4,13 @@ Testing differentiation of stl group objects.
 
 
 import os
+import tempfile
+import shutil
 import unittest
 
 import numpy as np
 
-from openmdao.main.api import Component, Assembly, set_as_top
+from openmdao.main.api import Component, Assembly, set_as_top, SimulationRoot
 
 import openmdao.lib.geometry.stl as stl
 from openmdao.lib.geometry.ffd_axisymetric import Body, Shell
@@ -43,11 +45,24 @@ class TestcaseSTLGroup(unittest.TestCase):
 
     def setUp(self):
 
+        self.startdir = os.getcwd()
+        self.tempdir = tempfile.mkdtemp(prefix='test_stl-')
+        os.chdir(self.tempdir)
+        SimulationRoot.chroot(self.tempdir)
+        
         self.top = set_as_top(Assembly())
         self.top.add('plug_noz', PlugNozzleGeometry())
         self.top.driver.workflow.add('plug_noz')
         self.top.run()
 
+    def tearDown(self):
+        os.chdir(self.startdir)
+        SimulationRoot.chroot(self.startdir)
+        if not os.environ.get('OPENMDAO_KEEPDIRS', False):
+            try:
+                shutil.rmtree(self.tempdir)
+            except OSError:
+                pass
 
     def test_vars_created(self):
         """make sure the inputs and outputs are created properly"""
