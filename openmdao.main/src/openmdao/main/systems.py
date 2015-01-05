@@ -393,7 +393,7 @@ class System(object):
 
         for sub in self.local_subsystems():
             if isinstance(sub, ParamSystem):
-                sub.setup_variables({}, resid_state_map)#variables, resid_state_map)
+                sub.setup_variables(variables, resid_state_map)
 
         # now loop through a final time to keep order of all subsystems the same
         # as local_subsystems()
@@ -564,7 +564,11 @@ class System(object):
             srcvec = self.vec[srcvecname]
             destvec = self.vec[destvecname]
 
-            #print "scattering %s --> %s:  %s" % (srcvecname, destvecname, scatter.scatter_conns)
+            #print "SCATTER", srcvecname, destvecname
+            #print self.name, self
+            #print 'srcvec', srcvec.array, srcvec.keys()
+            #print 'destvec', destvec.array, destvec.keys()
+            
             scatter(self, srcvec, destvec)
 
             if destvecname == 'p':

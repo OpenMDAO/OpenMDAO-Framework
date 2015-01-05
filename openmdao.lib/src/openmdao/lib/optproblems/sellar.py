@@ -230,5 +230,3 @@ class SellarProblemWithDeriv(OptProblem):
         }
 
         #END OF MDAO Problem Definition
-
-
