@@ -10,7 +10,7 @@ conda create --name openmdao \
   pyparsing \
   traits==4.3.0 \
   nose \
-  sphinx \
+  sphinx==1.2.2\
   fabric==0.9.3 \
   boto \
   paramiko==1.7.7.1 \
