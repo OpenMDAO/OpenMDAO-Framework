@@ -250,7 +250,6 @@ def build_docs(parser=None, options=None, args=None):
                 version = "?-?-?"
                 shtitle = "OpenMDAO Documentation (unknown revision)"
     
-    import pdb;pdb.set_trace()
     branchdir, docdir, bindir = _get_dirnames()
 
     startdir = os.getcwd()
