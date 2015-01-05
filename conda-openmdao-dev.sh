@@ -4,6 +4,7 @@
 # Should move all possible openmdao dependencies
 # up here to simplify script
 conda create --name openmdao \
+  pip \
   numpy \
   scipy \
   setuptools \

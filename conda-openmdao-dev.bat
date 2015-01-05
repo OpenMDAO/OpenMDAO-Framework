@@ -6,6 +6,7 @@ SET OLD_DIR=%CD%
 REM Create an openmdao environment and
 REM install numpy and scipy
 REM TODO: Should move all possible openmdao dependencies up here to simplify script
+SET DEPENDENCIES=pip
 SET DEPENDENCIES=numpy
 SET DEPENDENCIES=%DEPENDENCIES% scipy
 SET DEPENDENCIES=%DEPENDENCIES% setuptools
