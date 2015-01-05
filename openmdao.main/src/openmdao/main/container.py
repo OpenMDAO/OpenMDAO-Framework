@@ -1349,7 +1349,7 @@ class Container(SafeHasTraits):
             full_msg = '%s (%s): %s' % (self.get_pathname(), coords, msg)
         else:
             full_msg = '%s: %s' % (self.get_pathname(), msg)
-        self._logger.error(msg)
+        #self._logger.error(msg)
         raise exception_class(full_msg)
 
     def reraise_exception(self, msg='', info=None):

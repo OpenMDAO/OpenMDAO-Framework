@@ -187,6 +187,21 @@ class Assembly(Component):
 
         self.add('recording_options', RecordingOptions())
 
+    def _pre_execute(self):
+        """Prepares for execution by calling various initialization methods
+        if necessary.
+
+        Overrides of this function must call this version.
+        """
+        new_config = self._new_config
+        super(Assembly, self)._pre_execute()
+
+        if new_config and self.parent is None:
+            self._setup()  # only call _setup from top level
+
+        if self.parent is None:
+            self.configure_recording(self.recording_options)
+
     @property
     def _top_driver(self):
         if self._pre_driver:
@@ -827,6 +842,10 @@ class Assembly(Component):
     def record_configuration(self):
         """ record model configuration without running the model
         """
+        top = self
+        while top.parent:
+            top = top.parent
+        top._setup()
         self.configure_recording()
         for recorder in self.recorders:
             recorder.close()
@@ -1463,15 +1482,19 @@ class Assembly(Component):
 
         self._var_meta = {}
 
-        self.pre_setup()
-        self.setup_depgraph()
-        self.setup_reduced_graph(inputs=inputs, outputs=outputs)
-        self.setup_systems()
-        self.setup_communicators(comm)
-        self.setup_variables()
-        self.setup_sizes()
-        self.setup_vectors()
-        self.setup_scatters()
+        try:
+            self.pre_setup()
+            self.setup_depgraph()
+            self.setup_reduced_graph(inputs=inputs, outputs=outputs)
+            self.setup_systems()
+            self.setup_communicators(comm)
+            self.setup_variables()
+            self.setup_sizes()
+            self.setup_vectors()
+            self.setup_scatters()
+        except Exception:
+            traceback.print_exc()
+            raise
         self.post_setup()
 
 

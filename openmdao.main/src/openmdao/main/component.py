@@ -432,8 +432,6 @@ class Component(Container):
 
         if self._new_config:
             self.check_config()
-            if self.parent is None and has_interface(self, IAssembly):
-                self._setup()  # only call _setup from top level
             self._new_config = False
 
     def execute(self):
@@ -507,8 +505,8 @@ class Component(Container):
         self._stop = False
         self._case_uuid = case_uuid
 
-        if self.parent is None:
-            self._run_begins()
+        # if self.parent is None:
+        #     self._run_begins()
 
         try:
             self._pre_execute()

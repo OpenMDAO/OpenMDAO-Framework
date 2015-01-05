@@ -1,6 +1,8 @@
 import os.path
 import re
 import sys
+import tempfile
+import shutil
 import unittest
 import json
 
@@ -84,7 +86,19 @@ class Top(Assembly):
 class TestCase(unittest.TestCase):
 
     def setUp(self):
+        self.startdir = os.getcwd()
+        self.tempdir = tempfile.mkdtemp(prefix='test_json_filevar-')
+        os.chdir(self.tempdir)
         self.top = set_as_top(Top())
+
+    def tearDown(self):
+        self.top = None
+        os.chdir(self.startdir)
+        if not os.environ.get('OPENMDAO_KEEPDIRS', False):
+            try:
+                shutil.rmtree(self.tempdir)
+            except OSError:
+                pass
 
     def test_file_vars(self):
         sout = StringIO()
@@ -137,11 +151,6 @@ class TestCase(unittest.TestCase):
                 self.assertAlmostEqual(oldname, newname, '%s != %s' % (oldname, newname))
             else:
                 self.assertEqual(oldname, newname) # just raises an exception
-
-    def tearDown(self):
-        if os.path.exists("x.in"):
-            os.remove('x.in')
-        self.top = None
 
 
 if __name__ == '__main__':

@@ -7,9 +7,17 @@ import StringIO
 import logging
 import sys
 import time
+import os
+import inspect
+
 
 import json
 import bson
+
+import cPickle
+
+from openmdao.lib.casehandlers.pymongo_bson.json_util import dumps
+from openmdao.lib.casehandlers.pymongo_bson.binary import Binary
 
 from numpy  import ndarray
 from struct import pack
@@ -29,6 +37,10 @@ class _BaseRecorder(object):
         self._cfg_map = {}
         self._uuid = None
         self._cases = None
+        
+		# not used yet but for getting values of variables
+		#     from subcases
+        self._last_child_case_uuids = {} # keyed by driver id
 
     def startup(self):
         """ Prepare for new run. """
@@ -44,7 +56,8 @@ class _BaseRecorder(object):
         top = self._cfg_map.keys()[0].parent
         while top.parent:
             top = top.parent
-        prefix_drop = len(top.name)+1 if top.name else 0
+        #prefix_drop = len(top.name)+1 if top.name else 0
+        prefix_drop = 0
 
         # Collect variable metadata.
         cruft = ('desc', 'framework_var', 'type', 'validation_trait')
@@ -132,8 +145,9 @@ class _BaseRecorder(object):
         top = self._cfg_map.keys()[0].parent
         while top.parent:
             top = top.parent
-        prefix_drop = len(top.name) + 1 if top.name else 0
-
+        #prefix_drop = len(top.name) + 1 if top.name else 0
+        prefix_drop = 0 
+        
         driver_info = []
         for driver, (ins, outs) in sorted(self._cfg_map.items(),
                                           key=lambda item: item[0].get_pathname()):
@@ -161,12 +175,27 @@ class _BaseRecorder(object):
                       case_uuid, parent_uuid):
         """ Return case info dictionary. """
         in_names, out_names = self._cfg_map[driver]
+
+        scope = driver.parent
+        prefix = scope.get_pathname()
+        if prefix:
+            prefix += '.'
+        in_names = [prefix+name for name in in_names]        
+        out_names = [prefix+name for name in out_names]        
+        
         data = dict(zip(in_names, inputs))
         data.update(zip(out_names, outputs))
 
+        #subdriver_last_case_uuids = {}
+        #for subdriver in driver.subdrivers():
+            #subdriver_last_case_uuids[ id(subdriver) ] = self._last_child_case_uuids[ id(subdriver) ]
+        #self._last_child_case_uuids[ id(driver) ] = case_uuid
+            
+            
         return dict(_id=case_uuid,
                     _parent_id=parent_uuid or self._uuid,
                     _driver_id=id(driver),
+                    #subdriver_last_case_uuids = subdriver_last_case_uuids,
                     error_status=None,
                     error_message=str(exc) if exc else '',
                     timestamp=time.time(),
@@ -243,6 +272,7 @@ class JSONCaseRecorder(_BaseRecorder):
         """ Return JSON data, report any bad keys & values encountered. """
         try:
             return json.dumps(info, indent=self.indent,
+            #return dumps(info, indent=self.indent,
                               sort_keys=self.sort_keys,
                               cls=_Encoder, check_circular=False)
         except Exception as exc:
@@ -251,6 +281,7 @@ class JSONCaseRecorder(_BaseRecorder):
             for key in sorted(info):
                 try:
                     json.dumps(info[key], indent=self.indent,
+                    #dumps(info[key], indent=self.indent,
                                sort_keys=self.sort_keys,
                                cls=_Encoder, check_circular=False)
                 except Exception:
@@ -264,6 +295,7 @@ class JSONCaseRecorder(_BaseRecorder):
                 bad = []
                 for key in sorted(info):
                     try:
+                        #dumps(info[key], indent=self.indent,
                         json.dumps(info[key], indent=self.indent,
                                    sort_keys=self.sort_keys,
                                    cls=_Encoder, check_circular=False)
@@ -322,7 +354,9 @@ def _fixup(value):
     elif isinstance(value, (list, tuple, set, frozenset)):
         return [_fixup(val) for val in value]
     elif isinstance(value, ndarray):
-        return value.tolist()
+        d = dumps(Binary( cPickle.dumps( value, protocol=2) ) )
+        return json.loads(d)
+        #return dumps(Binary( cPickle.dumps( value, protocol=2) ) )
     elif isinstance(value, VariableTree):
         return dict([(name, _fixup(getattr(value, name)))
                      for name in value.list_vars()])
@@ -425,3 +459,44 @@ class BSONCaseRecorder(_BaseRecorder):
     def get_iterator(self):
         """ Just returns None. """
         return None
+
+def dict_iter(dct):
+    for k,v in dct.items():
+        if isinstance(v, dict):
+            for kk,vv in dict_iter(v):
+                yield (kk, vv)
+        else:
+            yield (k, v)
+
+def verify_json(test, sout, filename):
+
+    directory = os.path.dirname(inspect.getfile(test.__class__))
+    path = os.path.join(directory, filename)
+    with open(path, 'r') as inp:
+        old_json = json.load(inp)
+
+    new_json = json.loads(sout.getvalue())
+
+    old = list(dict_iter(old_json))
+    new = list(dict_iter(new_json))
+
+    if len(old) != len(new):
+        test.fail("Number of items (%d) != number of items expected (%d)" %
+                  (len(old), len(new)))
+
+    ignore = set([u'uuid', u'OpenMDAO_Version', u'_id',
+                  u'_driver_id', u'_parent_id', u'timestamp', u'pcomp_name'])
+
+    for (oldname, oldval), (newname, newval) in zip(old, new):
+        if oldname.startswith('__length_'):
+            continue
+        if oldname in ignore: # don't care if these match
+            continue
+        if oldname == newname:
+            if oldname == 'high' and newval == sys.maxint:
+                continue
+            if oldname == 'low' and newval == -sys.maxint:
+                continue
+            test.assertAlmostEqual(oldval, newval)
+        else:
+            test.assertEqual(oldname, newname) # just raises an exception

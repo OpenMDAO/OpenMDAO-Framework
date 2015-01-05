@@ -1,10 +1,10 @@
 
-Design Doc Outline 
+Design Doc Outline
 ===================
 
 .. toctree::
    :maxdepth: 1
-   
+
    execution_prep
    build_depgraph
    assembly_lifecycle
@@ -12,8 +12,8 @@ Design Doc Outline
    subgraphs
    sys_decomp
    execution_mgmt
-   flattenable 
-   solvers
+   flattenable
+   linear_solvers
    case_recording
    components
    assembly_subassembly

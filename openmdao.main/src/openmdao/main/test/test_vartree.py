@@ -1,6 +1,9 @@
 import copy
 import glob
 import os
+import tempfile
+import shutil
+
 import unittest
 
 from traits.trait_base import not_none
@@ -140,8 +143,12 @@ class NamespaceTestCase(unittest.TestCase):
     def setUp(self):
         # SimulationRoot is static and so some junk can be left
         # over from other tests when running under nose, so
-        # set it to cwd here just to be safe
-        SimulationRoot.chroot(os.getcwd())
+        # set it here just to be safe
+        self.startdir = os.getcwd()
+        self.tempdir = tempfile.mkdtemp(prefix='omdao-')
+        os.chdir(self.tempdir)
+        SimulationRoot.chroot(self.tempdir)
+        
         self.asm = set_as_top(Assembly())
         obj = self.asm.add('scomp1', SimpleComp())
         self.asm.add('scomp2', SimpleComp())
@@ -164,8 +171,13 @@ class NamespaceTestCase(unittest.TestCase):
             obj.cont_in.vt2.vt3.data = FileRef(filename, self.asm)
 
     def tearDown(self):
-        for name in glob.glob('*.data.vt*'):
-            os.remove(name)
+        os.chdir(self.startdir)
+        SimulationRoot.chroot(self.startdir)
+        if not os.environ.get('OPENMDAO_KEEPDIRS', False):
+            try:
+                shutil.rmtree(self.tempdir)
+            except OSError:
+                pass
 
     def _check_values(self, expected, actual):
         for e, a in zip(expected, actual):

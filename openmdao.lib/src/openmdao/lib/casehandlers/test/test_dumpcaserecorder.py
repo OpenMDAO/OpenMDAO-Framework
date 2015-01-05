@@ -12,6 +12,142 @@ from openmdao.lib.drivers.sensitivity import SensitivityDriver
 from openmdao.lib.drivers.simplecid import SimpleCaseIterDriver
 
 
+from openmdao.lib.casehandlers.api import CSVCaseIterator, CSVCaseRecorder, \
+                                          DumpCaseRecorder
+from openmdao.main.datatypes.api import Array, Str, Bool, VarTree, Float
+from openmdao.lib.drivers.api import SimpleCaseIterDriver
+from openmdao.main.api import Assembly, Case, set_as_top, VariableTree, Component
+from openmdao.test.execcomp import ExecComp
+from openmdao.util.testutil import assert_raises
+from openmdao.main.test.test_vartree import DumbVT
+from openmdao.lib.drivers.conmindriver import CONMINdriver
+
+
+class TestContainer(VariableTree):
+
+    dummy1 = Float(desc='default value of 0.0') #this value is being grabbed by the optimizer
+    dummy2 = Float(11.0)
+
+
+class TestComponent(Component):
+
+    dummy_data = VarTree(TestContainer(), iotype='in')
+    x = Float(iotype='out')
+
+    def execute(self):
+        self.x = (self.dummy_data.dummy1-3)**2 - self.dummy_data.dummy2
+
+
+class TestAssembly(Assembly):
+
+    def configure(self):
+        self.add('dummy_top', TestContainer())
+        self.add('comp', TestComponent())
+        self.add('driver', CONMINdriver())
+
+        self.driver.workflow.add(['comp'])
+        #self.driver.iprint = 4 #debug verbosity
+        self.driver.add_objective('comp.x')
+        self.driver.add_parameter('comp.dummy_data.dummy1', low=-10.0, high=10.0)
+
+class TestCase(unittest.TestCase):
+    def setUp(self):
+        pass
+
+    def tearDown(self):
+        for recorder in self.top.recorders:
+            recorder.close()
+
+    def test_dumprecorder(self):
+        self.top = set_as_top(TestAssembly())
+        sout1 = StringIO.StringIO()
+        sout2 = StringIO.StringIO()
+        self.top.recorders = [DumpCaseRecorder(sout1), DumpCaseRecorder(sout2)]
+        self.top.run()
+        
+        expected_constants = """\
+Constants:
+   comp.directory:
+   comp.force_fd: False
+   comp.missing_deriv_policy: error
+   directory:
+   driver.conmin_diff: False
+   driver.ct: -0.1
+   driver.ctl: -0.01
+   driver.ctlmin: 0.001
+   driver.ctmin: 0.004
+   driver.dabfun: 0.001
+   driver.delfun: 0.001
+   driver.directory:
+   driver.fdch: 0.01
+   driver.fdchm: 0.01
+   driver.force_fd: False
+   driver.gradient_options.atol: 1e-09
+   driver.gradient_options.derivative_direction: auto
+   driver.gradient_options.directional_fd: False
+   driver.gradient_options.fd_blocks: []
+   driver.gradient_options.fd_form: forward
+   driver.gradient_options.fd_step: 1e-06
+   driver.gradient_options.fd_step_type: absolute
+   driver.gradient_options.force_fd: False
+   driver.gradient_options.lin_solver: scipy_gmres
+   driver.gradient_options.maxiter: 100
+   driver.gradient_options.rtol: 1e-09
+   driver.icndir: 0.0
+   driver.iprint: 0
+   driver.itmax: 10
+   driver.itrm: 3
+   driver.linobj: False
+   driver.phi: 5.0
+   driver.theta: 1.0
+   force_fd: False
+   missing_deriv_policy: assume_zero
+   recording_options.excludes: []
+   recording_options.includes: ['*']
+   recording_options.save_problem_formulation: True"""
+        
+        expected_case = """\
+Case:
+   uuid: e2904a73-800a-11e4-8009-20c9d0478eff
+   timestamp: 1418174496.710163
+   inputs:
+      comp.dummy_data.dummy1: 2.28846229958
+   outputs:
+      Objective(comp.x): -10.4937141009
+      _pseudo_0.out0: -10.4937141009
+      comp.derivative_exec_count: 0
+      comp.exec_count: 11
+      comp.itername: 9-comp
+      comp.x: -10.4937141009
+      driver.workflow.itername: 9"""
+
+
+        # print sout1.getvalue()
+        expected = expected_constants.split('\n')
+        for sout in [sout1, sout2]:
+            lines = sout.getvalue().split('\n')
+            lines = [line.rstrip() for line in lines]
+            for i in range(len(expected)):
+                self.assertEqual(lines[i].rstrip(), expected[i])
+
+        expected = expected_case.split('\n')
+        for sout in [sout1, sout2]:
+            lines = sout.getvalue().split('\n')
+            lines = [line.rstrip() for line in lines]
+            start = 0
+            for i in range(9):
+                index = start + lines[start:].index('Case:')
+                start = index + 1
+            for i in range(len(expected)):
+                if expected[i].startswith('   uuid:'):
+                    self.assertTrue(lines[index+i].startswith('   uuid:'))
+                elif expected[i].startswith('   timestamp:'):
+                    self.assertTrue(lines[index+i].startswith('   timestamp:'))
+                else:
+                    self.assertEqual(lines[index+i], expected[i])
+
+
+
 class DumpCaseRecorderTestCase(unittest.TestCase):
 
     def setUp(self):
@@ -42,82 +178,6 @@ class DumpCaseRecorderTestCase(unittest.TestCase):
         else:
             self.fail("Exception expected")
 
-    def test_dumprecorder(self):
-        sout1 = StringIO.StringIO()
-        sout2 = StringIO.StringIO()
-        self.top.recorders = [DumpCaseRecorder(sout1), DumpCaseRecorder(sout2)]
-        self.top.run()
-
-        expected_constants = """\
-Constants:
-   comp1.directory:
-   comp1.force_fd: False
-   comp1.missing_deriv_policy: error
-   comp2.directory:
-   comp2.force_fd: False
-   comp2.missing_deriv_policy: error
-   directory:
-   driver.case_inputs.comp1.x: [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]
-   driver.case_inputs.comp1.y: [0.0, 2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0, 18.0]
-   driver.directory:
-   driver.force_fd: False
-   driver.gradient_options.atol: 1e-09
-   driver.gradient_options.derivative_direction: auto
-   driver.gradient_options.directional_fd: False
-   driver.gradient_options.fd_blocks: []
-   driver.gradient_options.fd_form: forward
-   driver.gradient_options.fd_step: 1e-06
-   driver.gradient_options.fd_step_type: absolute
-   driver.gradient_options.force_fd: False
-   driver.gradient_options.lin_solver: scipy_gmres
-   driver.gradient_options.maxiter: 100
-   driver.gradient_options.rtol: 1e-09
-   force_fd: False
-   missing_deriv_policy: assume_zero"""
-
-        expected_case = """\
-Case:
-   uuid: ad4c1b76-64fb-11e0-95a8-001e8cf75fe
-   timestamp: 1383239074.309192
-   inputs:
-      comp1.x: 8.0
-      comp1.y: 16.0
-   outputs:
-      Response(comp1.z): 24.0
-      Response(comp2.z): 25.0
-      comp1.derivative_exec_count: 0
-      comp1.exec_count: 9
-      comp1.itername: 9-comp1
-      comp1.z: 24.0
-      comp2.derivative_exec_count: 0
-      comp2.exec_count: 9
-      comp2.itername: 9-comp2
-      comp2.z: 25.0
-      driver.workflow.itername: 9"""
-
-        # print sout1.getvalue()
-        expected = expected_constants.split('\n')
-        for sout in [sout1, sout2]:
-            lines = sout.getvalue().split('\n')
-            lines = [line.rstrip() for line in lines]
-            for i in range(len(expected)):
-                self.assertEqual(lines[i].rstrip(), expected[i])
-
-        expected = expected_case.split('\n')
-        for sout in [sout1, sout2]:
-            lines = sout.getvalue().split('\n')
-            lines = [line.rstrip() for line in lines]
-            start = 0
-            for i in range(9):
-                index = start + lines[start:].index('Case:')
-                start = index + 1
-            for i in range(len(expected)):
-                if expected[i].startswith('   uuid:'):
-                    self.assertTrue(lines[index+i].startswith('   uuid:'))
-                elif expected[i].startswith('   timestamp:'):
-                    self.assertTrue(lines[index+i].startswith('   timestamp:'))
-                else:
-                    self.assertEqual(lines[index+i], expected[i])
 
     def test_multiple_objectives(self):
         sout = StringIO.StringIO()
@@ -159,13 +219,15 @@ Constants:
    recording_options.includes: ['*']
    recording_options.save_problem_formulation: True
 Case:
-   uuid: 766f9b47-5bc0-11e4-803d-080027a1f086
-   timestamp: 1414184290.686166
+   uuid: 56bc95a1-800a-11e4-800b-20c9d0478eff
+   timestamp: 1418174262.123138
    inputs:
       comp1.x: 0.0
    outputs:
       Objective(comp1.z): 0.0
       Objective(comp2.z): 1.0
+      _pseudo_2.out0: 0.0
+      _pseudo_3.out0: 1.0
       comp1.derivative_exec_count: 0
       comp1.exec_count: 1
       comp1.itername: 1-comp1
@@ -176,6 +238,8 @@ Case:
       comp2.z: 1.0
       driver.workflow.itername: 1
 """
+        
+        
 
         # print sout.getvalue()
         expected = expected.split('\n')

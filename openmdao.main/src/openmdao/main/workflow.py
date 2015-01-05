@@ -16,11 +16,11 @@ from openmdao.main.mp_support import has_interface
 from openmdao.main.case import Case
 from openmdao.main.mpiwrap import MPI, MPI_info
 from openmdao.main.systems import SerialSystem, ParallelSystem, \
-                                  OpaqueSystem, VarSystem, \
+                                  OpaqueSystem, VarSystem, CompoundSystem, \
                                   partition_subsystems, ParamSystem, \
                                   get_comm_if_active, collapse_to_system_node
 from openmdao.main.depgraph import _get_inner_connections, get_nondiff_groups, \
-                                   collapse_nodes, simple_node_iter
+                                   collapse_nodes, simple_node_iter, CollapsedGraph
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.interfaces import IVariableTree, IDriver
 
@@ -578,46 +578,73 @@ class Workflow(object):
                    self._check_path(path, includes, excludes):
                     self._rec_constraints.append(con)
                     outputs.append(name)
+                    #outputs.append(path+'.out0')
+
+        #driver.get_reduced_graph()
+        #self._rec_all_outputs = []
+        self._rec_outputs = []
+        for comp in driver.workflow: 
+            successors = driver._reduced_graph.successors(comp.name)
+            for output_name, aliases in successors:
+                if '.in' in output_name: # look for something that is not a pseudo input
+                    for n in aliases:
+                        if not ".in" in n:
+                            output_name = n
+                            break
+                #output_name = prefix + output_name
+                if output_name not in outputs and self._check_path(output_name, includes, excludes) :
+                    outputs.append(output_name)
+                    self._rec_outputs.append(output_name)
+                    #self._rec_all_outputs.append(output_name)
+                    
+        #####
+        # also need get any outputs of comps that are not connected vars 
+		#   and therefore not in the graph
+        # could use 
+        #   scope._depgraph
+        #      there's 'iotype' metadata in the var nodes
+        #    
+        #   also:
+        #         scope._depgraph.list_outputs('comp2')
+        
+        for comp in driver.workflow: 
+            for output_name in scope._depgraph.list_outputs(comp.name):
+                #output_name = prefix + output_name
+                if output_name not in outputs and self._check_path(output_name, includes, excludes) :
+                    outputs.append(output_name)
+                    self._rec_outputs.append(output_name)
 
         # Other outputs.
-        self._rec_outputs = []
-        srcs = scope.list_inputs()
-        if hasattr(driver, 'get_parameters'):
-            srcs.extend(param.target
-                        for param in driver.get_parameters().values())
-        dsts = scope.list_outputs()
+        #self._rec_outputs = []
+        # srcs = scope.list_inputs()
+        # if hasattr(driver, 'get_parameters'):
+        #     srcs.extend(param.target
+        #                 for param in driver.get_parameters().values())
+        # dsts = scope.list_outputs()
 
-        if hasattr(driver, 'get_objectives'):
-            dsts.extend(objective.pcomp_name+'.out0'
-                        for objective in driver.get_objectives().values())
-        if hasattr(driver, 'get_responses'):
-            dsts.extend(response.pcomp_name+'.out0'
-                        for response in driver.get_responses().values())
-        if hasattr(driver, 'get_eq_constraints'):
-            dsts.extend(constraint.pcomp_name+'.out0'
-                        for constraint in driver.get_eq_constraints().values())
-        if hasattr(driver, 'get_ineq_constraints'):
-            dsts.extend(constraint.pcomp_name+'.out0'
-                        for constraint in driver.get_ineq_constraints().values())
+        # if hasattr(driver, 'get_objectives'):
+        #     dsts.extend(objective.pcomp_name+'.out0'
+        #                 for objective in driver.get_objectives().values())
+        # if hasattr(driver, 'get_responses'):
+        #     dsts.extend(response.pcomp_name+'.out0'
+        #                 for response in driver.get_responses().values())
+        # if hasattr(driver, 'get_eq_constraints'):
+        #     dsts.extend(constraint.pcomp_name+'.out0'
+        #                 for constraint in driver.get_eq_constraints().values())
+        # if hasattr(driver, 'get_ineq_constraints'):
+        #     dsts.extend(constraint.pcomp_name+'.out0'
+        #                 for constraint in driver.get_ineq_constraints().values())
 
-        graph = scope._depgraph
-        for src, dst in _get_inner_connections(graph, srcs, dsts):
-            if scope.get_metadata(src)['iotype'] == 'in':
-                continue
-            path = prefix+src
-            if src not in inputs and src not in outputs and \
-               self._check_path(path, includes, excludes):
-                self._rec_outputs.append(src)
-                outputs.append(src)
+        # graph = scope._depgraph
+        # for src, dst in _get_inner_connections(graph, srcs, dsts):
+        #     if scope.get_metadata(src)['iotype'] == 'in':
+        #         continue
+        #     path = prefix+src
+        #     if src not in inputs and src not in outputs and \
+        #        self._check_path(path, includes, excludes):
+        #         self._rec_outputs.append(src)
+        #         #outputs.append(src)
 
-        for comp in self.get_components():
-            for name in comp.list_outputs():
-                src = '%s.%s' % (comp.name, name)
-                path = prefix+src
-                if src not in outputs and \
-                   self._check_path(path, includes, excludes):
-                    self._rec_outputs.append(src)
-                    outputs.append(src)
 
         name = '%s.workflow.itername' % driver.name
         path = prefix+name
@@ -773,6 +800,29 @@ class Workflow(object):
         for comp in self:
             comp.pre_setup()
 
+    def _add_param_systems(self, params, parent_graph, reduced):
+
+        if params:
+            # we need to connect a param comp node to all param nodes
+            for node in params:
+                param = node[0]
+                reduced.add_node(param, comp='param')
+                reduced.add_node(node, **(parent_graph.node[node]))
+                reduced.add_edge(param, node)
+                reduced.add_edge(node, nodes)
+                reduced.node[param]['system'] = \
+                           ParamSystem(scope, reduced, param)
+                           
+            self._reduced_graph = reduced
+            wf_cgraph = reduced.component_graph()
+            # from openmdao.util.dotgraph import plot_graph
+            # plot_graph(reduced)
+            self._system = SerialSystem(scope, reduced, wf_cgraph,
+                                        tuple(sorted(wf_cgraph.nodes())))
+        else:
+            self._system = system
+            self._reduced_graph = reduced
+    
     def setup_systems(self, system_type):
         """Get the subsystem for this workflow. Each
         subsystem contains a subgraph of this workflow's component
@@ -843,8 +893,8 @@ class Workflow(object):
                 for c in gtup:
                     opaque_map[c] = gtup
 
-            # get rid of any back edges for opaque boundary nodes that originate inside
-            # of the opaque system
+            # get rid of any back edges for opaque boundary nodes that 
+            # originate inside of the opaque system
             to_remove = []
             for node in systems:
                 for s in reduced.successors(node):
@@ -946,6 +996,9 @@ def get_cycle_vars(system):
     # examine the graph to see if we have any cycles that we need to
     # deal with
     cycle_vars = []
+    if not isinstance(system, CompoundSystem):
+        return cycle_vars
+        
     graph = system.graph
     varmeta = system.scope._var_meta
 

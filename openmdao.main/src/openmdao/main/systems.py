@@ -63,6 +63,7 @@ class System(object):
         # get our input nodes from the depgraph
         ins, _ = get_node_boundary(graph, all_outs)
 
+        #print "%s: ins = %s" % (self.name, ins)
         self._in_nodes = []
         for i in ins:
             if 'comp' not in graph.node[i]:
@@ -94,6 +95,11 @@ class System(object):
         self.rhs_buf = None
         self._parent_system = None
         self.complex_step = False
+        
+        #print "%s: nodes: %s" % (self.name, nodes)
+        #print "%s: edges: %s" % (self.name, graph.edges())
+        #print "%s: in_nodes: %s" % (self.name, self._in_nodes)
+        #print "%s: out_nodes: %s" % (self.name, self._out_nodes)
 
     def __getitem__(self, key):
         """A convenience method to allow easy access to descendant
@@ -395,6 +401,7 @@ class System(object):
             self.variables.update(sub.variables)
 
         self._create_var_dicts(resid_state_map)
+        #print "%s: my vars = %s" % (self.name, [(n,self.variables[n]['size']) for n in self.variables])
 
     def _create_var_dicts(self, resid_state_map):
         # now figure out all of the inputs we 'own'
@@ -557,10 +564,10 @@ class System(object):
             srcvec = self.vec[srcvecname]
             destvec = self.vec[destvecname]
 
-            print "SCATTER", srcvecname, destvecname
-            print self.name, self
-            print 'srcvec', srcvec.array, srcvec.keys()
-            print 'destvec', destvec.array, destvec.keys()
+            #print "SCATTER", srcvecname, destvecname
+            #print self.name, self
+            #print 'srcvec', srcvec.array, srcvec.keys()
+            #print 'destvec', destvec.array, destvec.keys()
             
             scatter(self, srcvec, destvec)
 
@@ -650,11 +657,30 @@ class System(object):
                 self.scatter_full.dump(self, self.vec['u'], self.vec['p'], nest)
             partial_subs = [s for s in self.local_subsystems() if s.scatter_partial]
             for sub in self.local_subsystems():
-                sub.dump(nest, stream)
                 if sub in partial_subs:
                     sub.scatter_partial.dump(self, self.vec['u'], self.vec['p'], nest+4, stream)
+                sub.dump(nest, stream)
 
         return stream.getvalue() if getval else None
+
+    def dump_vars(self, stream=sys.stdout):
+        """For debugging.  Dumps variable values from scope, u vector and p vector"""
+        vnames = sorted(set(self.vec['u'].keys()+self.vec['p'].keys()))
+        for name in vnames:
+            stream.write("%s: " % str(name))
+            strs = []
+            names = []
+            if self.scope.contains(name[0]):
+                names.append('scope')
+                strs.append("%s" % self.scope.get(name[0]))
+            if name in self.vec['u']:
+                names.append('U')
+                strs.append("%s" % self.vec['u'][name])
+            if name in self.vec['p']:
+                names.append('P')
+                strs.append("%s" % self.vec['p'][name])
+            stream.write('(%s) = (%s)' % (','.join(names), ', '.join(strs)))
+            stream.write('\n')
 
     def _get_vector_vars(self, vardict):
         """Return vector_vars, which are vars that actually add to the
@@ -857,6 +883,9 @@ class SimpleSystem(System):
         comp = None
         nodes = set([name])
         cpus = 1
+        self._grouped_nodes = name
+        if not isinstance(name, tuple):
+            self._grouped_nodes = tuple([name])
         try:
             comp = getattr(scope, name)
         except (AttributeError, TypeError):
@@ -967,6 +996,7 @@ class SimpleSystem(System):
 
     def run(self, iterbase, case_label='', case_uuid=None):
         if self.is_active():
+            #print "running", str(self.name)
             graph = self.scope._reduced_graph
 
             self._comp.set_itername('%s-%s' % (iterbase, self.name))
@@ -1062,6 +1092,7 @@ class VarSystem(SimpleSystem):
     """Base class for a System that contains a single variable."""
 
     def run(self, iterbase, case_label='', case_uuid=None):
+        #print "running", str(self.name)
         pass
 
     def evaluate(self, iterbase, case_label='', case_uuid=None):
@@ -1103,6 +1134,7 @@ class ParamSystem(VarSystem):
     def pre_run(self):
         """ Load param value into u vector. """
         self._get_sys().vec['u'].set_from_scope(self.scope)#, [self.name])
+        #print "PRE_RUN: %s set to %s" % (self.name, self._get_sys().vec['u'].array)
 
     def _get_sys(self):
         if self._dup_in_subdriver:
@@ -1116,6 +1148,7 @@ class InVarSystem(VarSystem):
 
     def run(self, iterbase, case_label='', case_uuid=None):
         if self.is_active():# and self.name in self.vector_vars:
+            #print "running InVarSystem", str(self.name)
             self.vec['u'].set_from_scope(self.scope, self._nodes)
 
             if self.complex_step is True:
@@ -1139,6 +1172,7 @@ class InVarSystem(VarSystem):
         """ Load param value into u vector. """
         #if self.name in self.vector_vars:
         self.vec['u'].set_from_scope(self.scope, [self.name])
+        #print "PRE_RUN (invar): %s set to %s" % (self.name, self.vec['u'].array)
 
 
 class EqConstraintSystem(SimpleSystem):
@@ -1166,10 +1200,13 @@ class EqConstraintSystem(SimpleSystem):
             super(EqConstraintSystem, self).run(iterbase,
                                                 case_label=case_label,
                                                 case_uuid=case_uuid)
-            state = self._mapped_resids.get(self.scope.name2collapsed[self.name+'.out0'])
+            collapsed_name = self.scope.name2collapsed[self.name+'.out0']
+            state = self._mapped_resids.get(collapsed_name)
 
             # Propagate residuals.
             if state:
+                #print "PROPAGATING RESIDS for %s:  state = %s" % (self.name, state)
+                #print "outval = %s" % self._comp.get_flattened_value('out0').real
                 self.vec['f'][state][:] = \
                     -self._comp.get_flattened_value('out0').real
 
@@ -1265,12 +1302,13 @@ class CompoundSystem(System):
 
     def __init__(self, scope, graph, subg, name=None):
         super(CompoundSystem, self).__init__(scope, graph,
-                                             subg.nodes(), name)
+                                             simple_node_iter(subg.nodes()), name)
         self.driver = None
         self.graph = subg
         self._local_subsystems = []  # subsystems in the same process
         self._ordering = ()
-
+        self._grouped_nodes = subg.nodes()
+        
     def local_subsystems(self):
         if MPI:
             return self._local_subsystems
@@ -1298,7 +1336,7 @@ class CompoundSystem(System):
             return (None, None, node)
 
         elif node in self.vector_vars: # basevar or non-duped subvar
-            if node not in self.vec['p']:
+            if node not in self.vec['p'] or self.vec['p'][node].size == 0:
                 return (None, None, None)
 
             isrc = varkeys.index(node)
@@ -1357,6 +1395,7 @@ class CompoundSystem(System):
 
         dest_start = numpy.sum(input_sizes[:rank])
 
+        #print "SCATTERS for %s" % self.name
         for subsystem in self.all_subsystems():
             src_partial = []
             dest_partial = []
@@ -1392,6 +1431,8 @@ class CompoundSystem(System):
                     scatter_conns_full.add(node)
 
             if MPI or scatter_conns or noflat_conns:
+                #print "PARTIAL %s --> %s: %s --> %s" % (self.name, subsystem.name, idx_merge(src_partial),
+                #                                        idx_merge(dest_partial))
                 subsystem.scatter_partial = DataTransfer(self, src_partial,
                                                          dest_partial,
                                                          scatter_conns, noflat_conns)
@@ -1507,10 +1548,15 @@ class SerialSystem(CompoundSystem):
 
     def run(self, iterbase, case_label='', case_uuid=None):
         if self.is_active():
+            #print "running", str(self.name)
             self._stop = False
 
             for sub in self.local_subsystems():
+                #print "PRE - scatter for %s" % self.name
+                #self.dump_vars()
                 self.scatter('u', 'p', sub)
+                #print "POST - scatter for %s" % self.name
+                #self.dump_vars()
 
                 sub.run(iterbase, case_label=case_label, case_uuid=case_uuid)
                 if self._stop:
@@ -1560,7 +1606,11 @@ class ParallelSystem(CompoundSystem):
         if not self.local_subsystems() or not self.is_active():
             return
 
+        #print "PRE - scatter for %s" % self.name
+        #self.dump_vars()
         self.scatter('u', 'p')
+        #print "POST - scatter for %s" % self.name
+        #self.dump_vars()
 
         for sub in self.local_subsystems():
             sub.run(iterbase, case_label=case_label, case_uuid=case_uuid)
@@ -1663,13 +1713,6 @@ class ParallelSystem(CompoundSystem):
 
         self._create_var_dicts(resid_state_map)
 
-    def simple_subsystems(self):
-        lsys = self.local_subsystems()
-        if lsys:
-            return lsys[0].simple_subsystems()
-        else:
-            return []
-
     def set_ordering(self, ordering, opaque_map):
         """Return the execution order of our subsystems."""
         for s in self.all_subsystems():
@@ -1770,11 +1813,12 @@ class OpaqueSystem(SimpleSystem):
         # internal system will create new vectors
         self._inner_system.setup_vectors(None)
 
-        # Preload all inputs and outputs along to our inner system.
-        # This was needed for the case where you regenerate the system
-        # hierarchy on the first calc_gradient call.
-        inner_u = self._inner_system.vec['u']
-        inner_u.set_from_scope(self.scope)
+        if self._inner_system.is_active():
+            # Preload all inputs and outputs along to our inner system.
+            # This was needed for the case where you regenerate the system
+            # hierarchy on the first calc_gradient call.
+            inner_u = self._inner_system.vec['u']
+            inner_u.set_from_scope(self.scope)
 
     def setup_scatters(self):
         self._inner_system.setup_scatters()
@@ -1790,6 +1834,10 @@ class OpaqueSystem(SimpleSystem):
         self._inner_system.pre_run()
 
     def run(self, iterbase, case_label='', case_uuid=None):
+        if not self.is_active() or not self._inner_system.is_active():
+            return
+            
+        #print "running", str(self.name)
         self_u = self.vec['u']
         self_du = self.vec['du']
         inner_u = self._inner_system.vec['u']
@@ -1834,6 +1882,7 @@ class OpaqueSystem(SimpleSystem):
             inner_system.apply_deriv = inner_system._apply_deriv
         else:
             self.J = inner_system.solve_fd(inputs, outputs)
+
 
         #print self.J, inputs, outputs
 
