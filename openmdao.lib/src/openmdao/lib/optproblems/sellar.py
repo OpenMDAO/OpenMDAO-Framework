@@ -35,7 +35,7 @@ class Discipline1(Component):
         y2 = self.y2
 
         self.y1 = z1**2 + z2 + x1 - 0.2*y2
-        #print "%s (z1: %f, z2: %f, x1: %f, y2: %f, out(y1): %f)" % (self.name, z1, z2, x1, y2, self.y1)
+        print "%s (z1: %f, z2: %f, x1: %f, y2: %f, out(y1): %f)" % (self.name, z1, z2, x1, y2, self.y1)
 
 
 class Discipline1_WithDerivatives(Component):
@@ -103,7 +103,7 @@ class Discipline2(Component):
         y1 = abs(self.y1)
 
         self.y2 = y1**(.5) + z1 + z2
-        #print "Dis 2 (%f, %f, %f, out = %f)" % (z1, z2, y1, self.y2)
+        print "%s (z1: %f, z2: %f, y1: %f, out(y2): %f)" % (self.name, z1, z2, y1, self.y2)
 
 
 class Discipline2_WithDerivatives(Component):

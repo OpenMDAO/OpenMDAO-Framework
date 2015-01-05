@@ -323,8 +323,10 @@ class VecWrapper(VecWrapperBase):
                 for dest in name[1]:
                     if dest != name[0]:
                         scope.set_flattened_value(dest, array_val)
+                        print "scope set", dest, array_val
             else:
                 scope.set_flattened_value(name, self[name])
+                print "scope set", name, self[name]
 
 
 class InputVecWrapper(VecWrapperBase):
@@ -404,8 +406,10 @@ class InputVecWrapper(VecWrapperBase):
             if isinstance(name, tuple):
                 for dest in name[1]:
                     scope.set_flattened_value(dest, array_val)
+                    print "scope set", dest, array_val
             else:
                 scope.set_flattened_value(name, array_val)
+                print "scope set", name, array_val
 
     def set_to_scope_complex(self, scope, vnames=None):
         """Pull values for the given set of names out of our array
@@ -505,10 +509,10 @@ class DataTransfer(object):
                                             #destvec.name.rsplit('.',1)[0],
                                             #list(self.scatter_conns),
                                             #src[self.scatter.dest_idxs if addv else self.scatter.src_idxs])
-            #print "Before", srcvec.array, destvec.array
+            print "Before", srcvec.array, destvec.array
             self.scatter.scatter(src, dest, addv=addv, mode=mode)
-            #print "After", srcvec.array, destvec.array
-            #print '.'
+            print "After", srcvec.array, destvec.array
+            print '.'
 
         if destvec.name.endswith('.p') and self.noflat_vars:
             if MPI:

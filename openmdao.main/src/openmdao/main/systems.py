@@ -570,6 +570,7 @@ class System(object):
             #print 'destvec', destvec.array, destvec.keys()
             
             scatter(self, srcvec, destvec)
+            print self.name, scatter is self.scatter_full, subsystem
 
             if destvecname == 'p':
 
@@ -582,6 +583,7 @@ class System(object):
                     if self.complex_step is True:
                         self.vec['dp'].set_to_scope_complex(self.scope)
                 else:
+                    print subsystem._in_nodes
                     if subsystem._in_nodes:
                         destvec.set_to_scope(self.scope, subsystem._in_nodes)
                         if self.complex_step is True:
