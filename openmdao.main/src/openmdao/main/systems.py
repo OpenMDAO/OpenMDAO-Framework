@@ -184,9 +184,12 @@ class System(object):
         tups = []
 
         # gather a list of tuples for J
-        for param, dct in J.items():
-            for output, value in dct.items():
-                tups.append((param, output))
+        for output, dct in J.items():
+            for param, value in dct.items():
+                comp = self.scope.get(output.partition('.')[0])
+                print comp.name, comp.mpi.comm, comp.mpi.comm is MPI.COMM_NULL
+                print dir(comp.mpi.comm)
+                tups.append((output, param))
 
         print "tups", tups
         dist_tups = comm.gather(tups, root=0)
@@ -211,12 +214,12 @@ class System(object):
         if myrank == 0:
             for (param, output), rank in tupdict.items():
                 J[param][output] = comm.recv(source=rank, tag=0)
-                print rank, param, output, J[param][output]
+                print 'comm.recv', rank, param, output, J[param][output]
         else:
             for (param, output), rank in tupdict.items():
                 if rank == myrank:
                     comm.send(J[param][output], dest=0, tag=0)
-                    print rank, param, output, J[param][output]
+                    print 'comm.send', rank, param, output, J[param][output]
 
         # FIXME: rework some of this using knowledge of local_var_sizes in order
         # to avoid any unnecessary data passing
