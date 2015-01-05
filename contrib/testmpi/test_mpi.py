@@ -322,52 +322,43 @@ class MPITests1(MPITestCase):
         
         class MyDriver(SimpleDriver):
 
-            def pre_iteration(self):
+            def execute(self):
                # Direct uvec setting
                 uvec = self._system.vec['u']
                 print uvec.keys()
                 # Only can interact with the var that is in our node
-                if 'branch0_comp0.x' in uvec:
-                    uvec['branch0_comp0.x'] = 1.0
-                if 'branch1_comp0.x' in uvec:
-                    uvec['branch1_comp0.x'] = 1.0
+                for num in [1.0, 2.0, 3.0]:
+                    if 'comp1.x' in uvec:
+                        uvec['comp1.x'] = num
+                        print "SETTING", 'comp1.x', uvec['comp1.x']
+                    if 'comp2.x' in uvec:
+                        uvec['comp2.x'] = num
+                        print "SETTING", 'comp2.x', uvec['comp2.x']
+                        
+                    self.run_iteration()
 
             def requires_derivs(self):
                 return False               
         
         top = set_as_top(Assembly())
         top.add('driver', MyDriver())
-        top.add('branch0_comp0', ExecComp(['y = 2.0*x']))
-        top.add('branch0_comp1', ExecComp(['y = 1.0*x']))
-        top.add('branch1_comp0', ExecComp(['y = 3.0*x']))
-        top.add('branch1_comp1', ExecComp(['y = 1.0*x']))
-        top.add('sum', ExecComp(['y = x1 + x2']))
-        top.driver.workflow.add(['branch0_comp0', 'branch0_comp1',
-                                 'branch1_comp0', 'branch1_comp1',
-                                 'sum'])
-        top.driver.add_parameter('branch0_comp0.x', low=-100, high=100)
-        top.driver.add_parameter('branch1_comp0.x', low=-100, high=100)
-        top.driver.add_objective('sum.y')
-        
-        # These lock up the process
-        #top.driver.add_constraint('branch1_comp1.y < branch0_comp0.x')
-        #top.driver.add_constraint('branch0_comp1.y < branch1_comp0.x')
-
-        # So do these
-        #top.driver.add_constraint('branch1_comp0.x < sum.y')
-        #top.driver.add_constraint('branch0_comp0.x < sum.y')
-        
-        top.connect('branch0_comp0.y', 'branch0_comp1.x')
-        top.connect('branch1_comp0.y', 'branch1_comp1.x')
-        top.connect('branch0_comp1.y', 'sum.x1')
-        top.connect('branch1_comp1.y', 'sum.x2')
+        top.add('comp1', ExecComp(['y = 2.0*x']))
+        top.add('comp2', ExecComp(['y = 1.0*x']))
+        top.driver.workflow.add(['comp1', 'comp2'])
+        top.driver.add_parameter('comp1.x', low=-100, high=100)
+        top.driver.add_parameter('comp2.x', low=-100, high=100)
+        top.driver.add_constraint('comp1.x = comp2.y')
+        top.driver.add_constraint('comp2.x = comp1.y')
         
         top.run()
-        print top.sum.y
+        print top.comp1.x, 'should be 3.0'
+        print top.comp2.x, 'should be 3.0'
+        
         #from openmdao.util.dotgraph import plot_system_tree
         #plot_system_tree(top.driver.workflow._system)
 
-        self.collective_assertTrue(top.sum.y==5.0)
+        self.collective_assertTrue(top.comp1.x==3.0)
+        self.collective_assertTrue(top.comp2.x==3.0)
         
 class MPITests2(MPITestCase):
 
@@ -405,7 +396,8 @@ class MPITests2(MPITestCase):
         #top._system.dump()
 
         if self.comm.rank == 0:
-            #from openmdao.util.dotgraph import plot_graph, plot_system_tree
+            from openmdao.util.dotgraph import plot_graph, plot_system_tree, plot_graphs
+            plot_graphs(top)
             #plot_graph(top.driver.workflow._reduced_graph, 'rgraph.pdf')
             #plot_system_tree(top._system, 'system.pdf')
             for name, expval in expected.items():
