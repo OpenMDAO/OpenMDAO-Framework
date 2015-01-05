@@ -29,6 +29,7 @@ class MPIContext(object):
     def __exit__(self, exc_type, exc_val, exc_tb):
         if exc_val is not None:
             fail = True
+            traceback.print_exception(exc_type, exc_val, exc_tb)
         else:
             fail = False
         
@@ -37,7 +38,9 @@ class MPIContext(object):
         if fail or not any(fails):
             return False  # exception will be re-raised for us
         else:
-            raise RuntimeError("a test failed in another rank")
+            for i,f in enumerate(fails):
+                if f:
+                    raise RuntimeError("a test failed in (at least) rank %d" % i)
 
 def mpi_fail_if_any(f):
     """In order to keep MPI tests from hanging when
@@ -132,6 +135,7 @@ class MPITestCase(TestCase):
             'skipped': [],
         }
         self.infos = []
+        junk = 0
 
         if result is None:
             result = self.defaultTestResult()
@@ -156,6 +160,8 @@ class MPITestCase(TestCase):
                 # send results back to the mothership
                 self.comm.gather(info, root=0)
                 
+                self.comm.gather(junk, root=0)
+
                 if exc_info is not None:
                     raise exc_info[0], exc_info[1], exc_info[2]
                     
@@ -177,8 +183,11 @@ class MPITestCase(TestCase):
                 except Exception:
                     exc_info = sys.exc_info()
 
+                self.junks = self.comm.gather(junk, root=MPI.ROOT)
+                
                 if exc_info is not None:
                     raise exc_info[0], exc_info[1], exc_info[2]
+                
         finally:
             self.comm.Disconnect()
 

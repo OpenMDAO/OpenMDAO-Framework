@@ -6,6 +6,8 @@ import logging
 import os.path
 import sys
 import unittest
+import tempfile
+import shutil
 
 import numpy.testing
 
@@ -59,10 +61,17 @@ class TestCase(unittest.TestCase):
 
     def setUp(self):
         self.filename = 'test_stream.dat'
+        self.startdir = os.getcwd()
+        self.tempdir = tempfile.mkdtemp(prefix='test_stream-')
+        os.chdir(self.tempdir)
 
     def tearDown(self):
-        if os.path.exists(self.filename):
-            os.remove(self.filename)
+        os.chdir(self.startdir)
+        if not os.environ.get('OPENMDAO_KEEPDIRS', False):
+            try:
+                shutil.rmtree(self.tempdir)
+            except OSError:
+                pass
 
     def test_int32(self):
         logging.debug('')
@@ -647,4 +656,3 @@ if __name__ == '__main__':
     sys.argv.append('--cover-package=openmdao.util')
     sys.argv.append('--cover-erase')
     nose.runmodule()
-
