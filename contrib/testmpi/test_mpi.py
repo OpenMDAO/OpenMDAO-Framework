@@ -218,8 +218,8 @@ class MPITests1(MPITestCase):
         
         top.run()
         print top.sum.y
-        from openmdao.util.dotgraph import plot_system_tree
-        plot_system_tree(top.driver.workflow._system)
+        #from openmdao.util.dotgraph import plot_system_tree
+        #plot_system_tree(top.driver.workflow._system)
 
         self.collective_assertTrue(top.sum.y==5.0)
         
