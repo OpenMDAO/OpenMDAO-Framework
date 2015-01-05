@@ -3,4 +3,5 @@ package:
   version: 4.8.3
 
 build:
+  binary_relocation: False
   string: gcc

@@ -13,7 +13,9 @@ requirements:
         - python
         - setuptools
         - numpy
+        - libgfortran #[osx]
 
     run:
         - python
         - numpy
+        - libgfortran #[osx]

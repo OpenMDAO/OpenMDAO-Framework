@@ -8,14 +8,14 @@ source:
 build:
     preserve_egg_dir: True
 
-
 requirements:
     build:
         - python
         - setuptools
         - numpy
+        - libgfortran #[osx]
 
     run:
         - python
         - numpy
-        - libgfortran ==4.8.3 #[osx]
+        - libgfortran #[osx]
