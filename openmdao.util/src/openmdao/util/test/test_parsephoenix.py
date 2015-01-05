@@ -1,8 +1,10 @@
 """
 Testing the ParsePhoenixWrapper utility.
 """
-
-import unittest, os
+import os
+import tempfile
+import shutil
+import unittest
 
 from openmdao.util.parse_phoenixwrapper import parse_phoenixwrapper
 
@@ -13,13 +15,17 @@ class TestCase(unittest.TestCase):
     def setUp(self):
         self.infile = 'phx_text_input.txt'
         self.outfile = 'phx_text_output.txt'
+        self.startdir = os.getcwd()
+        self.tempdir = tempfile.mkdtemp(prefix='test_phx-')
+        os.chdir(self.tempdir)
     
     def tearDown(self):
-        if os.path.exists(self.infile):
-            os.remove(self.infile)
-        if os.path.exists(self.outfile):
-            os.remove(self.outfile)
-        pass
+        os.chdir(self.startdir)
+        if not os.environ.get('OPENMDAO_KEEPDIRS', False):
+            try:
+                shutil.rmtree(self.tempdir)
+            except OSError:
+                pass
     
     def test_phx(self):
         
@@ -145,4 +151,3 @@ if __name__ == '__main__':
     sys.argv.append('--cover-package=openmdao')
     sys.argv.append('--cover-erase')
     nose.runmodule()
-

@@ -1,8 +1,12 @@
 """
 Test for CSVCaseRecorder and CSVCaseIterator.
 """
-import glob, os, time
+import glob
+import os
+import time
 import StringIO
+import tempfile
+import shutil
 import unittest
 
 from numpy import array
@@ -42,17 +46,25 @@ class TestAssembly(Assembly):
         self.driver.workflow.add(['comp'])
         #self.driver.iprint = 4 #debug verbosity
         self.driver.add_objective('comp.x')
-        self.driver.add_parameter('comp.dummy_data.dummy1', low=-10.0, high=10.0)
+        self.driver.add_parameter('comp.dummy_data.dummy1', 
+                                  low=-10.0, high=10.0)
 
 class TestCase(unittest.TestCase):
     def setUp(self):
         self.filename = "openmdao_test_csv_case_iterator.csv"
+        self.startdir = os.getcwd()
+        self.tempdir = tempfile.mkdtemp(prefix='test_csv-')
+        os.chdir(self.tempdir)
 
     def tearDown(self):
         for recorder in self.top.recorders:
             recorder.close()
-        if os.path.exists(self.filename):
-            os.remove(self.filename)
+        os.chdir(self.startdir)
+        if not os.environ.get('OPENMDAO_KEEPDIRS', False):
+            try:
+                shutil.rmtree(self.tempdir)
+            except OSError:
+                pass
 
     def test_flatten(self):
         self.top = set_as_top(TestAssembly())
@@ -170,6 +182,10 @@ class TestCase(unittest.TestCase):
 class CSVCaseRecorderTestCase(unittest.TestCase):
 
     def setUp(self):
+        self.startdir = os.getcwd()
+        self.tempdir = tempfile.mkdtemp(prefix='test_csv-')
+        os.chdir(self.tempdir)
+
         self.top = top = set_as_top(Assembly())
         driver = top.add('driver', SimpleCaseIterDriver())
         top.add('comp1', ExecComp(exprs=['z=x+y']))
@@ -199,8 +215,12 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
     def tearDown(self):
         for recorder in self.top.recorders:
             recorder.close()
-        if os.path.exists(self.filename):
-            os.remove(self.filename)
+        os.chdir(self.startdir)
+        if not os.environ.get('OPENMDAO_KEEPDIRS', False):
+            try:
+                shutil.rmtree(self.tempdir)
+            except OSError:
+                pass
 
     def test_CSVCaseIterator_read_external_file_with_header(self):
 

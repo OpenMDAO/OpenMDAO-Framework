@@ -1482,15 +1482,19 @@ class Assembly(Component):
 
         self._var_meta = {}
 
-        self.pre_setup()
-        self.setup_depgraph()
-        self.setup_reduced_graph(inputs=inputs, outputs=outputs)
-        self.setup_systems()
-        self.setup_communicators(comm)
-        self.setup_variables()
-        self.setup_sizes()
-        self.setup_vectors()
-        self.setup_scatters()
+        try:
+            self.pre_setup()
+            self.setup_depgraph()
+            self.setup_reduced_graph(inputs=inputs, outputs=outputs)
+            self.setup_systems()
+            self.setup_communicators(comm)
+            self.setup_variables()
+            self.setup_sizes()
+            self.setup_vectors()
+            self.setup_scatters()
+        except Exception:
+            traceback.print_exc()
+            raise
         self.post_setup()
 
 

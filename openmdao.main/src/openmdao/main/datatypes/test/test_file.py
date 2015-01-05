@@ -2,10 +2,12 @@
 Test of File traits.
 """
 
+import os
 import shutil
+import tempfile
 import unittest
 
-from openmdao.main.api import Assembly, Component, set_as_top
+from openmdao.main.api import Assembly, Component, set_as_top, SimulationRoot
 from openmdao.main.datatypes.api import Str, File
 from openmdao.util.fileutil import onerror
 
@@ -85,13 +87,19 @@ class TestCase(unittest.TestCase):
 
     def setUp(self):
         """ Called before each test in this class. """
+        self.startdir = os.getcwd()
+        self.tempdir = tempfile.mkdtemp(prefix='test_file-')
+        os.chdir(self.tempdir)
+        SimulationRoot.chroot(self.tempdir)
         self.model = set_as_top(Model())
 
     def tearDown(self):
         """ Called after each test in this class. """
-        for directory in ('Source', 'Middle', 'Sink'):
+        os.chdir(self.startdir)
+        SimulationRoot.chroot(self.startdir)
+        if not os.environ.get('OPENMDAO_KEEPDIRS', False):
             try:
-                shutil.rmtree(directory, onerror=onerror)
+                shutil.rmtree(self.tempdir)
             except OSError:
                 pass
 
