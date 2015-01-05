@@ -86,6 +86,7 @@ class FixedPointIterator(Driver):
         for name in uvec.keys():
             if name not in cycle_vars:
                 uvec[name] -= fvec[name]
+                #print "COMMAND", name, uvec[name]
 
         #print 'new u', uvec.array
         self.workflow.run()

@@ -571,6 +571,7 @@ class System(object):
             #print 'destvec', destvec.array, destvec.keys()
             
             scatter(self, srcvec, destvec)
+            #print self.name, scatter is self.scatter_full, subsystem
 
             if destvecname == 'p':
 
@@ -583,12 +584,11 @@ class System(object):
                         destvec.set_to_scope(self.scope)
                         if self.complex_step is True:
                             self.vec['dp'].set_to_scope_complex(self.scope)
-                    else:
-                        if subsystem._in_nodes:
-                            destvec.set_to_scope(self.scope, subsystem._in_nodes)
-                            if self.complex_step is True:
-                                self.vec['dp'].set_to_scope_complex(self.scope,
-                                                                    subsystem._in_nodes)
+                    elif subsystem._in_nodes:
+                        destvec.set_to_scope(self.scope, subsystem._in_nodes)
+                        if self.complex_step is True:
+                            self.vec['dp'].set_to_scope_complex(self.scope,
+                                                                subsystem._in_nodes)
 
     def dump(self, nest=0, stream=sys.stdout, verbose=False):
         """Prints out a textual representation of the collapsed
