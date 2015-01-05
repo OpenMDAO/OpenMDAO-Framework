@@ -61,7 +61,8 @@ class SellarMDF(Assembly):
 
         Optimal Design at (1.9776, 0, 0)
 
-        Optimal Objective = 3.18339"""
+        Optimal Objective = 3.18339
+        """
 
         self.add('driver', FixedPointIterator())
 
@@ -261,6 +262,10 @@ class MPITests1(MPITestCase):
 
         top.run()
 
+        #if self.comm.rank == 0:
+        #    from openmdao.util.dotgraph import plot_graph, plot_graphs, plot_system_tree
+        #    plot_graphs(top, prefix="works")
+        
         print top.C3.a
         
         self.collective_assertTrue(all(top.C3.a==np.ones(size, float)*6.))
@@ -405,9 +410,11 @@ class MPITests2(MPITestCase):
         #top._system.dump()
 
         if self.comm.rank == 0:
-            #from openmdao.util.dotgraph import plot_graph, plot_system_tree
+            #from openmdao.util.dotgraph import plot_graph, plot_graphs, plot_system_tree
+            #plot_graphs(top, prefix="broke")
             #plot_graph(top.driver.workflow._reduced_graph, 'rgraph.pdf')
-            #plot_system_tree(top._system, 'system.pdf')
+            # plot_system_tree(top._system, 'system.pdf')
+            #plot_system_tree(top._system, 'broken.pdf')
             for name, expval in expected.items():
                 val = top.get(name)
                 assert_rel_error(self, val, expval, 0.001)

@@ -70,10 +70,11 @@ class System(object):
                 self._in_nodes.append(i)
             elif i in self.scope.name2collapsed and self.scope.name2collapsed[i] in graph:
                 n = self.scope.name2collapsed[i]
-                if i != self.scope.name2collapsed[i] and n not in self._in_nodes:
+                if i != n and n not in self._in_nodes:
                     self._in_nodes.append(n)
 
         self._in_nodes = sorted(self._in_nodes)
+        #print "%s: _in_nodes = %s" % (str(self.name), self._in_nodes)
         self._out_nodes = sorted(self._out_nodes)
 
         self.mpi = MPI_info()
@@ -577,16 +578,17 @@ class System(object):
                     scatter(self, self.vec['du'], self.vec['dp'],
                             complex_step=True)
 
-                if scatter is self.scatter_full:
-                    destvec.set_to_scope(self.scope)
-                    if self.complex_step is True:
-                        self.vec['dp'].set_to_scope_complex(self.scope)
-                else:
-                    if subsystem._in_nodes:
-                        destvec.set_to_scope(self.scope, subsystem._in_nodes)
+                if scatter:
+                    if subsystem is None:
+                        destvec.set_to_scope(self.scope)
                         if self.complex_step is True:
-                            self.vec['dp'].set_to_scope_complex(self.scope,
-                                                                subsystem._in_nodes)
+                            self.vec['dp'].set_to_scope_complex(self.scope)
+                    else:
+                        if subsystem._in_nodes:
+                            destvec.set_to_scope(self.scope, subsystem._in_nodes)
+                            if self.complex_step is True:
+                                self.vec['dp'].set_to_scope_complex(self.scope,
+                                                                    subsystem._in_nodes)
 
     def dump(self, nest=0, stream=sys.stdout, verbose=False):
         """Prints out a textual representation of the collapsed
@@ -996,7 +998,7 @@ class SimpleSystem(System):
 
     def run(self, iterbase, case_label='', case_uuid=None):
         if self.is_active():
-            #print "running", str(self.name)
+            #print "    runsys", str(self.name)
             graph = self.scope._reduced_graph
 
             self._comp.set_itername('%s-%s' % (iterbase, self.name))
@@ -1092,7 +1094,7 @@ class VarSystem(SimpleSystem):
     """Base class for a System that contains a single variable."""
 
     def run(self, iterbase, case_label='', case_uuid=None):
-        #print "running", str(self.name)
+        #print "    runsys", str(self.name)
         pass
 
     def evaluate(self, iterbase, case_label='', case_uuid=None):
@@ -1121,6 +1123,8 @@ class ParamSystem(VarSystem):
             del self.flat_vars[to_remove[0]]
         else:
             self._dup_in_subdriver = False
+            
+        #print "PARAM SYS",str(self.name),self.vector_vars.keys()
 
     def applyJ(self, variables):
         """ Set to zero """
@@ -1148,7 +1152,7 @@ class InVarSystem(VarSystem):
 
     def run(self, iterbase, case_label='', case_uuid=None):
         if self.is_active():# and self.name in self.vector_vars:
-            #print "running InVarSystem", str(self.name)
+            #print "    runsys", str(self.name)
             self.vec['u'].set_from_scope(self.scope, self._nodes)
 
             if self.complex_step is True:
@@ -1191,6 +1195,7 @@ class EqConstraintSystem(SimpleSystem):
         for _, state_node in resid_state_map.items():
             if state_node == srcnode:
                 self._comp._negate = True
+                #print "NEGATE"
                 break
             elif state_node == destnode:
                 break
@@ -1395,18 +1400,22 @@ class CompoundSystem(System):
 
         dest_start = numpy.sum(input_sizes[:rank])
 
-        #print "SCATTERS for %s" % self.name
+        #print "SCATTERS for %s" % str(self.name)
+        #print "vars:",self.vector_vars.keys()
         for subsystem in self.all_subsystems():
             src_partial = []
             dest_partial = []
             scatter_conns = set()
             noflat_conns = set()  # non-flattenable vars
             for sub in subsystem.simple_subsystems():
+                #print "simple",str(sub.name)
                 for node in self.variables:
                     if node not in sub._in_nodes or node in scatter_conns:
+                        #print '        excluded1', str(node), node not in sub._in_nodes, node in scatter_conns
                         continue
                     src_idxs, dest_idxs, nflat = self._get_node_scatter_idxs(node, noflats, dest_start, destsys=sub)
                     if (src_idxs is None) and (dest_idxs is None) and (nflat is None):
+                        #print '        excluded2', str(node), src_idxs, dest_idxs, nflat
                         continue
 
                     if nflat:
@@ -1427,6 +1436,7 @@ class CompoundSystem(System):
                             src_full.append(src_idxs)
                             dest_full.append(dest_idxs)
 
+                    #print 'adding - ',str(node)
                     scatter_conns.add(node)
                     scatter_conns_full.add(node)
 
@@ -1548,7 +1558,7 @@ class SerialSystem(CompoundSystem):
 
     def run(self, iterbase, case_label='', case_uuid=None):
         if self.is_active():
-            #print "running", str(self.name)
+            #print "    runsys", str(self.name)
             self._stop = False
 
             for sub in self.local_subsystems():
@@ -1605,6 +1615,8 @@ class ParallelSystem(CompoundSystem):
         # going to run
         if not self.local_subsystems() or not self.is_active():
             return
+
+        #print "    runsys", str(self.name)
 
         #print "PRE - scatter for %s" % self.name
         #self.dump_vars()
@@ -1690,9 +1702,20 @@ class ParallelSystem(CompoundSystem):
         if not self.is_active():
             return
 
+        #print "LOCAL SUBS: %s" % [s.name for s in self.local_subsystems()]
+        #for sub in self.local_subsystems():
+            #sub.setup_variables(resid_state_map)
+            
+        variables = {}
         for sub in self.local_subsystems():
-            sub.setup_variables(resid_state_map)
+            if not isinstance(sub, ParamSystem):
+                sub.setup_variables(resid_state_map)
+                variables.update(sub.variables)
 
+        for sub in self.local_subsystems():
+            if isinstance(sub, ParamSystem):
+                sub.setup_variables(variables, resid_state_map)
+    
         if self.local_subsystems():
             sub = self.local_subsystems()[0]
             names = sub.variables.keys()
@@ -1700,8 +1723,10 @@ class ParallelSystem(CompoundSystem):
             sub = None
             names = []
 
+        #print "names:",names
         varkeys_list = self.mpi.comm.allgather(names)
 
+        #print "allnames: ",varkeys_list
         for varkeys in varkeys_list:
             for name in varkeys:
                 self.variables[name] = varmeta[name].copy()
@@ -1709,6 +1734,7 @@ class ParallelSystem(CompoundSystem):
 
         if sub:
             for name, var in sub.variables.items():
+                #print "sub var: ",name
                 self.variables[name] = var
 
         self._create_var_dicts(resid_state_map)
@@ -1837,7 +1863,7 @@ class OpaqueSystem(SimpleSystem):
         if not self.is_active() or not self._inner_system.is_active():
             return
             
-        #print "running", str(self.name)
+        #print "    runsys", str(self.name)
         self_u = self.vec['u']
         self_du = self.vec['du']
         inner_u = self._inner_system.vec['u']
@@ -2136,6 +2162,12 @@ def partition_subsystems(scope, graph, cgraph):
         # more than one, we can execute them in parallel
         zero_in_nodes = [n for n in gcopy.nodes_iter()
                             if gcopy.in_degree(n)==0]
+
+        ## add this to pull param systems outside of parallel systems
+        # for z in zero_in_nodes:
+        #     if cgraph.node[z].get('comp') == 'param':
+        #         zero_in_nodes = [z]
+        #         break
 
         if len(zero_in_nodes) > 1: # start of parallel chunk
             parallel_group = []
