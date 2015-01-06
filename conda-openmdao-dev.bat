@@ -40,13 +40,9 @@ conda create --yes --name openmdao %DEPENDENCIES%
 SET DEPENDENCIES=
 
 REM Get the root directory of anaconda
-SET PYTHON=activate^ openmdao^ ^&^&
-SET PYTHON=%PYTHON%^ python^ -c^ ^"import^ sys^;^ print^ sys.executable^"^ ^>^ %TEMP%\python^ ^&^&
-SET PYTHON=%PYTHON%^ SET^ /p^ PYTHON=^<%TEMP%\python^ ^&^&
-SET PYTHON=%PYTHON%^ ^&^&^ deactivate
-SET PYTHON=%PYTHON%^ ^&^&^ DEL^ %TEMP%\python
-
-%PYTHON%
+cmd /c "activate openmdao && python -c "import sys; print sys.executable" > %TEMP%\python && deactivate"
+SET /p PYTHON=<%TEMP%\python
+DEL %TEMP%\python
 
 REM install openmdao packages
 cd openmdao.units
