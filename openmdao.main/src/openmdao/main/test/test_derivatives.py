@@ -2508,13 +2508,13 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[0, 0], 313.0, .001)
 
         comp_list = simple_node_iter(self.top.driver.workflow._system.subsystems()[1]._nodes)
-        #self.assertTrue(len(comp_list) == 3)
-        #self.assertTrue('comp1' in comp_list)
-        #self.assertTrue('comp2' in comp_list)
-        #self.assertTrue('comp3' in comp_list)
-        #comp_list = simple_node_iter(self.top.driver.workflow._system.subsystems()[3]._nodes)
-        #self.assertTrue(len(comp_list) == 1)
-        #self.assertTrue('comp5' in comp_list)
+        self.assertTrue(len(comp_list) == 3)
+        self.assertTrue('comp1' in comp_list)
+        self.assertTrue('comp2' in comp_list)
+        self.assertTrue('comp3' in comp_list)
+        comp_list = simple_node_iter(self.top.driver.workflow._system.subsystems()[3]._nodes)
+        self.assertTrue(len(comp_list) == 1)
+        self.assertTrue('comp5' in comp_list)
 
         # Case 2 - differentiable (none)
 
@@ -2534,13 +2534,13 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
 
         assert_rel_error(self, J[0, 0], 313.0, .001)
 
-        #comp_list = simple_node_iter(self.top.driver.workflow._system.subsystems()[1]._nodes)
-        #self.assertTrue(len(comp_list) == 5)
-        #self.assertTrue('comp1' in comp_list)
-        #self.assertTrue('comp2' in comp_list)
-        #self.assertTrue('comp3' in comp_list)
-        #self.assertTrue('comp4' in comp_list)
-        #self.assertTrue('comp5' in comp_list)
+        comp_list = simple_node_iter(self.top.driver.workflow._system.subsystems()[1]._nodes)
+        self.assertTrue(len(comp_list) == 5)
+        self.assertTrue('comp1' in comp_list)
+        self.assertTrue('comp2' in comp_list)
+        self.assertTrue('comp3' in comp_list)
+        self.assertTrue('comp4' in comp_list)
+        self.assertTrue('comp5' in comp_list)
 
         # Case 3 - differentiable (comp5)
 
@@ -2560,12 +2560,12 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
 
         assert_rel_error(self, J[0, 0], 313.0, .001)
 
-        #comp_list = simple_node_iter(self.top.driver.workflow._system.subsystems()[1]._nodes)
-        #self.assertTrue(len(comp_list) == 4)
-        #self.assertTrue('comp1' in comp_list)
-        #self.assertTrue('comp2' in comp_list)
-        #self.assertTrue('comp3' in comp_list)
-        #self.assertTrue('comp4' in comp_list)
+        comp_list = simple_node_iter(self.top.driver.workflow._system.subsystems()[1]._nodes)
+        self.assertTrue(len(comp_list) == 4)
+        self.assertTrue('comp1' in comp_list)
+        self.assertTrue('comp2' in comp_list)
+        self.assertTrue('comp3' in comp_list)
+        self.assertTrue('comp4' in comp_list)
 
         # Case 4 - differentiable (comp1, comp3, comp5)
 
@@ -2586,10 +2586,10 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
 
         assert_rel_error(self, J[0, 0], 313.0, .001)
 
-        #comp_list = simple_node_iter(self.top.driver.workflow._system.subsystems()[3]._nodes)
-        #self.assertTrue(len(comp_list) == 2)
-        #self.assertTrue('comp2' in comp_list)
-        #self.assertTrue('comp4' in comp_list)
+        comp_list = simple_node_iter(self.top.driver.workflow._system.subsystems()[3]._nodes)
+        self.assertTrue(len(comp_list) == 2)
+        self.assertTrue('comp2' in comp_list)
+        self.assertTrue('comp4' in comp_list)
 
 
         # Put everything in a single pseudo-assy, and run fd.
