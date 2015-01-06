@@ -80,11 +80,15 @@ class FixedPointIterator(Driver):
         uvec = system.vec['u']
         fvec = system.vec['f']
 
+        #print 'old u', uvec.array, uvec.keys()
+        #print 'f', fvec.array
         cycle_vars = self.workflow._cycle_vars
         for name in uvec.keys():
             if name not in cycle_vars:
                 uvec[name] -= fvec[name]
+                #print "COMMAND", name, uvec[name]
 
+        #print 'new u', uvec.array
         self.workflow.run()
 
     def continue_iteration(self):

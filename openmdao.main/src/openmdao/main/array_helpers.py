@@ -10,7 +10,7 @@ from traits.trait_handlers import TraitListObject
 
 from openmdao.util.typegroups import real_types, int_types
 
-from numpy import ndarray, ravel_multi_index, prod, arange, array
+from numpy import ndarray, ravel_multi_index, prod, arange, array, zeros
 
 
 class IndexGetter(object):
@@ -147,20 +147,23 @@ def to_indices(idxs, val=None):
     """
     if isinstance(idxs, slice):
         start, stop, step = idxs.indices(len(val))
-        ilst = []
+        iarr = zeros(stop-start, dtype='i')
+        count = 0
         i = start
         if step > 0:
             while i < stop:
-                ilst.append(i)
+                iarr[count] = i
+                count += 1
                 i += step
         elif step < 0:
             while i > stop:
-                ilst.append(i)
+                iarr[count] = i
+                count += 1
                 i += step
         else:
             raise ValueError("slice step cannot be zero")
 
-        return array(ilst, 'i')
+        return iarr[:count+1]
 
     elif isinstance(idxs, ndarray):
         return idxs

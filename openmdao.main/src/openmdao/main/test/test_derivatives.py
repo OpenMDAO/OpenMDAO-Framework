@@ -1387,6 +1387,10 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         J = top.driver.calc_gradient(inputs=[('comp1.x', 'comp1.z'), ('comp2.x', 'comp2.z')],
                                      outputs=['comp2.y'],
                                      mode='fd')
+        
+        #from openmdao.util.dotgraph import plot_graph, plot_system_tree
+        #plot_system_tree(top._system, 'newsys.pdf')
+        
         #print J
         assert_rel_error(self, J[0, 0], 0.0, .001)
         assert_rel_error(self, J[0, 1], 5.0, .001)
