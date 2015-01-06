@@ -266,9 +266,7 @@ class MPITests1(MPITestCase):
         #if self.comm.rank == 0:
         #    from openmdao.util.dotgraph import plot_graph, plot_graphs, plot_system_tree
         #    plot_graphs(top, prefix="works")
-        
-        print top.C3.a
-        
+                
         self.collective_assertTrue(all(top.C3.a==np.ones(size, float)*6.))
         self.collective_assertTrue(all(top.C3.b==np.ones(size, float)*4.))
         self.collective_assertTrue(all(top.C3.c==np.ones(size, float)*10.))
