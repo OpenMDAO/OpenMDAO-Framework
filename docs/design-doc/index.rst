@@ -15,7 +15,7 @@ Design Doc Outline
    flattenable
    linear_solvers
    case_recording
-   components
+   implicit_explicit_comps
    assembly_subassembly
    systems_dictionary
    python_hierarchy
