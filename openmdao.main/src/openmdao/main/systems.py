@@ -998,7 +998,7 @@ class SimpleSystem(System):
 
     def run(self, iterbase, case_label='', case_uuid=None):
         if self.is_active():
-            #print "    runsys", str(self.name)
+            print "    runsys", str(self.name)
             graph = self.scope._reduced_graph
 
             self._comp.set_itername('%s-%s' % (iterbase, self.name))
@@ -1094,7 +1094,7 @@ class VarSystem(SimpleSystem):
     """Base class for a System that contains a single variable."""
 
     def run(self, iterbase, case_label='', case_uuid=None):
-        #print "    runsys", str(self.name)
+        print "    runsys", str(self.name)
         pass
 
     def evaluate(self, iterbase, case_label='', case_uuid=None):
@@ -1152,7 +1152,7 @@ class InVarSystem(VarSystem):
 
     def run(self, iterbase, case_label='', case_uuid=None):
         if self.is_active():# and self.name in self.vector_vars:
-            #print "    runsys", str(self.name)
+            print "    runsys", str(self.name)
             self.vec['u'].set_from_scope(self.scope, self._nodes)
 
             if self.complex_step is True:
@@ -1210,7 +1210,7 @@ class EqConstraintSystem(SimpleSystem):
 
             # Propagate residuals.
             if state:
-                #print "PROPAGATING RESIDS for %s:  state = %s" % (self.name, state)
+                print "PROPAGATING RESIDS for %s:  state = %s" % (self.name, state)
                 #print "outval = %s" % self._comp.get_flattened_value('out0').real
                 self.vec['f'][state][:] = \
                     -self._comp.get_flattened_value('out0').real
@@ -1558,7 +1558,7 @@ class SerialSystem(CompoundSystem):
 
     def run(self, iterbase, case_label='', case_uuid=None):
         if self.is_active():
-            #print "    runsys", str(self.name)
+            print "    runsys", str(self.name)
             self._stop = False
 
             for sub in self.local_subsystems():
@@ -1616,7 +1616,7 @@ class ParallelSystem(CompoundSystem):
         if not self.local_subsystems() or not self.is_active():
             return
 
-        #print "    runsys", str(self.name)
+        print "    runsys", str(self.name)
 
         #print "PRE - scatter for %s" % self.name
         #self.dump_vars()
@@ -1863,7 +1863,7 @@ class OpaqueSystem(SimpleSystem):
         if not self.is_active() or not self._inner_system.is_active():
             return
             
-        #print "    runsys", str(self.name)
+        print "    runsys", str(self.name)
         self_u = self.vec['u']
         self_du = self.vec['du']
         inner_u = self._inner_system.vec['u']

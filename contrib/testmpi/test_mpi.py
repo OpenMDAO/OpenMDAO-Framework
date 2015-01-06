@@ -9,6 +9,7 @@ from openmdao.util.testutil import assert_rel_error
 from openmdao.main.test.simpledriver import SimpleDriver
 
 from openmdao.main.api import Assembly, Component, set_as_top, Driver
+from openmdao.main.interfaces import implements, ISolver
 from openmdao.main.datatypes.api import Float, Array
 from openmdao.main.mpiwrap import MPI
 from openmdao.lib.drivers.iterate import FixedPointIterator
@@ -327,6 +328,8 @@ class MPITests1(MPITestCase):
         
         class MyDriver(SimpleDriver):
 
+            implements(ISolver)
+            
             def execute(self):
                # Direct uvec setting
                 uvec = self._system.vec['u']
@@ -343,7 +346,7 @@ class MPITests1(MPITestCase):
                     self.run_iteration()
 
             def requires_derivs(self):
-                return False               
+                return False
         
         top = set_as_top(Assembly())
         top.add('driver', MyDriver())
@@ -352,15 +355,17 @@ class MPITests1(MPITestCase):
         top.driver.workflow.add(['comp1', 'comp2'])
         top.driver.add_parameter('comp1.x', low=-100, high=100)
         top.driver.add_parameter('comp2.x', low=-100, high=100)
-        top.driver.add_constraint('comp1.x = comp2.y')
-        top.driver.add_constraint('comp2.x = comp1.y')
+        top.driver.add_constraint('comp1.y = comp2.x')
+        top.driver.add_constraint('comp2.y = comp1.x')
         
         top.run()
         print top.comp1.x, 'should be 3.0'
         print top.comp2.x, 'should be 3.0'
         
-        #from openmdao.util.dotgraph import plot_system_tree
-        #plot_system_tree(top.driver.workflow._system)
+        if self.comm.rank == 0:
+            from openmdao.util.dotgraph import plot_system_tree, plot_graphs
+            #plot_system_tree(top.driver.workflow._system)
+            plot_graphs(top, prefix='works')
 
         self.collective_assertTrue(top.comp1.x==3.0)
         self.collective_assertTrue(top.comp2.x==3.0)
@@ -401,8 +406,8 @@ class MPITests2(MPITestCase):
         #top._system.dump()
 
         if self.comm.rank == 0:
-            #from openmdao.util.dotgraph import plot_graph, plot_graphs, plot_system_tree
-            #plot_graphs(top, prefix="broke")
+            from openmdao.util.dotgraph import plot_graph, plot_graphs, plot_system_tree
+            plot_graphs(top, prefix="broke")
 
             #plot_graph(top.driver.workflow._reduced_graph, 'rgraph.pdf')
             # plot_system_tree(top._system, 'system.pdf')
