@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # cd to directory of conda build script
 # Create an openmdao environment and
 # install numpy and scipy
