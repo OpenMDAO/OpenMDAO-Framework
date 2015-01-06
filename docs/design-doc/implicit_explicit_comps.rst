@@ -1,3 +1,3 @@
-Implicit vs Explicit Components & Their Dynamics
+Implicit vs. Explicit Components & Their Dynamics
 -------------------------------------------------
 
