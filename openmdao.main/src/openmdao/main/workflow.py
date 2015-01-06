@@ -86,6 +86,8 @@ class Workflow(object):
         self._rec_constraints = None
         self._rec_outputs = None
 
+        self._need_prescatter = False
+
         if members:
             for member in members:
                 if not isinstance(member, basestring):
@@ -174,6 +176,9 @@ class Workflow(object):
         try:
             uvec = self._system.vec['u']
             fvec = self._system.vec['f']
+
+            if self._need_prescatter:
+                self._system.scatter('u', 'p')
 
             # save old value of u to compute resids
             for node in self._cycle_vars:
@@ -799,29 +804,6 @@ class Workflow(object):
         self._reduced_graph = None
         for comp in self:
             comp.pre_setup()
-
-    def _add_param_systems(self, params, parent_graph, reduced):
-
-        if params:
-            # we need to connect a param comp node to all param nodes
-            for node in params:
-                param = node[0]
-                reduced.add_node(param, comp='param')
-                reduced.add_node(node, **(parent_graph.node[node]))
-                reduced.add_edge(param, node)
-                reduced.add_edge(node, nodes)
-                reduced.node[param]['system'] = \
-                           ParamSystem(scope, reduced, param)
-                           
-            self._reduced_graph = reduced
-            wf_cgraph = reduced.component_graph()
-            # from openmdao.util.dotgraph import plot_graph
-            # plot_graph(reduced)
-            self._system = SerialSystem(scope, reduced, wf_cgraph,
-                                        tuple(sorted(wf_cgraph.nodes())))
-        else:
-            self._system = system
-            self._reduced_graph = reduced
     
     def setup_systems(self, system_type):
         """Get the subsystem for this workflow. Each
@@ -960,20 +942,25 @@ class Workflow(object):
             return
         self._system.setup_communicators(self.mpi.comm)
 
-    def setup_variables(self):
-        if MPI and self.mpi.comm == MPI.COMM_NULL:
-            return
-        return self._system.setup_variables()
+    # def setup_variables(self):
+    #     if MPI and self.mpi.comm == MPI.COMM_NULL:
+    #         return
+    #     return self._system.setup_variables()
 
-    def setup_sizes(self):
-        if MPI and self.mpi.comm == MPI.COMM_NULL:
-            return
-        return self._system.setup_sizes()
+    # def setup_sizes(self):
+    #     if MPI and self.mpi.comm == MPI.COMM_NULL:
+    #         return
+    #     return self._system.setup_sizes()
 
-    def setup_vectors(self, arrays=None, state_resid_map=None):
-        if MPI and self.mpi.comm == MPI.COMM_NULL:
-            return
-        self._system.setup_vectors(arrays, state_resid_map)
+    # def setup_vectors(self, arrays=None, state_resid_map=None):
+    #     if MPI and self.mpi.comm == MPI.COMM_NULL:
+    #         return
+
+    #     print "state_resid_map:",state_resid_map
+    #     if MPI and state_resid_map:
+    #         self._need_prescatter = True
+
+    #     self._system.setup_vectors(arrays, state_resid_map)
 
     def setup_scatters(self):
         if MPI and self.mpi.comm == MPI.COMM_NULL:

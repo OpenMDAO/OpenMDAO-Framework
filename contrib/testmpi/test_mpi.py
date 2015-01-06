@@ -362,10 +362,10 @@ class MPITests1(MPITestCase):
         print top.comp1.x, 'should be 3.0'
         print top.comp2.x, 'should be 3.0'
         
-        if self.comm.rank == 0:
-            from openmdao.util.dotgraph import plot_system_tree, plot_graphs
+        #if self.comm.rank == 0:
+            #from openmdao.util.dotgraph import plot_system_tree, plot_graphs
             #plot_system_tree(top.driver.workflow._system)
-            plot_graphs(top, prefix='works')
+            #plot_graphs(top, prefix='works')
 
         self.collective_assertTrue(top.comp1.x==3.0)
         self.collective_assertTrue(top.comp2.x==3.0)
@@ -394,27 +394,30 @@ class MPITests2(MPITestCase):
 
         top = set_as_top(SellarMDF())
 
+        top.driver.max_iteration = 25
         top.driver.add_parameter('C2.y1', low=-1e99, high=1e99)
         top.driver.add_constraint('C1.y1 = C2.y1')
         top.driver.add_parameter('C1.y2', low=-1.e99, high=1.e99)
         top.driver.add_constraint('C2.y2 = C1.y2')
 
-        expected = { 'C1.y1': 3.160068, 'C2.y2': 3.755315 }
+        expected = { 'C1.y1': 3.1598617768014536, 'C2.y2': 3.7551999159927316 }
 
         top.run()
         
-        #top._system.dump()
-
+        # gather the values back to the rank 0 process and compare to expected
+        dist_answers = top._system.mpi.comm.gather([(k[0],v) for k,v in top._system.vec['u'].items()], 
+                                                   root=0)
         if self.comm.rank == 0:
-            from openmdao.util.dotgraph import plot_graph, plot_graphs, plot_system_tree
-            plot_graphs(top, prefix="broke")
+            for answers in dist_answers:
+                for name, val in answers:
+                    if name in expected:
+                        print self.comm.rank, name, val[0]
+                        assert_rel_error(self, val[0], expected[name], 0.001)
+                        del expected[name]
 
-            #plot_graph(top.driver.workflow._reduced_graph, 'rgraph.pdf')
-            # plot_system_tree(top._system, 'system.pdf')
-            #plot_system_tree(top._system, 'broken.pdf')
-            for name, expval in expected.items():
-                val = top.get(name)
-                assert_rel_error(self, val, expval, 0.001)
+            if expected:
+                self.fail("not all expected values were found")
+
 
 class TestCaseSerial(TestCase):
     def test_sellar_p_serial(self):

@@ -531,12 +531,12 @@ class Driver(Component):
 
     @rbac(('owner', 'user'))
     def setup_systems(self):
-        """Allocate communicators from here down to all of our
+        """Set up system trees from here down to all of our
         child Components.
         """
         if self.name in self.parent._reduced_graph:
             self._system = self.parent._reduced_graph.node[self.name]['system']
-            return self.workflow.setup_systems(self.system_type)
+            self.workflow.setup_systems(self.system_type)
 
 
     #### MPI related methods ####
