@@ -1,4 +1,7 @@
 #!/bin/bash
+if [ "$(uname -s)" = "Linux" ]; then
+    export LDFLAGS="$LDFLAGS -shared"
+fi
 
 if [ -n "$OSX_ARCH" ]; then
     export LDFLAGS="$LDFLAGS  -undefined dynamic_lookup"
