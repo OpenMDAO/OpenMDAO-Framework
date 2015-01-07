@@ -1,6 +1,6 @@
 import os
 import unittest
-import ordereddict
+from collections import OrderedDict
 
 import numpy as np
 
@@ -131,7 +131,7 @@ class ProblemFormulationTest(unittest.TestCase):
             self.fail("Exception expected")
 
 
-        self.assertEqual(ordereddict.OrderedDict(zip([("D1.a", "D2.a"), ("D4.a", "D5.a"), ("D6.a", "D5.b")], [c1, c2, c3])),
+        self.assertEqual(OrderedDict(zip([("D1.a", "D2.a"), ("D4.a", "D5.a"), ("D6.a", "D5.b")], [c1, c2, c3])),
                          self.asm.list_coupling_vars())
 
         self.assertEqual({'D1':[c1], 'D4':[c2], 'D6':[c3]},
@@ -142,7 +142,7 @@ class ProblemFormulationTest(unittest.TestCase):
 
 
         self.asm.remove_coupling_var(('D1.a', 'D2.a'))
-        self.assertEqual(ordereddict.OrderedDict(zip([("D4.a", "D5.a"), ("D6.a", "D5.b")], [c2, c3])),
+        self.assertEqual(OrderedDict(zip([("D4.a", "D5.a"), ("D6.a", "D5.b")], [c2, c3])),
                          self.asm.list_coupling_vars())
         try:
             self.asm.remove_coupling_var(('D1.a', 'D2.a'))

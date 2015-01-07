@@ -1,0 +1,22 @@
+package:
+    name: openmdao.examples.metamodel_tutorial
+    version: dev
+    
+source:
+    path: ../../examples/openmdao.examples.metamodel_tutorial
+
+build:
+    preserve_egg_dir: True
+    
+requirements:
+    build:
+        - python
+        - setuptools
+        - openmdao.main
+        - openmdao.lib
+                
+    run:
+        - python
+        - setuptools
+        - openmdao.main
+        - openmdao.lib

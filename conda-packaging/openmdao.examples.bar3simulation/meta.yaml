@@ -1,0 +1,24 @@
+package:
+    name: openmdao.examples.bar3simulation
+    version: dev
+    
+source:
+    path: ../../examples/openmdao.examples.bar3simulation
+
+build:
+    preserve_egg_dir: True
+    
+requirements:
+    build:
+        - python
+        - setuptools
+        - numpy
+        - openmdao.main
+        - openmdao.lib
+        
+    run:
+        - python
+        - setuptools
+        - numpy
+        - openmdao.main
+        - openmdao.lib

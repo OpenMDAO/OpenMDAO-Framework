@@ -523,8 +523,12 @@ def _get_standard_modules():
 
     # Find 'real' sys.prefix (not that of virtualenv).
     orig_prefix = None
-    with open(os.path.join(lib_dir, 'orig-prefix.txt'), 'r') as inp:
-        orig_prefix = inp.read()
+
+    try:
+        with open(os.path.join(lib_dir, 'orig-prefix.txt'), 'r') as inp:
+            orig_prefix = inp.read()
+    except IOError as error:
+        pass
 
     # Add to roots.
     if orig_prefix:

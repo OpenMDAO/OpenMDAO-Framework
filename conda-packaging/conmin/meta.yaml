@@ -1,0 +1,21 @@
+package:
+    name: conmin
+    version: !!str {{environ['PKG_VERSION']}}
+
+source:
+    path: ../../contrib/conmin
+
+build:
+    preserve_egg_dir: True
+
+requirements:
+    build:
+        - python
+        - setuptools
+        - numpy
+        - libgfortran #[osx]
+
+    run:
+        - python
+        - numpy
+        - libgfortran #[osx]
