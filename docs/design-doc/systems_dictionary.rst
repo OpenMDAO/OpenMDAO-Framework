@@ -187,10 +187,11 @@ relationship.
 EqConstraintSystem
 +++++++++++++++++++
 
-Every Solver system has a corresponding EqConstraintSystem. This
-system defines the implicit relationship between the solver's parameters
-(which behave as implicit states in the coupled gradient solution) and the
-solver's equality constraint output (which behaves as a residual).
+Every Solver system has an EqConstraintSystem for each of its equality
+constraints. These systems define the implicit relationship between the 
+solver's parameter (which behaves as an implicit state in the coupled 
+gradient solution) and the solver's equality constraint output (which 
+behaves as a residual).
 
 .. _`SolverSystem`:
 
