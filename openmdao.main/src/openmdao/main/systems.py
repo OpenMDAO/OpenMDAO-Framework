@@ -184,17 +184,18 @@ class System(object):
 
         tups = []
 
-        # gather a list of tuples for J
+        # Gather a list of local tuples for J.
         for output, dct in J.items():
             for param, value in dct.items():
+                
+                # Params are already only on this process. We need to add
+                # only outputs that are on this process.
                 comp = self.scope.get(output.partition('.')[0])
-                print comp.name, comp.mpi.comm, comp.mpi.comm is MPI.COMM_NULL
-                print dir(comp.mpi.comm)
-                tups.append((output, param))
+                sys = self.find_system(comp.name)
+                if sys.is_active():
+                    tups.append((output, param))
 
-        print "tups", tups
         dist_tups = comm.gather(tups, root=0)
-        print "dist_tups", dist_tups
 
         tupdict = {}
         if myrank == 0:
@@ -208,19 +209,15 @@ class System(object):
                 if rank == 0:
                     del tupdict[tup]
 
-        print 'tupdict 1', tupdict
         tupdict = comm.bcast(tupdict, root=0)
 
-        print 'tupdict 2', tupdict
         if myrank == 0:
             for (param, output), rank in tupdict.items():
                 J[param][output] = comm.recv(source=rank, tag=0)
-                print 'comm.recv', rank, param, output, J[param][output]
         else:
             for (param, output), rank in tupdict.items():
                 if rank == myrank:
                     comm.send(J[param][output], dest=0, tag=0)
-                    print 'comm.send', rank, param, output, J[param][output]
 
         # FIXME: rework some of this using knowledge of local_var_sizes in order
         # to avoid any unnecessary data passing
@@ -1097,7 +1094,14 @@ class SimpleSystem(System):
         in the RHS vector."""
 
         self.sol_vec.array[:] = self.rhs_vec.array[:]
-
+        
+    def find_system(self, name):
+        """ Return system with given name. """
+        if self.name == name:
+            return self
+        
+        return None
+    
 
 class VarSystem(SimpleSystem):
     """Base class for a System that contains a single variable."""
@@ -1310,6 +1314,13 @@ class AssemblySystem(SimpleSystem):
         return ISolver.providedBy(self._comp.driver) or \
                driver.__class__.__name__ == 'Driver'
 
+    def find_system(self, name):
+        """ Return system with given name. """
+        
+        if self.name == name:
+            return self
+        return self._comp._system.find_system(name)
+
 
 class CompoundSystem(System):
     """A System that has subsystems."""
@@ -1493,6 +1504,19 @@ class CompoundSystem(System):
         to perform a matrix vector product.
         """
         self.dfd_solver.calculate(arg, result)
+
+    def find_system(self, name):
+        """ Return system with given name. """
+        
+        if self.name == name:
+            return self
+        
+        for sub in self.subsystems():
+            found = sub.find_system(name)
+            if found:
+                return found
+        
+        return None
 
 def _get_counts(names):
     """Return a dict with each name keyed to a number indicating the
@@ -1934,6 +1958,13 @@ class OpaqueSystem(SimpleSystem):
     def get_req_cpus(self):
         return self._inner_system.get_req_cpus()
 
+    def find_system(self, name):
+        """ Return system with given name. """
+        
+        if self.name == name:
+            return self
+        return self._inner_system.find_system(name)
+
 
 class DriverSystem(SimpleSystem):
     """Base System class for all Drivers."""
@@ -1984,6 +2015,19 @@ class DriverSystem(SimpleSystem):
 
     def setup_scatters(self):
         self._comp.setup_scatters()
+
+    def find_system(self, name):
+        """ Return system with given name. """
+        
+        if self.name == name:
+            return self
+        
+        for sub in self.all_subsystems():
+            found = sub.find_system(name)
+            if found:
+                return found
+        
+        return None
 
 
 class FiniteDiffDriverSystem(DriverSystem):

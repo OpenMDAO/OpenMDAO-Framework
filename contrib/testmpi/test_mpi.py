@@ -321,53 +321,8 @@ class MPITests1(MPITestCase):
         if self.comm.rank == 0:
             self.assertTrue(all(top.C4.a==np.ones(size, float)*11.))
             self.assertTrue(all(top.C4.b==np.ones(size, float)*5.))
+
             
-    def test_serial_under_par(self):
-        
-        class MyDriver(SimpleDriver):
-
-            implements(ISolver)
-            
-            def execute(self):
-               # Direct uvec setting
-                uvec = self._system.vec['u']
-                print uvec.keys()
-                # Only can interact with the var that is in our node
-                for num in [1.0, 2.0, 3.0]:
-                    if 'comp1.x' in uvec:
-                        uvec['comp1.x'] = num
-                        print "SETTING", 'comp1.x', uvec['comp1.x']
-                    if 'comp2.x' in uvec:
-                        uvec['comp2.x'] = num
-                        print "SETTING", 'comp2.x', uvec['comp2.x']
-                        
-                    self.run_iteration()
-
-            def requires_derivs(self):
-                return False
-        
-        top = set_as_top(Assembly())
-        top.add('driver', MyDriver())
-        top.add('comp1', ExecComp(['y = 2.0*x']))
-        top.add('comp2', ExecComp(['y = 1.0*x']))
-        top.driver.workflow.add(['comp1', 'comp2'])
-        top.driver.add_parameter('comp1.x', low=-100, high=100)
-        top.driver.add_parameter('comp2.x', low=-100, high=100)
-        top.driver.add_constraint('comp1.y = comp2.x')
-        top.driver.add_constraint('comp2.y = comp1.x')
-        
-        top.run()
-        print top.comp1.x, 'should be 3.0'
-        print top.comp2.x, 'should be 3.0'
-        
-        #if self.comm.rank == 0:
-            #from openmdao.util.dotgraph import plot_system_tree, plot_graphs
-            #plot_system_tree(top.driver.workflow._system)
-            #plot_graphs(top, prefix='works')
-
-        self.collective_assertTrue(top.comp1.x==3.0)
-        self.collective_assertTrue(top.comp2.x==3.0)
-        
 class MPITests2(MPITestCase):
 
     N_PROCS = 2

@@ -190,6 +190,42 @@ class MPITests(MPITestCase):
                                     J['_pseudo_1.out0']['comp1.x'][0][0], 
                                     20.0, 0.0001)        
 
+    def test_one_to_two_forward(self):
+        
+        top = set_as_top(Assembly())
+        
+        exp1 = ["y1 = 3.0*x", "y2 = 4.0*x"]
+        exp2 = ["y = -2.0*x"]
+        exp3 = ["y = 5.0*x"]
+        
+        deriv1 = ["dy1_dx = 3.0", "dy2_dx = 4.0"]
+        deriv2 = ["dy_dx = -2.0"]
+        deriv3 = ["dy_dx = 5.0"]
+        
+        top.add('comp1', ExecCompWithDerivatives(exp1, deriv1))
+        top.add('comp2', ExecCompWithDerivatives(exp2, deriv2))
+        top.add('comp3', ExecCompWithDerivatives(exp3, deriv3))
+        top.add('driver', SimpleDriver())
+        
+        top.driver.workflow.add(['comp1', 'comp2', 'comp3'])
+        top.connect('comp1.y1', 'comp2.x')
+        top.connect('comp1.y2', 'comp3.x')
+        top.driver.add_parameter('comp1.x', low=-100, high=100)
+        top.driver.add_constraint('comp2.y < 1000')
+        top.driver.add_constraint('comp3.y < 1000')
+        top.run()
+        
+        J = top.driver.workflow.calc_gradient(mode='forward',
+                                              return_format='dict')
+        J = top.driver.workflow._system.get_combined_J(J)
+        
+        collective_assert_rel_error(self, 
+                                    J['_pseudo_0.out0']['comp1.x'][0][0], 
+                                    -6.0, 0.0001)
+        collective_assert_rel_error(self,
+                                    J['_pseudo_1.out0']['comp1.x'][0][0], 
+                                    20.0, 0.0001)        
+
     def test_one_to_two_adjoint(self):
         
         top = set_as_top(Assembly())
@@ -217,19 +253,14 @@ class MPITests(MPITestCase):
         
         J = top.driver.workflow.calc_gradient(mode='adjoint',
                                               return_format='dict')
-        print J
         J = top.driver.workflow._system.get_combined_J(J)
-        print "post gather"
-        print J
-        #from openmdao.util.dotgraph import plot_system_tree
-        #plot_system_tree(top._system)
         
-        #collective_assert_rel_error(self, 
-                                    #J['_pseudo_0.out0']['comp1.x'][0][0], 
-                                    #-6.0, 0.0001)
-        #collective_assert_rel_error(self,
-                                    #J['_pseudo_1.out0']['comp1.x'][0][0], 
-                                    #20.0, 0.0001)        
+        collective_assert_rel_error(self, 
+                                    J['_pseudo_0.out0']['comp1.x'][0][0], 
+                                    -6.0, 0.0001)
+        collective_assert_rel_error(self,
+                                    J['_pseudo_1.out0']['comp1.x'][0][0], 
+                                    20.0, 0.0001)        
 
     def test_three_way_forward(self):
         
