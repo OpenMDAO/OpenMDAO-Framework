@@ -224,6 +224,8 @@ if __name__ == '__main__':
 
         except Exception:
             exc_info = sys.exc_info()
+            sys.stdout.flush()
+            sys.stderr.flush()
             if under_mpirun():
                 MPI.Comm.Get_parent().Disconnect()
             raise exc_info[0], exc_info[1], exc_info[2]
@@ -235,6 +237,8 @@ if __name__ == '__main__':
             tcase.run(result)
         except Exception:
             exc_info = sys.exc_info()
+            sys.stdout.flush()
+            sys.stderr.flush()
             if under_mpirun():
                 MPI.Comm.Get_parent().Disconnect()
             raise exc_info[0], exc_info[1], exc_info[2]

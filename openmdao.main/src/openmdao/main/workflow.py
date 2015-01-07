@@ -20,7 +20,7 @@ from openmdao.main.systems import SerialSystem, ParallelSystem, \
                                   partition_subsystems, ParamSystem, \
                                   get_comm_if_active, collapse_to_system_node
 from openmdao.main.depgraph import _get_inner_connections, get_nondiff_groups, \
-                                   collapse_nodes, simple_node_iter
+                                   collapse_nodes, simple_node_iter, CollapsedGraph
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.interfaces import IVariableTree, IDriver
 
@@ -85,6 +85,8 @@ class Workflow(object):
         self._rec_responses = None
         self._rec_constraints = None
         self._rec_outputs = None
+
+        self._need_prescatter = False
 
         if members:
             for member in members:
@@ -174,6 +176,9 @@ class Workflow(object):
         try:
             uvec = self._system.vec['u']
             fvec = self._system.vec['f']
+
+            if self._need_prescatter:
+                self._system.scatter('u', 'p')
 
             # save old value of u to compute resids
             for node in self._cycle_vars:
@@ -799,7 +804,7 @@ class Workflow(object):
         self._reduced_graph = None
         for comp in self:
             comp.pre_setup()
-
+    
     def setup_systems(self, system_type):
         """Get the subsystem for this workflow. Each
         subsystem contains a subgraph of this workflow's component
@@ -870,8 +875,8 @@ class Workflow(object):
                 for c in gtup:
                     opaque_map[c] = gtup
 
-            # get rid of any back edges for opaque boundary nodes that originate inside
-            # of the opaque system
+            # get rid of any back edges for opaque boundary nodes that 
+            # originate inside of the opaque system
             to_remove = []
             for node in systems:
                 for s in reduced.successors(node):
@@ -937,20 +942,25 @@ class Workflow(object):
             return
         self._system.setup_communicators(self.mpi.comm)
 
-    def setup_variables(self):
-        if MPI and self.mpi.comm == MPI.COMM_NULL:
-            return
-        return self._system.setup_variables()
+    # def setup_variables(self):
+    #     if MPI and self.mpi.comm == MPI.COMM_NULL:
+    #         return
+    #     return self._system.setup_variables()
 
-    def setup_sizes(self):
-        if MPI and self.mpi.comm == MPI.COMM_NULL:
-            return
-        return self._system.setup_sizes()
+    # def setup_sizes(self):
+    #     if MPI and self.mpi.comm == MPI.COMM_NULL:
+    #         return
+    #     return self._system.setup_sizes()
 
-    def setup_vectors(self, arrays=None, state_resid_map=None):
-        if MPI and self.mpi.comm == MPI.COMM_NULL:
-            return
-        self._system.setup_vectors(arrays, state_resid_map)
+    # def setup_vectors(self, arrays=None, state_resid_map=None):
+    #     if MPI and self.mpi.comm == MPI.COMM_NULL:
+    #         return
+
+    #     print "state_resid_map:",state_resid_map
+    #     if MPI and state_resid_map:
+    #         self._need_prescatter = True
+
+    #     self._system.setup_vectors(arrays, state_resid_map)
 
     def setup_scatters(self):
         if MPI and self.mpi.comm == MPI.COMM_NULL:

@@ -505,9 +505,6 @@ class Component(Container):
         self._stop = False
         self._case_uuid = case_uuid
 
-        # if self.parent is None:
-        #     self._run_begins()
-
         try:
             self._pre_execute()
             self._set_exec_state('RUNNING')

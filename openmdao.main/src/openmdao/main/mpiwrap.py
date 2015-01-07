@@ -75,7 +75,10 @@ class MPI_info(object):
     @property
     def rank(self):
         if MPI:
-            return self.comm.rank
+            if self.comm is not COMM_NULL:
+                return self.comm.rank
+            else:
+                return -1
         return 0
 
 if os.environ.get('USE_PROC_FILES'):
