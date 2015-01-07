@@ -113,6 +113,22 @@ class TestcaseParaboloid(unittest.TestCase):
         # See if model gets the right answer
         self.assertEqual(top.f_xy, 93.)
 
+    def test_find_system(self):
+        top = self.top
+
+        top.driver.add_parameter('comp.x', low=-1000, high=1000)
+        top.driver.add_parameter('comp.y', low=-1000, high=1000)
+        top.driver.add_objective('comp.f_xy')
+        top.comp.x = 3
+        top.comp.y = 5
+
+        top.run()
+        
+        sys = top._system.find_system('comp')
+        self.assertTrue(sys.name == 'comp')
+        sys = top._system.find_system("('_pseudo_0', 'comp', 'comp.x', 'comp.y')")
+        self.assertTrue(sys.name == "('_pseudo_0', 'comp', 'comp.x', 'comp.y')")
+
 
 class ABCDArrayComp(Component):
     delay = Float(0.01, iotype='in')
