@@ -46,7 +46,15 @@ def get_rev_info():
 
 def _get_dirnames():
     bindir = os.path.dirname(sys.executable)
-    branchdir = os.path.dirname(os.path.dirname(bindir))
+    branchdir = os.path.dirname(__file__)
+    branchdir = os.path.normpath(os.path.join( \
+        branchdir,
+        os.path.pardir,
+        os.path.pardir,
+        os.path.pardir,
+        os.path.pardir
+    ))
+    
     docdir = os.path.join(branchdir, 'docs')
     return (branchdir, docdir, bindir)
 
@@ -241,7 +249,7 @@ def build_docs(parser=None, options=None, args=None):
             except:
                 version = "?-?-?"
                 shtitle = "OpenMDAO Documentation (unknown revision)"
-
+    
     branchdir, docdir, bindir = _get_dirnames()
 
     startdir = os.getcwd()

@@ -1,0 +1,26 @@
+package:
+  name: fabric
+  version: 0.9.3
+
+source:
+  fn: fabric-0.9.3.tar.gz
+  url: https://pypi.python.org/packages/source/F/Fabric/Fabric-0.9.3.tar.gz
+  md5: e83dfd6c6889292e24ca7e4eb1ab371a
+
+requirements:
+  build:
+    - python
+    - setuptools
+    - pycrypto ==2.3
+    - paramiko ==1.7.7.1
+
+  run:
+    - python
+    - setuptools
+    - pycrypto ==2.3
+    - paramiko ==1.7.7.1
+
+build:
+  preserve_egg_dir: True
+  entry_points:
+    - fab = fabric.main:main

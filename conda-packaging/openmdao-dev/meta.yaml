@@ -1,0 +1,26 @@
+package:
+    name: openmdao
+    version: dev
+    
+requirements:
+    build:
+        - python
+        - setuptools
+        - openmdao.units
+        - openmdao.util
+        - openmdao.devtools
+        - openmdao.main
+        - openmdao.lib
+        - openmdao.test
+        - openmdao.examples
+
+    run:
+        - python
+        - setuptools
+        - openmdao.units
+        - openmdao.util
+        - openmdao.devtools
+        - openmdao.main
+        - openmdao.lib
+        - openmdao.test
+        - openmdao.examples

@@ -1,0 +1,16 @@
+package:
+    name: bson
+    version: !!str {{environ['PKG_VERSION']}}
+
+source:
+    git_url: https://github.com/martinkou/bson.git
+
+requirements:
+    build:
+        - python
+        - setuptools
+        - pytz >=2010b
+
+    run:
+        - python
+        - pytz >=2010b
