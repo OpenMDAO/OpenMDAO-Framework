@@ -190,8 +190,7 @@ class System(object):
                 
                 # Params are already only on this process. We need to add
                 # only outputs of components that are on this process.
-                comp = self.scope.get(output.partition('.')[0])
-                sys = self.find_system(comp.name)
+                sys = self.find_system(output.partition('.')[0])
                 if sys.is_active():
                     tups.append((output, param))
 
