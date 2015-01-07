@@ -2,6 +2,7 @@
 Test saving and loading of simulations as eggs.
 """
 
+import ctypes
 import cPickle
 import glob
 import logging
@@ -46,7 +47,6 @@ OBSERVATIONS = []
 
 # Version counter to ensure we know which egg we're dealing with.
 EGG_VERSION = 0
-
 
 def next_egg():
     """ Return next egg version. """
@@ -318,11 +318,18 @@ class TestCase(unittest.TestCase):
                 shutil.rmtree(self.tempdir)
             except OSError:
                 pass
-
+        
         # Not always added, but we need to ensure the egg is not in sys.path.
-        if self.egg_name is not None:
-            for i, path in enumerate(sys.path):
-                if path.endswith(self.egg_name):
+        egg_name = self.egg_name
+        paths = sys.path
+        
+        if egg_name is not None:
+            if sys.platform == "win32":
+                egg_name = egg_name.lower()
+                paths = [path.lower() for path in sys.path]
+                
+            for i, path in enumerate(paths):
+                if path.endswith(egg_name) or egg_name in path:
                     del sys.path[i]
                     break
 
@@ -359,8 +366,9 @@ class TestCase(unittest.TestCase):
         # Save to egg.
         global OBSERVATIONS
         OBSERVATIONS = []
+
         egg_info = self.model.save_to_egg(self.model.name, next_egg(),
-                                          py_dir=PY_DIR,
+                                          py_dir=os.path.realpath(PY_DIR),
                                           child_objs=self.child_objs,
                                           observer=observer)
         self.egg_name = egg_info[0]
@@ -437,6 +445,7 @@ class TestCase(unittest.TestCase):
         self.assertEqual(self.model.Sink.binary_file.binary, True)
 
         self.assertEqual(self.model.Sink.executions, 3)
+        
 
         # Restore in test directory.
         orig_dir = os.getcwd()
@@ -893,6 +902,7 @@ comp.run()
         if MODULE_NAME == '__main__':
             return
 
+
         logging.debug('')
         logging.debug('test_pkg_resources_factory')
 
@@ -1044,7 +1054,7 @@ comp.run()
         orig_dir = os.getcwd()
         os.chdir(PY_DIR)
         try:
-            cmdline = [python, os.path.join(TestCase.directory, 
+            cmdline = [python, os.path.join(TestCase.directory,
                                            'test_egg_save.py')]
             stdout = open('main_handling.out', 'w')
             retcode = subprocess.call(cmdline, stdout=stdout,
