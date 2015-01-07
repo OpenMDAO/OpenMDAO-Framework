@@ -231,6 +231,45 @@ class MPITests(MPITestCase):
                                     #J['_pseudo_1.out0']['comp1.x'][0][0], 
                                     #20.0, 0.0001)        
 
+    def test_three_way_forward(self):
+        
+        self.top = set_as_top(Assembly())
+
+        exp1 = ['y1 = 50.0*x1',
+                'y2 = 1.0*x1']
+        deriv1 = ['dy1_dx1 = 50.0',
+                  'dy2_dx1 = 1.0']
+
+        exp2 = ['y1 = 1.2*x1']
+        deriv2 = ['dy1_dx1 = 1.2']
+
+        exp3 = ['y1 = 100.0*x1*x2 + 30*x1 + 0.3*x2']
+        deriv3 = ['dy1_dx1 = 100.0*x2 + 30',
+                  'dy1_dx2 = 100.0*x1 + 0.3']
+
+        self.top.add('comp1', ExecCompWithDerivatives(exp1, deriv1))
+        self.top.add('comp2', ExecCompWithDerivatives(exp2, deriv2))
+        self.top.add('comp3', ExecCompWithDerivatives(exp3, deriv3))
+
+        self.top.driver.workflow.add(['comp1', 'comp2', 'comp3'])
+
+        self.top.connect('comp1.y1', 'comp2.x1')
+        self.top.connect('comp1.y2', 'comp3.x1')
+        self.top.connect('comp2.y1', 'comp3.x2')
+
+        self.top.comp1.x1 = 2.0
+        self.top.run()
+
+        # from openmdao.util.dotgraph import plot_system_tree
+        # plot_system_tree(self.top.driver.workflow._system)
+        
+        #J = self.top.driver.calc_gradient(inputs=['comp1.x1'],
+        #                                  outputs=['comp3.y1'],
+        #                                  mode='forward')
+        #print J
+        #collective_assert_rel_error(self, J[0][0], 24048,0, 0.0001)
+
+
 if __name__ == '__main__':
     import unittest
     unittest.main()
