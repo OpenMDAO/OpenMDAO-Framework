@@ -189,7 +189,7 @@ class System(object):
             for param, value in dct.items():
                 
                 # Params are already only on this process. We need to add
-                # only outputs that are on this process.
+                # only outputs of components that are on this process.
                 comp = self.scope.get(output.partition('.')[0])
                 sys = self.find_system(comp.name)
                 if sys.is_active():
