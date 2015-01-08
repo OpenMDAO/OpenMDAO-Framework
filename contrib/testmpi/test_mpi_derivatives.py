@@ -291,7 +291,7 @@ class MPITests(MPITestCase):
         self.top.run()
 
         from openmdao.util.dotgraph import plot_system_tree
-        plot_system_tree(self.top.driver.workflow._system)
+        plot_system_tree(self.top._system)
         
         J = self.top.driver.calc_gradient(inputs=['comp1.x1'],
                                           outputs=['comp3.y1'],

@@ -703,6 +703,9 @@ class System(object):
         """ Sets all user-configurable options for this system and all
         subsystems. """
 
+        if not self.is_active():
+            return
+
         self.mode = mode
         self.options = options
 
@@ -723,6 +726,9 @@ class System(object):
     def initialize_gradient_solver(self):
         """ Initialize the solver that will be used to calculate the
         gradient. """
+
+        if not self.is_active():
+            return
 
         if self.ln_solver is None:
 
@@ -761,6 +767,9 @@ class System(object):
     def calc_gradient(self, inputs, outputs, mode='auto', options=None,
                       iterbase='', return_format='array'):
         """ Return the gradient for this system. """
+
+        if not self.is_active():
+            return
 
         if options.force_fd or mode == 'fd':
             self.set_options('fd', options)
