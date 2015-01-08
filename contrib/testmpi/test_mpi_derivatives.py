@@ -295,7 +295,8 @@ class MPITests(MPITestCase):
         
         J = self.top.driver.calc_gradient(inputs=['comp1.x1'],
                                           outputs=['comp3.y1'],
-                                          mode='forward')
+                                          mode='forward',
+                                          return_format='dict')
         print J
         #collective_assert_rel_error(self, J[0][0], 24048,0, 0.0001)
 
