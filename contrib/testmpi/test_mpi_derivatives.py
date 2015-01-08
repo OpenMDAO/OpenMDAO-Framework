@@ -261,7 +261,7 @@ class MPITests(MPITestCase):
                                     J['_pseudo_1.out0']['comp1.x'][0][0], 
                                     20.0, 0.0001)        
 
-    def test_three_way_forward(self):
+    def test_three_comp_diamond_forward(self):
         
         self.top = set_as_top(Assembly())
 
@@ -290,13 +290,13 @@ class MPITests(MPITestCase):
         self.top.comp1.x1 = 2.0
         self.top.run()
 
-        # from openmdao.util.dotgraph import plot_system_tree
-        # plot_system_tree(self.top.driver.workflow._system)
+        from openmdao.util.dotgraph import plot_system_tree
+        plot_system_tree(self.top.driver.workflow._system)
         
-        #J = self.top.driver.calc_gradient(inputs=['comp1.x1'],
-        #                                  outputs=['comp3.y1'],
-        #                                  mode='forward')
-        #print J
+        J = self.top.driver.calc_gradient(inputs=['comp1.x1'],
+                                          outputs=['comp3.y1'],
+                                          mode='forward')
+        print J
         #collective_assert_rel_error(self, J[0][0], 24048,0, 0.0001)
 
 
