@@ -5,22 +5,21 @@ Test for CaseRecorders.
 import unittest
 import StringIO
 
-from openmdao.main.api import Assembly, Case, set_as_top
+from openmdao.main.api import Assembly, Case, set_as_top, VariableTree, Component
+from openmdao.main.datatypes.api import VarTree, Float
+from openmdao.lib.drivers.conmindriver import CONMINdriver
 from openmdao.test.execcomp import ExecComp
 from openmdao.lib.casehandlers.api import DumpCaseRecorder
 from openmdao.lib.drivers.sensitivity import SensitivityDriver
 from openmdao.lib.drivers.simplecid import SimpleCaseIterDriver
 
 
-from openmdao.lib.casehandlers.api import CSVCaseIterator, CSVCaseRecorder, \
-                                          DumpCaseRecorder
-from openmdao.main.datatypes.api import Array, Str, Bool, VarTree, Float
-from openmdao.lib.drivers.api import SimpleCaseIterDriver
-from openmdao.main.api import Assembly, Case, set_as_top, VariableTree, Component
-from openmdao.test.execcomp import ExecComp
-from openmdao.util.testutil import assert_raises
-from openmdao.main.test.test_vartree import DumbVT
-from openmdao.lib.drivers.conmindriver import CONMINdriver
+def float_value(str):
+    try:
+        val = float(str)
+    except ValueError:
+        return None
+    return val
 
 
 class TestContainer(VariableTree):
@@ -64,7 +63,7 @@ class TestCase(unittest.TestCase):
         sout2 = StringIO.StringIO()
         self.top.recorders = [DumpCaseRecorder(sout1), DumpCaseRecorder(sout2)]
         self.top.run()
-        
+
         expected_constants = """\
 Constants:
    comp.directory:
@@ -105,7 +104,7 @@ Constants:
    recording_options.excludes: []
    recording_options.includes: ['*']
    recording_options.save_problem_formulation: True"""
-        
+
         expected_case = """\
 Case:
    uuid: e2904a73-800a-11e4-8009-20c9d0478eff
@@ -120,7 +119,6 @@ Case:
       comp.itername: 9-comp
       comp.x: -10.4937141009
       driver.workflow.itername: 9"""
-
 
         # print sout1.getvalue()
         expected = expected_constants.split('\n')
@@ -139,13 +137,18 @@ Case:
                 index = start + lines[start:].index('Case:')
                 start = index + 1
             for i in range(len(expected)):
-                if expected[i].startswith('   uuid:'):
-                    self.assertTrue(lines[index+i].startswith('   uuid:'))
-                elif expected[i].startswith('   timestamp:'):
-                    self.assertTrue(lines[index+i].startswith('   timestamp:'))
+                prefix, value = expected[i].split(':')
+                if prefix.lstrip() in ['uuid', 'timestamp', 'comp.exec_count']:
+                    # these values vary, just check proper prefix & indentation
+                    self.assertTrue(lines[index+i].startswith(prefix+':'))
                 else:
-                    self.assertEqual(lines[index+i], expected[i])
-
+                    expected_float = float_value(value)
+                    if expected_float:
+                        self.assertTrue(lines[index+i].startswith(prefix+':'))
+                        _, value = lines[index+i].split(':')
+                        self.assertAlmostEqual(float_value(value), expected_float)
+                    else:
+                        self.assertEqual(lines[index+i], expected[i])
 
 
 class DumpCaseRecorderTestCase(unittest.TestCase):
@@ -177,7 +180,6 @@ class DumpCaseRecorderTestCase(unittest.TestCase):
             self.assertTrue(str(err).endswith(" was specified."))
         else:
             self.fail("Exception expected")
-
 
     def test_multiple_objectives(self):
         sout = StringIO.StringIO()
@@ -238,8 +240,6 @@ Case:
       comp2.z: 1.0
       driver.workflow.itername: 1
 """
-        
-        
 
         # print sout.getvalue()
         expected = expected.split('\n')
@@ -263,4 +263,3 @@ Case:
 
 if __name__ == '__main__':
     unittest.main()
-
