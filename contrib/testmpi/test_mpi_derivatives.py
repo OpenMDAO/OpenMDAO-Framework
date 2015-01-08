@@ -280,6 +280,7 @@ class MPITests(MPITestCase):
         self.top.add('comp1', ExecCompWithDerivatives(exp1, deriv1))
         self.top.add('comp2', ExecCompWithDerivatives(exp2, deriv2))
         self.top.add('comp3', ExecCompWithDerivatives(exp3, deriv3))
+        self.top.add('driver', SimpleDriver())
 
         self.top.driver.workflow.add(['comp1', 'comp2', 'comp3'])
 
@@ -287,6 +288,8 @@ class MPITests(MPITestCase):
         self.top.connect('comp1.y2', 'comp3.x1')
         self.top.connect('comp2.y1', 'comp3.x2')
 
+        self.top.driver.add_parameter('comp1.x1', low=-100, high=100)
+        self.top.driver.add_objective('comp3.y1')
         self.top.comp1.x1 = 2.0
         self.top.run()
 
