@@ -103,7 +103,7 @@ class Discipline2(Component):
         y1 = abs(self.y1)
 
         self.y2 = y1**(.5) + z1 + z2
-        #print "Dis 2 (%f, %f, %f, out = %f)" % (z1, z2, y1, self.y2)
+        #print "%s (z1: %f, z2: %f, y1: %f, out(y2): %f)" % (self.name, z1, z2, y1, self.y2)
 
 
 class Discipline2_WithDerivatives(Component):
@@ -230,5 +230,3 @@ class SellarProblemWithDeriv(OptProblem):
         }
 
         #END OF MDAO Problem Definition
-
-

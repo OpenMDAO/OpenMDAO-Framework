@@ -90,29 +90,30 @@ class PkgResourcesFactory(Factory):
             dist = lst[0]
             modules = lst[2]
             distset.add(dist.project_name)
-            ifaces = set()
-            for g in lst[1]:
-                ifaces.update(plugin_groups[g])
 
-            meta = {
-                'version': dist.version,
-                'ifaces': set(ifaces),
-            }
-
-            for modname in modules:
-                fpath = find_module(modname)
-                if fpath is not None:
-                    fanalyzer = self.tree_analyser.analyze_file(fpath, use_cache=True)
-                    # 'name' may be missing if that module only imports,
-                    # does not define, the class.
-                    if name in fanalyzer.classes:
-                        meta['bases'] = fanalyzer.classes[name].bases
-                        meta['ifaces'].update(fanalyzer.classes[name].meta['ifaces'])
-                    else:
-                        logging.warning('pkg_res_factory: %r not found', name)
-
-            meta['ifaces'] = list(meta['ifaces'])
             if groups.intersection(lst[1]):
+                ifaces = set()
+                for g in lst[1]:
+                    ifaces.update(plugin_groups[g])
+
+                meta = {
+                    'version': dist.version,
+                    'ifaces': set(ifaces),
+                }
+
+                for modname in modules:
+                    fpath = find_module(modname)
+                    if fpath is not None:
+                        fanalyzer = self.tree_analyser.analyze_file(fpath, use_cache=True)
+                        # 'name' may be missing if that module only imports,
+                        # does not define, the class.
+                        if name in fanalyzer.classes:
+                            meta['bases'] = fanalyzer.classes[name].bases
+                            meta['ifaces'].update(fanalyzer.classes[name].meta['ifaces'])
+                        else:
+                            logging.warning('pkg_res_factory: %r not found', name)
+
+                meta['ifaces'] = list(meta['ifaces'])
                 typ_list.append((name, meta))
         self.tree_analyser.flush_cache()
         return distset
@@ -129,21 +130,7 @@ class PkgResourcesFactory(Factory):
         groups = set(groups)
 
         typ_dict = self._get_type_dict()
-        distset = self._get_meta_info(ret, groups, typ_dict)
-
-        if self._search_path is None:  # self.env has same contents as working_set,
-                                       # so don't bother looking through it
-            return ret
-
-        # now look in the whole Environment
-        dists = []  # we want an iterator of newest dist for each project in Environment
-        for proj in self.env:
-            dist = self.env[proj][0]
-            if dist.project_name not in distset:
-                dists.append(dist)
-
-        typ_dict = self._entry_map_info(dists)
-        #dset = self._get_meta_info(ret, groups, typ_dict)
+        self._get_meta_info(ret, groups, typ_dict)
 
         return ret
 

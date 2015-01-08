@@ -1,7 +1,7 @@
 import sys
 from collections import OrderedDict, namedtuple
 import numpy
-from numpy import ndarray
+from numpy import ndarray, zeros
 
 from openmdao.main.mpiwrap import MPI, create_petsc_vec, PETSc
 from openmdao.main.array_helpers import offset_flat_index, \
@@ -323,8 +323,10 @@ class VecWrapper(VecWrapperBase):
                 for dest in name[1]:
                     if dest != name[0]:
                         scope.set_flattened_value(dest, array_val)
+                        #print "scope set", dest, array_val
             else:
                 scope.set_flattened_value(name, self[name])
+                #print "scope set", name, self[name]
 
 
 class InputVecWrapper(VecWrapperBase):
@@ -364,6 +366,9 @@ class InputVecWrapper(VecWrapperBase):
                 continue
 
             self._add_subview(scope, name)
+            
+        # if self.name.endswith('.p'):
+        #     print "P for %s: %s" % (system.name, self.keys())
 
     def _map_resids_to_states(self, system):
         pass
@@ -401,8 +406,10 @@ class InputVecWrapper(VecWrapperBase):
             if isinstance(name, tuple):
                 for dest in name[1]:
                     scope.set_flattened_value(dest, array_val)
+                    #print "scope set", dest, array_val
             else:
                 scope.set_flattened_value(name, array_val)
+                #print "scope set", name, array_val
 
     def set_to_scope_complex(self, scope, vnames=None):
         """Pull values for the given set of names out of our array
@@ -441,6 +448,7 @@ class DataTransfer(object):
 
         try:
             var_idxs, input_idxs = merge_idxs(var_idxs, input_idxs)
+            #print "ORIG INDXS: %s --> %s" % (var_idxs, input_idxs)
         except Exception as err:
             raise RuntimeError("ERROR creating scatter for system %s in scope %s" %
                                 (system.name, str(system.scope), str(err)))
@@ -465,6 +473,8 @@ class DataTransfer(object):
             try:
                 # note that scatter created here can be reused for other vectors as long
                 # as their sizes are the same as 'u' and 'p'
+                # print "PETSC srcs: %s" % var_idx_set.indices
+                # print "PETSC dests: %s" % input_idx_set.indices
                 self.scatter = PETSc.Scatter().create(system.vec['u'].petsc_vec, var_idx_set,
                                                       system.vec['p'].petsc_vec, input_idx_set)
             except Exception as err:
@@ -499,7 +509,21 @@ class DataTransfer(object):
                                             #destvec.name.rsplit('.',1)[0],
                                             #list(self.scatter_conns),
                                             #src[self.scatter.dest_idxs if addv else self.scatter.src_idxs])
+            #print destvec.name
+            #print self.scatter_conns
+            #print srcvec.keys(), '-->'
+            #print '-->', destvec.keys()
+            #print "Before", srcvec.array, destvec.array
+            #print "Before: %s" % str(system.name)
+            #srcvec.dump()
+            #print ''
+            #destvec.dump()
             self.scatter.scatter(src, dest, addv=addv, mode=mode)
+            #print "After", srcvec.array, destvec.array
+            #print "After:"
+            #destvec.dump()
+            #print '.'
+
 
         if destvec.name.endswith('.p') and self.noflat_vars:
             if MPI:
@@ -517,16 +541,16 @@ class DataTransfer(object):
                                                                (dest, src))
 
     def dump(self, system, srcvec, destvec, nest=0, stream=sys.stdout):
-        stream.write(" "*nest)
-        stream.write("Scatters: ")
         if not self.scatter_conns:
-            stream.write("(empty)\n")
             return
-        stream.write("\n")
+        stream.write(" "*nest)
+        stream.write("Scatters for %s:\n" % system.name)
         stream.write(" "*nest)
         stream.write("scatter vars: %s\n" % sorted(self.scatter_conns))
         stream.write(" "*nest)
-        var_idxs = to_indices(self.var_idxs, srcvec.array)
+        stream.write("%s --> %s\n" % (self.var_idxs, self.input_idxs))
+        stream.write("local array = %s\n" % srcvec.array)
+        var_idxs = to_indices(self.var_idxs, zeros(numpy.sum(system.local_var_sizes)))
         input_idxs = self.input_idxs
         stream.write("%s --> %s\n" % (var_idxs, input_idxs))
 
