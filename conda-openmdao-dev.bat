@@ -40,10 +40,9 @@ conda create --yes --name openmdao %DEPENDENCIES%
 SET DEPENDENCIES=
 
 REM Get the root directory of anaconda
-conda info --root >%TEMP%\conda-root
-SET /p CONDA_ROOT=<%TEMP%\conda-root
-DEL %TEMP%\conda-root
-SET PYTHON=%CONDA_ROOT%\envs\openmdao\python.exe
+cmd /c "activate openmdao && python -c "import sys; print sys.executable" > %TEMP%\python && deactivate"
+SET /p PYTHON=<%TEMP%\python
+DEL %TEMP%\python
 
 REM install openmdao packages
 cd openmdao.units
@@ -72,7 +71,7 @@ cd ..\openmdao.examples.nozzle_geometry_doe
 %PYTHON% setup.py develop
 cd ..\openmdao.examples.simple
 %PYTHON% setup.py develop
-SET CODNA_ROOT=
+
 SET PYTHON=
 CD %OLD_DIR%
 SET OLD_DIR=*/
