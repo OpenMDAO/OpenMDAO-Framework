@@ -46,7 +46,7 @@ class TestAssembly(Assembly):
         self.driver.workflow.add(['comp'])
         #self.driver.iprint = 4 #debug verbosity
         self.driver.add_objective('comp.x')
-        self.driver.add_parameter('comp.dummy_data.dummy1', 
+        self.driver.add_parameter('comp.dummy_data.dummy1',
                                   low=-10.0, high=10.0)
 
 class TestCase(unittest.TestCase):
@@ -79,7 +79,7 @@ class TestCase(unittest.TestCase):
         self.top = set_as_top(TestAssembly())
         self.top.recorders = [CSVCaseRecorder(filename=self.filename)]
         self.top.run()
-        
+
         # now use the CSV recorder as source of Cases
         cases = [case for case in self.top.recorders[0].get_iterator()]
         driver = self.top.add('driver', SimpleCaseIterDriver())
@@ -89,7 +89,7 @@ class TestCase(unittest.TestCase):
         self.top.recorders = [DumpCaseRecorder(sout)]
         driver.add_responses(['comp.x',])
         self.top.run()
-        
+
         # Check the results
         expected = [
             'Case:',
@@ -105,8 +105,8 @@ class TestCase(unittest.TestCase):
             '      comp.itername: 4-comp',
             '      comp.x: -2.19888892477',
             '      driver.workflow.itername: 4',
-            ]
-        
+        ]
+
         lines = sout.getvalue().split('\n')
         count = 0
         for index, line in enumerate(lines):
@@ -115,16 +115,16 @@ class TestCase(unittest.TestCase):
                 if count != 4:
                     continue
                 for i in range(len(expected)):
-                    if expected[i].startswith('   uuid:'):
-                        self.assertTrue(lines[index+i].startswith('   uuid:'))
-                    elif expected[i].startswith('   timestamp:'):
-                        self.assertTrue(lines[index+i].startswith('   timestamp:'))
+                    prefix = expected[i].split(':')[0]
+                    if prefix.lstrip() in ['uuid', 'timestamp', 'comp.exec_count']:
+                        # these values vary, just check proper prefix & indentation
+                        self.assertTrue(lines[index+i].startswith(prefix+':'))
                     else:
                         self.assertEqual(lines[index+i], expected[i])
                 break
         else:
             self.fail("couldn't find the expected Case")
-        
+
     def test_inoutCSV_delimiter(self):
 
         # Repeat test above using semicolon delimiter and ' as quote char.
@@ -133,7 +133,7 @@ class TestCase(unittest.TestCase):
         self.top.recorders = [CSVCaseRecorder(filename=self.filename,
                                               delimiter=';', quotechar="'")]
         self.top.run()
-        
+
         # now use the CSV recorder as source of Cases
         cases = [case for case in self.top.recorders[0].get_iterator()]
         driver = self.top.add('driver', SimpleCaseIterDriver())
@@ -143,7 +143,7 @@ class TestCase(unittest.TestCase):
         self.top.recorders = [DumpCaseRecorder(sout)]
         driver.add_responses(['comp.x',])
         self.top.run()
-        
+
         # Check the results
         expected = [
             'Case:',
@@ -159,8 +159,8 @@ class TestCase(unittest.TestCase):
             '      comp.itername: 4-comp',
             '      comp.x: -2.19888892477',
             '      driver.workflow.itername: 4',
-            ]
-        
+        ]
+
         lines = sout.getvalue().split('\n')
         count = 0
         for index, line in enumerate(lines):
@@ -169,10 +169,10 @@ class TestCase(unittest.TestCase):
                 if count != 4:
                     continue
                 for i in range(len(expected)):
-                    if expected[i].startswith('   uuid:'):
-                        self.assertTrue(lines[index+i].startswith('   uuid:'))
-                    elif expected[i].startswith('   timestamp:'):
-                        self.assertTrue(lines[index+i].startswith('   timestamp:'))
+                    prefix = expected[i].split(':')[0]
+                    if prefix.lstrip() in ['uuid', 'timestamp', 'comp.exec_count']:
+                        # these values vary, just check proper prefix & indentation
+                        self.assertTrue(lines[index+i].startswith(prefix+':'))
                     else:
                         self.assertEqual(lines[index+i], expected[i])
                 break
@@ -224,17 +224,17 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
 
     def test_CSVCaseIterator_read_external_file_with_header(self):
 
-        csv_data = ['"comp1.x", "comp1.y", "comp2.b_string"\n',
-                    '33.5, 76.2, "Hello There"\n'
-                    '3.14159, 0, "Goodbye z"\n'
-                    ]
+        csv_data = [
+            '"comp1.x", "comp1.y", "comp2.b_string"\n',
+            '33.5, 76.2, "Hello There"\n'
+            '3.14159, 0, "Goodbye z"\n'
+        ]
 
         outfile = open(self.filename, 'w')
         outfile.writelines(csv_data)
         outfile.close()
 
         self.top.comp2.add('b_string', Str("Hello',;','", iotype='in'))
-
 
         sout = StringIO.StringIO()
         cases = [case for case in CSVCaseIterator(filename=self.filename)]
@@ -249,20 +249,22 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
 
     def test_CSVCaseIterator_read_external_file_without_header(self):
 
-        csv_data = ['33.5, 76.2, "Hello There"\n'
-                    '3.14159, 0, "Goodbye z"\n'
-                    ]
+        csv_data = [
+            '33.5, 76.2, "Hello There"\n'
+            '3.14159, 0, "Goodbye z"\n'
+        ]
 
         outfile = open(self.filename, 'w')
         outfile.writelines(csv_data)
         outfile.close()
 
-        header_dict = {0 : "comp1.x",
-                       1 : "comp1.y",
-                       2 : "comp2.b_string"}
+        header_dict = {
+            0: "comp1.x",
+            1: "comp1.y",
+            2: "comp2.b_string"
+        }
 
         self.top.comp2.add('b_string', Str("Hello',;','", iotype='in'))
-
 
         sout = StringIO.StringIO()
         cases = [case for case in CSVCaseIterator(filename=self.filename,
@@ -270,7 +272,7 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         self.top.driver.clear_parameters()
         Case.set_vartree_inputs(self.top.driver, cases)
         self.top.recorders = [DumpCaseRecorder(sout)]
-        
+
         self.top.run()
 
         self.assertEqual(self.top.comp1.x, 3.14159)

@@ -184,10 +184,15 @@ class System(object):
 
         tups = []
 
-        # gather a list of tuples for J
-        for param, dct in J.items():
-            for output, value in dct.items():
-                tups.append((param, output))
+        # Gather a list of local tuples for J.
+        for output, dct in J.items():
+            for param, value in dct.items():
+                
+                # Params are already only on this process. We need to add
+                # only outputs of components that are on this process.
+                sys = self.find_system(output.partition('.')[0])
+                if sys.is_active():
+                    tups.append((output, param))
 
         dist_tups = comm.gather(tups, root=0)
 
@@ -1088,7 +1093,14 @@ class SimpleSystem(System):
         in the RHS vector."""
 
         self.sol_vec.array[:] = self.rhs_vec.array[:]
-
+        
+    def find_system(self, name):
+        """ Return system with given name. """
+        if self.name == name:
+            return self
+        
+        return None
+    
 
 class VarSystem(SimpleSystem):
     """Base class for a System that contains a single variable."""
@@ -1301,6 +1313,13 @@ class AssemblySystem(SimpleSystem):
         return ISolver.providedBy(self._comp.driver) or \
                driver.__class__.__name__ == 'Driver'
 
+    def find_system(self, name):
+        """ Return system with given name. """
+        
+        if self.name == name:
+            return self
+        return self._comp._system.find_system(name)
+
 
 class CompoundSystem(System):
     """A System that has subsystems."""
@@ -1484,6 +1503,19 @@ class CompoundSystem(System):
         to perform a matrix vector product.
         """
         self.dfd_solver.calculate(arg, result)
+
+    def find_system(self, name):
+        """ Return system with given name. """
+        
+        if self.name == name:
+            return self
+        
+        for sub in self.subsystems():
+            found = sub.find_system(name)
+            if found:
+                return found
+        
+        return None
 
 def _get_counts(names):
     """Return a dict with each name keyed to a number indicating the
@@ -1925,6 +1957,13 @@ class OpaqueSystem(SimpleSystem):
     def get_req_cpus(self):
         return self._inner_system.get_req_cpus()
 
+    def find_system(self, name):
+        """ Return system with given name. """
+        
+        if self.name == name:
+            return self
+        return self._inner_system.find_system(name)
+
 
 class DriverSystem(SimpleSystem):
     """Base System class for all Drivers."""
@@ -1975,6 +2014,19 @@ class DriverSystem(SimpleSystem):
 
     def setup_scatters(self):
         self._comp.setup_scatters()
+
+    def find_system(self, name):
+        """ Return system with given name. """
+        
+        if self.name == name:
+            return self
+        
+        for sub in self.all_subsystems():
+            found = sub.find_system(name)
+            if found:
+                return found
+        
+        return None
 
 
 class FiniteDiffDriverSystem(DriverSystem):
