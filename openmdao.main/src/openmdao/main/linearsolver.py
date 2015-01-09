@@ -242,6 +242,10 @@ class PETSc_KSP(LinearSolver):
 
         j = 0
         for param in inputs:
+
+            if isinstance(param, tuple):
+                param = param[0]
+
             param_tup = name2collapsed[param]
             param_size = system.get_size(param)
 
@@ -254,6 +258,10 @@ class PETSc_KSP(LinearSolver):
 
                 i = 0
                 for out in outputs:
+                    
+                    if isinstance(out, tuple):
+                        out = out[0]
+                    
                     out_size = system.get_size(out)
 
                     if return_format == 'dict':
