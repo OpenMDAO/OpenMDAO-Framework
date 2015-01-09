@@ -251,8 +251,8 @@ class MPITests_2Proc(MPITestCase):
         J = top.driver.workflow._system.get_combined_J(J)
         print J
 
-        from openmdao.util.dotgraph import plot_system_tree
-        plot_system_tree(top._system)
+        #from openmdao.util.dotgraph import plot_system_tree
+        #plot_system_tree(top._system)
 
         collective_assert_rel_error(self, 
                                     J['_pseudo_0.out0']['comp1.x'][0][0], 
