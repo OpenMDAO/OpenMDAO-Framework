@@ -357,16 +357,10 @@ class MPITests1(MPITestCase):
         top.driver.add_constraint('comp2.y = comp1.x')
         
         top.run()
-        print top.comp1.x, 'should be 3.0'
-        print top.comp2.x, 'should be 3.0'
         
-        #if self.comm.rank == 0:
-            #from openmdao.util.dotgraph import plot_system_tree, plot_graphs
-            #plot_system_tree(top.driver.workflow._system)
-            #plot_graphs(top, prefix='works')
-
         self.collective_assertTrue(top.comp1.x==3.0)
         self.collective_assertTrue(top.comp2.x==3.0)
+        
         
 class MPITests2(MPITestCase):
 

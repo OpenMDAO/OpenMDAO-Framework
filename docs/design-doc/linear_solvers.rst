@@ -67,7 +67,7 @@ supported in OpenMDAO soon.
 
 PetSC KSP is the default linear solver for any driver executing under MPI.
 However, you can also use it for serial execution provided that you have
-installed PetSC and PetSC4py (openMPI and MPI4py may also be needed).
+installed PetSC and PetSC4py, openMPI and MPI4py.
 
 Linear Gauss-Seidel
 ++++++++++++++++++++
