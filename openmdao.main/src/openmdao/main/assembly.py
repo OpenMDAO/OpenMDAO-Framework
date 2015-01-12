@@ -601,17 +601,14 @@ class Assembly(Component):
 
     @rbac(('owner', 'user'))
     def connect(self, src, dest):
-        """Connect one src expression to one destination expression. This could
-        be a normal connection between variables from two internal Components,
-        or it could be a passthrough connection, which connects across the scope
-        boundary of this object.  When a pathname begins with 'parent.', that
-        indicates it is referring to a Variable outside of this object's scope.
+        """Connect one source variable or expression to one or more
+        destination variables.
 
         src: str
             Source expression string.
 
         dest: str or list(str)
-            Destination expression string(s).
+            Destination variable string(s).
         """
         src = eliminate_expr_ws(src)
 
