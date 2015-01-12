@@ -1807,7 +1807,7 @@ class OpaqueSystem(SimpleSystem):
         full = get_full_nodeset(scope, nodes)
         int_nodes = ograph.internal_nodes(full, shared=False)
         shared_int_nodes = ograph.internal_nodes(full, shared=True)
-        ograph.add_node(tuple(nodes), comp='opaque')
+        #ograph.add_node(tuple(nodes), comp='opaque')
         collapse_nodes(ograph, tuple(nodes), int_nodes)
 
         super(OpaqueSystem, self).__init__(scope, ograph, tuple(nodes))
@@ -1968,7 +1968,7 @@ class OpaqueSystem(SimpleSystem):
         self._inner_system.set_complex_step(complex_step)
 
     def set_ordering(self, ordering, opaque_map):
-        self._inner_system.set_ordering(ordering, opaque_map)
+        self._inner_system.set_ordering(ordering, {})
 
     def get_req_cpus(self):
         return self._inner_system.get_req_cpus()
@@ -2257,7 +2257,9 @@ def partition_subsystems(scope, graph, cgraph):
                     parallel_group.append(brnodes[0])
 
             for branch in parallel_group:
-                if isinstance(branch, tuple):
+                if 'system' in gcopy.node.get(branch,()):
+                    gcopy.remove_node(branch)
+                else: # multiple nodes
                     branch = tuple(branch)
                     to_remove.extend(branch)
                     subg = cgraph.subgraph(branch)
@@ -2266,8 +2268,6 @@ def partition_subsystems(scope, graph, cgraph):
                     collapse_to_system_node(cgraph, system, branch)
 
                     gcopy.remove_nodes_from(branch)
-                else: # single comp system
-                    gcopy.remove_node(branch)
 
             parallel_group = tuple(sorted(parallel_group))
             to_remove.extend(parallel_group)

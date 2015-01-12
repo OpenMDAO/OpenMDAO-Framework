@@ -180,7 +180,7 @@ class FiniteDifference(object):
             outputs = [out for out in self.outputs 
                        if out in self.system.vec['u']]
         else:
-            ouputs = self.outputs
+            outputs = self.outputs
             
         uvec.set_to_array(self.y_base, outputs)
 

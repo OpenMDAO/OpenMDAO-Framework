@@ -872,6 +872,7 @@ class Workflow(object):
                 reduced.add_node(gtup, comp=True)
                 collapse_nodes(reduced, gtup, reduced.internal_nodes(gtup))
                 reduced.node[gtup]['comp'] = True
+                reduced.node[gtup]['system'] = system
                 for c in gtup:
                     opaque_map[c] = gtup
 
