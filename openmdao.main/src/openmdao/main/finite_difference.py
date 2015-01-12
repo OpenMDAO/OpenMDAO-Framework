@@ -7,6 +7,7 @@ from sys import float_info
 from openmdao.main.array_helpers import flattened_size
 from openmdao.main.interfaces import IVariableTree
 from openmdao.main.mp_support import has_interface
+from openmdao.main.mpiwrap import MPI
 from openmdao.util.graph import base_var
 
 from numpy import ndarray, zeros, ones, unravel_index, complex128
@@ -145,13 +146,21 @@ class FiniteDifference(object):
         if return_format == 'dict':
             self.J = {}
             for okey in outputs:
+                
                 self.J[okey] = {}
                 for ikey in inputs:
                     if isinstance(ikey, tuple):
                         ikey = ikey[0]
 
-                    osize = self.system.vec['u'][okey].size
+                    # If output not on this process, just allocate a dummy
+                    # array
+                    if MPI and okey not in self.system.vec['u']:
+                        osize = 0
+                    else:
+                        osize = self.system.vec['u'][okey].size
+
                     isize = self.system.vec['p'][ikey].size
+                    
                     self.J[okey][ikey] = zeros((osize, isize))
         else:
             self.J = zeros((out_size, in_size))
@@ -166,8 +175,14 @@ class FiniteDifference(object):
         iterbase = 'fd-' + iterbase
         uvec = self.system.vec['u']
 
-        uvec.set_to_array(self.y_base,
-                          self.outputs)
+        # For MPI, don't compute outputs that aren't on our processor.
+        if MPI:
+            outputs = [out for out in self.outputs 
+                       if out in self.system.vec['u']]
+        else:
+            ouputs = self.outputs
+            
+        uvec.set_to_array(self.y_base, outputs)
 
         for j, src, in enumerate(self.inputs):
             # Users can customize the FD per variable
@@ -221,7 +236,7 @@ class FiniteDifference(object):
                     self.set_value(src, fd_step, i-i1)
 
                     self.system.run(iterbase)
-                    self.get_outputs(self.y)
+                    self.get_outputs(self.y, outputs)
 
                     # Forward difference
                     Jfd = (self.y - self.y_base)/fd_step
@@ -238,7 +253,7 @@ class FiniteDifference(object):
                     self.set_value(src, -fd_step, i-i1)
 
                     self.system.run(iterbase)
-                    self.get_outputs(self.y)
+                    self.get_outputs(self.y, outputs)
 
                     # Backward difference
                     Jfd = (self.y_base - self.y)/fd_step
@@ -255,13 +270,13 @@ class FiniteDifference(object):
                     self.set_value(src, fd_step, i-i1)
 
                     self.system.run(iterbase)
-                    self.get_outputs(self.y)
+                    self.get_outputs(self.y, outputs)
 
                     # Backward Step
                     self.set_value(src, -2.0*fd_step, i-i1)
 
                     self.system.run(iterbase)
-                    self.get_outputs(self.y2)
+                    self.get_outputs(self.y2, outputs)
 
                     # Central difference
                     Jfd = (self.y - self.y2)/(2.0*fd_step)
@@ -295,7 +310,7 @@ class FiniteDifference(object):
                 # Pack Jacobian in either an array or a dictionary.
                 if self.return_format == 'dict':
                     start = end = 0
-                    for okey in self.outputs:
+                    for okey in outputs:
 
                         sz = uvec[okey].size
                         end += sz
@@ -306,19 +321,19 @@ class FiniteDifference(object):
                     self.J[:, i] = Jfd
 
         # Restore final inputs/outputs.
-        uvec.set_from_array(self.y_base, self.outputs)
+        uvec.set_from_array(self.y_base, outputs)
         uvec.set_to_scope(self.scope)
 
         #print 'after FD', self.J
         return self.J
 
-    def get_outputs(self, x):
+    def get_outputs(self, x, outputs):
         """Return matrix of flattened values from output edges."""
 
         uvec = self.system.vec['u']
         start = end = 0
 
-        for src in self.outputs:
+        for src in outputs:
             uarray = uvec[src]
             end += uarray.size
             x[start:end] = uarray
