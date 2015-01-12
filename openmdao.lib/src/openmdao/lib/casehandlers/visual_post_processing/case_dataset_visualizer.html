@@ -102,8 +102,14 @@
             {{ case_data }}
         </script>
         <script id='visualizer' type='text/javascript'>
-            //global variables
-            var case_data = JSON.parse(document.getElementById('case-data').innerHTML);
+            // global variables
+
+            // NaN is not valid JSON, but is a valid javascript value
+            var case_data = document.getElementById('case-data').innerHTML.replace(/\bNaN\b/g, '"***NaN***"')
+            case_data = JSON.parse(case_data, function(key, value) {
+                return value === "***NaN***" ? NaN : value;
+            });
+
             var cases = [];
             var it_case_key = "iteration_case_" ;
             var simulation_info_key = "simulation_info" ;
