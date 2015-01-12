@@ -1,3 +1,4 @@
+echo $PKG_VERSION
 export CFLAGS="$CFLAGS -fPIC"
 
 if [ "$(uname -s)" = "Linux" ]; then

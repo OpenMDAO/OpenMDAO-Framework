@@ -1,6 +1,6 @@
 package:
     name: newsumt
-    version: !!str {{environ['PKG_VERSION']}}
+    version: !!str 1.1.1
 
 source:
     path: ../../contrib/newsumt

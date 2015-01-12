@@ -1,6 +1,6 @@
 package:
     name: cobyla
-    version: !!str {{environ['PKG_VERSION']}}
+    version: !!str 1.0.2
 
 source:
     path: ../../contrib/cobyla

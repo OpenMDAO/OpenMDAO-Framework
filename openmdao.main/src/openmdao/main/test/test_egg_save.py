@@ -896,6 +896,7 @@ comp.run()
             shutil.rmtree(test_dir, onerror=onerror)
 
     def test_pkg_resources_factory(self):
+
         # NOTE: this test fails if run standalone:
         #       ImportError: No module named test_egg_save
         # Probably need Egg_TestModel.test_egg_save, or adjusted sys.path.
@@ -992,6 +993,7 @@ comp.run()
         finally:
             os.chdir(orig_dir)
             shutil.rmtree(test_dir, onerror=onerror)
+            shutil.rmtree(os.path.join(pkg_resources.get_default_cache(), "{}-tmp".format(self.egg_name)))
 
     def create_and_check_model(self, factory, name, file_data):
         """ Create a complete model instance and check it's operation. """
