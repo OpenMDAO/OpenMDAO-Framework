@@ -509,20 +509,20 @@ class DataTransfer(object):
                                             #destvec.name.rsplit('.',1)[0],
                                             #list(self.scatter_conns),
                                             #src[self.scatter.dest_idxs if addv else self.scatter.src_idxs])
-            print destvec.name
+            #print destvec.name
             #print self.scatter_conns
             #print srcvec.keys(), '-->'
             #print '-->', destvec.keys()
-            print "Before", srcvec.array, destvec.array
-            print "Before: %s" % str(system.name)
+            #print "Before", srcvec.array, destvec.array
+            #print "Before: %s" % str(system.name)
             #srcvec.dump()
-            print ''
+            #print ''
             #destvec.dump()
             self.scatter.scatter(src, dest, addv=addv, mode=mode)
-            print "After", srcvec.array, destvec.array
+            #print "After", srcvec.array, destvec.array
             #print "After:"
             #destvec.dump()
-            print '.'
+            #print '.'
 
 
         if destvec.name.endswith('.p') and self.noflat_vars:

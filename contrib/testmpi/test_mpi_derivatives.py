@@ -214,7 +214,7 @@ class MPITests_2Proc(MPITestCase):
                                               return_format='dict')
 
         J = top.driver.workflow._system.get_combined_J(J)
-        print J
+        #print J
         collective_assert_rel_error(self, 
                                     J['_pseudo_0.out0']['comp1.x'][0][0], 
                                     7.0, 0.0001)
@@ -247,9 +247,9 @@ class MPITests_2Proc(MPITestCase):
         J = top.driver.workflow.calc_gradient(mode='adjoint',
                                               return_format='dict')
 
-        print J
+        #print J
         J = top.driver.workflow._system.get_combined_J(J)
-        print J
+        #print J
 
         #from openmdao.util.dotgraph import plot_system_tree
         #plot_system_tree(top._system)
@@ -483,7 +483,7 @@ class MPITests_2Proc(MPITestCase):
                                           return_format='dict')
         #from openmdao.util.dotgraph import plot_system_tree
         #plot_system_tree(self.top._system)
-        print J
+        #print J
         collective_assert_rel_error(self, 
                                     J['comp5.y1']['comp1.x1'][0][0], 
                                     313.0, 0.0001)

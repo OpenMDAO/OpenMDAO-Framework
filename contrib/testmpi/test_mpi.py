@@ -331,15 +331,15 @@ class MPITests1(MPITestCase):
             def execute(self):
                # Direct uvec setting
                 uvec = self._system.vec['u']
-                print uvec.keys()
+                #print uvec.keys()
                 # Only can interact with the var that is in our node
                 for num in [1.0, 2.0, 3.0]:
                     if 'comp1.x' in uvec:
                         uvec['comp1.x'] = num
-                        print "SETTING", 'comp1.x', uvec['comp1.x']
+                        #print "SETTING", 'comp1.x', uvec['comp1.x']
                     if 'comp2.x' in uvec:
                         uvec['comp2.x'] = num
-                        print "SETTING", 'comp2.x', uvec['comp2.x']
+                        #print "SETTING", 'comp2.x', uvec['comp2.x']
                         
                     self.run_iteration()
 
@@ -403,7 +403,7 @@ class MPITests2(MPITestCase):
             for answers in dist_answers:
                 for name, val in answers:
                     if name in expected:
-                        print self.comm.rank, name, val[0]
+                        #print self.comm.rank, name, val[0]
                         assert_rel_error(self, val[0], expected[name], 0.001)
                         del expected[name]
 

@@ -1362,7 +1362,7 @@ class CompoundSystem(System):
         for s in self.local_subsystems():
             s.pre_run()
 
-    def _get_node_scatter_idxs(self, node, noflats, dest_start, destsys=None):
+    def _get_node_scatter_idxs(self, node, noflats, dest_start, destsys):
         varkeys = self.vector_vars.keys()
 
         if node in noflats:
@@ -1372,13 +1372,32 @@ class CompoundSystem(System):
             if node not in self.vec['p'] or self.vec['p'][node].size == 0:
                 return (None, None, None)
 
+            sizes = self.local_var_sizes
             isrc = varkeys.index(node)
-            src_idxs = numpy.sum(self.local_var_sizes[:, :isrc]) + self.arg_idx[node]
-            if self.local_var_sizes[self.mpi.rank, isrc]:
-                src_idxs += numpy.sum(self.local_var_sizes[:self.mpi.rank, isrc])
+            offset = numpy.sum(sizes[:, :isrc])
+            src_idxs = offset + self.arg_idx[node]
+
             dest_idxs = dest_start + self.vec['p']._info[node].start + \
                         petsc_linspace(0, len(self.arg_idx[node]))
 
+            if sizes[self.mpi.rank, isrc]:
+                src_idxs += numpy.sum(sizes[:self.mpi.rank, isrc])
+                sidxs = [src_idxs]
+                didxs = [dest_idxs]
+                if isinstance(destsys, ParallelSystem):
+                     # for reverse scatter, need to scatter to srcs from other ranks
+                    for i in range(self.mpi.size):
+                        if i == self.mpi.rank:
+                            continue
+                        # src is duplicated in rank i, so add it
+                        # to the reverse scatter
+                        if sizes[i, isrc]:
+                            sidxs.append(offset + numpy.sum(sizes[:i, isrc]) + self.arg_idx[node])
+                            didxs.append(dest_idxs)
+
+                src_idxs = numpy.concatenate(sidxs)
+                dest_idxs = numpy.concatenate(didxs)
+                        
             return (src_idxs, dest_idxs, None)
 
         elif node in self.flat_vars:  # duped subvar
@@ -1386,13 +1405,10 @@ class CompoundSystem(System):
                 return (None, None, None)
             base = self.scope.name2collapsed[node[0].split('[', 1)[0]]
             if base in self.vec['p']:
-                if destsys is not None:
-                    basedests = base[1]
-                    for comp in destsys._all_comp_nodes():
-                        if comp in basedests:
-                            return (None, None, None)
-                else:
-                    return (None, None, None)
+                basedests = base[1]
+                for comp in destsys._all_comp_nodes():
+                    if comp in basedests:
+                        return (None, None, None)
             isrc = varkeys.index(base)
             src_idxs = numpy.sum(self.local_var_sizes[:, :isrc]) + \
                           self.scope._var_meta[node]['flat_idx']
@@ -1407,7 +1423,6 @@ class CompoundSystem(System):
         """ Defines scatters for args at this system's level """
         if not self.is_active():
             return
-        var_sizes = self.local_var_sizes
         input_sizes = self.input_sizes
         rank = self.mpi.rank
         varmeta = self.scope._var_meta
@@ -1436,14 +1451,11 @@ class CompoundSystem(System):
             scatter_conns = set()
             noflat_conns = set()  # non-flattenable vars
             for sub in subsystem.simple_subsystems():
-                #print "simple",str(sub.name)
                 for node in self.variables:
                     if node not in sub._in_nodes or node in scatter_conns:
-                        #print '        excluded1', str(node), node not in sub._in_nodes, node in scatter_conns
                         continue
-                    src_idxs, dest_idxs, nflat = self._get_node_scatter_idxs(node, noflats, dest_start, destsys=sub)
+                    src_idxs, dest_idxs, nflat = self._get_node_scatter_idxs(node, noflats, dest_start, destsys=subsystem)
                     if (src_idxs is None) and (dest_idxs is None) and (nflat is None):
-                        #print '        excluded2', str(node), src_idxs, dest_idxs, nflat
                         continue
 
                     if nflat:
@@ -1451,20 +1463,20 @@ class CompoundSystem(System):
                             continue
                         noflat_conns.add(node)
                     else:
-                        #print node, src_idxs
                         src_partial.append(src_idxs)
                         dest_partial.append(dest_idxs)
 
                         if node in self.vec['u']:
-                            src_rev_full.append(src_idxs)
-                            dest_rev_full.append(dest_idxs)
-                            scatter_conns_rev.add(node)
+                            #print "U node size for %s: %s" % (str(node), self.variables[node]['size'])
+                            if node not in scatter_conns_rev:
+                                src_rev_full.append(src_idxs)
+                                dest_rev_full.append(dest_idxs)
+                                scatter_conns_rev.add(node)
 
                         if node not in scatter_conns_full:
                             src_full.append(src_idxs)
                             dest_full.append(dest_idxs)
 
-                    #print 'adding - ',str(node)
                     scatter_conns.add(node)
                     scatter_conns_full.add(node)
 
@@ -1474,11 +1486,6 @@ class CompoundSystem(System):
                 subsystem.scatter_partial = DataTransfer(self, src_partial,
                                                          dest_partial,
                                                          scatter_conns, noflat_conns)
-
-            # if subsystem in list(self.local_subsystems()):
-            #     src_full.extend(src_partial)
-            #     dest_full.extend(dest_partial)
-            #     scatter_conns_full.update(scatter_conns)
 
         if MPI or scatter_conns_full or noflat_conns_full:
             self.scatter_full = DataTransfer(self, src_full, dest_full,
