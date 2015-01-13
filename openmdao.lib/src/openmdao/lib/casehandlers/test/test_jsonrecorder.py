@@ -1,7 +1,9 @@
 import bson
 import json
 import os.path
+import tempfile
 import re
+import shutil
 import sys
 import unittest
 
@@ -12,7 +14,7 @@ from openmdao.main import __version__
 from openmdao.main.api import Assembly, Component, Case, VariableTree, set_as_top
 from openmdao.main.datatypes.api import Array, Instance, List, VarTree
 from openmdao.test.execcomp import ExecComp
-from openmdao.lib.casehandlers.api import JSONCaseRecorder, BSONCaseRecorder, verify_json
+from openmdao.lib.casehandlers.api import JSONCaseRecorder, BSONCaseRecorder, verify_json, CaseDataset
 
 from openmdao.lib.drivers.api import SensitivityDriver, CaseIteratorDriver, \
                                      SLSQPdriver
@@ -62,7 +64,13 @@ class TestCase(unittest.TestCase):
         Case.set_vartree_inputs(driver, cases)
         driver.add_responses(outputs)
 
+        self.tempdir = tempfile.mkdtemp(prefix='test_jsonrecorder-')
+
     def tearDown(self):
+        try:
+            shutil.rmtree(self.tempdir)
+        except OSError:
+            pass
         self.top = None
 
     def test_jsonrecorder_norun(self):
@@ -218,8 +226,9 @@ class TestCase(unittest.TestCase):
         sub.create_passthrough('comp.loads_out')
         top.driver.workflow.add('sub')
 
-        sout = StringIO()
-        top.recorders = [JSONCaseRecorder(sout)]
+        
+        jsonfile = os.path.join(self.tempdir, 'test_vtree.json')
+        top.recorders = [JSONCaseRecorder(jsonfile)]
 
         loads = Loads()
         loads.Fx = [1, 2, 3]
@@ -231,9 +240,12 @@ class TestCase(unittest.TestCase):
 
         top.run()
 
-        # with open('vtree.new', 'w') as out:
-        #     out.write(sout.getvalue())
-        verify_json(self, sout, 'vtree.json')
+        cdsnew = CaseDataset(jsonfile, 'json')
+        cdsold = CaseDataset('vtree.json', 'json')
+
+
+        cdsold.data.vars('sub.comp.loads_out').fetch()[0][0]['loads'][0]['Fx'] == cdsnew.data.vars('sub.comp.loads_out').fetch()[0][0]['loads'][0]['Fx']
+        cdsold.data.vars('sub.comp.loads_out').fetch()[1][0]['loads'][0]['Fz'] == cdsnew.data.vars('sub.comp.loads_out').fetch()[1][0]['loads'][0]['Fz']
 
 
 if __name__ == '__main__':
