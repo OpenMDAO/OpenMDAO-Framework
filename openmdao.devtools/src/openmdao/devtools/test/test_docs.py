@@ -10,6 +10,9 @@ class SphinxDocsTestCase(unittest.TestCase):
     def test_docs(self):
         openmdao_cmd = os.path.join(os.path.dirname(sys.executable), 'openmdao')
         
+	if sys.platform == "win32":
+	    openmdao_cmd = "{}.exe".format(openmdao_cmd)
+
         #If path doesn't exist,
         #sys.executable must be part of a
         #a standard Python or anaconda distribution
