@@ -8,9 +8,11 @@ A python Newton solver with line-search adapation of the relaxation parameter.
 __all__ = ['NewtonSolver']
 
 import numpy
+from openmdao.main.mpiwrap import MPI
+
 npnorm = numpy.linalg.norm
 def norm(a, order=None):
-    '''This little funct for nomr replaces a dependency on scipy
+    '''This little funct for norm replaces a dependency on scipy
     '''
     return npnorm(numpy.asarray_chkfinite(a), ord=order)
 
@@ -56,8 +58,19 @@ class NewtonSolver(Driver):
                   'convergence. Set to 2 to get backtracking convergence '
                   'as well.')
 
+    def __init__(self):
+        super(NewtonSolver, self).__init__()
+
+        # user either the petsc norm or numpy.linalg norm
+        if MPI:
+            self.norm = self._mpi_norm
+
     def execute(self):
         """ General Newton's method. """
+
+        if MPI:
+            if self.workflow._system.mpi.comm == MPI.COMM_NULL:
+                return
 
         system = self.workflow._system
         options = self.gradient_options
@@ -69,7 +82,7 @@ class NewtonSolver(Driver):
         # perform an initial run
         self.workflow._system.evaluate(iterbase, case_uuid=Case.next_uuid())
 
-        f_norm = norm(fvec.array)
+        f_norm = self.norm()
         f_norm0 = f_norm
 
         if self.iprint == 1:
@@ -82,13 +95,13 @@ class NewtonSolver(Driver):
 
             system.calc_newton_direction(options=options)
 
-            #print "LS 1", uvec.array, '+', dfvec.array
+            print "LS 1", uvec.array, '+', dfvec.array
             uvec.array += alpha*dfvec.array
 
             # Just evaluate the model with the new points
             self.workflow._system.evaluate(iterbase, case_uuid=Case.next_uuid())
 
-            f_norm = norm(fvec.array)
+            f_norm = self.norm()
             if self.iprint == 1:
                 print self.name, "Norm: ", f_norm, itercount+1
 
@@ -107,7 +120,7 @@ class NewtonSolver(Driver):
                 self.workflow._system.evaluate(iterbase,
                                                case_uuid=Case.next_uuid())
 
-                f_norm = npnorm(fvec.array)
+                f_norm = self.norm()
                 if self.iprint == 2:
                     print "Backtracking Norm: %f, Alpha: %f" % (f_norm, alpha)
 
@@ -124,6 +137,16 @@ class NewtonSolver(Driver):
 
         if self.iprint == 1:
             print self.name, "converged"
+
+    def _mpi_norm(self):
+        """ Compute the norm of the f Vec using petsc. """
+        fvec = self.workflow._system.vec['f']
+        fvec.petsc_vec.assemble()
+        return fvec.petsc_vec.norm()
+
+    def norm(self):
+        """ Compute the norm using numpy.linalg. """
+        return norm(self.workflow._system.vec['f'].array)
 
     def requires_derivs(self):
         """Newtonsolver always requires derivatives."""

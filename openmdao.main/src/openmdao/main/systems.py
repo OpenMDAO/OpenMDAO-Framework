@@ -1040,9 +1040,12 @@ class SimpleSystem(System):
             self._comp.run(case_uuid=case_uuid)
 
             # put component outputs in u vector
-            self.vec['u'].set_from_scope(self.scope,
-                             [n for n in graph.successors(self.name)
-                                   if n in self.vector_vars])
+            vnames = [n for n in graph.successors(self.name)
+                                   if n in self.vector_vars]
+            self.vec['u'].set_from_scope(self.scope, vnames)
+
+            if self.complex_step is True:
+                self.vec['du'].set_from_scope_complex(self.scope, vnames)
 
             vec['f'].array[:] -= vec['u'].array[:]
             vec['u'].array[:] += vec['f'].array[:]
@@ -1679,7 +1682,13 @@ class ParallelSystem(CompoundSystem):
         """ Evalutes a component's residuals without invoking its
         internal solve (for implicit comps.)
         """
-        self.run(iterbase, case_label=case_label, case_uuid=case_uuid)
+        if not self.local_subsystems() or not self.is_active():
+            return
+
+        self.scatter('u', 'p')
+
+        for sub in self.local_subsystems():
+            sub.evaluate(iterbase, case_label=case_label, case_uuid=case_uuid)
 
     def setup_communicators(self, comm):
         self.mpi.comm = comm
