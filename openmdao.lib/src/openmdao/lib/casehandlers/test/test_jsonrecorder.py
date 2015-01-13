@@ -228,6 +228,7 @@ class TestCase(unittest.TestCase):
 
         
         jsonfile = os.path.join(self.tempdir, 'test_vtree.json')
+        old_json_file = os.path.join(os.path.dirname(__file__), 'vtree.json')
         top.recorders = [JSONCaseRecorder(jsonfile)]
 
         loads = Loads()
@@ -241,7 +242,7 @@ class TestCase(unittest.TestCase):
         top.run()
 
         cdsnew = CaseDataset(jsonfile, 'json')
-        cdsold = CaseDataset('vtree.json', 'json')
+        cdsold = CaseDataset(old_json_file, 'json')
 
 
         cdsold.data.vars('sub.comp.loads_out').fetch()[0][0]['loads'][0]['Fx'] == cdsnew.data.vars('sub.comp.loads_out').fetch()[0][0]['loads'][0]['Fx']
