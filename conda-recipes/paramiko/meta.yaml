@@ -1,0 +1,22 @@
+package:
+  name: paramiko
+  version: 1.7.7.1
+
+source:
+  fn: paramiko-1.7.7.1.zip
+  url: https://pypi.python.org/packages/source/p/paramiko/paramiko-1.7.7.1.zip
+  md5: 4a9d3bab15a0cbf8b0b828aefd395993
+
+requirements:
+  build:
+    - python
+    - setuptools
+    - pycrypto ==2.3
+
+  run:
+    - python
+    - setuptools
+    - pycrypto ==2.3
+
+build:
+  preserve_egg_dir: True

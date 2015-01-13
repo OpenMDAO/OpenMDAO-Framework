@@ -5,7 +5,7 @@
 
 # pylint: disable=E0611,F0401
 import operator
-import ordereddict
+from collections import OrderedDict
 import weakref
 
 from numpy import ndarray
@@ -380,7 +380,7 @@ class _HasConstraintsBase(object):
                        'get_referenced_varpaths']
 
     def __init__(self, parent, allowed_types=None):
-        self._constraints = ordereddict.OrderedDict()
+        self._constraints = OrderedDict()
         self._parent = None if parent is None else weakref.ref(parent)
 
     def __getstate__(self):
@@ -418,7 +418,7 @@ class _HasConstraintsBase(object):
         name: string
             Name of component being referenced.
         """
-        refs = ordereddict.OrderedDict()
+        refs = OrderedDict()
         for cname, constraint in self._constraints.items():
             if name in constraint.get_referenced_compnames():
                 refs[cname] = constraint
@@ -471,7 +471,7 @@ class _HasConstraintsBase(object):
 
     def copy_constraints(self):
         """Returns a copy of our constraints dict."""
-        dct = ordereddict.OrderedDict()
+        dct = OrderedDict()
         for key, val in self._constraints.items():
             dct[key] = val.copy()
         return dct
@@ -519,7 +519,7 @@ class _HasConstraintsBase(object):
         that are incompatible with this object are ignored.
         """
         old = self._constraints
-        self._constraints = ordereddict.OrderedDict()
+        self._constraints = OrderedDict()
         scope = _get_scope(target)
 
         for name, cnst in target.copy_constraints().items():
@@ -595,7 +595,7 @@ class HasEqConstraints(_HasConstraintsBase):
 
         constraint = Constraint(lhs, '=', rhs, scope=_get_scope(self, scope))
         constraint.linear = linear
-        
+
         if IDriver.providedBy(self.parent):
             constraint.activate(self.parent)
             self.parent.config_changed()
@@ -943,7 +943,7 @@ class HasConstraints(object):
             self._eq.restore_references(refs[0])
             self._ineq.restore_references(refs[1])
         else:
-            raise TypeError('refs should be tuple of ordereddict.OrderedDict,'
+            raise TypeError('refs should be tuple of collections.OrderedDict,'
                             ' got %r' % refs)
 
     def clear_constraints(self):
@@ -998,7 +998,7 @@ class HasConstraints(object):
             Set to True or False to return linear or nonlinear constraints.
             Default is None, for all constraints."""
 
-        return ordereddict.OrderedDict(self._eq.get_eq_constraints(linear=linear).items() +
+        return OrderedDict(self._eq.get_eq_constraints(linear=linear).items() +
                                        self._ineq.get_ineq_constraints(linear=linear).items())
 
     def total_eq_constraints(self):
@@ -1134,7 +1134,7 @@ class Has2SidedConstraints(_HasConstraintsBase):
         constraint = Constraint2Sided(lhs, center, rhs, rel,
                                       scope=_get_scope(self, scope))
         constraint.linear = linear
-        
+
         if IDriver.providedBy(self.parent):
             constraint.activate(self.parent)
             self.parent.config_changed()
@@ -1193,7 +1193,7 @@ class Has2SidedConstraints(_HasConstraintsBase):
         that are incompatible with this object are ignored.
         """
         old = self._constraints
-        self._constraints = ordereddict.OrderedDict()
+        self._constraints = OrderedDict()
         scope = _get_scope(target)
 
         for name, cnst in target.copy_constraints().items():

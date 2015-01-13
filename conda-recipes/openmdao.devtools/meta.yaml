@@ -1,0 +1,38 @@
+package:
+ name: openmdao.devtools
+ version: dev
+
+source:
+ path:  ../../openmdao.devtools
+
+requirements:
+  build:
+    - python
+    - setuptools
+    - sphinx
+    - fabric >=0.9.3
+    - openmdao.util
+    - boto
+    - paramiko >=1.7.7
+    - requests
+    - virtualenv
+
+  run:
+    - python
+    - setuptools
+    - sphinx
+    - fabric >=0.9.3
+    - openmdao.util
+    - boto
+    - paramiko >=1.7.7
+    - requests
+    - virtualenv
+
+build:
+  preserve_egg_dir: True
+  entry_points:
+    - wingproj = openmdao.devtools.wingproj:run_wing
+    - make_installer = openmdao.devtools.mkinstaller:main
+    - release = openmdao.devtools.releasetools:release
+    - push_dists = openmdao.devtools.push_dists:main
+    - remote_build = openmdao.devtools.remote_build:main

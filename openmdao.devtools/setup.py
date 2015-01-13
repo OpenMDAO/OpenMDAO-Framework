@@ -1,10 +1,10 @@
 """
-This package is not included in an OpenMDAO release.  It's always present in 
+This package is not included in an OpenMDAO release.  It's always present in
 a 'dev' install, but to be used with a release it must be explicitly installed
 after the release virtualenv has been activated.
 
 It's just a place to collect all of the tools we use to build
-openmdao docs, releases, etc., and a place to specify all of their 
+openmdao docs, releases, etc., and a place to specify all of their
 dependencies without forcing non-dev openmdao users to satisfy dependencies
 that they don't need.
 """
@@ -39,12 +39,12 @@ setup(name='openmdao.devtools',
       zip_safe=False,
       install_requires=[
           'setuptools',
-          'Sphinx',
-          'Fabric>=0.9.3',
+          'Sphinx==1.2.2',
+          'Fabric==0.9.3',
           'virtualenv',
           'openmdao.util',
           'boto',
-          'paramiko>=1.7.7',
+          'paramiko==1.7.7.1',
           'requests',
       ],
       entry_points = {
@@ -57,5 +57,3 @@ setup(name='openmdao.devtools',
               ],
       }
     )
-
-
