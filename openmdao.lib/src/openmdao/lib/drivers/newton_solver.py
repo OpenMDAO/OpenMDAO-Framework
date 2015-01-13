@@ -95,7 +95,7 @@ class NewtonSolver(Driver):
 
             system.calc_newton_direction(options=options)
 
-            print "LS 1", uvec.array, '+', dfvec.array
+            #print "LS 1", uvec.array, '+', dfvec.array
             uvec.array += alpha*dfvec.array
 
             # Just evaluate the model with the new points
