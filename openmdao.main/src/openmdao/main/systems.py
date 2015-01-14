@@ -1726,7 +1726,7 @@ class ParallelSystem(CompoundSystem):
 
         for i,sub in enumerate(subsystems):
             if requested_procs[i] > 0 and assigned_procs[i] == 0:
-                raise RuntimeError("parallel group %s requested %d processors but got 0" %
+                raise RuntimeError("subsystem group %s requested %d processors but got 0" %
                                    (sub.name, requested_procs[i]))
 
         color = []
@@ -1759,10 +1759,6 @@ class ParallelSystem(CompoundSystem):
         if not self.is_active():
             return
 
-        #print "LOCAL SUBS: %s" % [s.name for s in self.local_subsystems()]
-        #for sub in self.local_subsystems():
-            #sub.setup_variables(resid_state_map)
-            
         variables = {}
         for sub in self.local_subsystems():
             if not isinstance(sub, ParamSystem):
@@ -1780,10 +1776,8 @@ class ParallelSystem(CompoundSystem):
             sub = None
             names = []
 
-        #print "names:",names
         varkeys_list = self.mpi.comm.allgather(names)
 
-        #print "allnames: ",varkeys_list
         for varkeys in varkeys_list:
             for name in varkeys:
                 self.variables[name] = varmeta[name].copy()
@@ -1791,7 +1785,6 @@ class ParallelSystem(CompoundSystem):
 
         if sub:
             for name, var in sub.variables.items():
-                #print "sub var: ",name
                 self.variables[name] = var
 
         self._create_var_dicts(resid_state_map)
@@ -2231,10 +2224,48 @@ def _create_simple_sys(scope, graph, name):
 
     return sub
 
+# def partition_subsystems(scope, graph, cgraph):
+#     """Return a nested system graph with metadata for parallel
+#     and serial subworkflows.  Graph must acyclic. All subdriver
+#     iterations sets must have already been collapsed.
+
+#     No nested parallel systems will result from this algorithm.
+
+#     """
+#     if len(cgraph) < 2:
+#         return cgraph
+
+#     gcopy = cgraph.subgraph(cgraph.nodes_iter())
+
+#     parnodes = []
+
+#     while len(gcopy) > 1:
+#         # find all nodes with in degree 0. If we find
+#         # more than one, we can execute them in parallel
+#         zero_in_nodes = [n for n in gcopy.nodes_iter()
+#                             if not gcopy.in_degree(n)]
+
+#         if len(zero_in_nodes) > 1: # start of parallel chunk
+#             parnodes.append(zero_in_nodes)
+
+#         elif len(zero_in_nodes) == 0:  # circular - no further splitting
+#             break
+
+#         gcopy.remove_nodes_from(zero_in_nodes)
+
+#     for nodes in parnodes:
+#         subg = cgraph.subgraph(nodes)
+#         psys = ParallelSystem(scope, graph, subg, str(tuple(sorted(subg.nodes()))))
+#         collapse_to_system_node(cgraph, psys, tuple(psys._nodes))
+
+#     return cgraph
+
 def partition_subsystems(scope, graph, cgraph):
     """Return a nested system graph with metadata for parallel
     and serial subworkflows.  Graph must acyclic. All subdriver
     iterations sets must have already been collapsed.
+
+    This algorithm frequently results in nested parallel systems.
 
     """
     if len(cgraph) < 2:
@@ -2249,12 +2280,6 @@ def partition_subsystems(scope, graph, cgraph):
         # more than one, we can execute them in parallel
         zero_in_nodes = [n for n in gcopy.nodes_iter()
                             if gcopy.in_degree(n)==0]
-
-        ## add this to pull param systems outside of parallel systems
-        # for z in zero_in_nodes:
-        #     if cgraph.node[z].get('comp') == 'param':
-        #         zero_in_nodes = [z]
-        #         break
 
         if len(zero_in_nodes) > 1: # start of parallel chunk
             parallel_group = []
@@ -2273,7 +2298,7 @@ def partition_subsystems(scope, graph, cgraph):
                     to_remove.extend(branch)
                     subg = cgraph.subgraph(branch)
                     partition_subsystems(scope, graph, subg)
-                    system=SerialSystem(scope, graph, subg, str(branch))
+                    system=SerialSystem(scope, graph, subg, str(tuple(sorted(subg.nodes()))))
                     collapse_to_system_node(cgraph, system, branch)
 
                     gcopy.remove_nodes_from(branch)
@@ -2281,7 +2306,7 @@ def partition_subsystems(scope, graph, cgraph):
             parallel_group = tuple(sorted(parallel_group))
             to_remove.extend(parallel_group)
             subg = cgraph.subgraph(parallel_group)
-            system=ParallelSystem(scope, graph, subg, str(parallel_group))
+            system=ParallelSystem(scope, graph, subg, str(tuple(sorted(subg.nodes()))))
             collapse_to_system_node(cgraph, system, parallel_group)
 
         elif len(zero_in_nodes) == 1:  # serial
