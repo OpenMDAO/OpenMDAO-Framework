@@ -887,7 +887,7 @@ class Workflow(object):
 
         self._reduced_graph = reduced
 
-        if MPI and system_type == 'auto':
+        if system_type == 'auto' and MPI:
             self._auto_setup_systems(scope, reduced, cgraph)
         elif MPI and system_type == 'parallel':
             self._system = ParallelSystem(scope, reduced, cgraph,
@@ -943,26 +943,6 @@ class Workflow(object):
             return
         self._system.setup_communicators(self.mpi.comm)
 
-    # def setup_variables(self):
-    #     if MPI and self.mpi.comm == MPI.COMM_NULL:
-    #         return
-    #     return self._system.setup_variables()
-
-    # def setup_sizes(self):
-    #     if MPI and self.mpi.comm == MPI.COMM_NULL:
-    #         return
-    #     return self._system.setup_sizes()
-
-    # def setup_vectors(self, arrays=None, state_resid_map=None):
-    #     if MPI and self.mpi.comm == MPI.COMM_NULL:
-    #         return
-
-    #     print "state_resid_map:",state_resid_map
-    #     if MPI and state_resid_map:
-    #         self._need_prescatter = True
-
-    #     self._system.setup_vectors(arrays, state_resid_map)
-
     def setup_scatters(self):
         if MPI and self.mpi.comm == MPI.COMM_NULL:
             return
@@ -972,9 +952,7 @@ class Workflow(object):
         """Return the set of nodes in the depgraph
         belonging to this driver (inlcudes full iteration set).
         """
-        nodeset = set([c.name for c in self.parent.iteration_set()])
-        rgraph = self.scope._reduced_graph
-        return nodeset
+        return set([c.name for c in self.parent.iteration_set()])
 
     def subdrivers(self):
         """Return a list of direct subdrivers in this workflow."""

@@ -189,6 +189,8 @@ class MPITestCase(TestCase):
                     raise exc_info[0], exc_info[1], exc_info[2]
                 
         finally:
+            sys.stdout.flush()
+            sys.stderr.flush()
             self.comm.Disconnect()
 
 
