@@ -1135,6 +1135,7 @@ class Assembly(Component):
 
         # copy the reduced graph
         rgraph = rgraph.subgraph(rgraph.nodes_iter())
+
         rgraph.collapse_subdrivers([], [self._top_driver])
 
         drvname = self._top_driver.name
@@ -1461,7 +1462,8 @@ class Assembly(Component):
         for comp in self.get_comps():
             comp.post_setup()
 
-        self._system.vec['u'].set_from_scope(self)
+        if self._system.is_active():
+            self._system.vec['u'].set_from_scope(self)
 
     def _setup(self, inputs=None, outputs=None):
         """This is called automatically on the top level Assembly
@@ -1484,6 +1486,10 @@ class Assembly(Component):
             self.setup_depgraph()
             self.setup_reduced_graph(inputs=inputs, outputs=outputs)
             self.setup_systems()
+            # if MPI.COMM_WORLD.rank == 0:
+            #     from openmdao.util.dotgraph import plot_system_tree
+            #     plot_system_tree(self._system)
+
             self.setup_communicators(comm)
             self.setup_variables()
             self.setup_sizes()

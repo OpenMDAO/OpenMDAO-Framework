@@ -492,7 +492,7 @@ class System(object):
                 base = name[0].split('[', 1)[0]
                 if base == name[0]:
                     continue
-                isrc = self.vector_vars.keys().index(self.scope.name2collapsed[base])
+                #isrc = self.vector_vars.keys().index(self.scope.name2collapsed[base])
                 idxs = varmeta[name].get('flat_idx')
 
             self.arg_idx[name] = idxs# + numpy.sum(self.local_var_sizes[:self.mpi.rank, isrc])
@@ -2270,7 +2270,7 @@ def partition_subsystems(scope, graph, cgraph):
         # find all nodes with in degree 0. If we find
         # more than one, we can execute them in parallel
         zero_in_nodes = [n for n in gcopy.nodes_iter()
-                            if gcopy.in_degree(n)==0]
+                            if not gcopy.in_degree(n)]
 
         if len(zero_in_nodes) > 1: # start of parallel chunk
             parallel_group = []
