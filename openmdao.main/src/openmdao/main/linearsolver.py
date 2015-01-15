@@ -27,8 +27,8 @@ class LinearSolver(object):
         system.rhs_vec.array[:] += system.rhs_buf[:]
 
         if MPI:
-            system.rhs_vec.petsc.assemble()
-            return system.rhs_vec.petsc.norm()
+            system.rhs_vec.petsc_vec.assemble()
+            return system.rhs_vec.petsc_vec.norm()
         else:
             return np.linalg.norm(system.rhs_vec.array)
 
@@ -242,6 +242,10 @@ class PETSc_KSP(LinearSolver):
 
         j = 0
         for param in inputs:
+
+            if isinstance(param, tuple):
+                param = param[0]
+
             param_tup = name2collapsed[param]
             param_size = system.get_size(param)
 
@@ -254,6 +258,10 @@ class PETSc_KSP(LinearSolver):
 
                 i = 0
                 for out in outputs:
+                    
+                    if isinstance(out, tuple):
+                        out = out[0]
+                    
                     out_size = system.get_size(out)
 
                     if return_format == 'dict':
@@ -377,6 +385,11 @@ class LinearGS(LinearSolver):
 
         if system.mode == 'adjoint':
             outputs, inputs = inputs, outputs
+            invec = system.vec['u']
+            outvec = system.vec['p']
+        else:
+            invec = system.vec['p']
+            outvec = system.vec['u']
 
         # If Forward mode, solve linear system for each parameter
         # If Reverse mode, solve linear system for each requested output
@@ -386,7 +399,7 @@ class LinearGS(LinearSolver):
             if isinstance(param, tuple):
                 param = param[0]
 
-            in_indices = system.vec['u'].indices(system.scope, param)
+            in_indices = invec.indices(system.scope, param)
             jbase = j
 
             for irhs in in_indices:
@@ -407,7 +420,7 @@ class LinearGS(LinearSolver):
                     if isinstance(item, tuple):
                         item = item[0]
 
-                    out_indices = system.vec['u'].indices(system.scope, item)
+                    out_indices = outvec.indices(system.scope, item)
                     nk = len(out_indices)
 
                     if return_format == 'dict':
@@ -447,16 +460,22 @@ class LinearGS(LinearSolver):
               norm/norm0 > options.rtol:
 
             if system.mode == 'forward':
+                #print "Start", system.name, system
                 for subsystem in system.subsystems(local=True):
+                    #print "Z1", system.vec['du'].array, system.vec['dp'].array, system.vec['df'].array
                     system.scatter('du', 'dp', subsystem=subsystem)
+                    #print "Z2", system.vec['du'].array, system.vec['dp'].array, system.vec['df'].array
                     system.rhs_vec.array[:] = 0.0
                     subsystem.applyJ(system.flat_vars.keys())
                     system.rhs_vec.array[:] *= -1.0
                     system.rhs_vec.array[:] += system.rhs_buf[:]
                     sub_options = options if subsystem.options is None \
                                           else subsystem.options
+                    #print "Z4", system.vec['du'].array, system.vec['dp'].array, system.vec['df'].array
                     subsystem.solve_linear(sub_options)
-
+                    #print "Z5", system.vec['du'].array, system.vec['dp'].array, system.vec['df'].array
+                    #print subsystem.name, system.rhs_vec.array, system.sol_vec.array
+                #print "End", system.name
             elif system.mode == 'adjoint':
 
                 rev_systems = [item for item in reversed(system.subsystems(local=True))]

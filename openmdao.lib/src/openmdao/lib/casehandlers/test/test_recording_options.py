@@ -27,20 +27,20 @@ class RecordingOptionsTestCase(unittest.TestCase):
         self.top.driver.add_objective('comp2.z')
 
     def test_no_recorder(self):
-        """ verify recording options are ignored if there are no recorders
-             (i.e. the Assembly runs without errors)
-        """
+        # verify recording options are ignored if there are no recorders
+        #    (i.e. the Assembly runs without errors)
+        
         self.top.recorders = []
         self.top.run()
         self.assertEqual(self.top.comp1.z, 0.0)
         self.assertEqual(self.top.comp2.z, 1.0)
 
     def test_default_options(self):
-        """ verify default options:
-                save_problem_formulation = True
-                includes = ['*']
-                excludes = []
-        """
+        # verify default options:
+        #        save_problem_formulation = True
+        #        includes = ['*']
+        #        excludes = []
+        
         sout = StringIO.StringIO()
         self.top.recorders = [JSONCaseRecorder(sout)]
         self.top.run()

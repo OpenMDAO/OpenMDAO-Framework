@@ -26,7 +26,6 @@ from openmdao.main.interfaces import IVariableTree, IDriver
 
 __all__ = ['Workflow']
 
-
 def _flattened_names(name, val, names=None):
     """ Return list of names for values in `val`.
     Note that this expands arrays into an entry for each index!.
@@ -831,8 +830,6 @@ class Workflow(object):
                 reduced.add_node(s[0], comp='param')
                 reduced.add_edge(s[0], s)
 
-        #reduced._connect_srcs_to_comps()
-
         # we need to connect a param comp node to all param nodes
         for node in params:
             param = node[0]
@@ -872,6 +869,7 @@ class Workflow(object):
                 reduced.add_node(gtup, comp=True)
                 collapse_nodes(reduced, gtup, reduced.internal_nodes(gtup))
                 reduced.node[gtup]['comp'] = True
+                reduced.node[gtup]['system'] = system
                 for c in gtup:
                     opaque_map[c] = gtup
 
@@ -885,8 +883,9 @@ class Workflow(object):
             reduced.remove_edges_from(to_remove)
 
         self._reduced_graph = reduced
+        self._component_graph = cgraph
 
-        if MPI and system_type == 'auto':
+        if system_type == 'auto' and MPI:
             self._auto_setup_systems(scope, reduced, cgraph)
         elif MPI and system_type == 'parallel':
             self._system = ParallelSystem(scope, reduced, cgraph,
@@ -898,17 +897,20 @@ class Workflow(object):
         self._system.set_ordering([p[0] for p in params]+
                                   [c.name for c in self], opaque_map)
 
-        self._system._parent_system = self.scope._reduced_graph.node[self.parent.name]['system']
+        self._system._parent_system = self.parent._system
 
         for comp in self:
             comp.setup_systems()
 
-        self._cycle_vars = get_cycle_vars(self._system)
+        if hasattr(self._system, 'graph'):
+            self._cycle_vars = get_cycle_vars(self._system.graph, scope._var_meta)
+        else:
+            self._cycle_vars = []
 
     def _auto_setup_systems(self, scope, reduced, cgraph):
         """
-        Collapse the graph (recursively) into nodes representing
-        subsystems.
+        Collapse the graph into nodes representing parallel
+        and serial subsystems.
         """
         cgraph = partition_subsystems(scope, reduced, cgraph)
 
@@ -942,26 +944,6 @@ class Workflow(object):
             return
         self._system.setup_communicators(self.mpi.comm)
 
-    # def setup_variables(self):
-    #     if MPI and self.mpi.comm == MPI.COMM_NULL:
-    #         return
-    #     return self._system.setup_variables()
-
-    # def setup_sizes(self):
-    #     if MPI and self.mpi.comm == MPI.COMM_NULL:
-    #         return
-    #     return self._system.setup_sizes()
-
-    # def setup_vectors(self, arrays=None, state_resid_map=None):
-    #     if MPI and self.mpi.comm == MPI.COMM_NULL:
-    #         return
-
-    #     print "state_resid_map:",state_resid_map
-    #     if MPI and state_resid_map:
-    #         self._need_prescatter = True
-
-    #     self._system.setup_vectors(arrays, state_resid_map)
-
     def setup_scatters(self):
         if MPI and self.mpi.comm == MPI.COMM_NULL:
             return
@@ -971,52 +953,46 @@ class Workflow(object):
         """Return the set of nodes in the depgraph
         belonging to this driver (inlcudes full iteration set).
         """
-        nodeset = set([c.name for c in self.parent.iteration_set()])
-        rgraph = self.scope._reduced_graph
-        return nodeset
+        return set([c.name for c in self.parent.iteration_set()])
 
     def subdrivers(self):
         """Return a list of direct subdrivers in this workflow."""
         return [c for c in self if has_interface(c, IDriver)]
 
-def get_cycle_vars(system):
+def get_cycle_vars(graph, varmeta):
     # examine the graph to see if we have any cycles that we need to
     # deal with
     cycle_vars = []
-    if not isinstance(system, CompoundSystem):
-        return cycle_vars
         
-    graph = system.graph
-    varmeta = system.scope._var_meta
-
     # make a copy of the graph since we don't want to modify it
     g = graph.subgraph(graph.nodes_iter())
 
-    if not is_directed_acyclic_graph(g):
-        # get total data sizes for subsystem connections
-        sizes = []
-        for u,v,data in g.edges_iter(data=True):
-            sz = 0
-            for node in data['varconns']:
-                dct = varmeta[node]
-                sz += dct.get('size', 0)
-            data['conn_size'] = sz
-            sizes.append((sz, (u,v)))
+    sizes = []
 
-        sizes = sorted(sizes)
+    while not is_directed_acyclic_graph(g):
+        if not sizes:
+            # get total data sizes for subsystem connections
+            for u,v,data in g.edges_iter(data=True):
+                sz = 0
+                for node in data['varconns']:
+                    dct = varmeta[node]
+                    sz += dct.get('size', 0)
+                data['conn_size'] = sz
+                sizes.append((sz, (u,v)))
 
-        while not is_directed_acyclic_graph(g):
-            strong = strongly_connected_components(g)[0]
-            if len(strong) == 1:
+            sizes = sorted(sizes)
+
+        strong = strongly_connected_components(g)[0]
+        if len(strong) == 1:
+            break
+
+        # find the connection with the smallest data xfer
+        for sz, (src, dest) in sizes:
+            if src in strong and dest in strong:
+                cycle_vars.extend(g[src][dest]['varconns'])
+                g.remove_edge(src, dest)
+                sizes.remove((sz, (src, dest)))
                 break
-
-            # find the connection with the smallest data xfer
-            for sz, (src, dest) in sizes:
-                if src in strong and dest in strong:
-                    cycle_vars.extend(g[src][dest]['varconns'])
-                    g.remove_edge(src, dest)
-                    sizes.remove((sz, (src, dest)))
-                    break
 
     return cycle_vars
 
