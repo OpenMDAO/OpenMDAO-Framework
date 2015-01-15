@@ -48,8 +48,8 @@ class RecordingOptionsTestCase(unittest.TestCase):
         sout.seek(0) # need to go back to the front of the "file"
         cds = CaseDataset(sout, 'json')
         vnames = cds.data.var_names().fetch()
-        expected = ['_driver_id', '_id', '_parent_id', u'_pseudo_0', 
-				u'_pseudo_0.out0', u'_pseudo_1', u'_pseudo_1.out0',
+        expected = ['_driver_id', '_id', '_parent_id',  
+				u'_pseudo_0.out0',  u'_pseudo_1.out0',
 				u'comp1.derivative_exec_count', u'comp1.exec_count', 
 				u'comp1.itername', u'comp1.x', u'comp1.z', 
 				u'comp2.derivative_exec_count', u'comp2.exec_count', 
@@ -60,7 +60,7 @@ class RecordingOptionsTestCase(unittest.TestCase):
         self.assertFalse(set(vnames).symmetric_difference(set(expected)))
         
         # Specific variables.
-        names = [ 'comp1.x', '_pseudo_0', '_pseudo_1']
+        names = [ 'comp1.x', 'comp2.z', 'comp1.z']
         vnames = cds.data.vars(names).var_names().fetch()
         self.assertEqual(vnames, names)
 
@@ -70,8 +70,8 @@ class RecordingOptionsTestCase(unittest.TestCase):
 
         iteration_case_1 = {
             "comp1.x": 0.0,
-            "_pseudo_0": 0.0,
-            "_pseudo_1": 1.0,
+            "comp1.z": 0.0,
+            "comp2.z": 1.0,
         }
         for name, val in zip(names, cases[0]):
             self.assertAlmostEqual(val, iteration_case_1[name])
@@ -91,8 +91,8 @@ class RecordingOptionsTestCase(unittest.TestCase):
         sout.seek(0) # need to go back to the front of the "file"
         cds = CaseDataset(sout, 'json')
         vnames = cds.data.var_names().fetch()
-        expected = ['_driver_id', '_id', '_parent_id', u'_pseudo_0',
-                    u'_pseudo_1', u'comp1.x', 'error_message', 'error_status', 'timestamp']
+        expected = ['_driver_id', '_id', '_parent_id', u'_pseudo_0.out0',
+                    u'_pseudo_1.out0', u'comp1.x', 'error_message', 'error_status', 'timestamp']
 
         self.assertFalse(set(vnames).symmetric_difference(set(expected)))
         
@@ -201,7 +201,7 @@ class RecordingOptionsTestCase(unittest.TestCase):
 
 
         vnames = cds.data.var_names().fetch()
-        expected = ['_driver_id', '_id', '_parent_id', u'_pseudo_0', u'_pseudo_1', 
+        expected = ['_driver_id', '_id', '_parent_id', u'_pseudo_0.out0', u'_pseudo_1.out0', 
                     u'comp1.derivative_exec_count', u'comp1.exec_count', u'comp1.itername', 
                     u'comp1.x', u'comp1.z', 'error_message', 'error_status', 'timestamp']
         

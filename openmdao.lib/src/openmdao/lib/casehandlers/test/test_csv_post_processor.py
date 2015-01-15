@@ -106,77 +106,67 @@ class CSVPostProcessorTestCase(unittest.TestCase):
         for case in cases:
             print >>sout, case
 
-        expected = [
-            'Case:',
-            '   uuid: ae79e023-8006-11e4-800d-20c9d0478eff',
-            '   timestamp: 1418172691.333990',
-            '   parent_uuid: ae735561-8006-11e4-ac35-20c9d0478eff',
-            '   inputs:',
-            '      comp1.x_array[0]: 2.0',
-            '      comp1.x_array[1]: 2.0',
-            '      comp1.x_array[2]: 2.0',
-            '   outputs:',
-            '      Response(comp1.a_array)[0]: 1.0',
-            '      Response(comp1.a_array)[1]: 3.0',
-            '      Response(comp1.a_array)[2]: 5.5',
-            '      Response(comp1.vt).data: ',
-            '      Response(comp1.vt).v1: 1.0',
-            '      Response(comp1.vt).v2: 2.0',
-            '      Response(comp1.vt).vt2.data: ',
-            '      Response(comp1.vt).vt2.vt3.a: 1.0',
-            '      Response(comp1.vt).vt2.vt3.b: 12.0',
-            '      Response(comp1.vt).vt2.vt3.data: ',
-            '      Response(comp1.vt).vt2.x: -1.0',
-            '      Response(comp1.vt).vt2.y: -2.0',
-            '      _pseudo_4.out0[0]: 1.0',
-            '      _pseudo_4.out0[1]: 3.0',
-            '      _pseudo_4.out0[2]: 5.5',
-            '      _pseudo_5.out0.data: ',
-            '      _pseudo_5.out0.v1: 1.0',
-            '      _pseudo_5.out0.v2: 2.0',
-            '      _pseudo_5.out0.vt2.data: ',
-            '      _pseudo_5.out0.vt2.vt3.a: 1.0',
-            '      _pseudo_5.out0.vt2.vt3.b: 12.0',
-            '      _pseudo_5.out0.vt2.vt3.data: ',
-            '      _pseudo_5.out0.vt2.x: -1.0',
-            '      _pseudo_5.out0.vt2.y: -2.0',
-            '      comp1.a_array[0]: 1.0',
-            '      comp1.a_array[1]: 3.0',
-            '      comp1.a_array[2]: 5.5',
-            "      comp1.a_string: Hello',;','",                                                                                                                       
-            '      comp1.derivative_exec_count: 0.0',
-            '      comp1.exec_count: 1.0',
-            '      comp1.itername: 1-comp1',
-            '      comp1.vt.data: ',
-            '      comp1.vt.v1: 1.0',
-            '      comp1.vt.v2: 2.0',
-            '      comp1.vt.vt2.data: ',
-            '      comp1.vt.vt2.vt3.a: 1.0',
-            '      comp1.vt.vt2.vt3.b: 12.0',
-            '      comp1.vt.vt2.vt3.data: ',
-            '      comp1.vt.vt2.x: -1.0',
-            '      comp1.vt.vt2.y: -2.0',
-            '      comp1.z: 0.0',
-            '      comp2.derivative_exec_count: 0.0',
-            '      comp2.exec_count: 1.0',
-            '      comp2.itername: 1-comp2',
-            '      comp2.z: 1.0',
-            '      driver.workflow.itername: 1',
-        ]
+        expected = \
+'''Case:
+   uuid: 07280785-9b76-11e4-800d-20c9d0478eff
+   timestamp: 1421189195.646824
+   parent_uuid: 0720c385-9b76-11e4-b796-20c9d0478eff
+   inputs:
+      comp1.x_array[0]: 2.0
+      comp1.x_array[1]: 2.0
+      comp1.x_array[2]: 2.0
+   outputs:
+      _pseudo_4.out0[0]: 1.0
+      _pseudo_4.out0[1]: 3.0
+      _pseudo_4.out0[2]: 5.5
+      _pseudo_5.out0.data: 
+      _pseudo_5.out0.v1: 1.0
+      _pseudo_5.out0.v2: 2.0
+      _pseudo_5.out0.vt2.data: 
+      _pseudo_5.out0.vt2.vt3.a: 1.0
+      _pseudo_5.out0.vt2.vt3.b: 12.0
+      _pseudo_5.out0.vt2.vt3.data: 
+      _pseudo_5.out0.vt2.x: -1.0
+      _pseudo_5.out0.vt2.y: -2.0
+      comp1.a_array[0]: 1.0
+      comp1.a_array[1]: 3.0
+      comp1.a_array[2]: 5.5
+      comp1.a_string: Hello',;','
+      comp1.derivative_exec_count: 0.0
+      comp1.exec_count: 1.0
+      comp1.itername: 1-comp1
+      comp1.vt.data: 
+      comp1.vt.v1: 1.0
+      comp1.vt.v2: 2.0
+      comp1.vt.vt2.data: 
+      comp1.vt.vt2.vt3.a: 1.0
+      comp1.vt.vt2.vt3.b: 12.0
+      comp1.vt.vt2.vt3.data: 
+      comp1.vt.vt2.x: -1.0
+      comp1.vt.vt2.y: -2.0
+      comp1.z: 0.0
+      comp2.derivative_exec_count: 0.0
+      comp2.exec_count: 1.0
+      comp2.itername: 1-comp2
+      comp2.z: 1.0
+      driver.workflow.itername: 1
 
-        #print sout.getvalue()
+'''
+
+        print sout.getvalue()
         lines = sout.getvalue().split('\n')
+        expected_lines = expected.split('\n')
         for index, line in enumerate(lines):
             if line.startswith('Case:'):
-                for i in range(len(expected)):
-                    if expected[i].startswith('   uuid:'):
+                for i in range(len(expected_lines)):
+                    if expected_lines[i].startswith('   uuid:'):
                         self.assertTrue(lines[index+i].startswith('   uuid:'))
-                    elif expected[i].startswith('   parent_uuid:'):
+                    elif expected_lines[i].startswith('   parent_uuid:'):
                         self.assertTrue(lines[index+i].startswith('   parent_uuid:'))
-                    elif expected[i].startswith('   timestamp:'):
+                    elif expected_lines[i].startswith('   timestamp:'):
                         self.assertTrue(lines[index+i].startswith('   timestamp:'))
                     else:
-                        self.assertEqual(lines[index+i], expected[i])
+                        self.assertEqual(lines[index+i], expected_lines[i])
                 break
         else:
             self.fail("couldn't find the expected Case")
@@ -195,7 +185,8 @@ class CSVPostProcessorTestCase(unittest.TestCase):
 
     def generate_and_compare(self, name):
 
-        directory = os.path.dirname(__file__)
+
+        directory = os.path.abspath(os.path.dirname(__file__))
         name = os.path.join(directory, name)
 
         cds = CaseDataset(name + '.json', 'json')

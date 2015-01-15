@@ -23,6 +23,8 @@ from openmdao.main.depgraph import _get_inner_connections, get_nondiff_groups, \
                                    collapse_nodes, simple_node_iter, CollapsedGraph
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.interfaces import IVariableTree, IDriver
+from openmdao.main.depgraph import is_connection
+
 
 __all__ = ['Workflow']
 
@@ -552,7 +554,10 @@ class Workflow(object):
                 if save_problem_formulation or \
                    self._check_path(path, includes, excludes):
                     self._rec_objectives.append(key)
-                    outputs.append(name)
+		    if key != objective.text:
+			outputs.append(name)
+		    else:
+			outputs.append(name + '.out0')
 
         # Responses
         self._rec_responses = []
@@ -563,7 +568,7 @@ class Workflow(object):
                 if save_problem_formulation or \
                    self._check_path(path, includes, excludes):
                     self._rec_responses.append(key)
-                    outputs.append(name)
+                    outputs.append(name + '.out0')
 
         # Constraints
         self._rec_constraints = []
@@ -574,7 +579,7 @@ class Workflow(object):
                 if save_problem_formulation or \
                    self._check_path(path, includes, excludes):
                     self._rec_constraints.append(con)
-                    outputs.append(name)
+                    outputs.append(name + '.out0')
         if hasattr(driver, 'get_ineq_constraints'):
             for con in driver.get_ineq_constraints().values():
                 name = con.pcomp_name
@@ -582,7 +587,7 @@ class Workflow(object):
                 if save_problem_formulation or \
                    self._check_path(path, includes, excludes):
                     self._rec_constraints.append(con)
-                    outputs.append(name)
+                    outputs.append(name + '.out0')
                     #outputs.append(path+'.out0')
 
         #driver.get_reduced_graph()
@@ -591,6 +596,16 @@ class Workflow(object):
         for comp in driver.workflow: 
             successors = driver._reduced_graph.successors(comp.name)
             for output_name, aliases in successors:
+
+        # From Bret: it does make sense to skip subdrivers like you said, except for the 
+        #      case where a driver has actual outputs of its own.  So you may have to keep 
+        #  subdriver successors if the edge between the subdriver and the successor
+        #  is an actual data connection.
+        # look at the edge metadata to see if there's maybe a 'conn' in there for real connections. 
+        if has_interface(comp, IDriver):
+            if not is_connection(driver._reduced_graph, comp.name, output_name):
+                continue
+
                 if '.in' in output_name: # look for something that is not a pseudo input
                     for n in aliases:
                         if not ".in" in n:
@@ -604,7 +619,7 @@ class Workflow(object):
                     
         #####
         # also need get any outputs of comps that are not connected vars 
-		#   and therefore not in the graph
+        #   and therefore not in the graph
         # could use 
         #   scope._depgraph
         #      there's 'iotype' metadata in the var nodes
@@ -614,6 +629,11 @@ class Workflow(object):
         
         for comp in driver.workflow: 
             for output_name in scope._depgraph.list_outputs(comp.name):
+                if has_interface(comp, IDriver): # Only record outputs from drivers if they are framework variables
+                    metadata = scope.get_metadata(output_name)
+                    if not ('framework_var' in metadata and metadata[ 'framework_var'] ):
+                        continue
+
                 #output_name = prefix + output_name
                 if output_name not in outputs and self._check_path(output_name, includes, excludes) :
                     outputs.append(output_name)
