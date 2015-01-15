@@ -597,14 +597,14 @@ class Workflow(object):
             successors = driver._reduced_graph.successors(comp.name)
             for output_name, aliases in successors:
 
-        # From Bret: it does make sense to skip subdrivers like you said, except for the 
-        #      case where a driver has actual outputs of its own.  So you may have to keep 
-        #  subdriver successors if the edge between the subdriver and the successor
-        #  is an actual data connection.
-        # look at the edge metadata to see if there's maybe a 'conn' in there for real connections. 
-        if has_interface(comp, IDriver):
-            if not is_connection(driver._reduced_graph, comp.name, output_name):
-                continue
+                # From Bret: it does make sense to skip subdrivers like you said, except for the 
+                #      case where a driver has actual outputs of its own.  So you may have to keep 
+                #  subdriver successors if the edge between the subdriver and the successor
+                #  is an actual data connection.
+                # look at the edge metadata to see if there's maybe a 'conn' in there for real connections. 
+                if has_interface(comp, IDriver):
+                    if not is_connection(driver._reduced_graph, comp.name, output_name):
+                        continue
 
                 if '.in' in output_name: # look for something that is not a pseudo input
                     for n in aliases:
