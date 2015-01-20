@@ -336,6 +336,7 @@ def run_openmdao_suite(argv=None):
             tdir = os.path.dirname(tdir)
         tdir = os.path.join(tdir, 'contrib', 'testmpi')
         args.append(tdir)
+        args.append('--no-path-adjustment')
 
     # some libs we use call multiprocessing.cpu_count() on import, which can
     # raise NotImplementedError, so try to monkeypatch it here to return 1 if
