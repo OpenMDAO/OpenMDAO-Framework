@@ -351,7 +351,7 @@ class TestCase(unittest.TestCase):
         path = os.path.join(os.path.dirname(__file__), 'jsonrecorder.json')
         cases = CaseDataset(path, 'json').data.fetch()
         self.assertEqual(len(cases), 10)
-        self.assertEqual(len(cases[0]),21)
+        self.assertEqual(len(cases[0]),19)
 
         names = ('comp1.x', 'comp1.y', 'comp1.z', 'comp2.z')
         CaseDataset(path, 'json').data.vars(names).write('cases.reduced')
