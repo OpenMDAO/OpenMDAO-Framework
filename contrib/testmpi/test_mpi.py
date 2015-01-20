@@ -439,7 +439,7 @@ class MPITests2(MPITestCase):
                         del expected[name]
 
             if expected:
-                self.fail("not all expected values were found")
+                self.fail("expected values %s were not found" % expected.keys())
 
     def test_sellar_Newton_parallel(self):
 
