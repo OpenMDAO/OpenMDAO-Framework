@@ -1,23 +1,2 @@
-package:
-  name: openmdao.units
-  version: dev
-
-source:
-  path:  ../../openmdao.units
-
-build:
-    preserve_egg_dir: True
-    
-requirements:
-  build:
-    - python
-    - setuptools
-
-  run:
-    - python
-    - setuptools
-
-about:
-  home:  http://openmdao.org
-  license:  Apache 2.0
-  summary:  "Open-source Multidisciplinary Design, Analysis and Optimazation framework in Python."
+{% extends  "/../base.yaml" %}
+{% block name %} openmdao.units {% endblock %}

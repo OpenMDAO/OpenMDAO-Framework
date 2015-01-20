@@ -1,6 +1,6 @@
 package:
     name: slsqp
-    version: !!str 1.0.2
+    version: !!str {{ environ['PKG_VERSION'] }}
 
 source:
     path: ../../contrib/slsqp
@@ -13,9 +13,7 @@ requirements:
         - python
         - setuptools
         - numpy
-        - libgfortran #[osx]
 
     run:
         - python
         - numpy
-        - libgfortran #[osx]
