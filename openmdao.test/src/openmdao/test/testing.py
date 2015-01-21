@@ -278,15 +278,9 @@ def run_openmdao_suite(argv=None):
             covpkg = True
         if (i > 0 and not arg.startswith('-')) or arg in break_check:
             break
-    else:  # no non '-' args, so assume they want to run the default test suite
-        # in a release install, default is the set of tests specified in release_tests.cfg
-        if not is_dev_install() or '--small' in args:
-            if '--small' in args:
-                args.remove('--small')
-            args.extend(['-c', os.path.join(os.path.dirname(__file__), 'release_tests.cfg')])
-        else:  # in a dev install, default is all tests
-            if '--mpi' not in args:
-                args.append('--all')
+    else:
+        if '--mpi' not in args:
+            args.append("--all")
 
     args.append('--exe')  # by default, nose will skip any .py files that are
                           # executable. --exe prevents this behavior
@@ -321,7 +315,7 @@ def run_openmdao_suite(argv=None):
         args.remove('--enable_console')
         os.environ['OPENMDAO_ENABLE_CONSOLE'] = '1'
 
-    if '--all' in args:
+    if '--mpi' not in args and '--all' in args:
         args.remove('--all')
         args.extend(tlist)
 
@@ -342,6 +336,7 @@ def run_openmdao_suite(argv=None):
             tdir = os.path.dirname(tdir)
         tdir = os.path.join(tdir, 'contrib', 'testmpi')
         args.append(tdir)
+        args.append('--no-path-adjustment')
 
     # some libs we use call multiprocessing.cpu_count() on import, which can
     # raise NotImplementedError, so try to monkeypatch it here to return 1 if

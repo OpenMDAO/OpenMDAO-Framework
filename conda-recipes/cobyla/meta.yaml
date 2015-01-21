@@ -1,0 +1,21 @@
+package:
+    name: cobyla
+    version: !!str 1.0.2
+
+source:
+    path: ../../contrib/cobyla
+
+build:
+    preserve_egg_dir: True
+
+requirements:
+    build:
+        - python
+        - setuptools
+        - numpy
+        - libgfortran #[osx]
+
+    run:
+        - python
+        - numpy
+        - libgfortran #[osx]

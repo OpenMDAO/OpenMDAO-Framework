@@ -1,5 +1,5 @@
-import ordereddict
 import weakref
+from collections import OrderedDict
 
 from openmdao.main.vartree import VariableTree
 from openmdao.main.datatypes.api import List, VarTree
@@ -48,7 +48,7 @@ class HasResponses(object):
                        'get_referenced_varpaths']
 
     def __init__(self, parent):
-        self._responses = ordereddict.OrderedDict()
+        self._responses = OrderedDict()
         self._parent = None if parent is None else weakref.ref(parent)
 
     def __getstate__(self):
@@ -146,7 +146,7 @@ class HasResponses(object):
         name: string
             Name of component being removed.
         """
-        refs = ordereddict.OrderedDict()
+        refs = OrderedDict()
         for rname, response in self._responses.items():
             if name in response.get_referenced_compnames():
                 refs[rname] = response
@@ -303,4 +303,3 @@ class HasVarTreeResponses(HasResponses):
 
         name = names[-1]
         obj.remove_trait(name)
-

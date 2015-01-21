@@ -1,0 +1,13 @@
+package:
+    name: pyevolve
+    version: !!str {{environ['PKG_VERSION']}}
+
+source:
+    git_url: https://github.com/perone/Pyevolve.git
+
+requirements:
+    build:
+        - python
+
+    run:
+        - python

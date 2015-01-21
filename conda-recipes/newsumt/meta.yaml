@@ -1,0 +1,21 @@
+package:
+    name: newsumt
+    version: !!str 1.1.1
+
+source:
+    path: ../../contrib/newsumt
+
+build:
+    preserve_egg_dir: True
+
+requirements:
+    build:
+        - python
+        - setuptools
+        - numpy
+        - libgfortran #[osx]
+
+    run:
+        - python
+        - numpy
+        - libgfortran #[osx]

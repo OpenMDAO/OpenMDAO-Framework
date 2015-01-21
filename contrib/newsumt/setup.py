@@ -7,16 +7,16 @@ from numpy.distutils.misc_util import Configuration
 
 sdkdir = os.environ.get('WindowsSdkDir')
 if sys.platform == 'win32' and sdkdir:
-    # Update the ``library_dir_option`` function in MSVCCompiler 
+    # Update the ``library_dir_option`` function in MSVCCompiler
     # to add quotes around /LIBPATH entries.
     import types
     def _lib_dir_option(self, dir):
         return '/LIBPATH:"%s"' % dir
-    
+
     from distutils.msvc9compiler import MSVCCompiler
     setattr(MSVCCompiler, 'library_dir_option',
             types.MethodType(_lib_dir_option, None, MSVCCompiler))
-    
+
     include_dirs = [os.path.join(sdkdir,'Include')]
     library_dirs = [os.path.join(sdkdir,'Lib')]
     # make sure we have mt.exe available in path
@@ -35,7 +35,7 @@ config.add_extension('newsumtinterruptible',
                      library_dirs=library_dirs)
 
 kwds = {'install_requires':['numpy'],
-        'version': '1.1.0',
+        'version': '1.1.1',
         'zip_safe': False,
         'license': 'public domain',
    # NOTE: we use 'url' here, but it really translates to 'home-page'
@@ -46,4 +46,3 @@ kwds = {'install_requires':['numpy'],
 kwds.update(config.todict())
 
 setup(**kwds)
-

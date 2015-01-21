@@ -1,5 +1,5 @@
 import pprint
-from ordereddict import OrderedDict
+from collections import OrderedDict
 
 _missing = object()
 
@@ -22,7 +22,7 @@ def graph_to_svg(g):
     output = BytesIO()
     fig.savefig(output, format='svg')
     plt.close(fig)
-    
+
     return output.getvalue()
 
 
