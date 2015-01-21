@@ -453,11 +453,11 @@ class MPITests2(MPITestCase):
 
         expected = { 'C1.y1': 3.1598617768014536, 'C2.y2': 3.7551999159927316 }
 
-        top.driver.iprint = 1
+        top.driver.iprint = 0
         top.driver.max_iteration = 20
         top.run()
-        print top.C1.y1, top.C2.y1
-        print top.C1.y2, top.C2.y2
+        # print top.C1.y1, top.C2.y1
+        # print top.C1.y2, top.C2.y2
         
         # gather the values back to the rank 0 process and compare to expected
         dist_answers = top._system.mpi.comm.gather([(k[0],v) for k,v in top._system.vec['u'].items()], 
