@@ -1002,7 +1002,7 @@ def get_cycle_vars(graph, varmeta):
 
             sizes = sorted(sizes)
 
-        strong = strongly_connected_components(g)[0]
+        strong = list(strongly_connected_components(g))[0]
         if len(strong) == 1:
             break
 

@@ -26,6 +26,7 @@ from uuid   import uuid1
 from openmdao.main.api import VariableTree
 from openmdao.main.interfaces import implements, ICaseRecorder
 from openmdao.main.releaseinfo import __version__
+from openmdao.util.typegroups import real_types
 
 
 class _BaseRecorder(object):
@@ -37,7 +38,7 @@ class _BaseRecorder(object):
         self._cfg_map = {}
         self._uuid = None
         self._cases = None
-        
+
 		# not used yet but for getting values of variables
 		#     from subcases
         self._last_child_case_uuids = {} # keyed by driver id
@@ -146,8 +147,8 @@ class _BaseRecorder(object):
         while top.parent:
             top = top.parent
         #prefix_drop = len(top.name) + 1 if top.name else 0
-        prefix_drop = 0 
-        
+        prefix_drop = 0
+
         driver_info = []
         for driver, (ins, outs) in sorted(self._cfg_map.items(),
                                           key=lambda item: item[0].get_pathname()):
@@ -180,9 +181,9 @@ class _BaseRecorder(object):
         prefix = scope.get_pathname()
         if prefix:
             prefix += '.'
-        in_names = [prefix+name for name in in_names]        
-        out_names = [prefix+name for name in out_names]        
-        
+        in_names = [prefix+name for name in in_names]
+        out_names = [prefix+name for name in out_names]
+
         data = dict(zip(in_names, inputs))
         data.update(zip(out_names, outputs))
 
@@ -190,8 +191,8 @@ class _BaseRecorder(object):
         #for subdriver in driver.subdrivers():
             #subdriver_last_case_uuids[ id(subdriver) ] = self._last_child_case_uuids[ id(subdriver) ]
         #self._last_child_case_uuids[ id(driver) ] = case_uuid
-            
-            
+
+
         return dict(_id=case_uuid,
                     _parent_id=parent_uuid or self._uuid,
                     _driver_id=id(driver),
@@ -497,6 +498,9 @@ def verify_json(test, sout, filename):
                 continue
             if oldname == 'low' and newval == -sys.maxint:
                 continue
-            test.assertAlmostEqual(oldval, newval)
+            if isinstance(oldval, real_types) and isinstance(newval, real_types):
+                test.assertAlmostEqual(oldval, newval)
+            else:
+                test.assertEqual(oldval, newval)
         else:
             test.assertEqual(oldname, newname) # just raises an exception

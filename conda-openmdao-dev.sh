@@ -19,7 +19,7 @@ conda create --name openmdao \
   requests \
   decorator \
   mock \
-  networkx==1.8.1 \
+  networkx \
   zope.interface \
   "pytz>=2011" \
   pycrypto==2.3 \
