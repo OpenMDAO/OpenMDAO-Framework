@@ -27,7 +27,9 @@ excellent documentation describing how to install Git and how to become
 familiar with Git and GitHub.  You can find it `here`__.
 
 .. __: https://help.github.com
-
+                                                                                                   
+                                                                                                   
+   
 **C/C++ and Fortran Compilers**
 
 Certain packages used in OpenMDAO contain Python extensions, meaning that they contain non-Python
