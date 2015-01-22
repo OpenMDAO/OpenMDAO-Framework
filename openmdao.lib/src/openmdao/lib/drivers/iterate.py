@@ -128,7 +128,7 @@ class FixedPointIterator(Driver):
         # Check to make sure we don't have a null problem.
         if n_dep == 0:
             cgraph = self.parent._depgraph.component_graph().subgraph([c.name for c in self.workflow])
-            strong = strongly_connected_components(cgraph)
+            strong = list(strongly_connected_components(cgraph))
             if not ((strong and len(strong[0]) > 1) or self._get_param_constraint_pairs()):
                 msg = "FixedPointIterator requires a cyclic workflow, or a " \
                       "parameter/constraint pair."
