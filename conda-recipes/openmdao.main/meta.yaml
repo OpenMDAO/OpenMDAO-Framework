@@ -4,14 +4,14 @@ package:
 
 source:
  path:  ../../openmdao.main
-    
+
 requirements:
   build:
     - python
     - setuptools
     - decorator
     - mock
-    - networkx ==1.8.1
+    - networkx
     - openmdao.units
     - openmdao.util
     - pycrypto ==2.3
@@ -25,7 +25,7 @@ requirements:
     - python
     - decorator
     - mock
-    - networkx ==1.8.1
+    - networkx
     - openmdao.units
     - openmdao.util
     - pycrypto ==2.3

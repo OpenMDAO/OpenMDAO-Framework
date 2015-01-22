@@ -1633,7 +1633,7 @@ def break_cycles(graph):
         conns = graph.edges()
 
     while not is_directed_acyclic_graph(graph):
-        strong = strongly_connected_components(graph)
+        strong = list(strongly_connected_components(graph))
         if not strong or len(strong[0]) == 1:
             return []
 

@@ -226,7 +226,7 @@ class TestCase(unittest.TestCase):
         sub.create_passthrough('comp.loads_out')
         top.driver.workflow.add('sub')
 
-        
+
         jsonfile = os.path.join(self.tempdir, 'test_vtree.json')
         old_json_file = os.path.join(os.path.dirname(__file__), 'vtree.json')
         top.recorders = [JSONCaseRecorder(jsonfile)]

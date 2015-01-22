@@ -380,7 +380,7 @@ install`` will simply retrieve a repository's latest version of the default bran
 stable.  This is why plugins found at OpenMDAO-Plugins are all tagged.
 
 We will discuss :ref:`plugin-install` in more detail later in this document. For further general
-discussion of Git tagging, follow this link: http://git-scm.com/book/en/Git-Basics-Tagging.
+discussion of Git tagging, follow this link: http://git-scm.com/book/en/v2/Git-Basics-Tagging.
 
 
 Making Your Plugin Available to Others
