@@ -1,6 +1,4 @@
 import os.path
-import re
-import sys
 import tempfile
 import shutil
 import unittest
@@ -8,10 +6,9 @@ import json
 
 from cStringIO import StringIO
 
-from openmdao.main import __version__
 
 from openmdao.main.api import Assembly, Component, set_as_top
-from openmdao.lib.datatypes.api import File, Float
+from openmdao.lib.datatypes.api import FileRef, File, Float
 from openmdao.lib.drivers.api import CONMINdriver
 from openmdao.lib.casehandlers.api import JSONCaseRecorder
 
@@ -19,10 +16,10 @@ from openmdao.lib.casehandlers.api import JSONCaseRecorder
 class WriteFile(Component):
     x=Float(1.0,iotype='in')
     y=Float(2.0,iotype='in')
-    file_out=File('x.in',iotype='out')
+    file_out=File(FileRef('x.in'), iotype='out')
 
     def execute(self):
-        with open(self.file_out.abspath(),'w') as f:
+        with open(self.file_out.path,'w') as f:
             f.write('{:7.3f}\n'.format(self.x))
             f.write('{:7.3f}\n'.format(self.y))
 
@@ -33,7 +30,7 @@ class ReadFile(Component):
     y=Float(iotype='out')
 
     def execute(self):
-        with open(self.file_in.abspath(),'r') as f:
+        with open(self.file_in.path,'r') as f:
             self.x=float(f.readline())
             self.y=float(f.readline())
 
@@ -86,6 +83,7 @@ class Top(Assembly):
 class TestCase(unittest.TestCase):
 
     def setUp(self):
+        self.path = os.path.abspath(os.path.dirname(__file__))
         self.startdir = os.getcwd()
         self.tempdir = tempfile.mkdtemp(prefix='test_json_filevar-')
         os.chdir(self.tempdir)
@@ -125,8 +123,7 @@ class TestCase(unittest.TestCase):
                 yield (k, v)
 
     def verify(self, sout, filename):
-        directory = os.path.dirname(__file__)
-        path = os.path.join(directory, filename)
+        path = os.path.join(self.path, filename)
         with open(path, 'r') as inp:
             old_json = json.load(inp)
 
