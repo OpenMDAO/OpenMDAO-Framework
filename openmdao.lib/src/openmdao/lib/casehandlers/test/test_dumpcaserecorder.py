@@ -105,14 +105,14 @@ Constants:
    recording_options.includes: ['*']
    recording_options.save_problem_formulation: True"""
 
-        expected_case = """\
+
+        expected_case ="""\
 Case:
-   uuid: e2904a73-800a-11e4-8009-20c9d0478eff
-   timestamp: 1418174496.710163
+   uuid: 66aaa5dc-9c1c-11e4-8009-20c9d0478eff
+   timestamp: 1421260652.344388
    inputs:
       comp.dummy_data.dummy1: 2.28846229958
    outputs:
-      Objective(comp.x): -10.4937141009
       _pseudo_0.out0: -10.4937141009
       comp.derivative_exec_count: 0
       comp.exec_count: 11
@@ -221,13 +221,11 @@ Constants:
    recording_options.includes: ['*']
    recording_options.save_problem_formulation: True
 Case:
-   uuid: 56bc95a1-800a-11e4-800b-20c9d0478eff
-   timestamp: 1418174262.123138
+   uuid: 4a80208f-9c20-11e4-800b-20c9d0478eff
+   timestamp: 1421262323.082445
    inputs:
       comp1.x: 0.0
    outputs:
-      Objective(comp1.z): 0.0
-      Objective(comp2.z): 1.0
       _pseudo_2.out0: 0.0
       _pseudo_3.out0: 1.0
       comp1.derivative_exec_count: 0
