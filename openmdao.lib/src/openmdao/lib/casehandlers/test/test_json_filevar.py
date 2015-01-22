@@ -83,6 +83,7 @@ class Top(Assembly):
 class TestCase(unittest.TestCase):
 
     def setUp(self):
+        self.path = os.path.abspath(os.path.dirname(__file__))
         self.startdir = os.getcwd()
         self.tempdir = tempfile.mkdtemp(prefix='test_json_filevar-')
         os.chdir(self.tempdir)
@@ -122,7 +123,7 @@ class TestCase(unittest.TestCase):
                 yield (k, v)
 
     def verify(self, sout, filename):
-        path = os.path.join(self.startdir, filename)
+        path = os.path.join(self.path, filename)
         with open(path, 'r') as inp:
             old_json = json.load(inp)
 
