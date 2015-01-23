@@ -2268,7 +2268,7 @@ def partition_subsystems(scope, graph, cgraph):
 
     for nodes in parnodes:
         subg = cgraph.subgraph(nodes)
-        psys = ParallelSystem(scope, graph, subg, str(tuple(sorted(subg.nodes()))))
+        psys = ParallelSystem(scope, graph, subg, tuple(sorted(subg.nodes())))
         collapse_to_system_node(cgraph, psys, tuple(sorted(subg.nodes())))#tuple(psys._nodes))
 
     return cgraph
@@ -2312,7 +2312,7 @@ def partition_subsystems(scope, graph, cgraph):
 #                     to_remove.extend(branch)
 #                     subg = cgraph.subgraph(branch)
 #                     partition_subsystems(scope, graph, subg)
-#                     system=SerialSystem(scope, graph, subg, str(tuple(sorted(subg.nodes()))))
+#                     system=SerialSystem(scope, graph, subg, tuple(sorted(subg.nodes())))
 #                     collapse_to_system_node(cgraph, system, branch)
 # 
 #                     gcopy.remove_nodes_from(branch)
@@ -2320,7 +2320,7 @@ def partition_subsystems(scope, graph, cgraph):
 #             parallel_group = tuple(sorted(parallel_group))
 #             to_remove.extend(parallel_group)
 #             subg = cgraph.subgraph(parallel_group)
-#             system=ParallelSystem(scope, graph, subg, str(tuple(sorted(subg.nodes()))))
+#             system=ParallelSystem(scope, graph, subg, tuple(sorted(subg.nodes())))
 #             collapse_to_system_node(cgraph, system, parallel_group)
 # 
 #         elif len(zero_in_nodes) == 1:  # serial
