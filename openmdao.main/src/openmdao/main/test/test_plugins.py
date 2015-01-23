@@ -407,7 +407,7 @@ class PluginsTestCase(unittest.TestCase):
         expected = os.path.join(os.path.dirname(sys.modules['subprocess'].__file__),
                                 'sphinx_build', 'html', 'index.html')
         self.assertEqual(os.path.realpath(url), os.path.realpath(expected))
-        
+
 
     def test_install(self):
         # Errors.
