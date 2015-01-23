@@ -532,12 +532,6 @@ class Component(Container):
                 self.pop_dir()
 
     @rbac(('owner', 'user'))
-    def _run_begins(self):
-        """ Executed at start of top-level run. """
-        if hasattr(self, 'recorders'):
-            self.configure_recording()
-
-    @rbac(('owner', 'user'))
     def _run_terminated(self):
         """ Executed at end of top-level run. """
         if hasattr(self, 'recorders'):

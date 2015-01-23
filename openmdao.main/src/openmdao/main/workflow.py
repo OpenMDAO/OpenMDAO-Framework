@@ -267,8 +267,8 @@ class Workflow(object):
             # recreate system hierarchy from the top
 
             top = self.scope
-            # while top.parent is not None:
-            #     top = top.parent
+            while top.parent is not None:
+                top = top.parent
 
             top._setup(inputs=inputs, outputs=outputs)
 
@@ -995,8 +995,7 @@ def get_cycle_vars(graph, varmeta):
             for u,v,data in g.edges_iter(data=True):
                 sz = 0
                 for node in data['varconns']:
-                    dct = varmeta[node]
-                    sz += dct.get('size', 0)
+                    sz += varmeta[node].get('size', 0)
                 data['conn_size'] = sz
                 sizes.append((sz, (u,v)))
 
