@@ -846,6 +846,8 @@ class Workflow(object):
         params = set()
         for s in parent_graph.successors(drvname):
             if parent_graph[drvname][s].get('drv_conn') == drvname:
+	        if reduced.in_degree(s):
+		    continue
                 params.add(s)
                 reduced.add_node(s[0], comp='param')
                 reduced.add_edge(s[0], s)
