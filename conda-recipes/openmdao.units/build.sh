@@ -1,1 +1,1 @@
-easy_install -N --allow-hosts=None -- $SRC_DIR/$PKG_NAME
+easy_install -N $PKG_NAME

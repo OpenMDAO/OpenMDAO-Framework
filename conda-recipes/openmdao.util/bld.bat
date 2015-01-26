@@ -1,1 +1,1 @@
-python setup.py install
+easy_install -N %PKG_NAME%

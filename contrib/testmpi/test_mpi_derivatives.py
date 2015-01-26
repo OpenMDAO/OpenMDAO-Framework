@@ -65,8 +65,9 @@ class MPITests_2Proc(MPITestCase):
 
         self.top.run()
 
-        self.assertEqual(self.top.comp.f_xy, 93.)
-        self.assertEqual(self.top._pseudo_0.out0, 93.)
+        if self.comm.rank == 0:
+            self.assertEqual(self.top.comp.f_xy, 93.)
+            self.assertEqual(self.top._pseudo_0.out0, 93.)
 
     def test_calc_gradient_fwd(self):
         self.top.run()
@@ -74,64 +75,59 @@ class MPITests_2Proc(MPITestCase):
         J = self.top.driver.calc_gradient(mode='forward',
                                           return_format='dict')
 
-        J = self.top.driver.workflow._system.get_combined_J(J)
-
-        collective_assert_rel_error(self, 
-                                    J['_pseudo_0.out0']['comp.x'][0][0], 
-                                    5.0, 0.0001)
-        collective_assert_rel_error(self, 
-                                    J['_pseudo_0.out0']['comp.y'][0][0], 
-                                    21.0, 0.0001)
+        #J = self.top.driver.workflow._system.get_combined_J(J)
+        
+        if self.comm.rank == 0:
+            assert_rel_error(self, J['_pseudo_0.out0']['comp.x'][0][0], 
+                                        5.0, 0.0001)
+            assert_rel_error(self, J['_pseudo_0.out0']['comp.y'][0][0], 
+                                        21.0, 0.0001)
 
     def test_calc_gradient_adjoint(self):
         self.top.run()
-
+    
         J = self.top.driver.calc_gradient(mode='adjoint',
                                           return_format='dict')
-
-        J = self.top.driver.workflow._system.get_combined_J(J)
-
-        # with MPIContext():
-        #     self.top._system.dump()
-           
-        collective_assert_rel_error(self, 
-                                    J['_pseudo_0.out0']['comp.x'][0][0], 
+    
+        #J = self.top.driver.workflow._system.get_combined_J(J)
+    
+        if self.comm.rank == 0:
+            assert_rel_error(self, J['_pseudo_0.out0']['comp.x'][0][0], 
                                     5.0, 0.0001)
-        collective_assert_rel_error(self,
-                                    J['_pseudo_0.out0']['comp.y'][0][0], 
+            assert_rel_error(self, J['_pseudo_0.out0']['comp.y'][0][0], 
                                     21.0, 0.0001)
-
+    
     def test_calc_gradient_fd(self):
         self.top.run()
-
+    
         J = self.top.driver.calc_gradient(mode='fd',
                                           return_format='dict')
-
-        collective_assert_rel_error(self, 
-                                    J['_pseudo_0.out0']['comp.x'][0][0], 
-                                    5.0, 0.0001)
-        collective_assert_rel_error(self, 
-                                    J['_pseudo_0.out0']['comp.y'][0][0], 
-                                    21.0, 0.0001)
+    
+        if self.comm.rank == 0:
+            assert_rel_error(self, J['_pseudo_0.out0']['comp.x'][0][0], 
+                                        5.0, 0.0001)
+            assert_rel_error(self, J['_pseudo_0.out0']['comp.y'][0][0], 
+                                        21.0, 0.0001)
         
     def test_calc_gradient_fwd_linGS(self):
         
         self.top.driver.gradient_options.lin_solver = 'linear_gs'
         self.top.driver.gradient_options.maxiter = 1
         self.top.run()
-
-        J = self.top.driver.calc_gradient(inputs=['comp.x'], mode='forward',
+    
+        J = self.top.driver.calc_gradient(inputs=['comp.x','comp.y'], mode='forward',
                                           return_format='dict')
-
+    
         J = self.top.driver.workflow._system.get_combined_J(J)
-
-        collective_assert_rel_error(self, 
-                                    J['_pseudo_0.out0']['comp.x'][0][0], 
-                                    5.0, 0.0001)
-        collective_assert_rel_error(self, 
-                                    J['_pseudo_0.out0']['comp.y'][0][0], 
-                                    21.0, 0.0001)
-
+        
+        # TODO: ask Ken why this ever worked before when 'comp.y' was not
+        #       specified as an input.
+        if self.comm.rank == 0:
+            assert_rel_error(self, J['_pseudo_0.out0']['comp.x'][0][0], 
+                                        5.0, 0.0001)
+            assert_rel_error(self, J['_pseudo_0.out0']['comp.y'][0][0], 
+                                        21.0, 0.0001)
+    
     def test_two_to_one_forward(self):
         
         top = set_as_top(Assembly())
@@ -166,7 +162,8 @@ class MPITests_2Proc(MPITestCase):
                                     15.0, 0.0001)
         collective_assert_rel_error(self,
                                     J['_pseudo_0.out0']['comp2.x'][0][0], 
-                                    -8.0, 0.0001)        
+                                    -8.0, 0.0001) 
+
     def test_two_to_one_adjoint(self):
         
         top = set_as_top(Assembly())
@@ -429,7 +426,7 @@ class MPITests_2Proc(MPITestCase):
 
         exp2 = ['y1 = 1.2*x1']
         deriv2 = ['dy1_dx1 = 1.2']
-
+    
         exp3 = ['y1 = 100.0*x1*x2 + 30*x1 + 0.3*x2']
         deriv3 = ['dy1_dx1 = 100.0*x2 + 30',
                   'dy1_dx2 = 100.0*x1 + 0.3']
@@ -510,6 +507,129 @@ class MPITests_2Proc(MPITestCase):
         J = self.top.driver.calc_gradient(inputs=['comp1.x1'],
                                           outputs=['comp5.y1'],
                                           mode='forward',
+                                          return_format='dict')
+        
+        collective_assert_rel_error(self, 
+                                    J['comp5.y1']['comp1.x1'][0][0], 
+                                    313.0, 0.0001)
+
+    def test_diverge_converge_LinGS_forward(self):
+        
+        self.top = set_as_top(Assembly())
+
+        exp1 = ['y1 = 2.0*x1**2',
+                'y2 = 3.0*x1']
+        deriv1 = ['dy1_dx1 = 4.0*x1',
+                  'dy2_dx1 = 3.0']
+
+        exp2 = ['y1 = 0.5*x1']
+        deriv2 = ['dy1_dx1 = 0.5']
+
+        exp3 = ['y1 = 3.5*x1']
+        deriv3 = ['dy1_dx1 = 3.5']
+
+        exp4 = ['y1 = x1 + 2.0*x2',
+                'y2 = 3.0*x1',
+                'y3 = x1*x2']
+        deriv4 = ['dy1_dx1 = 1.0',
+                  'dy1_dx2 = 2.0',
+                  'dy2_dx1 = 3.0',
+                  'dy2_dx2 = 0.0',
+                  'dy3_dx1 = x2',
+                  'dy3_dx2 = x1']
+
+        exp5 = ['y1 = x1 + 3.0*x2 + 2.0*x3']
+        deriv5 = ['dy1_dx1 = 1.0',
+                  'dy1_dx2 = 3.0',
+                  'dy1_dx3 = 2.0']
+
+        self.top.add('comp1', ExecCompWithDerivatives(exp1, deriv1))
+        self.top.add('comp2', ExecCompWithDerivatives(exp2, deriv2))
+        self.top.add('comp3', ExecCompWithDerivatives(exp3, deriv3))
+        self.top.add('comp4', ExecCompWithDerivatives(exp4, deriv4))
+        self.top.add('comp5', ExecCompWithDerivatives(exp5, deriv5))
+
+        self.top.driver.workflow.add(['comp1', 'comp2', 'comp3', 'comp4', 'comp5'])
+
+        self.top.connect('comp1.y1', 'comp2.x1')
+        self.top.connect('comp1.y2', 'comp3.x1')
+        self.top.connect('comp2.y1', 'comp4.x1')
+        self.top.connect('comp3.y1', 'comp4.x2')
+        self.top.connect('comp4.y1', 'comp5.x1')
+        self.top.connect('comp4.y2', 'comp5.x2')
+        self.top.connect('comp4.y3', 'comp5.x3')
+        
+        self.top.comp1.x1 = 2.0        
+        self.top.driver.gradient_options.lin_solver = 'linear_gs'
+        self.top.driver.gradient_options.maxiter = 1
+        self.top.run()
+
+        from openmdao.util.dotgraph import plot_system_tree
+        plot_system_tree(self.top._system)
+        
+        J = self.top.driver.calc_gradient(inputs=['comp1.x1'],
+                                          outputs=['comp5.y1'],
+                                          mode='forward',
+                                          return_format='dict')
+        
+        collective_assert_rel_error(self, 
+                                    J['comp5.y1']['comp1.x1'][0][0], 
+                                    313.0, 0.0001)
+
+    def test_diverge_converge_LinGS_adjoint(self):
+        
+        self.top = set_as_top(Assembly())
+
+        exp1 = ['y1 = 2.0*x1**2',
+                'y2 = 3.0*x1']
+        deriv1 = ['dy1_dx1 = 4.0*x1',
+                  'dy2_dx1 = 3.0']
+
+        exp2 = ['y1 = 0.5*x1']
+        deriv2 = ['dy1_dx1 = 0.5']
+
+        exp3 = ['y1 = 3.5*x1']
+        deriv3 = ['dy1_dx1 = 3.5']
+
+        exp4 = ['y1 = x1 + 2.0*x2',
+                'y2 = 3.0*x1',
+                'y3 = x1*x2']
+        deriv4 = ['dy1_dx1 = 1.0',
+                  'dy1_dx2 = 2.0',
+                  'dy2_dx1 = 3.0',
+                  'dy2_dx2 = 0.0',
+                  'dy3_dx1 = x2',
+                  'dy3_dx2 = x1']
+
+        exp5 = ['y1 = x1 + 3.0*x2 + 2.0*x3']
+        deriv5 = ['dy1_dx1 = 1.0',
+                  'dy1_dx2 = 3.0',
+                  'dy1_dx3 = 2.0']
+
+        self.top.add('comp1', ExecCompWithDerivatives(exp1, deriv1))
+        self.top.add('comp2', ExecCompWithDerivatives(exp2, deriv2))
+        self.top.add('comp3', ExecCompWithDerivatives(exp3, deriv3))
+        self.top.add('comp4', ExecCompWithDerivatives(exp4, deriv4))
+        self.top.add('comp5', ExecCompWithDerivatives(exp5, deriv5))
+
+        self.top.driver.workflow.add(['comp1', 'comp2', 'comp3', 'comp4', 'comp5'])
+
+        self.top.connect('comp1.y1', 'comp2.x1')
+        self.top.connect('comp1.y2', 'comp3.x1')
+        self.top.connect('comp2.y1', 'comp4.x1')
+        self.top.connect('comp3.y1', 'comp4.x2')
+        self.top.connect('comp4.y1', 'comp5.x1')
+        self.top.connect('comp4.y2', 'comp5.x2')
+        self.top.connect('comp4.y3', 'comp5.x3')
+        
+        self.top.comp1.x1 = 2.0        
+        self.top.driver.gradient_options.lin_solver = 'linear_gs'
+        self.top.driver.gradient_options.maxiter = 1
+        self.top.run()
+
+        J = self.top.driver.calc_gradient(inputs=['comp1.x1'],
+                                          outputs=['comp5.y1'],
+                                          mode='adjoint',
                                           return_format='dict')
         
         collective_assert_rel_error(self, 
@@ -638,7 +758,7 @@ class MPITests_2Proc(MPITestCase):
                                     J['comp5.y1']['comp1.x1'][0][0], 
                                     313.0, 0.0001)
 
-
-if __name__ == '__main__':
-    import unittest
-    unittest.main()
+# FIXME: running this file as main currently doesn't work...
+# if __name__ == '__main__':
+#     import unittest
+#     unittest.main()

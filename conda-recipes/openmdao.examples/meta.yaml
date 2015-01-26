@@ -3,17 +3,6 @@ package:
     version: dev
     
 requirements:
-    build:
-        - python
-        - setuptools
-        - numpy
-        - openmdao.examples.bar3simulation
-        - openmdao.examples.expected_improvement
-        - openmdao.examples.mdao
-        - openmdao.examples.metamodel_tutorial
-        - openmdao.examples.nozzle_geometry_doe
-        - openmdao.examples.simple
-    
     run:
         - python
         - setuptools
