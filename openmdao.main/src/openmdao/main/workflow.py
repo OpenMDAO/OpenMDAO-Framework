@@ -28,27 +28,6 @@ from openmdao.main.depgraph import is_connection
 
 __all__ = ['Workflow']
 
-def _flattened_names(name, val, names=None):
-    """ Return list of names for values in `val`.
-    Note that this expands arrays into an entry for each index!.
-    """
-    if names is None:
-        names = []
-    if isinstance(val, float):
-        names.append(name)
-    elif isinstance(val, ndarray):
-        for i in range(len(val)):
-            value = val[i]
-            _flattened_names('%s[%s]' % (name, i), value, names)
-    elif IVariableTree.providedBy(val):
-        for key in sorted(val.list_vars()):  # Force repeatable order.
-            value = getattr(val, key)
-            _flattened_names('.'.join((name, key)), value, names)
-    else:
-        raise TypeError('Variable %s is of type %s which is not convertable'
-                        ' to a 1D float array.' % (name, type(val)))
-    return names
-
 
 class Workflow(object):
     """
@@ -160,7 +139,7 @@ class Workflow(object):
         """ Run the Components in this Workflow. """
         if not self._system.is_active():
             return
-            
+
         self._stop = False
         self._exec_count += 1
 
@@ -236,90 +215,10 @@ class Workflow(object):
             Override this driver's Gradient_Options with others.
         """
 
-        parent = self.parent
-
-        # if inputs aren't specified, use parameters
-        if inputs is None:
-            if hasattr(parent, 'list_param_group_targets'):
-                inputs = parent.list_param_group_targets()
-            if not inputs:
-                msg = "No inputs given for derivatives."
-                self.scope.raise_exception(msg, RuntimeError)
-
-        # If outputs aren't specified, use the objectives and constraints
-        if outputs is None:
-            outputs = []
-            if hasattr(parent, 'list_objective_targets'):
-                outputs.extend(parent.list_objective_targets())
-            if hasattr(parent, 'list_constraint_targets'):
-                outputs.extend(parent.list_constraint_targets())
-            if not outputs:
-                msg = "No outputs given for derivatives."
-                self.scope.raise_exception(msg, RuntimeError)
-
-        inputs  = [_fix_tups(x) for x in inputs]
-        outputs = [_fix_tups(x) for x in outputs]
-
-        self._calc_gradient_inputs = inputs[:]
-        self._calc_gradient_outputs = outputs[:]
-
-        if force_regen is True:
-            # recreate system hierarchy from the top
-
-            top = self.scope
-            while top.parent is not None:
-                top = top.parent
-
-            top._setup(inputs=inputs, outputs=outputs)
-
-
-        if options is None:
-            options = self.parent.gradient_options
-
-        J = self._system.calc_gradient(inputs, outputs, mode=mode,
+        return self._system.calc_gradient(inputs, outputs, mode=mode,
                                        options=options,
                                        iterbase=self._iterbase(),
                                        return_format=return_format)
-
-        # Finally, we need to untransform the jacobian if any parameters have
-        # scalers.
-        if not hasattr(parent, 'get_parameters'):
-            return J
-
-        params = parent.get_parameters()
-
-        if len(params) == 0:
-            return J
-
-        i = 0
-        for group in inputs:
-
-            if isinstance(group, str):
-                pname = name = group
-            else:
-                pname = tuple(group)
-                name = group[0]
-
-            # Note: 'dict' is the only valid return_format for MPI runs.
-            if return_format == 'dict':
-                if pname in params:
-                    scaler = params[pname].scaler
-                    if scaler != 1.0:
-                        for okey in J.keys():
-                            J[okey][name] = J[okey][name]*scaler
-
-            else:
-                width = len(self._system.vec['u'][name])
-
-                if pname in params:
-                    scaler = params[pname].scaler
-                    if scaler != 1.0:
-                        J[:, i:i+width] = J[:, i:i+width]*scaler
-
-                i += width
-
-        #print J
-        return J
 
     def calc_newton_direction(self):
         """ Solves for the new state in Newton's method and leaves it in the
@@ -327,183 +226,6 @@ class Workflow(object):
 
         self._system.calc_newton_direction(options=self.parent.gradient_options,
                                           iterbase=self._iterbase())
-
-    def check_gradient(self, inputs=None, outputs=None, stream=sys.stdout, mode='auto'):
-        """Compare the OpenMDAO-calculated gradient with one calculated
-        by straight finite-difference. This provides the user with a way
-        to validate his derivative functions (apply_deriv and provideJ.)
-
-        inputs: (optional) iter of str or None
-            Names of input variables. The calculated gradient will be
-            the matrix of values of the output variables with respect
-            to these input variables. If no value is provided for inputs,
-            they will be determined based on the parameters of
-            the Driver corresponding to this workflow.
-
-        outputs: (optional) iter of str or None
-            Names of output variables. The calculated gradient will be
-            the matrix of values of these output variables with respect
-            to the input variables. If no value is provided for outputs,
-            they will be determined based on the objectives and constraints
-            of the Driver corresponding to this workflow.
-
-        stream: (optional) file-like object or str
-            Where to write to, default stdout. If a string is supplied,
-            that is used as a filename. If None, no output is written.
-
-        mode: (optional) str
-            Set to 'forward' for forward mode, 'adjoint' for adjoint mode,
-            or 'auto' to let OpenMDAO determine the correct mode.
-            Defaults to 'auto'.
-
-        Returns the finite difference gradient, the OpenMDAO-calculated
-        gradient, and a list of suspect inputs/outputs.
-        """
-        parent = self.parent
-
-        # tuples cause problems
-        if inputs:
-            inputs = list(inputs)
-        if outputs:
-            outputs = list(outputs)
-
-        if isinstance(stream, basestring):
-            stream = open(stream, 'w')
-            close_stream = True
-        else:
-            close_stream = False
-            if stream is None:
-                stream = StringIO()
-
-        J = self.calc_gradient(inputs, outputs, mode=mode, force_regen=True)
-        Jbase = self.calc_gradient(inputs, outputs, mode='fd',
-                                   force_regen=True)
-
-        print >> stream, 24*'-'
-        print >> stream, 'Calculated Gradient'
-        print >> stream, 24*'-'
-        print >> stream, J
-        print >> stream, 24*'-'
-        print >> stream, 'Finite Difference Comparison'
-        print >> stream, 24*'-'
-        print >> stream, Jbase
-
-        # This code duplication is needed so that we print readable names for
-        # the constraints and objectives.
-
-        if inputs is None:
-            if hasattr(parent, 'list_param_group_targets'):
-                inputs = parent.list_param_group_targets()
-                input_refs = []
-                for item in inputs:
-                    if len(item) < 2:
-                        input_refs.append(item[0])
-                    else:
-                        input_refs.append(item)
-            # Should be caught in calc_gradient()
-            else:  # pragma no cover
-                msg = "No inputs given for derivatives."
-                self.scope.raise_exception(msg, RuntimeError)
-        else:
-            input_refs = inputs
-
-        if outputs is None:
-            outputs = []
-            output_refs = []
-            if hasattr(parent, 'get_objectives'):
-                obj = ["%s.out0" % item.pcomp_name for item in
-                       parent.get_objectives().values()]
-                outputs.extend(obj)
-                output_refs.extend(parent.get_objectives().keys())
-            if hasattr(parent, 'get_constraints'):
-                con = ["%s.out0" % item.pcomp_name for item in
-                       parent.get_constraints().values()]
-                outputs.extend(con)
-                output_refs.extend(parent.get_constraints().keys())
-
-            if len(outputs) == 0:  # pragma no cover
-                msg = "No outputs given for derivatives."
-                self.scope.raise_exception(msg, RuntimeError)
-        else:
-            output_refs = outputs
-
-        out_width = 0
-
-        for output, oref in zip(outputs, output_refs):
-            out_val = self.scope.get(output)
-            out_names = _flattened_names(oref, out_val)
-            out_width = max(out_width, max([len(out) for out in out_names]))
-
-        inp_width = 0
-        for input_tup, iref in zip(inputs, input_refs):
-            if isinstance(input_tup, str):
-                input_tup = [input_tup]
-            inp_val = self.scope.get(input_tup[0])
-            inp_names = _flattened_names(str(iref), inp_val)
-            inp_width = max(inp_width, max([len(inp) for inp in inp_names]))
-
-        label_width = out_width + inp_width + 4
-
-        print >> stream
-        print >> stream, label_width*' ', \
-              '%-18s %-18s %-18s' % ('Calculated', 'FiniteDiff', 'RelError')
-        print >> stream, (label_width+(3*18)+3)*'-'
-
-        suspect_limit = 1e-5
-        error_n = error_sum = 0
-        error_max = error_loc = None
-        suspects = []
-        i = -1
-
-        io_pairs = []
-
-        for output, oref in zip(outputs, output_refs):
-            out_val = self.scope.get(output)
-            for out_name in _flattened_names(oref, out_val):
-                i += 1
-                j = -1
-                for input_tup, iref in zip(inputs, input_refs):
-                    if isinstance(input_tup, basestring):
-                        input_tup = (input_tup,)
-
-                    inp_val = self.scope.get(input_tup[0])
-                    for inp_name in _flattened_names(iref, inp_val):
-                        j += 1
-                        calc = J[i, j]
-                        finite = Jbase[i, j]
-                        if finite and calc:
-                            error = (calc - finite) / finite
-                        else:
-                            error = calc - finite
-                        error_n += 1
-                        error_sum += abs(error)
-                        if error_max is None or abs(error) > abs(error_max):
-                            error_max = error
-                            error_loc = (out_name, inp_name)
-                        if abs(error) > suspect_limit or isnan(error):
-                            suspects.append((out_name, inp_name))
-                        print >> stream, '%*s / %*s: %-18s %-18s %-18s' \
-                              % (out_width, out_name, inp_width, inp_name,
-                                 calc, finite, error)
-                        io_pairs.append("%*s / %*s"
-                                        % (out_width, out_name,
-                                           inp_width, inp_name))
-        print >> stream
-        if error_n:
-            print >> stream, 'Average RelError:', error_sum / error_n
-            print >> stream, 'Max RelError:', error_max, 'for %s / %s' % error_loc
-        if suspects:
-            print >> stream, 'Suspect gradients (RelError > %s):' % suspect_limit
-            for out_name, inp_name in suspects:
-                print >> stream, '%*s / %*s' \
-                      % (out_width, out_name, inp_width, inp_name)
-        print >> stream
-
-        if close_stream:
-            stream.close()
-
-        # return arrays and suspects to make it easier to check from a test
-        return Jbase.flatten(), J.flatten(), io_pairs, suspects
 
     def configure_recording(self, recording_options=None):
         """Called at start of top-level run to configure case recording.
@@ -592,15 +314,15 @@ class Workflow(object):
         #driver.get_reduced_graph()
         #self._rec_all_outputs = []
         self._rec_outputs = []
-        for comp in driver.workflow: 
+        for comp in self:
             successors = driver._reduced_graph.successors(comp.name)
             for output_name, aliases in successors:
 
-                # From Bret: it does make sense to skip subdrivers like you said, except for the 
-                #      case where a driver has actual outputs of its own.  So you may have to keep 
+                # From Bret: it does make sense to skip subdrivers like you said, except for the
+                #      case where a driver has actual outputs of its own.  So you may have to keep
                 #  subdriver successors if the edge between the subdriver and the successor
                 #  is an actual data connection.
-                # look at the edge metadata to see if there's maybe a 'conn' in there for real connections. 
+                # look at the edge metadata to see if there's maybe a 'conn' in there for real connections.
                 if has_interface(comp, IDriver):
                     if not is_connection(driver._reduced_graph, comp.name, output_name):
                         continue
@@ -615,18 +337,18 @@ class Workflow(object):
                     outputs.append(output_name)
                     self._rec_outputs.append(output_name)
                     #self._rec_all_outputs.append(output_name)
-                    
+
         #####
-        # also need get any outputs of comps that are not connected vars 
+        # also need get any outputs of comps that are not connected vars
         #   and therefore not in the graph
-        # could use 
+        # could use
         #   scope._depgraph
         #      there's 'iotype' metadata in the var nodes
-        #    
+        #
         #   also:
         #         scope._depgraph.list_outputs('comp2')
-        
-        for comp in driver.workflow: 
+
+        for comp in driver.workflow:
             for output_name in scope._depgraph.list_outputs(comp.name):
                 if has_interface(comp, IDriver): # Only record outputs from drivers if they are framework variables
                     metadata = scope.get_metadata(output_name)
@@ -823,7 +545,7 @@ class Workflow(object):
         self._reduced_graph = None
         for comp in self:
             comp.pre_setup()
-    
+
     def setup_systems(self, system_type):
         """Get the subsystem for this workflow. Each
         subsystem contains a subgraph of this workflow's component
@@ -895,7 +617,7 @@ class Workflow(object):
                 for c in gtup:
                     opaque_map[c] = gtup
 
-            # get rid of any back edges for opaque boundary nodes that 
+            # get rid of any back edges for opaque boundary nodes that
             # originate inside of the opaque system
             to_remove = []
             for node in systems:
@@ -985,7 +707,7 @@ def get_cycle_vars(graph, varmeta):
     # examine the graph to see if we have any cycles that we need to
     # deal with
     cycle_vars = []
-        
+
     # make a copy of the graph since we don't want to modify it
     g = graph.subgraph(graph.nodes_iter())
 
@@ -1016,10 +738,3 @@ def get_cycle_vars(graph, varmeta):
                 break
 
     return cycle_vars
-
-
-def _fix_tups(x):
-    """Return x[0] if x is a single element tuple, else return x."""
-    if isinstance(x, tuple) and len(x) == 1:
-        return x[0]
-    return x

@@ -213,7 +213,7 @@ class DGraphBase(nx.DiGraph):
     def remove_edges_from(self, ebunch):
         super(DGraphBase, self).remove_edges_from(ebunch)
         self.config_changed()
-        
+
     def in_degree(self, name):
         """The nx.DiGraph version returns an empty dict when it should
         return 0, so fix it here...
@@ -1305,7 +1305,7 @@ class CollapsedGraph(DGraphBase):
 
             # locate any bidirectional edges to/from collapsed driver.
             # If the driver isn't the only input to a var, remove the
-            # driver input to the var. 
+            # driver input to the var.
             dname = child_drv.name
             succ = self.successors(dname)
             for p in self.predecessors(dname):
@@ -1418,10 +1418,10 @@ class CollapsedGraph(DGraphBase):
                         else:
                             newname = '@'+node[0]
                         self.add_node(newname, comp='invar')
-                        
+
                     if not self.has_edge(node, newname) and (node, newname) not in to_add:
                         to_add.add((newname, node))
-                        
+
                 if self.out_degree(node) == 0:
                     if base in self and 'comp' in self.node[base]:
                         newname = base
@@ -1431,7 +1431,7 @@ class CollapsedGraph(DGraphBase):
                         else:
                             newname = '@'+node[0]
                         self.add_node(newname, comp='outvar')
-                        
+
                     if not self.has_edge(newname, node) and (newname, node) not in to_add:
                         to_add.add((node, newname))
 
@@ -1444,7 +1444,7 @@ class CollapsedGraph(DGraphBase):
     #             comp = node[0].split('[', 1)[0].split('.', 1)[0]
     #             if comp in self and not self.has_edge(comp, node):
     #                 self.add_edge(comp, node)
-        
+
     def config_changed(self):
         pass
 
@@ -1684,7 +1684,7 @@ def collapse_nodes(g, collapsed_name, nodes, remove=True, add=False):
         else:
             newnode = tuple(sorted(nodes))
         g.add_node(newnode, comp=True)
-        
+
     in_edges, out_edges = \
                   get_edge_boundary(g, nodes)
 

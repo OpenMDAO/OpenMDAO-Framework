@@ -1,7 +1,7 @@
 {
-"__length_1": 17210
+"__length_1": 17007
 , "simulation_info": {
-    "OpenMDAO_Version": "0.10.3.2", 
+    "OpenMDAO_Version": "0.12.0", 
     "comp_graph": "{\"directed\": true, \"graph\": [], \"nodes\": [{\"comp\": true, \"id\": \"comp2\"}, {\"comp\": true, \"pseudo\": \"objective\", \"id\": \"_pseudo_1\"}, {\"comp\": true, \"id\": \"comp1\"}, {\"comp\": true, \"driver\": true, \"id\": \"driver\"}, {\"comp\": true, \"pseudo\": \"objective\", \"id\": \"_pseudo_0\"}], \"links\": [{\"source\": 0, \"target\": 1}, {\"source\": 2, \"target\": 0}, {\"source\": 2, \"target\": 4}], \"multigraph\": false}", 
     "constants": {
         "comp1.data": null, 
@@ -43,7 +43,6 @@
         "driver.gradient_options.atol": 1e-09, 
         "driver.gradient_options.derivative_direction": "auto", 
         "driver.gradient_options.directional_fd": false, 
-        "driver.gradient_options.fd_blocks": [], 
         "driver.gradient_options.fd_form": "forward", 
         "driver.gradient_options.fd_step": 1e-06, 
         "driver.gradient_options.fd_step_type": "absolute", 
@@ -75,7 +74,7 @@
     }, 
     "graph": "{\"directed\": true, \"graph\": [[\"title\", \"unknown\"]], \"nodes\": [{\"short\": \"ignore_egg_requirements\", \"color_idx\": 3, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"full\": \"driver.ignore_egg_requirements\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.ignore_egg_requirements\"}, {\"short\": \"in0\", \"color_idx\": 1, \"title\": \"{}\", \"full\": \"_pseudo_1.in0\", \"var\": true, \"iotype\": \"in\", \"id\": \"_pseudo_1.in0\"}, {\"short\": \"data\", \"color_idx\": 2, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"full\": \"comp1.data\", \"var\": true, \"iotype\": \"in\", \"id\": \"comp1.data\"}, {\"short\": \"comp2\", \"color_idx\": 0, \"title\": \"{}\", \"comp\": true, \"full\": \"comp2\", \"id\": \"comp2\"}, {\"short\": \"_pseudo_1\", \"color_idx\": 1, \"title\": \"{}\", \"comp\": true, \"pseudo\": \"objective\", \"full\": \"_pseudo_1\", \"id\": \"_pseudo_1\"}, {\"short\": \"comp1\", \"color_idx\": 2, \"title\": \"{}\", \"comp\": true, \"full\": \"comp1\", \"id\": \"comp1\"}, {\"short\": \"in0\", \"color_idx\": 4, \"title\": \"{}\", \"full\": \"_pseudo_0.in0\", \"var\": true, \"iotype\": \"in\", \"id\": \"_pseudo_0.in0\"}, {\"short\": \"reload_model\", \"color_idx\": 3, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"full\": \"driver.reload_model\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.reload_model\"}, {\"short\": \"extra_resources\", \"color_idx\": 3, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"full\": \"driver.extra_resources\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.extra_resources\"}, {\"short\": \"case_inputs\", \"color_idx\": 3, \"deriv_ignore\": true, \"title\": \"{'deriv_ignore': True, 'differentiable': False}\", \"differentiable\": false, \"full\": \"driver.case_inputs\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.case_inputs\"}, {\"short\": \"z\", \"color_idx\": 2, \"title\": \"{}\", \"full\": \"comp1.z\", \"var\": true, \"iotype\": \"out\", \"id\": \"comp1.z\"}, {\"short\": \"y\", \"color_idx\": 2, \"title\": \"{}\", \"full\": \"comp1.y\", \"var\": true, \"iotype\": \"in\", \"id\": \"comp1.y\"}, {\"short\": \"x\", \"color_idx\": 2, \"title\": \"{}\", \"full\": \"comp1.x\", \"var\": true, \"iotype\": \"in\", \"id\": \"comp1.x\"}, {\"short\": \"driver\", \"color_idx\": 3, \"title\": \"{'driver': True}\", \"comp\": true, \"driver\": true, \"full\": \"driver\", \"id\": \"driver\"}, {\"short\": \"x\", \"color_idx\": 0, \"title\": \"{}\", \"full\": \"comp2.x\", \"var\": true, \"iotype\": \"in\", \"id\": \"comp2.x\"}, {\"short\": \"z\", \"color_idx\": 0, \"title\": \"{}\", \"full\": \"comp2.z\", \"var\": true, \"iotype\": \"out\", \"id\": \"comp2.z\"}, {\"short\": \"sequential\", \"color_idx\": 3, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"full\": \"driver.sequential\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.sequential\"}, {\"short\": \"out0\", \"color_idx\": 1, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"full\": \"_pseudo_1.out0\", \"var\": true, \"iotype\": \"out\", \"id\": \"_pseudo_1.out0\"}, {\"short\": \"error_policy\", \"color_idx\": 3, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"full\": \"driver.error_policy\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.error_policy\"}, {\"short\": \"_pseudo_0\", \"color_idx\": 4, \"title\": \"{}\", \"comp\": true, \"pseudo\": \"objective\", \"full\": \"_pseudo_0\", \"id\": \"_pseudo_0\"}, {\"short\": \"out0\", \"color_idx\": 4, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"full\": \"_pseudo_0.out0\", \"var\": true, \"iotype\": \"out\", \"id\": \"_pseudo_0.out0\"}, {\"short\": \"case_outputs\", \"color_idx\": 3, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"full\": \"driver.case_outputs\", \"var\": true, \"iotype\": \"out\", \"id\": \"driver.case_outputs\"}, {\"short\": \"max_retries\", \"color_idx\": 3, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"full\": \"driver.max_retries\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.max_retries\"}], \"links\": [{\"source\": 0, \"target\": 13}, {\"source\": 1, \"target\": 4}, {\"drv_conn\": \"driver\", \"target\": 13, \"source\": 17}, {\"source\": 2, \"target\": 5}, {\"source\": 3, \"target\": 15}, {\"source\": 5, \"target\": 10}, {\"source\": 6, \"target\": 19}, {\"source\": 7, \"target\": 13}, {\"source\": 8, \"target\": 13}, {\"source\": 18, \"target\": 13}, {\"source\": 9, \"target\": 13}, {\"source\": 10, \"target\": 6, \"conn\": true}, {\"source\": 10, \"target\": 14, \"conn\": true}, {\"source\": 11, \"target\": 5}, {\"source\": 12, \"target\": 5}, {\"drv_conn\": \"driver\", \"target\": 13, \"source\": 20}, {\"source\": 14, \"target\": 3}, {\"source\": 13, \"target\": 21}, {\"drv_conn\": \"driver\", \"target\": 11, \"source\": 13}, {\"drv_conn\": \"driver\", \"target\": 12, \"source\": 13}, {\"source\": 15, \"target\": 1, \"conn\": true}, {\"source\": 4, \"target\": 17}, {\"source\": 19, \"target\": 20}, {\"source\": 16, \"target\": 13}, {\"source\": 22, \"target\": 13}], \"multigraph\": false}", 
     "name": "", 
-    "uuid": "d2940a74-a23c-11e4-ad32-3c970e57723f", 
+    "uuid": "2a2f8600-a599-11e4-b2d6-3c970e57723f", 
     "variable_metadata": {
         "comp1.data": {
             "copy": "deep", 
@@ -267,11 +266,6 @@
             "iotype": "in", 
             "vartypename": "Bool"
         }, 
-        "driver.gradient_options.fd_blocks": {
-            "copy": "deep", 
-            "iotype": "in", 
-            "vartypename": "List"
-        }, 
         "driver.gradient_options.fd_form": {
             "assumed_default": false, 
             "iotype": "in", 
@@ -390,7 +384,7 @@
 }
 , "__length_2": 572
 , "driver_info_1": {
-    "_id": 139760223212944, 
+    "_id": 140671742457424, 
     "name": "driver", 
     "parameters": [
         "comp1.y", 

@@ -97,7 +97,6 @@ Constants:
    driver.gradient_options.atol: 1e-09
    driver.gradient_options.derivative_direction: auto
    driver.gradient_options.directional_fd: False
-   driver.gradient_options.fd_blocks: []
    driver.gradient_options.fd_form: forward
    driver.gradient_options.fd_step: 1e-06
    driver.gradient_options.fd_step_type: absolute
@@ -134,7 +133,6 @@ Constants:
    nested.doublenest.driver.gradient_options.atol: 1e-09
    nested.doublenest.driver.gradient_options.derivative_direction: auto
    nested.doublenest.driver.gradient_options.directional_fd: False
-   nested.doublenest.driver.gradient_options.fd_blocks: []
    nested.doublenest.driver.gradient_options.fd_form: forward
    nested.doublenest.driver.gradient_options.fd_step: 1e-06
    nested.doublenest.driver.gradient_options.fd_step_type: absolute
@@ -152,7 +150,6 @@ Constants:
    nested.driver.gradient_options.atol: 1e-09
    nested.driver.gradient_options.derivative_direction: auto
    nested.driver.gradient_options.directional_fd: False
-   nested.driver.gradient_options.fd_blocks: []
    nested.driver.gradient_options.fd_form: forward
    nested.driver.gradient_options.fd_step: 1e-06
    nested.driver.gradient_options.fd_step_type: absolute
@@ -323,7 +320,6 @@ Constants:
    driver.gradient_options.atol: 1e-09
    driver.gradient_options.derivative_direction: auto
    driver.gradient_options.directional_fd: False
-   driver.gradient_options.fd_blocks: []
    driver.gradient_options.fd_form: forward
    driver.gradient_options.fd_step: 1e-06
    driver.gradient_options.fd_step_type: absolute
@@ -387,7 +383,6 @@ Constants:
    driver.gradient_options.atol: 1e-09
    driver.gradient_options.derivative_direction: auto
    driver.gradient_options.directional_fd: False
-   driver.gradient_options.fd_blocks: []
    driver.gradient_options.fd_form: forward
    driver.gradient_options.fd_step: 1e-06
    driver.gradient_options.fd_step_type: absolute

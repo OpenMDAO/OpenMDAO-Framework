@@ -997,7 +997,7 @@ class Assembly(Component):
         # fill in missing inputs or outputs using the object specified by 'name'
         if not inputs:
             if has_interface(obj, IDriver):
-                pass  # workflow.check_gradient can pull inputs from driver
+                pass  # driver.check_gradient can pull inputs from driver
             elif has_interface(obj, IAssembly):
                 inputs = ['.'.join((obj.name, inp))
                           for inp in obj.list_inputs()
@@ -1012,7 +1012,7 @@ class Assembly(Component):
                                      " gradient.")
         if not outputs:
             if has_interface(obj, IDriver):
-                pass  # workflow.check_gradient can pull outputs from driver
+                pass  # driver.check_gradient can pull outputs from driver
             elif has_interface(obj, IAssembly):
                 outputs = ['.'.join((obj.name, out))
                            for out in obj.list_outputs()
@@ -1039,10 +1039,10 @@ class Assembly(Component):
         driver.gradient_options.fd_step_type = fd_step_type
 
         try:
-            result = driver.workflow.check_gradient(inputs=inputs,
-                                                    outputs=outputs,
-                                                    stream=stream,
-                                                    mode=mode)
+            result = driver.check_gradient(inputs=inputs,
+                                           outputs=outputs,
+                                           stream=stream,
+                                           mode=mode)
         finally:
             driver.gradient_options.fd_form = base_fd_form
             driver.gradient_options.fd_step = base_fd_step

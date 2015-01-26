@@ -98,7 +98,7 @@ class System(object):
         self.rhs_buf = None
         self._parent_system = None
         self.complex_step = False
-        
+
         #print "%s: nodes: %s" % (self.name, nodes)
         #print "%s: edges: %s" % (self.name, graph.edges())
         #print "%s: in_nodes: %s" % (self.name, self._in_nodes)
@@ -189,7 +189,7 @@ class System(object):
         # Gather a list of local tuples for J.
         for output, dct in J.items():
             for param, value in dct.items():
-                
+
                 # Params are already only on this process. We need to add
                 # only outputs of components that are on this process.
                 sys = self.find_system(output.partition('.')[0])
@@ -576,7 +576,7 @@ class System(object):
             #print self.name, self
             #print 'srcvec', srcvec.array, srcvec.keys()
             #print 'destvec', destvec.array, destvec.keys()
-            
+
             scatter(self, srcvec, destvec)
             #print self.name, scatter is self.scatter_full, subsystem
 
@@ -1107,14 +1107,14 @@ class SimpleSystem(System):
         in the RHS vector."""
 
         self.sol_vec.array[:] = self.rhs_vec.array[:]
-        
+
     def find_system(self, name):
         """ Return system with given name. """
         if self.name == name:
             return self
-        
+
         return None
-    
+
 
 class VarSystem(SimpleSystem):
     """Base class for a System that contains a single variable."""
@@ -1149,7 +1149,7 @@ class ParamSystem(VarSystem):
             del self.flat_vars[to_remove[0]]
         else:
             self._dup_in_subdriver = False
-            
+
         #print "PARAM SYS",str(self.name),self.vector_vars.keys()
 
     def applyJ(self, variables):
@@ -1329,7 +1329,7 @@ class AssemblySystem(SimpleSystem):
 
     def find_system(self, name):
         """ Return system with given name. """
-        
+
         if self.name == name:
             return self
         return self._comp._system.find_system(name)
@@ -1346,7 +1346,7 @@ class CompoundSystem(System):
         self._local_subsystems = []  # subsystems in the same process
         self._ordering = ()
         self._grouped_nodes = subg.nodes()
-        
+
     def local_subsystems(self):
         if MPI:
             return self._local_subsystems
@@ -1402,7 +1402,7 @@ class CompoundSystem(System):
 
                 src_idxs = numpy.concatenate(sidxs)
                 dest_idxs = numpy.concatenate(didxs)
-                        
+
             return (src_idxs, dest_idxs, None)
 
         elif node in self.flat_vars:  # duped subvar
@@ -1527,15 +1527,15 @@ class CompoundSystem(System):
 
     def find_system(self, name):
         """ Return system with given name. """
-        
+
         if self.name == name:
             return self
-        
+
         for sub in self.subsystems():
             found = sub.find_system(name)
             if found:
                 return found
-        
+
         return None
 
 def _get_counts(names):
@@ -1770,7 +1770,7 @@ class ParallelSystem(CompoundSystem):
         for sub in self.local_subsystems():
             if isinstance(sub, ParamSystem):
                 sub.setup_variables(variables, resid_state_map)
-    
+
         if self.local_subsystems():
             sub = self.local_subsystems()[0]
             names = sub.variables.keys()
@@ -1914,7 +1914,7 @@ class OpaqueSystem(SimpleSystem):
     def run(self, iterbase, case_label='', case_uuid=None):
         if not self.is_active() or not self._inner_system.is_active():
             return
-            
+
         #print "    runsys", str(self.name)
         self_u = self.vec['u']
         self_du = self.vec['du']
@@ -1979,7 +1979,7 @@ class OpaqueSystem(SimpleSystem):
 
     def find_system(self, name):
         """ Return system with given name. """
-        
+
         if self.name == name:
             return self
         return self._inner_system.find_system(name)
@@ -2022,7 +2022,7 @@ class DriverSystem(SimpleSystem):
                            if 'comp' not in data and not varmeta[n].get('noflat')])
         self._relevant_vars = vnames
 
-        # if a state is 'stolen' by the system that owns 
+        # if a state is 'stolen' by the system that owns
         # the corresponding residual, we can get a lag when we have parallel
         # systems depending on execution order (of the parent SerialSystem), so
         # to ensure the U vector is up-to-date, we force a full scatter
@@ -2037,15 +2037,15 @@ class DriverSystem(SimpleSystem):
 
     def find_system(self, name):
         """ Return system with given name. """
-        
+
         if self.name == name:
             return self
-        
+
         for sub in self.all_subsystems():
             found = sub.find_system(name)
             if found:
                 return found
-        
+
         return None
 
 
@@ -2254,7 +2254,7 @@ def partition_subsystems(scope, graph, cgraph):
 
             zero_in_nodes = [z for z in zero_in_nodes
                                 if z in gcopy]
-                                
+
             if len(zero_in_nodes) <= 1:
                 gcopy.remove_nodes_from(zero_in_nodes)
                 continue
@@ -2277,25 +2277,25 @@ def partition_subsystems(scope, graph, cgraph):
 #     """Return a nested system graph with metadata for parallel
 #     and serial subworkflows.  Graph must acyclic. All subdriver
 #     iterations sets must have already been collapsed.
-# 
+#
 #     This algorithm frequently results in nested parallel systems.
-# 
+#
 #     """
 #     if len(cgraph) < 2:
 #         return cgraph
-# 
+#
 #     gcopy = cgraph.subgraph(cgraph.nodes_iter())
-# 
+#
 #     to_remove = []
-# 
+#
 #     while len(gcopy) > 1:
 #         # find all nodes with in degree 0. If we find
 #         # more than one, we can execute them in parallel
 #         zero_in_nodes = [n for n in gcopy.nodes_iter()
 #                             if not gcopy.in_degree(n)]
-#                             
+#
 #         if len(zero_in_nodes) > 1: # start of parallel chunk
-## 
+##
 #             parallel_group = []
 #             for node in zero_in_nodes:
 #                 brnodes = sorted(get_branch(gcopy, node))
@@ -2303,7 +2303,7 @@ def partition_subsystems(scope, graph, cgraph):
 #                     parallel_group.append(tuple(brnodes))
 #                 else:
 #                     parallel_group.append(brnodes[0])
-# 
+#
 #             for branch in parallel_group:
 #                 if 'system' in gcopy.node.get(branch,()):
 #                     gcopy.remove_node(branch)
@@ -2314,23 +2314,23 @@ def partition_subsystems(scope, graph, cgraph):
 #                     partition_subsystems(scope, graph, subg)
 #                     system=SerialSystem(scope, graph, subg, tuple(sorted(subg.nodes())))
 #                     collapse_to_system_node(cgraph, system, branch)
-# 
+#
 #                     gcopy.remove_nodes_from(branch)
-# 
+#
 #             parallel_group = tuple(sorted(parallel_group))
 #             to_remove.extend(parallel_group)
 #             subg = cgraph.subgraph(parallel_group)
 #             system=ParallelSystem(scope, graph, subg, tuple(sorted(subg.nodes())))
 #             collapse_to_system_node(cgraph, system, parallel_group)
-# 
+#
 #         elif len(zero_in_nodes) == 1:  # serial
 #             gcopy.remove_nodes_from(zero_in_nodes)
 #         else: # circular - no further splitting
 #             break
-# 
+#
 #     # Now remove all of the old nodes
 #     cgraph.remove_nodes_from(to_remove)
-# 
+#
 #     return cgraph
 
 def collapse_to_system_node(G, system, name):

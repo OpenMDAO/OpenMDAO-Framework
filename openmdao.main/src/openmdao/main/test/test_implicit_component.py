@@ -944,7 +944,7 @@ class Testcase_implicit(unittest.TestCase):
         model.comp.eval_only = True
         model.run()
 
-        J = model.driver.workflow.calc_gradient()
+        J = model.driver.calc_gradient()
 
     def test_list_states(self):
         comp = MyComp_Deriv()

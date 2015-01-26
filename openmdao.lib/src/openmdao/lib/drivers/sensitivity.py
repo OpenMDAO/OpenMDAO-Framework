@@ -55,7 +55,7 @@ class SensitivityDriver(Driver):
     def execute(self):
         """Calculate the gradient of the workflow."""
 
-        
+
         # Inital run to make sure the workflow executes
         self.run_iteration()
 
@@ -75,22 +75,22 @@ class SensitivityDriver(Driver):
         self.x = self.eval_parameters(self.parent)
 
         # Finally, calculate gradient
-        J = self.workflow.calc_gradient(inputs, obj + con)
+        J = self._calc_gradient(inputs, obj + con)
 
         self.dF = J[:nobj, :]
         self.dG = J[nobj:nobj+ncon, :]
 
     def pre_setup(self):
         """ Size up our outputs."""
-        super(SensitivityDriver, self).pre_setup()  
+        super(SensitivityDriver, self).pre_setup()
         self._check()
-        
+
         n_param = len(self.eval_parameters())
-        
+
         n_obj = 0
         for obj in self.list_objective_targets():
             n_obj += len(self.parent.get_flattened_value(obj))
-            
+
         n_con = 0
         for con in self.list_constraint_targets():
             n_con += len(self.parent.get_flattened_value(con))
@@ -98,11 +98,11 @@ class SensitivityDriver(Driver):
         self.x = zeros((n_param))
         self.F = zeros((n_obj))
         self.G = zeros((n_con))
-        
+
         self.dF = zeros((n_obj, n_param))
         self.dG = zeros((n_con, n_param))
 
-        
+
     def _check(self):
         """Make sure we aren't missing inputs or outputs."""
 

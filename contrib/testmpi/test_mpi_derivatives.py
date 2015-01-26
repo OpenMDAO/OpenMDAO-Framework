@@ -153,7 +153,7 @@ class MPITests_2Proc(MPITestCase):
         top.driver.add_constraint('comp3.y < 1000')
         top.run()
 
-        J = top.driver.workflow.calc_gradient(mode='forward',
+        J = top.driver.calc_gradient(mode='forward',
                                               return_format='dict')
 
         J = top.driver.workflow._system.get_combined_J(J)
@@ -189,7 +189,7 @@ class MPITests_2Proc(MPITestCase):
         top.driver.add_constraint('comp3.y < 1000')
         top.run()
 
-        J = top.driver.workflow.calc_gradient(mode='adjoint',
+        J = top.driver.calc_gradient(mode='adjoint',
                                               return_format='dict')
 
         J = top.driver.workflow._system.get_combined_J(J)
@@ -225,7 +225,7 @@ class MPITests_2Proc(MPITestCase):
         top.driver.add_constraint('comp3.y < 1000')
         top.run()
 
-        J = top.driver.workflow.calc_gradient(mode='fd',
+        J = top.driver.calc_gradient(mode='fd',
                                               return_format='dict')
 
         J = top.driver.workflow._system.get_combined_J(J)
@@ -261,7 +261,7 @@ class MPITests_2Proc(MPITestCase):
         top.driver.add_constraint('comp3.y < 1000')
         top.run()
 
-        J = top.driver.workflow.calc_gradient(mode='forward',
+        J = top.driver.calc_gradient(mode='forward',
                                               return_format='dict')
 
         J = top.driver.workflow._system.get_combined_J(J)
@@ -295,7 +295,7 @@ class MPITests_2Proc(MPITestCase):
         top.driver.add_constraint('comp3.y < 1000')
         top.run()
 
-        J = top.driver.workflow.calc_gradient(mode='adjoint',
+        J = top.driver.calc_gradient(mode='adjoint',
                                               return_format='dict')
 
         J = top.driver.workflow._system.get_combined_J(J)
@@ -332,7 +332,7 @@ class MPITests_2Proc(MPITestCase):
         top.driver.add_constraint('comp3.y < 1000')
         top.run()
         
-        J = top.driver.workflow.calc_gradient(mode='forward',
+        J = top.driver.calc_gradient(mode='forward',
                                               return_format='dict')
         J = top.driver.workflow._system.get_combined_J(J)
         
@@ -368,7 +368,7 @@ class MPITests_2Proc(MPITestCase):
         top.driver.add_constraint('comp3.y < 1000')
         top.run()
         
-        J = top.driver.workflow.calc_gradient(mode='adjoint',
+        J = top.driver.calc_gradient(mode='adjoint',
                                               return_format='dict')
         J = top.driver.workflow._system.get_combined_J(J)
         
@@ -404,7 +404,7 @@ class MPITests_2Proc(MPITestCase):
         top.driver.add_constraint('comp3.y < 1000')
         top.run()
         
-        J = top.driver.workflow.calc_gradient(mode='fd',
+        J = top.driver.calc_gradient(mode='fd',
                                               return_format='dict')
         J = top.driver.workflow._system.get_combined_J(J)
         

@@ -3,6 +3,10 @@
 #public symbols
 __all__ = ["Driver"]
 
+import sys
+from cStringIO import StringIO
+from math import isnan
+
 # pylint: disable=E0611,F0401
 
 from networkx.algorithms.components import strongly_connected_components
@@ -58,10 +62,6 @@ class GradientOptions(VariableTree):
                                        "the full fd space.",
                                        framework_var=True)
 
-    fd_blocks = List([], desc="List of lists that contain comps which "
-                              "should be finite-differenced together.",
-                              framework_var=True)
-
     derivative_direction = Enum('auto',
                                 ['auto', 'forward', 'adjoint'],
                                 desc="Direction for derivative calculation. "
@@ -74,9 +74,9 @@ class GradientOptions(VariableTree):
                                 "are equal, then forward direction is used.",
                                 framework_var=True)
 
-    # KTM - story up for this one.
     #fd_blocks = List([], desc='User can specify nondifferentiable blocks '
-    #                          'by adding sets of component names.')
+    #                          'by adding sets of component names.',
+    #                          framework_var=True)
 
     # Linear Solver settings
     lin_solver = Enum('scipy_gmres', ['scipy_gmres', 'petsc_ksp', 'linear_gs'],
@@ -565,7 +565,31 @@ class Driver(Component):
         return names
 
     def calc_gradient(self, inputs=None, outputs=None, mode='auto',
-                      return_format='array', force_regen=True):
+                      return_format='array'):
+        """Returns the Jacobian of derivatives between inputs and outputs.
+
+        inputs: list of strings
+            List of OpenMDAO inputs to take derivatives with respect to.
+
+        outputs: list of strings
+            Lis of OpenMDAO outputs to take derivatives of.
+
+        mode: string in ['forward', 'adjoint', 'auto', 'fd']
+            Mode for gradient calculation. Set to 'auto' to let OpenMDAO choose
+            forward or adjoint based on problem dimensions. Set to 'fd' to
+            finite difference the entire workflow.
+
+        return_format: string in ['array', 'dict']
+            Format for return value. Default is array, but some optimizers may
+            want a dictionary instead.
+        """
+
+        return self._calc_gradient(inputs=inputs, outputs=outputs,
+                                   mode=mode, return_format=return_format,
+                                   force_regen=True)
+
+    def _calc_gradient(self, inputs, outputs, mode='auto',
+                       return_format='array', options=None, force_regen=False):
         """Returns the Jacobian of derivatives between inputs and outputs.
 
         inputs: list of strings
@@ -584,13 +608,262 @@ class Driver(Component):
             want a dictionary instead.
 
         force_regen: boolean
-            Set to True to force a regeneration of the system hierarchy. This
-            is set to True because this function is meant for manual testing.
+            Set to True to force a regeneration of the system hierarchy.
         """
 
-        return self.workflow.calc_gradient(inputs=inputs, outputs=outputs,
-                                           mode=mode, return_format=return_format,
-                                           force_regen=force_regen)
+        # if inputs aren't specified, use parameters
+        if inputs is None:
+            if hasattr(self, 'list_param_group_targets'):
+                inputs = self.list_param_group_targets()
+            if not inputs:
+                msg = "No inputs given for derivatives."
+                self.raise_exception(msg, RuntimeError)
+
+        # If outputs aren't specified, use the objectives and constraints
+        if outputs is None:
+            outputs = []
+            if hasattr(self, 'list_objective_targets'):
+                outputs.extend(self.list_objective_targets())
+            if hasattr(self, 'list_constraint_targets'):
+                outputs.extend(self.list_constraint_targets())
+            if not outputs:
+                msg = "No outputs given for derivatives."
+                self.raise_exception(msg, RuntimeError)
+
+        inputs  = [_fix_tups(x) for x in inputs]
+        outputs = [_fix_tups(x) for x in outputs]
+
+        self.workflow._calc_gradient_inputs = inputs[:]
+        self.workflow._calc_gradient_outputs = outputs[:]
+
+        if force_regen:
+            top = self
+            while top.parent is not None:
+                top = top.parent
+
+            top._setup(inputs=inputs, outputs=outputs)
+
+        if options is None:
+            options = self.gradient_options
+
+        self.workflow._calc_gradient_inputs = inputs[:]
+        self.workflow._calc_gradient_outputs = outputs[:]
+        
+        J = self.workflow.calc_gradient(inputs, outputs, mode, return_format,
+                                        options=options)
+
+        # Finally, we need to untransform the jacobian if any parameters have
+        # scalers.
+        if not hasattr(self, 'get_parameters'):
+            return J
+
+        params = self.get_parameters()
+
+        if len(params) == 0:
+            return J
+
+        i = 0
+        for group in inputs:
+
+            if isinstance(group, str):
+                pname = name = group
+            else:
+                pname = tuple(group)
+                name = group[0]
+
+            # Note: 'dict' is the only valid return_format for MPI runs.
+            if return_format == 'dict':
+                if pname in params:
+                    scaler = params[pname].scaler
+                    if scaler != 1.0:
+                        for okey in J.keys():
+                            J[okey][name] = J[okey][name]*scaler
+
+            else:
+                width = len(self._system.vec['u'][name])
+
+                if pname in params:
+                    scaler = params[pname].scaler
+                    if scaler != 1.0:
+                        J[:, i:i+width] = J[:, i:i+width]*scaler
+
+                i += width
+
+        return J
+
+    def check_gradient(self, inputs=None, outputs=None, stream=sys.stdout, mode='auto'):
+        """Compare the OpenMDAO-calculated gradient with one calculated
+        by straight finite-difference. This provides the user with a way
+        to validate his derivative functions (apply_deriv and provideJ.)
+
+        inputs: (optional) iter of str or None
+            Names of input variables. The calculated gradient will be
+            the matrix of values of the output variables with respect
+            to these input variables. If no value is provided for inputs,
+            they will be determined based on the parameters of
+            this Driver.
+
+        outputs: (optional) iter of str or None
+            Names of output variables. The calculated gradient will be
+            the matrix of values of these output variables with respect
+            to the input variables. If no value is provided for outputs,
+            they will be determined based on the objectives and constraints
+            of this Driver.
+
+        stream: (optional) file-like object or str
+            Where to write to, default stdout. If a string is supplied,
+            that is used as a filename. If None, no output is written.
+
+        mode: (optional) str
+            Set to 'forward' for forward mode, 'adjoint' for adjoint mode,
+            or 'auto' to let OpenMDAO determine the correct mode.
+            Defaults to 'auto'.
+
+        Returns the finite difference gradient, the OpenMDAO-calculated
+        gradient, and a list of suspect inputs/outputs.
+        """
+        # tuples cause problems
+        if inputs:
+            inputs = list(inputs)
+        if outputs:
+            outputs = list(outputs)
+
+        if isinstance(stream, basestring):
+            stream = open(stream, 'w')
+            close_stream = True
+        else:
+            close_stream = False
+            if stream is None:
+                stream = StringIO()
+
+        J = self.calc_gradient(inputs, outputs, mode=mode)
+        Jbase = self.calc_gradient(inputs, outputs, mode='fd')
+
+        print >> stream, 24*'-'
+        print >> stream, 'Calculated Gradient'
+        print >> stream, 24*'-'
+        print >> stream, J
+        print >> stream, 24*'-'
+        print >> stream, 'Finite Difference Comparison'
+        print >> stream, 24*'-'
+        print >> stream, Jbase
+
+        # This code duplication is needed so that we print readable names for
+        # the constraints and objectives.
+
+        if inputs is None:
+            if hasattr(self, 'list_param_group_targets'):
+                inputs = self.list_param_group_targets()
+                input_refs = []
+                for item in inputs:
+                    if len(item) < 2:
+                        input_refs.append(item[0])
+                    else:
+                        input_refs.append(item)
+            # Should be caught in calc_gradient()
+            else:  # pragma no cover
+                msg = "No inputs given for derivatives."
+                self.raise_exception(msg, RuntimeError)
+        else:
+            input_refs = inputs
+
+        if outputs is None:
+            outputs = []
+            output_refs = []
+            if hasattr(self, 'get_objectives'):
+                obj = ["%s.out0" % item.pcomp_name for item in
+                       self.get_objectives().values()]
+                outputs.extend(obj)
+                output_refs.extend(self.get_objectives().keys())
+            if hasattr(self, 'get_constraints'):
+                con = ["%s.out0" % item.pcomp_name for item in
+                       self.get_constraints().values()]
+                outputs.extend(con)
+                output_refs.extend(self.get_constraints().keys())
+
+            if len(outputs) == 0:  # pragma no cover
+                msg = "No outputs given for derivatives."
+                self.raise_exception(msg, RuntimeError)
+        else:
+            output_refs = outputs
+
+        out_width = 0
+
+        for output, oref in zip(outputs, output_refs):
+            out_val = self.parent.get(output)
+            out_names = _flattened_names(oref, out_val)
+            out_width = max(out_width, max([len(out) for out in out_names]))
+
+        inp_width = 0
+        for input_tup, iref in zip(inputs, input_refs):
+            if isinstance(input_tup, str):
+                input_tup = [input_tup]
+            inp_val = self.parent.get(input_tup[0])
+            inp_names = _flattened_names(str(iref), inp_val)
+            inp_width = max(inp_width, max([len(inp) for inp in inp_names]))
+
+        label_width = out_width + inp_width + 4
+
+        print >> stream
+        print >> stream, label_width*' ', \
+              '%-18s %-18s %-18s' % ('Calculated', 'FiniteDiff', 'RelError')
+        print >> stream, (label_width+(3*18)+3)*'-'
+
+        suspect_limit = 1e-5
+        error_n = error_sum = 0
+        error_max = error_loc = None
+        suspects = []
+        i = -1
+
+        io_pairs = []
+
+        for output, oref in zip(outputs, output_refs):
+            out_val = self.parent.get(output)
+            for out_name in _flattened_names(oref, out_val):
+                i += 1
+                j = -1
+                for input_tup, iref in zip(inputs, input_refs):
+                    if isinstance(input_tup, basestring):
+                        input_tup = (input_tup,)
+
+                    inp_val = self.parent.get(input_tup[0])
+                    for inp_name in _flattened_names(iref, inp_val):
+                        j += 1
+                        calc = J[i, j]
+                        finite = Jbase[i, j]
+                        if finite and calc:
+                            error = (calc - finite) / finite
+                        else:
+                            error = calc - finite
+                        error_n += 1
+                        error_sum += abs(error)
+                        if error_max is None or abs(error) > abs(error_max):
+                            error_max = error
+                            error_loc = (out_name, inp_name)
+                        if abs(error) > suspect_limit or isnan(error):
+                            suspects.append((out_name, inp_name))
+                        print >> stream, '%*s / %*s: %-18s %-18s %-18s' \
+                              % (out_width, out_name, inp_width, inp_name,
+                                 calc, finite, error)
+                        io_pairs.append("%*s / %*s"
+                                        % (out_width, out_name,
+                                           inp_width, inp_name))
+        print >> stream
+        if error_n:
+            print >> stream, 'Average RelError:', error_sum / error_n
+            print >> stream, 'Max RelError:', error_max, 'for %s / %s' % error_loc
+        if suspects:
+            print >> stream, 'Suspect gradients (RelError > %s):' % suspect_limit
+            for out_name, inp_name in suspects:
+                print >> stream, '%*s / %*s' \
+                      % (out_width, out_name, inp_width, inp_name)
+        print >> stream
+
+        if close_stream:
+            stream.close()
+
+        # return arrays and suspects to make it easier to check from a test
+        return Jbase.flatten(), J.flatten(), io_pairs, suspects
 
     @rbac(('owner', 'user'))
     def setup_depgraph(self, dgraph):
@@ -620,3 +893,32 @@ class Driver(Component):
     def pre_setup(self):
         self._reduced_graph = None
         self.workflow.pre_setup()
+
+
+def _flattened_names(name, val, names=None):
+    """ Return list of names for values in `val`.
+    Note that this expands arrays into an entry for each index!.
+    """
+    if names is None:
+        names = []
+    if isinstance(val, float):
+        names.append(name)
+    elif isinstance(val, ndarray):
+        for i in range(len(val)):
+            value = val[i]
+            _flattened_names('%s[%s]' % (name, i), value, names)
+    elif IVariableTree.providedBy(val):
+        for key in sorted(val.list_vars()):  # Force repeatable order.
+            value = getattr(val, key)
+            _flattened_names('.'.join((name, key)), value, names)
+    else:
+        raise TypeError('Variable %s is of type %s which is not convertable'
+                        ' to a 1D float array.' % (name, type(val)))
+    return names
+
+
+def _fix_tups(x):
+    """Return x[0] if x is a single element tuple, else return x."""
+    if isinstance(x, tuple) and len(x) == 1:
+        return x[0]
+    return x
