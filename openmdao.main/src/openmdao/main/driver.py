@@ -538,6 +538,24 @@ class Driver(Component):
             self._system = self.parent._reduced_graph.node[self.name]['system']
             self.workflow.setup_systems(self.system_type)
 
+    def print_norm(self, driver_string, iteration, res, res0, msg=None, indent=0, solver='NL'):
+        """ Prints out the norm of the residual in a neat readable format.
+        """
+
+        # Find indentation level
+        if self.itername == '-driver':
+            level = 0 + indent
+        else:
+            level = self.itername.count('.') + 1 + indent
+            
+        indent = '   ' * level
+        if msg is not None:
+            form = indent + '[%s] %s: %s   %d | %s'
+            print form % (self.name, solver, driver_string, iteration, msg)
+            return
+
+        form = indent + '[%s] %s: %s   %d | %.9g %.9g'
+        print form % (self.name, solver, driver_string, iteration, res, res/res0)
 
     #### MPI related methods ####
 

@@ -40,6 +40,9 @@ class FixedPointIterator(Driver):
                        desc='For multivariable iteration, type of norm '
                                    'to use to test convergence.')
 
+    iprint = Enum(0, [0, 1], iotype='in', desc='set to 1 to print '
+                  'convergence..')
+
     def __init__(self):
         super(FixedPointIterator, self).__init__()
         self.current_iteration = 0
@@ -72,7 +75,10 @@ class FixedPointIterator(Driver):
         self.run_iteration()
         self.normval = self.norm()
         self.norm0 = self.normval if self.normval != 0.0 else 1.0
-
+        
+        if self.iprint > 0:
+            self.print_norm('NLN_GS', 0, self.normval, self.norm0)
+       
     def run_iteration(self):
         """Runs an iteration."""
         self.current_iteration += 1
@@ -97,8 +103,16 @@ class FixedPointIterator(Driver):
     def post_iteration(self):
         """Runs after each iteration"""
         self.normval = self.norm()
-        #print "iter %d, norm = %s" % (self.current_iteration, self.normval)
+        if self.iprint > 0:
+            self.print_norm('NLN_GS', self.current_iteration-1, self.normval, 
+                            self.norm0)
 
+    def end_iteration(self):
+        """Print convergence."""
+        if self.iprint > 0:
+            self.print_norm('NLN_GS', self.current_iteration-1, self.normval, 
+                            self.norm0, msg='Converged')
+        
     def _mpi_norm(self):
         """ Compute the norm of the f Vec using petsc. """
         fvec = self.workflow._system.vec['f']

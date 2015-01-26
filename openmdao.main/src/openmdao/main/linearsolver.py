@@ -17,7 +17,34 @@ class LinearSolver(object):
         """ Set up any LinearSolver object """
         self._system = system
         self.options = system.options
+        
+        # Figure out base indentation for printing the residual during convergence.
+        level = 0
+        if hasattr(system, '_parent_system') and system._parent_system is not None:
+            drv = system._parent_system._comp
+            self.drv_name = drv.name
+            if drv.itername == '-driver':
+                level = 0
+            else:
+                level = drv.itername.count('.') + 1
+                
+        else:
+            self.drv_name = system.name
+            
+        self.indent = '   ' * level
+        
+    def print_norm(self, driver_string, iteration, res, res0, msg=None, solver='LN'):
+        """ Prints out the norm of the residual in a neat readable format.
+        """
 
+        if msg is not None:
+            form = self.indent + '[%s]    %s: %s   %d | %s'
+            print form % (self.drv_name, solver, self.ln_string, iteration, msg)
+            return
+
+        form = self.indent + '[%s]    %s: %s   %d | %.9g %.9g'
+        print form % (self.drv_name, solver, self.ln_string, iteration, res, res/res0)
+        
     def _norm(self):
         """ Computes the norm of the linear residual """
         system = self._system
@@ -37,6 +64,8 @@ class ScipyGMRES(LinearSolver):
     """ Scipy's GMRES Solver. This is a serial solver, so
     it should never be used in an MPI setting.
     """
+    
+    ln_string = 'GMERES'
 
     def __init__(self, system):
         """ Set up ScipyGMRES object """
@@ -177,6 +206,23 @@ class ScipyGMRES(LinearSolver):
 class PETSc_KSP(LinearSolver):
     """ PETSc's KSP solver with preconditioning. MPI is supported."""
 
+    ln_string = 'KSP'
+
+    # This class object is given to KSP as a callback object for printing the residual.
+    class Monitor(object):
+        """ Prints output from PETSc's KSP solvers """
+    
+        def __init__(self, ksp):
+            """ Stores pointer to the ksp solver """
+            self._ksp = ksp
+            self._norm0 = 1.0
+    
+        def __call__(self, ksp, counter, norm):
+            """ Store norm if first iteration, and print norm """
+            if counter == 0 and norm != 0.0:
+                self._norm0 = norm
+            self._ksp.print_norm(self._ksp.ln_string, counter, norm, self._norm0)
+    
     def __init__(self, system):
         """ Set up KSP object """
         super(PETSc_KSP, self).__init__(system)
@@ -193,6 +239,7 @@ class PETSc_KSP(LinearSolver):
         self.ksp.setType('fgmres')
         self.ksp.setGMRESRestart(1000)
         self.ksp.setPCSide(PETSc.PC.Side.RIGHT)
+        self.ksp.setMonitor(self.Monitor(self))
 
         pc_mat = self.ksp.getPC()
         pc_mat.setType('python')
@@ -349,6 +396,8 @@ class LinearGS(LinearSolver):
     """ Linear block Gauss Seidel. MPI is not supported yet.
     Serial block solve of D x = b - (L+U) x """
 
+    ln_string = 'LIN_GS'
+
     def __init__(self, system):
         """ Set up LinearGS object """
         super(LinearGS, self).__init__(system)
@@ -456,6 +505,8 @@ class LinearGS(LinearSolver):
 
         norm0, norm = 1.0, 1.0
         counter = 0
+        self.print_norm(self.ln_string, counter, norm, norm0)
+        
         while counter < options.maxiter and norm > options.atol and \
               norm/norm0 > options.rtol:
 
@@ -498,8 +549,10 @@ class LinearGS(LinearSolver):
                             system.vec['dp'].array[:] = 0.0
                     system.rhs_vec.array[:] = system.sol_buf[:]
                     subsystem.solve_linear(options)
+                    
             norm = self._norm()
             counter += 1
+            self.print_norm(self.ln_string, counter, norm, norm0)
 
         #print 'return', options.parent.name, np.linalg.norm(system.rhs_vec.array), system.rhs_vec.array
         #print 'Linear solution vec', system.sol_vec.array
