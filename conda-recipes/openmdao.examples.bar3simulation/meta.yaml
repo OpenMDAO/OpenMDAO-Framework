@@ -1,24 +1,34 @@
+{% set pkg_version = environ['PKG_VERSION'] %}
+{% set remote = "https://github.com/OpenMDAO/OpenMDAO-Framework.git" %}
+
+{% if pkg_version == "dev" %}
+{% set source="git_url: {}\n  git_branch: {}".format(remote, pkg_version) %}
+{% else %}
+{% set source="  git_url: {}\n  git_branch: {}".format(remote, pkg_version) %}
+{% endif %}
+
 package:
-    name: openmdao.examples.bar3simulation
-    version: dev
-    
+  name: openmdao.examples.bar3simulation
+  version: !!str {{ pkg_version }}
+
 source:
-    path: ../../examples/openmdao.examples.bar3simulation
+{{ source }}
 
 build:
     preserve_egg_dir: True
     
 requirements:
-    build:
-        - python
-        - setuptools
-        - numpy
-        - openmdao.main
-        - openmdao.lib
-        
-    run:
-        - python
-        - setuptools
-        - numpy
-        - openmdao.main
-        - openmdao.lib
+  build:
+    - python
+    - numpy
+    - setuptools
+
+  run:
+    - python
+    - numpy
+    - setuptools
+
+about:
+  home:  http://openmdao.org
+  license:  Apache 2.0
+  summary:  "Open-source Multidisciplinary Design, Analysis and Optimazation framework in Python."
