@@ -14,7 +14,7 @@ def build_packages(name, version):
         "openmdao.examples.expected_improvement",
         "openmdao.examples.mdao",
         "openmdao.examples.metamodel_tutorial",
-        "openmdao.examples.nozzel_geometry_doe",
+        "openmdao.examples.nozzle_geometry_doe",
         "openmdao.examples.simple",
     ]
     

@@ -23,7 +23,7 @@ requirements:
     - python
     - setuptools
     - openmdao.main
-    - pytz >=2011
+#    - pytz >=2011
     - numpy
     - scipy >=0.11.0
     - bson
