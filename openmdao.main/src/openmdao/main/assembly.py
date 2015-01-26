@@ -1315,6 +1315,7 @@ class Assembly(Component):
         # collapse all connections into single nodes.
         collapsed_graph = dgraph.collapse_connections()
         collapsed_graph.fix_duplicate_dests()
+        collapsed_graph._consolidate_srcs()
         collapsed_graph.vars2tuples(dgraph)
 
         self.name2collapsed = collapsed_graph.map_collapsed_nodes()

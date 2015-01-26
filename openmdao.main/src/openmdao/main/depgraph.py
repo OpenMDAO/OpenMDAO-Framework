@@ -1084,7 +1084,7 @@ class DependencyGraph(DGraphBase):
 
         g.remove_nodes_from(to_remove)
 
-        return g._consolidate_srcs()
+        return g
 
     def _add_boundary_comps(self):
         """Add fake boundary components and connect them to boundary
