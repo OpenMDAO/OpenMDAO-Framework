@@ -486,7 +486,7 @@ class LinearGS(LinearSolver):
                     # Instead of a double loop, we can use the graph to only
                     # call applyJ on the component behind us. This led to a
                     # nice speedup.
-                    succs = system.graph.successors(subsystem.name)
+                    succs = system.graph.successors(subsystem.node)
 
                     for subsystem2 in rev_systems:
                         if subsystem2.name in succs:
