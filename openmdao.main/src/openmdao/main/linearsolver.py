@@ -65,7 +65,7 @@ class ScipyGMRES(LinearSolver):
     it should never be used in an MPI setting.
     """
     
-    ln_string = 'GMERES'
+    ln_string = 'GMRES'
 
     def __init__(self, system):
         """ Set up ScipyGMRES object """
