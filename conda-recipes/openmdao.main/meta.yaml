@@ -20,13 +20,14 @@ requirements:
     - setuptools
 
   run:
-    - numpy
+    - numpy >=1.7.1
     - python
     - decorator
     - mock
     - networkx
     - openmdao.units
     - openmdao.util
+    - pip
     - pycrypto
     - pyparsing
     - requests

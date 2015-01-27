@@ -12,8 +12,8 @@ requirements:
     build:
         - python
         - setuptools
-        - numpy
+        - numpy ==1.7.1
 
     run:
         - python
-        - numpy
+        - numpy >=1.7.1

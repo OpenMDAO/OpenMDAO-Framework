@@ -10,3 +10,5 @@ fi
 
 ${PYTHON} setup.py build_ext
 ${PYTHON} setup.py install
+
+python -c "from pkg_resources import get_distribution; print get_distribution('$PKG_NAME').version" > __conda_version__.txt

@@ -27,25 +27,20 @@ requirements:
 
         # Dependencies
         - bson ==0.3.3
-        - decorator ==3.4.0
-        - docutils ==0.10
-#        - jinja2 ==2.4
-        - jinja2
-        - mock ==1.0.1
-        - networkx ==1.9.1
+        - decorator >=3.4.0
+        - docutils >=0.10
+        - jinja2 >=2.4
+        - mock >=1.0.1
+        - networkx >=1.8.1
         - nose ==1.3.3
-        - numpy
+        - numpy >=1.7.1
         - pip
         - pycrypto ==2.3
         - pyevolve ==0.6
-#        - pygments ==1.3.1
-        - pyparsing ==1.5.7
-#        - pytz ==2011k
+        - pyparsing >=1.5.7
         - requests ==2.2.1
-#        - setupdocs ==1.0.5
-        - scipy
+        - scipy >=0.11
         - sphinx ==1.2.2 
         - traits ==4.3.0
-#        - zope.interface ==3.6.1  
-        - zope.interface 
+        - zope.interface >=3.6.1
 
