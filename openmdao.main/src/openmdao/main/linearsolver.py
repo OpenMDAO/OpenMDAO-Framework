@@ -221,7 +221,9 @@ class PETSc_KSP(LinearSolver):
             """ Store norm if first iteration, and print norm """
             if counter == 0 and norm != 0.0:
                 self._norm0 = norm
-            self._ksp.print_norm(self._ksp.ln_string, counter, norm, self._norm0)
+                
+            if self._ksp.options.iprint > 0:
+                self._ksp.print_norm(self._ksp.ln_string, counter, norm, self._norm0)
     
     def __init__(self, system):
         """ Set up KSP object """
@@ -505,7 +507,8 @@ class LinearGS(LinearSolver):
 
         norm0, norm = 1.0, 1.0
         counter = 0
-        self.print_norm(self.ln_string, counter, norm, norm0)
+        if self.options.iprint > 0:
+            self.print_norm(self.ln_string, counter, norm, norm0)
         
         while counter < options.maxiter and norm > options.atol and \
               norm/norm0 > options.rtol:
@@ -552,7 +555,8 @@ class LinearGS(LinearSolver):
                     
             norm = self._norm()
             counter += 1
-            self.print_norm(self.ln_string, counter, norm, norm0)
+            if self.options.iprint > 0:
+                self.print_norm(self.ln_string, counter, norm, norm0)
 
         #print 'return', options.parent.name, np.linalg.norm(system.rhs_vec.array), system.rhs_vec.array
         #print 'Linear solution vec', system.sol_vec.array

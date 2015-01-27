@@ -90,8 +90,8 @@ class TestCase(unittest.TestCase):
         self.top.recorders = [JSONCaseRecorder(sout)]
         self.top.run()
 
-        # with open('jsonrecorder.new', 'w') as out:
-        #     out.write(sout.getvalue())
+        with open('jsonrecorder.new', 'w') as out:
+            out.write(sout.getvalue())
         verify_json(self, sout, 'jsonrecorder.json')
 
     def test_multiple_objectives(self):

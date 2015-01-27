@@ -91,6 +91,10 @@ class GradientOptions(VariableTree):
     maxiter = Int(100, desc='Maximum number of iterations for the linear solver.',
                   framework_var=True)
 
+    iprint = Enum(0, [0, 1], desc="Set to 1 to print out residual of the linear solver",
+                  framework_var=True)
+
+
     def _lin_solver_changed(self, oldls, newls):
         # if PETSc has been imported prior to the creation of a remote object using
         # the multiprocessing package, we get errors due to broken socket connections
