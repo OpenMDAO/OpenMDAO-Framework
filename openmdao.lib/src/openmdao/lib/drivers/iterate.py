@@ -41,7 +41,7 @@ class FixedPointIterator(Driver):
                                    'to use to test convergence.')
 
     iprint = Enum(0, [0, 1], iotype='in', desc='set to 1 to print '
-                  'convergence..')
+                  'residual during convergence.')
 
     def __init__(self):
         super(FixedPointIterator, self).__init__()
