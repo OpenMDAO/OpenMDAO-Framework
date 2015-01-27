@@ -33,7 +33,7 @@ class A(Component):
 
     def execute(self):
         pass
-    
+
     def some_funct(self, a, b, op='add'):
         if op == 'add':
             return a+b
@@ -546,30 +546,12 @@ class ExprEvalTestCase(unittest.TestCase):
         top.connect('comp6.c', 'comp7.b')
         top.connect('comp8.c', 'comp9.b')
 
-
-        # exp = ExprEvaluator('comp9.c+comp5.d', top.driver)
-        # self.assertEqual(exp.get_required_compnames(top),
-        #                  set(['comp1','comp2','comp3','comp5','comp8','comp9']))
-        # exp = ExprEvaluator('comp7.a', top.driver)
-        # self.assertEqual(exp.get_required_compnames(top),
-        #                  set(['comp1','comp2','comp3','comp4','comp6','comp7']))
-        # exp = ExprEvaluator('comp8.a', top.driver)
-        # self.assertEqual(exp.get_required_compnames(top),
-        #                  set(['comp8']))
-        # exp = ExprEvaluator('comp9.c+comp7.d', top.driver)
-        # self.assertEqual(exp.get_required_compnames(top),
-        #                  set(['comp1','comp2','comp3','comp4','comp6',
-        #                       'comp7','comp8','comp9']))
-        # exp = ExprEvaluator('sin(0.3)', top.driver)
-        # self.assertEqual(exp.get_required_compnames(top),
-        #                  set())
-
     def test_eval_gradient(self):
         top = set_as_top(Assembly())
         top.add('comp1', Simple())
         top.comp1.a = 5.2
         top.comp1.b = 1.8
-        
+
         top.run()
 
         exp = ExprEvaluator('3.0*comp1.c', top.driver)
