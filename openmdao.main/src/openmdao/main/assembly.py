@@ -34,7 +34,7 @@ from openmdao.main.driver import Driver
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import is_instance
 from openmdao.main.printexpr import eliminate_expr_ws
-from openmdao.main.expreval import ExprEvaluator
+from openmdao.main.expreval import ExprEvaluator, ConnectedExprEvaluator
 from openmdao.main.exprmapper import ExprMapper
 from openmdao.main.pseudocomp import PseudoComponent, UnitConversionPComp
 from openmdao.main.array_helpers import is_differentiable_var, get_val_and_index, \
@@ -159,6 +159,9 @@ class Assembly(Component):
         self._unexecuted = []
         self._var_meta = {}
 
+        # a list of (srcexpr, destexpr)
+        self._connections = []
+
         # data dependency graph. Includes edges for data
         # connections as well as for all driver parameters and
         # constraints/objectives.  This is the starting graph for
@@ -231,10 +234,8 @@ class Assembly(Component):
         """Returns a list of connections where the given name is referred
         to either in the source or the destination.
         """
-        exprset = set(self._exprmapper.find_referring_exprs(name))
-        return [(u, v) for u, v
-                       in self._depgraph.list_connections(show_passthrough=True)
-                                        if u in exprset or v in exprset]
+        return [(u.text,v.text) for u,v in self._connections
+                 if u.refers_to(name) or v.refers_to(name)]
 
     def find_in_workflows(self, name):
         """Returns a list of tuples of the form (workflow, index) for all
@@ -626,9 +627,13 @@ class Assembly(Component):
         """Handle one connection destination. This should only be called via
         the connect() function, never directly.
         """
+        destexpr = ConnectedExprEvaluator(dest, self, is_dest=True)
+        srcexpr = ConnectedExprEvaluator(src, self,
+                                         getter='get_attr_w_copy')
+        self._connections.append((srcexpr, destexpr))
 
         # Among other things, check if already connected.
-        srcexpr, destexpr, pcomp_type = \
+        _, _, pcomp_type = \
                    self._exprmapper.check_connect(src, dest, self)
 
         if pcomp_type is not None:
@@ -680,13 +685,18 @@ class Assembly(Component):
         and outputs.
         """
         try:
-            cnames = ExprEvaluator(varpath, self).get_referenced_compnames()
-            if varpath2 is not None:
-                cnames.update(ExprEvaluator(varpath2, self).get_referenced_compnames())
-            boundary_vars = self.list_inputs() + self.list_outputs()
-            for cname in cnames:
-                if cname not in boundary_vars:
-                    getattr(self, cname).config_changed(update_parent=False)
+            if varpath2 is None:
+                to_remove = [(u,v) for u,v in self._connections
+                               if u.refers_to(varpath) or v.refers_to(varpath)
+                                  or u.text==varpath.strip()
+                                  or v.text==varpath.strip()]
+            else:
+                to_remove = [(u,v) for u,v in self._connections
+                               if u.text==varpath.strip()
+                                  and v.text==varpath2.strip()]
+            self._connections = [tup for tup in self._connections
+                                    if tup not in to_remove]
+
 
             to_remove, pcomps = self._exprmapper.disconnect(varpath, varpath2)
 
@@ -901,14 +911,6 @@ class Assembly(Component):
             return newconns
         return conns
 
-    @rbac(('owner', 'user'))
-    def child_run_finished(self, childname, outs=None):
-        """Called by a child when it completes its run() function."""
-        self._depgraph.child_run_finished(childname, outs)
-
-    def exec_counts(self, compnames):
-        return [getattr(self, c).exec_count for c in compnames]
-
     def check_gradient(self, name=None, inputs=None, outputs=None,
                        stream=sys.stdout, mode='auto',
                        fd_form='forward', fd_step=1.0e-6,
@@ -1049,13 +1051,6 @@ class Assembly(Component):
             driver.gradient_options.fd_step_type = base_fd_step_type
 
         return result
-
-    def list_components(self):
-        ''' List the components in the assembly.
-        '''
-        names = [name for name in self.list_containers()
-                     if isinstance(self.get(name), Component)]
-        return names
 
     @rbac(('owner', 'user'))
     def new_pseudo_name(self):
