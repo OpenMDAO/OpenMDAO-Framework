@@ -1,5 +1,5 @@
 {
-"__length_1": 17210
+"__length_1": 17492
 , "simulation_info": {
     "OpenMDAO_Version": "0.10.3.2", 
     "comp_graph": "{\"directed\": true, \"graph\": [], \"nodes\": [{\"comp\": true, \"id\": \"comp2\"}, {\"comp\": true, \"pseudo\": \"objective\", \"id\": \"_pseudo_1\"}, {\"comp\": true, \"id\": \"comp1\"}, {\"comp\": true, \"driver\": true, \"id\": \"driver\"}, {\"comp\": true, \"pseudo\": \"objective\", \"id\": \"_pseudo_0\"}], \"links\": [{\"source\": 0, \"target\": 1}, {\"source\": 2, \"target\": 0}, {\"source\": 2, \"target\": 4}], \"multigraph\": false}", 
@@ -48,6 +48,7 @@
         "driver.gradient_options.fd_step": 1e-06, 
         "driver.gradient_options.fd_step_type": "absolute", 
         "driver.gradient_options.force_fd": false, 
+        "driver.gradient_options.iprint": 0, 
         "driver.gradient_options.lin_solver": "scipy_gmres", 
         "driver.gradient_options.maxiter": 100, 
         "driver.gradient_options.rtol": 1e-09, 
@@ -75,7 +76,7 @@
     }, 
     "graph": "{\"directed\": true, \"graph\": [[\"title\", \"unknown\"]], \"nodes\": [{\"short\": \"ignore_egg_requirements\", \"color_idx\": 3, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"full\": \"driver.ignore_egg_requirements\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.ignore_egg_requirements\"}, {\"short\": \"in0\", \"color_idx\": 1, \"title\": \"{}\", \"full\": \"_pseudo_1.in0\", \"var\": true, \"iotype\": \"in\", \"id\": \"_pseudo_1.in0\"}, {\"short\": \"data\", \"color_idx\": 2, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"full\": \"comp1.data\", \"var\": true, \"iotype\": \"in\", \"id\": \"comp1.data\"}, {\"short\": \"comp2\", \"color_idx\": 0, \"title\": \"{}\", \"comp\": true, \"full\": \"comp2\", \"id\": \"comp2\"}, {\"short\": \"_pseudo_1\", \"color_idx\": 1, \"title\": \"{}\", \"comp\": true, \"pseudo\": \"objective\", \"full\": \"_pseudo_1\", \"id\": \"_pseudo_1\"}, {\"short\": \"comp1\", \"color_idx\": 2, \"title\": \"{}\", \"comp\": true, \"full\": \"comp1\", \"id\": \"comp1\"}, {\"short\": \"in0\", \"color_idx\": 4, \"title\": \"{}\", \"full\": \"_pseudo_0.in0\", \"var\": true, \"iotype\": \"in\", \"id\": \"_pseudo_0.in0\"}, {\"short\": \"reload_model\", \"color_idx\": 3, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"full\": \"driver.reload_model\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.reload_model\"}, {\"short\": \"extra_resources\", \"color_idx\": 3, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"full\": \"driver.extra_resources\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.extra_resources\"}, {\"short\": \"case_inputs\", \"color_idx\": 3, \"deriv_ignore\": true, \"title\": \"{'deriv_ignore': True, 'differentiable': False}\", \"differentiable\": false, \"full\": \"driver.case_inputs\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.case_inputs\"}, {\"short\": \"z\", \"color_idx\": 2, \"title\": \"{}\", \"full\": \"comp1.z\", \"var\": true, \"iotype\": \"out\", \"id\": \"comp1.z\"}, {\"short\": \"y\", \"color_idx\": 2, \"title\": \"{}\", \"full\": \"comp1.y\", \"var\": true, \"iotype\": \"in\", \"id\": \"comp1.y\"}, {\"short\": \"x\", \"color_idx\": 2, \"title\": \"{}\", \"full\": \"comp1.x\", \"var\": true, \"iotype\": \"in\", \"id\": \"comp1.x\"}, {\"short\": \"driver\", \"color_idx\": 3, \"title\": \"{'driver': True}\", \"comp\": true, \"driver\": true, \"full\": \"driver\", \"id\": \"driver\"}, {\"short\": \"x\", \"color_idx\": 0, \"title\": \"{}\", \"full\": \"comp2.x\", \"var\": true, \"iotype\": \"in\", \"id\": \"comp2.x\"}, {\"short\": \"z\", \"color_idx\": 0, \"title\": \"{}\", \"full\": \"comp2.z\", \"var\": true, \"iotype\": \"out\", \"id\": \"comp2.z\"}, {\"short\": \"sequential\", \"color_idx\": 3, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"full\": \"driver.sequential\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.sequential\"}, {\"short\": \"out0\", \"color_idx\": 1, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"full\": \"_pseudo_1.out0\", \"var\": true, \"iotype\": \"out\", \"id\": \"_pseudo_1.out0\"}, {\"short\": \"error_policy\", \"color_idx\": 3, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"full\": \"driver.error_policy\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.error_policy\"}, {\"short\": \"_pseudo_0\", \"color_idx\": 4, \"title\": \"{}\", \"comp\": true, \"pseudo\": \"objective\", \"full\": \"_pseudo_0\", \"id\": \"_pseudo_0\"}, {\"short\": \"out0\", \"color_idx\": 4, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"full\": \"_pseudo_0.out0\", \"var\": true, \"iotype\": \"out\", \"id\": \"_pseudo_0.out0\"}, {\"short\": \"case_outputs\", \"color_idx\": 3, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"full\": \"driver.case_outputs\", \"var\": true, \"iotype\": \"out\", \"id\": \"driver.case_outputs\"}, {\"short\": \"max_retries\", \"color_idx\": 3, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"full\": \"driver.max_retries\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.max_retries\"}], \"links\": [{\"source\": 0, \"target\": 13}, {\"source\": 1, \"target\": 4}, {\"drv_conn\": \"driver\", \"target\": 13, \"source\": 17}, {\"source\": 2, \"target\": 5}, {\"source\": 3, \"target\": 15}, {\"source\": 5, \"target\": 10}, {\"source\": 6, \"target\": 19}, {\"source\": 7, \"target\": 13}, {\"source\": 8, \"target\": 13}, {\"source\": 18, \"target\": 13}, {\"source\": 9, \"target\": 13}, {\"source\": 10, \"target\": 6, \"conn\": true}, {\"source\": 10, \"target\": 14, \"conn\": true}, {\"source\": 11, \"target\": 5}, {\"source\": 12, \"target\": 5}, {\"drv_conn\": \"driver\", \"target\": 13, \"source\": 20}, {\"source\": 14, \"target\": 3}, {\"source\": 13, \"target\": 21}, {\"drv_conn\": \"driver\", \"target\": 11, \"source\": 13}, {\"drv_conn\": \"driver\", \"target\": 12, \"source\": 13}, {\"source\": 15, \"target\": 1, \"conn\": true}, {\"source\": 4, \"target\": 17}, {\"source\": 19, \"target\": 20}, {\"source\": 16, \"target\": 13}, {\"source\": 22, \"target\": 13}], \"multigraph\": false}", 
     "name": "", 
-    "uuid": "d28fc07c-a23c-11e4-b184-3c970e57723f", 
+    "uuid": "520d1007-a656-11e4-889d-001f5b354a5c", 
     "variable_metadata": {
         "comp1.data": {
             "copy": "deep", 
@@ -305,6 +306,15 @@
             "iotype": "in", 
             "vartypename": "Bool"
         }, 
+        "driver.gradient_options.iprint": {
+            "assumed_default": false, 
+            "iotype": "in", 
+            "values": [
+                0, 
+                1
+            ], 
+            "vartypename": "Enum"
+        }, 
         "driver.gradient_options.lin_solver": {
             "assumed_default": false, 
             "iotype": "in", 
@@ -388,9 +398,9 @@
         }
     }
 }
-, "__length_2": 572
+, "__length_2": 567
 , "driver_info_1": {
-    "_id": 139760223212848, 
+    "_id": 4541033936, 
     "name": "driver", 
     "parameters": [
         "comp1.y", 
@@ -416,11 +426,11 @@
         "comp2.z"
     ]
 }
-, "__length_3": 698
+, "__length_3": 693
 , "iteration_case_1": {
-    "_driver_id": 139760223212848, 
-    "_id": "d290d5ab-a23c-11e4-800b-3c970e57723f", 
-    "_parent_id": "d28fc07c-a23c-11e4-b184-3c970e57723f", 
+    "_driver_id": 4541033936, 
+    "_id": "520de5f8-a656-11e4-800b-001f5b354a5c", 
+    "_parent_id": "520d1007-a656-11e4-889d-001f5b354a5c", 
     "data": {
         "_pseudo_0.out0": 0.0, 
         "_pseudo_1.out0": 1.0, 
@@ -438,13 +448,13 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1421934284.242609
+    "timestamp": 1422385040.201602
 }
-, "__length_4": 698
+, "__length_4": 693
 , "iteration_case_2": {
-    "_driver_id": 139760223212848, 
-    "_id": "d2913b59-a23c-11e4-800c-3c970e57723f", 
-    "_parent_id": "d28fc07c-a23c-11e4-b184-3c970e57723f", 
+    "_driver_id": 4541033936, 
+    "_id": "520e30d1-a656-11e4-800c-001f5b354a5c", 
+    "_parent_id": "520d1007-a656-11e4-889d-001f5b354a5c", 
     "data": {
         "_pseudo_0.out0": 3.0, 
         "_pseudo_1.out0": 4.0, 
@@ -462,13 +472,13 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1421934284.243926
+    "timestamp": 1422385040.202522
 }
-, "__length_5": 698
+, "__length_5": 692
 , "iteration_case_3": {
-    "_driver_id": 139760223212848, 
-    "_id": "d2916ddc-a23c-11e4-800d-3c970e57723f", 
-    "_parent_id": "d28fc07c-a23c-11e4-b184-3c970e57723f", 
+    "_driver_id": 4541033936, 
+    "_id": "520e548f-a656-11e4-800d-001f5b354a5c", 
+    "_parent_id": "520d1007-a656-11e4-889d-001f5b354a5c", 
     "data": {
         "_pseudo_0.out0": 6.0, 
         "_pseudo_1.out0": 7.0, 
@@ -486,13 +496,13 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1421934284.245138
+    "timestamp": 1422385040.20343
 }
-, "__length_6": 700
+, "__length_6": 695
 , "iteration_case_4": {
-    "_driver_id": 139760223212848, 
-    "_id": "d2919cc5-a23c-11e4-800e-3c970e57723f", 
-    "_parent_id": "d28fc07c-a23c-11e4-b184-3c970e57723f", 
+    "_driver_id": 4541033936, 
+    "_id": "520e7811-a656-11e4-800e-001f5b354a5c", 
+    "_parent_id": "520d1007-a656-11e4-889d-001f5b354a5c", 
     "data": {
         "_pseudo_0.out0": 9.0, 
         "_pseudo_1.out0": 10.0, 
@@ -510,13 +520,13 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1421934284.246317
+    "timestamp": 1422385040.204426
 }
-, "__length_7": 702
+, "__length_7": 697
 , "iteration_case_5": {
-    "_driver_id": 139760223212848, 
-    "_id": "d291cad4-a23c-11e4-800f-3c970e57723f", 
-    "_parent_id": "d28fc07c-a23c-11e4-b184-3c970e57723f", 
+    "_driver_id": 4541033936, 
+    "_id": "520e9f05-a656-11e4-800f-001f5b354a5c", 
+    "_parent_id": "520d1007-a656-11e4-889d-001f5b354a5c", 
     "data": {
         "_pseudo_0.out0": 12.0, 
         "_pseudo_1.out0": 13.0, 
@@ -534,13 +544,13 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1421934284.247535
+    "timestamp": 1422385040.205337
 }
-, "__length_8": 703
+, "__length_8": 697
 , "iteration_case_6": {
-    "_driver_id": 139760223212848, 
-    "_id": "d291faa3-a23c-11e4-8010-3c970e57723f", 
-    "_parent_id": "d28fc07c-a23c-11e4-b184-3c970e57723f", 
+    "_driver_id": 4541033936, 
+    "_id": "520ec240-a656-11e4-8010-001f5b354a5c", 
+    "_parent_id": "520d1007-a656-11e4-889d-001f5b354a5c", 
     "data": {
         "_pseudo_0.out0": 15.0, 
         "_pseudo_1.out0": 16.0, 
@@ -558,13 +568,13 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1421934284.248727
+    "timestamp": 1422385040.20624
 }
-, "__length_9": 703
+, "__length_9": 698
 , "iteration_case_7": {
-    "_driver_id": 139760223212848, 
-    "_id": "d2922921-a23c-11e4-8011-3c970e57723f", 
-    "_parent_id": "d28fc07c-a23c-11e4-b184-3c970e57723f", 
+    "_driver_id": 4541033936, 
+    "_id": "520ee585-a656-11e4-8011-001f5b354a5c", 
+    "_parent_id": "520d1007-a656-11e4-889d-001f5b354a5c", 
     "data": {
         "_pseudo_0.out0": 18.0, 
         "_pseudo_1.out0": 19.0, 
@@ -582,13 +592,13 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1421934284.249903
+    "timestamp": 1422385040.207144
 }
-, "__length_10": 703
+, "__length_10": 698
 , "iteration_case_8": {
-    "_driver_id": 139760223212848, 
-    "_id": "d29256de-a23c-11e4-8012-3c970e57723f", 
-    "_parent_id": "d28fc07c-a23c-11e4-b184-3c970e57723f", 
+    "_driver_id": 4541033936, 
+    "_id": "520f08d4-a656-11e4-8012-001f5b354a5c", 
+    "_parent_id": "520d1007-a656-11e4-889d-001f5b354a5c", 
     "data": {
         "_pseudo_0.out0": 21.0, 
         "_pseudo_1.out0": 22.0, 
@@ -606,13 +616,13 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1421934284.251096
+    "timestamp": 1422385040.208052
 }
-, "__length_11": 703
+, "__length_11": 698
 , "iteration_case_9": {
-    "_driver_id": 139760223212848, 
-    "_id": "d2928761-a23c-11e4-8013-3c970e57723f", 
-    "_parent_id": "d28fc07c-a23c-11e4-b184-3c970e57723f", 
+    "_driver_id": 4541033936, 
+    "_id": "520f2cbd-a656-11e4-8013-001f5b354a5c", 
+    "_parent_id": "520d1007-a656-11e4-889d-001f5b354a5c", 
     "data": {
         "_pseudo_0.out0": 24.0, 
         "_pseudo_1.out0": 25.0, 
@@ -630,13 +640,13 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1421934284.252371
+    "timestamp": 1422385040.208965
 }
-, "__length_12": 708
+, "__length_12": 703
 , "iteration_case_10": {
-    "_driver_id": 139760223212848, 
-    "_id": "d292b7ab-a23c-11e4-8014-3c970e57723f", 
-    "_parent_id": "d28fc07c-a23c-11e4-b184-3c970e57723f", 
+    "_driver_id": 4541033936, 
+    "_id": "520f5078-a656-11e4-8014-001f5b354a5c", 
+    "_parent_id": "520d1007-a656-11e4-889d-001f5b354a5c", 
     "data": {
         "_pseudo_0.out0": 27.0, 
         "_pseudo_1.out0": 28.0, 
@@ -654,6 +664,6 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1421934284.253585
+    "timestamp": 1422385040.209884
 }
 }

@@ -78,6 +78,7 @@ class NewtonSolver(Driver):
         dfvec = system.vec['df']
         uvec = system.vec['u']
         iterbase = self.workflow._iterbase()
+        nstring = 'NEWTON'
 
         # perform an initial run
         self.workflow._system.evaluate(iterbase, case_uuid=Case.next_uuid())
@@ -85,8 +86,8 @@ class NewtonSolver(Driver):
         f_norm = self.norm()
         f_norm0 = f_norm
 
-        if self.iprint == 1:
-            print self.name, "Norm: ", f_norm, 0
+        if self.iprint > 0:
+            self.print_norm(nstring, 0, f_norm, f_norm0)
 
         itercount = 0
         alpha = self.alpha
@@ -102,8 +103,8 @@ class NewtonSolver(Driver):
             self.workflow._system.evaluate(iterbase, case_uuid=Case.next_uuid())
 
             f_norm = self.norm()
-            if self.iprint == 1:
-                print self.name, "Norm: ", f_norm, itercount+1
+            if self.iprint > 0:
+                self.print_norm(nstring, itercount+1, f_norm, f_norm0)
 
             itercount += 1
             ls_itercount = 0
@@ -121,8 +122,8 @@ class NewtonSolver(Driver):
                                                case_uuid=Case.next_uuid())
 
                 f_norm = self.norm()
-                if self.iprint == 2:
-                    print "Backtracking Norm: %f, Alpha: %f" % (f_norm, alpha)
+                if self.iprint> 1:
+                    self.print_norm('BK_TKG', itercount+1, f_norm, f_norm/f_norm0, indent=1, solver='LS')
 
                 ls_itercount += 1
 
@@ -135,8 +136,8 @@ class NewtonSolver(Driver):
         self.run_iteration()
         self.post_iteration()
 
-        if self.iprint == 1:
-            print self.name, "converged"
+        if self.iprint > 0:
+            self.print_norm(nstring, itercount, f_norm, f_norm0, msg='Converged')
 
     def _mpi_norm(self):
         """ Compute the norm of the f Vec using petsc. """
