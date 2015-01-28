@@ -366,7 +366,7 @@ class InputVecWrapper(VecWrapperBase):
                 continue
 
             self._add_subview(scope, name)
-            
+
         # if self.name.endswith('.p'):
         #     print "P for %s: %s" % (system.name, self.keys())
 
@@ -652,3 +652,136 @@ def _filter_ignored(scope, lst):
 
 def _filter_flat(scope, lst):
     return [n for n in lst if not scope._var_meta[n].get('noflat')]
+
+
+
+class DataTransfer2(object):
+    """A wrapper object that manages data transfer between
+    systems via scatters (and possibly send/receive for
+    non-array values)
+    """
+    def __init__(self, system, var_idxs, input_idxs,
+                 scatter_conns, noflat_vars):
+        # self.scatter = None
+        # self.scatter_conns = scatter_conns
+        # self.noflat_vars = list(noflat_vars)
+        #
+        # if not (MPI or scatter_conns or noflat_vars):
+        #     return  # no data to xfer
+
+        # try:
+        #     var_idxs, input_idxs = merge_idxs(var_idxs, input_idxs)
+        #     #print "ORIG INDXS: %s --> %s" % (var_idxs, input_idxs)
+        # except Exception as err:
+        #     raise RuntimeError("ERROR creating scatter for system %s in scope %s" %
+        #                         (system.name, str(system.scope), str(err)))
+
+        # self.var_idxs = to_slice(var_idxs)
+        # self.input_idxs = to_slice(input_idxs)
+
+        # if len(var_idxs) != len(input_idxs):
+        #     raise RuntimeError("ERROR: creating scatter (index size mismatch): (%d != %d) srcs: %s,  dest: %s in %s" %
+        #                         (len(var_idxs), len(input_idxs),
+        #                           var_idxs, input_idxs, system.name))
+
+        if MPI:
+            print "var_idxs",var_idxs; sys.stdout.flush()
+            var_idx_set = PETSc.IS().createGeneral(var_idxs,
+                                                   comm=system.mpi.comm)
+            # input_idx_set = PETSc.IS().createGeneral(input_idxs,
+            #                                          comm=system.mpi.comm)
+
+            # if system.app_ordering is not None:
+            #     var_idx_set = system.app_ordering.app2petsc(var_idx_set)
+            #
+            # try:
+            #     # note that scatter created here can be reused for other vectors as long
+            #     # as their sizes are the same as 'u' and 'p'
+            #     # print "PETSC srcs: %s" % var_idx_set.indices
+            #     # print "PETSC dests: %s" % input_idx_set.indices
+            #     self.scatter = PETSc.Scatter().create(system.vec['u'].petsc_vec, var_idx_set,
+            #                                           system.vec['p'].petsc_vec, input_idx_set)
+            # except Exception as err:
+            #     raise RuntimeError("ERROR in %s (var_idxs=%s, input_idxs=%s, usize=%d, psize=%d): %s" %
+            #                           (system.name, var_idxs, input_idxs, system.vec['u'].array.size,
+            #                            system.vec['p'].array.size, str(err)))
+        # else:  # serial execution
+        #     if len(var_idxs) and len(input_idxs):
+        #         self.scatter = SerialScatter(system.vec['u'], var_idxs,
+        #                                      system.vec['p'], input_idxs)
+
+    def __call__(self, system, srcvec, destvec, complex_step=False):
+
+        if self.scatter is None and not self.noflat_vars:
+            return
+
+        if MPI:
+            src = srcvec.petsc_vec
+            dest = destvec.petsc_vec
+        else:
+            src = srcvec.array
+            dest = destvec.array
+
+        addv = mode = False
+        if not complex_step and system.mode == 'adjoint' and srcvec.name.endswith('du'):
+            addv = mode = True
+            destvec, srcvec = srcvec, destvec
+            dest, src = src, dest
+
+        if self.scatter:
+            #print "%s for %s\n%s <-- %s" % (destvec.name.rsplit('.', 1)[1],
+                                            #destvec.name.rsplit('.',1)[0],
+                                            #list(self.scatter_conns),
+                                            #src[self.scatter.dest_idxs if addv else self.scatter.src_idxs])
+            #print destvec.name
+            #print self.scatter_conns
+            #print srcvec.keys(), '-->'
+            #print '-->', destvec.keys()
+            #print "Before", srcvec.array, destvec.array
+            #print "Before: %s" % str(system.name)
+            #srcvec.dump()
+            #print ''
+            #destvec.dump()
+            self.scatter.scatter(src, dest, addv=addv, mode=mode)
+            #print "After", srcvec.array, destvec.array
+            #print "After:"
+            #destvec.dump()
+            #print '.'
+
+
+        if destvec.name.endswith('.p') and self.noflat_vars:
+            if MPI:
+                raise NotImplementedError("passing of non-flat vars %s has not been implemented yet" %
+                                          self.noflat_vars) # FIXME
+            else:
+                for src, dests in self.noflat_vars:
+                    for dest in dests:
+                        if src != dest:
+                            try:
+                                system.scope.set(dest,
+                                                 system.scope.get_attr_w_copy(src))
+                            except Exception:
+                                system.scope.reraise_exception("cannot set '%s' from '%s'" %
+                                                               (dest, src))
+
+    def dump(self, system, srcvec, destvec, nest=0, stream=sys.stdout):
+        if not self.scatter_conns:
+            return
+        stream.write(" "*nest)
+        stream.write("Scatters for %s:\n" % system.name)
+        stream.write(" "*nest)
+        stream.write("scatter vars: %s\n" % sorted(self.scatter_conns))
+        stream.write(" "*nest)
+        stream.write("%s --> %s\n" % (self.var_idxs, self.input_idxs))
+        stream.write("local array = %s\n" % srcvec.array)
+        var_idxs = to_indices(self.var_idxs, zeros(numpy.sum(system.local_var_sizes)))
+        input_idxs = self.input_idxs
+        stream.write("%s --> %s\n" % (var_idxs, input_idxs))
+
+        if MPI and system.app_ordering:
+            var_idx_set = system.app_ordering.app2petsc(var_idxs)
+            stream.write(" "*nest)
+            stream.write("(petsc): %s --> %s\n" % (var_idx_set, input_idxs))
+        if self.noflat_vars:
+            stream.write(" "*nest)
+            stream.write("no-flats: %s\n" % self.noflat_vars)
