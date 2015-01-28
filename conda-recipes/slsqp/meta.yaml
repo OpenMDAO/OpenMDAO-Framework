@@ -17,4 +17,4 @@ requirements:
     run:
         - python
         - numpy >=1.7.1
-        - libpython
+        - libpython # [win32]
