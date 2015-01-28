@@ -1,7 +1,7 @@
 export CFLAGS="$CFLAGS -fPIC"
 
 if [ `uname` == "Linux" ]; then
-    export LDFLAGS="LDFLAGS -shared"
+    export LDFLAGS="-shared"
 fi
 
 if [ `uname` == "Darwin" ]; then

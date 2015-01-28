@@ -27,7 +27,7 @@ requirements:
     - python
     - numpy >=1.7.1
     - setuptools
-    - libpython
+    - libpython # [win32]
 
 about:
   home:  http://openmdao.org
