@@ -20,7 +20,9 @@ class LinearSolver(object):
         
         # Figure out base indentation for printing the residual during convergence.
         level = 0
-        if hasattr(system, '_parent_system') and system._parent_system is not None:
+        if hasattr(system, '_parent_system') and \
+           system._parent_system is not None and \
+           hasattr(system._parent_system, '_comp'):
             drv = system._parent_system._comp
             self.drv_name = drv.name
             if drv.itername == '-driver':
@@ -499,6 +501,7 @@ class LinearGS(LinearSolver):
     def solve(self, arg):
         """ Executes an iterative solver """
         system = self._system
+        print "START", system.name
 
         system.rhs_buf[:] = arg[:]
         system.sol_buf[:] = system.sol_vec.array[:]
@@ -535,29 +538,50 @@ class LinearGS(LinearSolver):
                 rev_systems = [item for item in reversed(system.subsystems(local=True))]
 
                 for subsystem in rev_systems:
+                    print "Outer", subsystem.name
                     system.sol_buf[:] = system.rhs_buf[:]
 
                     # Instead of a double loop, we can use the graph to only
                     # call applyJ on the component behind us. This led to a
                     # nice speedup.
-                    succs = system.graph.successors(subsystem.node)
+                    succs = [str(node) for node in system.graph.successors(subsystem.node)]
 
                     for subsystem2 in rev_systems:
                         if subsystem2.name in succs:
+                            print "Inner", subsystem2.name
                             system.rhs_vec.array[:] = 0.0
                             args = subsystem.flat_vars.keys()
+                            print "Z1", system.vec['du'].array, system.vec['dp'].array, system.vec['df'].array
                             subsystem2.applyJ(args)
+                            print "Z2", system.vec['du'].array, system.vec['dp'].array, system.vec['df'].array
                             system.scatter('du', 'dp', subsystem=subsystem2)
+                            print subsystem2.name, subsystem2.vec['dp'].keys(), subsystem2.vec['du'].keys()
+                            print "Z3", system.vec['du'].array, system.vec['dp'].array, system.vec['df'].array
                             system.sol_buf[:] -= system.rhs_vec.array[:]
                             system.vec['dp'].array[:] = 0.0
+                            print "Z4", system.vec['du'].array, system.vec['dp'].array, system.vec['df'].array
                     system.rhs_vec.array[:] = system.sol_buf[:]
+                    print "Z5", system.vec['du'].array, system.vec['dp'].array, system.vec['df'].array
+                    if len(system.vec['dp'].array) == 0:
+                        psys = system._parent_system
+                        print "pZ5", psys.vec['du'].array, psys.vec['dp'].array, psys.vec['df'].array
                     subsystem.solve_linear(options)
+                    print "Z6", system.vec['du'].array, system.vec['dp'].array, system.vec['df'].array
+                    if len(system.vec['dp'].array) == 0:
+                        psys = system._parent_system
+                        print "pZ6", psys.vec['du'].array, psys.vec['dp'].array, psys.vec['df'].array
                     
             norm = self._norm()
+            if len(system.vec['dp'].array) == 0:
+                psys = system._parent_system
+                print "pZ7afternorm", psys.vec['du'].array, psys.vec['dp'].array, psys.vec['df'].array
             counter += 1
             if self.options.iprint > 0:
                 self.print_norm(self.ln_string, counter, norm, norm0)
 
         #print 'return', options.parent.name, np.linalg.norm(system.rhs_vec.array), system.rhs_vec.array
-        #print 'Linear solution vec', system.sol_vec.array
+        print 'Linear solution vec', system.sol_vec.array
+        if len(system.vec['dp'].array) == 0:
+            psys = system._parent_system
+            print "pZZ", psys.vec['du'].array, psys.vec['dp'].array, psys.vec['df'].array
         return system.sol_vec.array
