@@ -1486,9 +1486,10 @@ class Assembly(Component):
             self.setup_depgraph()
             self.setup_reduced_graph(inputs=inputs, outputs=outputs)
             self.setup_systems()
-            # if MPI.COMM_WORLD.rank == 0:
-            #     from openmdao.util.dotgraph import plot_system_tree
-            #     plot_system_tree(self._system)
+            #if MPI.COMM_WORLD.rank == 0:
+                #from openmdao.util.dotgraph import plot_system_tree, plot_graph
+                #plot_system_tree(self._system)
+                #plot_graph(self._reduced_graph, 'red.pdf')
 
             self.setup_communicators(comm)
             self.setup_variables()
