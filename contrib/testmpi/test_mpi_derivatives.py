@@ -332,16 +332,16 @@ class MPITests_2Proc(MPITestCase):
         top.driver.add_constraint('comp3.y < 1000')
         top.run()
 
-        # J = top.driver.workflow.calc_gradient(mode='forward',
-        #                                       return_format='dict')
-        # J = top.driver.workflow._system.get_combined_J(J)
-        #
-        # collective_assert_rel_error(self,
-        #                             J['_pseudo_0.out0']['comp1.x'][0][0],
-        #                             -6.0, 0.0001)
-        # collective_assert_rel_error(self,
-        #                             J['_pseudo_1.out0']['comp1.x'][0][0],
-        #                             20.0, 0.0001)
+        J = top.driver.workflow.calc_gradient(mode='forward',
+                                              return_format='dict')
+        J = top.driver.workflow._system.get_combined_J(J)
+       
+        collective_assert_rel_error(self,
+                                    J['_pseudo_0.out0']['comp1.x'][0][0],
+                                    -6.0, 0.0001)
+        collective_assert_rel_error(self,
+                                    J['_pseudo_1.out0']['comp1.x'][0][0],
+                                    20.0, 0.0001)
 
     def test_one_to_two_adjoint(self):
 
