@@ -518,20 +518,27 @@ class LinearGS(LinearSolver):
                 for subsystem in system.subsystems(local=True):
                     print subsystem.name
                     sys.stdout.flush()
-                    #print "Z1", system.vec['du'].array, system.vec['dp'].array, system.vec['df'].array
+                    if subsystem.name in ['_pseudo_1', '_pseudo_2']:
+                        continue
+                    print "Z1", system.vec['du'].array, system.vec['dp'].array, system.vec['df'].array
+                    sys.stdout.flush()
                     system.scatter('du', 'dp', subsystem=subsystem)
-                    #print "Z2", system.vec['du'].array, system.vec['dp'].array, system.vec['df'].array
+                    print "Z2", system.vec['du'].array, system.vec['dp'].array, system.vec['df'].array
+                    sys.stdout.flush()
                     system.rhs_vec.array[:] = 0.0
                     subsystem.applyJ(system.flat_vars.keys())
                     system.rhs_vec.array[:] *= -1.0
                     system.rhs_vec.array[:] += system.rhs_buf[:]
                     sub_options = options if subsystem.options is None \
                                           else subsystem.options
-                    #print "Z4", system.vec['du'].array, system.vec['dp'].array, system.vec['df'].array
+                    print "Z4", system.vec['du'].array, system.vec['dp'].array, system.vec['df'].array
+                    sys.stdout.flush()
                     subsystem.solve_linear(sub_options)
-                    #print "Z5", system.vec['du'].array, system.vec['dp'].array, system.vec['df'].array
-                    #print subsystem.name, system.rhs_vec.array, system.sol_vec.array
-                #print "End", system.name
+                    print "Z5", system.vec['du'].array, system.vec['dp'].array, system.vec['df'].array
+                    print subsystem.name, system.rhs_vec.array, system.sol_vec.array
+                    sys.stdout.flush()
+                    
+                print "End", system.name
             elif system.mode == 'adjoint':
                 print "Start Adjoint", system.name, system
                 sys.stdout.flush()
