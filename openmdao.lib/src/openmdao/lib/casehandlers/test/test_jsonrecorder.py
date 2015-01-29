@@ -1,6 +1,6 @@
 import bson
 import json
-import os.path
+import os
 import tempfile
 import re
 import shutil
@@ -81,8 +81,9 @@ class TestCase(unittest.TestCase):
         self.top.recorders = [JSONCaseRecorder(sout)]
         self.top.record_configuration()
 
-        # with open('jsonrecorder_norun.new', 'w') as out:
-        #      out.write(sout.getvalue())
+        if os.environ.get('REGEN_JSON_FILES'):
+            with open('jsonrecorder_norun.new', 'w') as out:
+                 out.write(sout.getvalue())
         verify_json(self, sout, 'jsonrecorder_norun.json')
 
     def test_jsonrecorder(self):
@@ -90,8 +91,9 @@ class TestCase(unittest.TestCase):
         self.top.recorders = [JSONCaseRecorder(sout)]
         self.top.run()
 
-        # with open('jsonrecorder.new', 'w') as out:
-        #     out.write(sout.getvalue())
+        if os.environ.get('REGEN_JSON_FILES'):
+            with open('jsonrecorder.new', 'w') as out:
+                out.write(sout.getvalue())
         verify_json(self, sout, 'jsonrecorder.json')
 
     def test_multiple_objectives(self):
@@ -105,8 +107,9 @@ class TestCase(unittest.TestCase):
         self.top.recorders = [JSONCaseRecorder(sout)]
         self.top.run()
 
-        # with open('multiobj.new', 'w') as out:
-        #     out.write(sout.getvalue())
+        if os.environ.get('REGEN_JSON_FILES'):
+            with open('multiobj.new', 'w') as out:
+                out.write(sout.getvalue())
         verify_json(self, sout, 'multiobj.json')
 
     def test_nested(self):
@@ -146,11 +149,10 @@ class TestCase(unittest.TestCase):
         asm1.recorders = [JSONCaseRecorder(sout)]
         asm1.run()
 
-        #with open('nested.new', 'w') as out:
-        #    out.write(sout.getvalue())
+        if os.environ.get('REGEN_JSON_FILES'):
+            with open('nested.new', 'w') as out:
+               out.write(sout.getvalue())
         verify_json(self, sout, 'nested.json')
-
-
 
     def test_close(self):
         sout = StringIO()

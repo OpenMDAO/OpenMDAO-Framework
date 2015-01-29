@@ -86,6 +86,7 @@ class System(object):
         self.scatter_full = None
         self.scatter_rev_full = None
         self.scatter_partial = None
+        self.scatter_partial_rev = None
 
         # Derivatives stuff
         self.mode = None
@@ -566,7 +567,10 @@ class System(object):
             else:
                 scatter = self.scatter_full
         else:
-            scatter = subsystem.scatter_partial
+            if self.mode == 'adjoint' and srcvecname == 'du':
+                scatter = subsystem.scatter_partial_rev
+            else:
+                scatter = subsystem.scatter_partial
 
         if scatter is not None:
             srcvec = self.vec[srcvecname]
@@ -1439,7 +1443,9 @@ class CompoundSystem(System):
         dest_full = []
         src_rev_full = []
         dest_rev_full = []
-        scatter_conns_rev = set()
+        dest_rev = []
+        src_rev = []
+        scatter_conns_rev_full = set()
         scatter_conns_full = set()
         noflat_conns_full = set()
         noflats = set([k for k,v in self.variables.items()
@@ -1453,7 +1459,10 @@ class CompoundSystem(System):
         for subsystem in self.all_subsystems():
             src_partial = []
             dest_partial = []
+            src_rev_partial = []
+            dest_rev_partial = []
             scatter_conns = set()
+            scatter_conns_rev = set()
             noflat_conns = set()  # non-flattenable vars
             for sub in subsystem.simple_subsystems():
                 for node in self.variables:
@@ -1472,11 +1481,21 @@ class CompoundSystem(System):
                         dest_partial.append(dest_idxs)
 
                         if node in self.vec['u']:
-                            #print "U node size for %s: %s" % (str(node), self.variables[node]['size'])
-                            if node not in scatter_conns_rev:
-                                src_rev_full.append(src_idxs)
-                                dest_rev_full.append(dest_idxs)
-                                scatter_conns_rev.add(node)
+                            sidxs = src_idxs
+                            didxs = dest_idxs
+                        else:
+                            sidxs = petsc_linspace(0, 0)
+                            didxs = petsc_linspace(0, 0)
+
+                        src_rev_partial.append(sidxs)
+                        dest_rev_partial.append(didxs)
+                        scatter_conns_rev.add(node)
+
+                        #print "U node size for %s: %s" % (str(node), self.variables[node]['size'])
+                        if node not in scatter_conns_rev_full:
+                            src_rev_full.append(sidxs)
+                            dest_rev_full.append(didxs)
+                            scatter_conns_rev_full.add(node)
 
                         if node not in scatter_conns_full:
                             src_full.append(src_idxs)
@@ -1487,18 +1506,26 @@ class CompoundSystem(System):
 
             if MPI or scatter_conns or noflat_conns:
                 #print "PARTIAL %s --> %s: %s --> %s" % (self.name, subsystem.name, idx_merge(src_partial),
-                #                                        idx_merge(dest_partial))
+                #                                        idx_merge(dest_partial)); sys.stdout.flush()
                 subsystem.scatter_partial = DataTransfer(self, src_partial,
                                                          dest_partial,
                                                          scatter_conns, noflat_conns)
+
+            # special partial reverse scatter for adjoint linearGS
+            if scatter_conns_rev:
+                #print "PARTIAL rev %s --> %s: %s --> %s" % (self.name, subsystem.name, idx_merge(src_rev_partial),
+                #                                        idx_merge(dest_rev_partial)); sys.stdout.flush()
+                subsystem.scatter_partial_rev = DataTransfer(self, src_rev_partial,
+                                                             dest_rev_partial,
+                                                             scatter_conns_rev, set())
 
         if MPI or scatter_conns_full or noflat_conns_full:
             self.scatter_full = DataTransfer(self, src_full, dest_full,
                                              scatter_conns_full, noflat_conns_full)
 
-        if scatter_conns_rev:
+        if scatter_conns_rev_full:
             self.scatter_rev_full = DataTransfer(self, src_rev_full, dest_rev_full,
-                                                 scatter_conns_rev, [])
+                                                 scatter_conns_rev_full, [])
 
         for sub in self.local_subsystems():
             sub.setup_scatters()
