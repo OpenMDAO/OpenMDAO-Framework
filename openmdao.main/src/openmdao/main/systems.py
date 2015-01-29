@@ -15,7 +15,7 @@ from openmdao.main.linearsolver import ScipyGMRES, PETSc_KSP, LinearGS
 from openmdao.main.mp_support import has_interface
 from openmdao.main.interfaces import IDriver, IAssembly, IImplicitComponent, \
                                      ISolver, IPseudoComp, IComponent, ISystem
-from openmdao.main.vecwrapper import VecWrapper, InputVecWrapper, DataTransfer, DataTransfer2, \
+from openmdao.main.vecwrapper import VecWrapper, InputVecWrapper, DataTransfer, \
                                      idx_merge, petsc_linspace, _filter, _filter_subs, \
                                      _filter_flat, _filter_ignored
 from openmdao.main.depgraph import break_cycles, get_node_boundary, gsort, \
@@ -561,20 +561,15 @@ class System(object):
         send/receive for data that isn't flattenable to a
         float array.
         """
-        print "in scatter"; sys.stdout.flush()
         if subsystem is None:
             if self.mode == 'adjoint' and srcvecname == 'du':
-                print "full rev scatter"; sys.stdout.flush()
                 scatter = self.scatter_rev_full
             else:
-                print "full scatter"; sys.stdout.flush()
                 scatter = self.scatter_full
         else:
             if self.mode == 'adjoint' and srcvecname == 'du':
-                print "partial rev scatter to %s" % str(subsystem.name); sys.stdout.flush()
                 scatter = subsystem.scatter_partial_rev
             else:
-                print "partial scatter to %s" % str(subsystem.name); sys.stdout.flush()
                 scatter = subsystem.scatter_partial
 
         if scatter is not None:
@@ -586,11 +581,8 @@ class System(object):
             #print 'srcvec', srcvec.array, srcvec.keys()
             #print 'destvec', destvec.array, destvec.keys()
 
-            print "doing the scatter"; sys.stdout.flush()
-
             scatter(self, srcvec, destvec)
             #print self.name, scatter is self.scatter_full, subsystem
-            print "scatter DONE"; sys.stdout.flush()
 
             if destvecname == 'p':
 
@@ -608,8 +600,6 @@ class System(object):
                         if self.complex_step is True:
                             self.vec['dp'].set_to_scope_complex(self.scope,
                                                                 subsystem._in_nodes)
-            print "RETURNING"; sys.stdout.flush()
-
 
     def dump(self, nest=0, stream=sys.stdout, verbose=False):
         """Prints out a textual representation of the collapsed
@@ -1491,15 +1481,21 @@ class CompoundSystem(System):
                         dest_partial.append(dest_idxs)
 
                         if node in self.vec['u']:
-                            src_rev_partial.append(src_idxs)
-                            dest_rev_partial.append(dest_idxs)
-                            scatter_conns_rev.add(node)
+                            sidxs = src_idxs
+                            didxs = dest_idxs
+                        else:
+                            sidxs = petsc_linspace(0, 0)
+                            didxs = petsc_linspace(0, 0)
 
-                            #print "U node size for %s: %s" % (str(node), self.variables[node]['size'])
-                            if node not in scatter_conns_rev_full:
-                                src_rev_full.append(src_idxs)
-                                dest_rev_full.append(dest_idxs)
-                                scatter_conns_rev_full.add(node)
+                        src_rev_partial.append(numpy.array(sidxs))
+                        dest_rev_partial.append(numpy.array(didxs))
+                        scatter_conns_rev.add(node)
+
+                        #print "U node size for %s: %s" % (str(node), self.variables[node]['size'])
+                        if node not in scatter_conns_rev_full:
+                            src_rev_full.append(numpy.array(sidxs))
+                            dest_rev_full.append(numpy.array(didxs))
+                            scatter_conns_rev_full.add(node)
 
                         if node not in scatter_conns_full:
                             src_full.append(src_idxs)
@@ -1510,13 +1506,15 @@ class CompoundSystem(System):
 
             if MPI or scatter_conns or noflat_conns:
                 #print "PARTIAL %s --> %s: %s --> %s" % (self.name, subsystem.name, idx_merge(src_partial),
-                #                                        idx_merge(dest_partial))
+                #                                        idx_merge(dest_partial)); sys.stdout.flush()
                 subsystem.scatter_partial = DataTransfer(self, src_partial,
                                                          dest_partial,
                                                          scatter_conns, noflat_conns)
 
             if scatter_conns_rev:
-                subsystem.scatter_partial_rev = DataTransfer2(self, src_rev_partial,
+                #print "PARTIAL rev %s --> %s: %s --> %s" % (self.name, subsystem.name, idx_merge(src_rev_partial),
+                #                                        idx_merge(dest_rev_partial)); sys.stdout.flush()
+                subsystem.scatter_partial_rev = DataTransfer(self, src_rev_partial,
                                                              dest_rev_partial,
                                                              scatter_conns_rev, set())
 

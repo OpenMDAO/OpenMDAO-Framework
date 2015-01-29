@@ -564,8 +564,8 @@ class MPITests_2Proc(MPITestCase):
         self.top.driver.gradient_options.maxiter = 1
         self.top.run()
 
-        from openmdao.util.dotgraph import plot_system_tree
-        plot_system_tree(self.top._system)
+        # from openmdao.util.dotgraph import plot_system_tree
+        # plot_system_tree(self.top._system)
 
         J = self.top.driver.calc_gradient(inputs=['comp1.x1'],
                                           outputs=['comp5.y1'],
