@@ -1487,14 +1487,14 @@ class CompoundSystem(System):
                             sidxs = petsc_linspace(0, 0)
                             didxs = petsc_linspace(0, 0)
 
-                        src_rev_partial.append(numpy.array(sidxs))
-                        dest_rev_partial.append(numpy.array(didxs))
+                        src_rev_partial.append(sidxs)
+                        dest_rev_partial.append(didxs)
                         scatter_conns_rev.add(node)
 
                         #print "U node size for %s: %s" % (str(node), self.variables[node]['size'])
                         if node not in scatter_conns_rev_full:
-                            src_rev_full.append(numpy.array(sidxs))
-                            dest_rev_full.append(numpy.array(didxs))
+                            src_rev_full.append(sidxs)
+                            dest_rev_full.append(didxs)
                             scatter_conns_rev_full.add(node)
 
                         if node not in scatter_conns_full:
@@ -1511,6 +1511,7 @@ class CompoundSystem(System):
                                                          dest_partial,
                                                          scatter_conns, noflat_conns)
 
+            # special partial reverse scatter for adjoint linearGS
             if scatter_conns_rev:
                 #print "PARTIAL rev %s --> %s: %s --> %s" % (self.name, subsystem.name, idx_merge(src_rev_partial),
                 #                                        idx_merge(dest_rev_partial)); sys.stdout.flush()
