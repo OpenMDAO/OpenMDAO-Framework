@@ -18,15 +18,15 @@ def caseset_query_to_html(query, filename='cases.html'):
     json_data = json.loads(case_data)
 
     # get dependency graph from case data and render it to SVG
-    graph = json_data['simulation_info']['graph']
-    G = nx.readwrite.json_graph.loads(graph)
+    graph = json.loads(json_data['simulation_info']['graph'])
+    G = nx.readwrite.json_graph.node_link_graph(graph)
     agraph = nx.to_agraph(G)
     svg_dep_graph = agraph.draw(format='svg', prog='dot')
 
     # get component graph from case data and render it to SVG
     if 'comp_graph' in json_data['simulation_info'].keys():
-        graph = json_data['simulation_info']['comp_graph']
-        G = nx.readwrite.json_graph.loads(graph)
+        graph = json.loads(json_data['simulation_info']['comp_graph'])
+        G = nx.readwrite.json_graph.node_link_graph(graph)
         agraph = nx.to_agraph(G)
         svg_comp_graph = agraph.draw(format='svg', prog='dot')
     else:

@@ -1162,7 +1162,7 @@ def change_prefix(filename, dst_prefix):
             os.path.join("/Library/Python", sys.version[:3], "site-packages"),
             os.path.join(sys.prefix, "Extras", "lib", "python"),
             os.path.join("~", "Library", "Python", sys.version[:3], "site-packages"),
-            # Python 2.6 no-frameworks
+            # Python 2.7 no-frameworks
             os.path.join("~", ".local", "lib","python", sys.version[:3], "site-packages"),
             # System Python 2.7 on OSX Mountain Lion
             os.path.join("~", "Library", "Python", sys.version[:3], "lib", "python", "site-packages")))
