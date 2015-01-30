@@ -563,24 +563,11 @@ class LinearGS(LinearSolver):
                             #print "Z4", system.vec['du'].array, system.vec['dp'].array, system.vec['df'].array; sys.stdout.flush()
                     system.rhs_vec.array[:] = system.sol_buf[:]
                     #print "Z5", system.vec['du'].array, system.vec['dp'].array, system.vec['df'].array; sys.stdout.flush()
-                    #print "len dp",len(system.vec['dp'].array); sys.stdout.flush()
-                    if len(system.vec['dp'].array) == 0:
-                        psys = system._parent_system
-                        #print "pZ5", psys.vec['du'].array, psys.vec['dp'].array, psys.vec['df'].array; sys.stdout.flush()
-                    try:
-                        subsystem.solve_linear(options)
-                    except:
-                        traceback.print_exc(); sys.stderr.flush()
-                        raise
+                    
+                    subsystem.solve_linear(options)
                     #print "Z6", system.vec['du'].array, system.vec['dp'].array, system.vec['df'].array; sys.stdout.flush()
-                    if len(system.vec['dp'].array) == 0:
-                        psys = system._parent_system
-                        #print "pZ6", psys.vec['du'].array, psys.vec['dp'].array, psys.vec['df'].array; sys.stdout.flush()
 
             norm = self._norm()
-            if len(system.vec['dp'].array) == 0:
-                psys = system._parent_system
-                #print "pZ7afternorm", psys.vec['du'].array, psys.vec['dp'].array, psys.vec['df'].array; sys.stdout.flush()
             counter += 1
             if self.options.iprint > 0:
                 self.print_norm(self.ln_string, counter, norm, norm0)
