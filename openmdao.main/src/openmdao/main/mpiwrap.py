@@ -1,5 +1,6 @@
 import os
 import sys
+import numpy
 
 def use_proc_files():
     if MPI is not None:
@@ -10,7 +11,7 @@ def use_proc_files():
 def under_mpirun():
     """Return True if we're being executed under mpirun."""
     # TODO: this is a bit of a hack and there appears to be
-    # no consistent set of environment vars between MPI 
+    # no consistent set of environment vars between MPI
     # implementations.
     for name in os.environ.keys():
         if name.startswith('OMPI_COMM') or name.startswith('MPICH_'):
@@ -21,7 +22,7 @@ class PETSc(object):
     def __init__(self):
         self.needs_ksp = False # PETSc won't actually be imported unless this is True
         self._PETSc = None
-        
+
     @property
     def installed(self):
         try:
@@ -33,12 +34,12 @@ class PETSc(object):
         except ImportError:
             self._PETSc = None
             return False
-            
+
     def __getattr__(self, name):
         if self.installed:
             return getattr(self._PETSc, name)
         raise AttributeError(name)
-    
+
 def create_petsc_vec(comm, arr):
     if under_mpirun() or PETSc.needs_ksp:
         if PETSc.installed:
@@ -52,7 +53,7 @@ if under_mpirun():
     PETSc.installed = True
 
     COMM_NULL = MPI.COMM_NULL
-    
+
 else:
     MPI = None
     COMM_NULL = None
@@ -80,6 +81,25 @@ class MPI_info(object):
             else:
                 return -1
         return 0
+
+
+def get_norm(vec, order=None):
+    """Either do a distributed norm or a local numpy
+    norm depending on whether we're running under MPI.
+
+    vec: VecWrapper
+        Returns the norm of this vector
+
+    order: int, float, string (see numpy.linalg.norm)
+        Order of the norm (ignored in MPI)
+    """
+
+    if MPI:
+        vec.petsc_vec.assemble()
+        return vec.petsc_vec.norm()
+    else:
+        return numpy.linalg.norm(vec.array, ord=order)
+
 
 if os.environ.get('USE_PROC_FILES'):
     use_proc_files()

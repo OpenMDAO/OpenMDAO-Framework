@@ -8,7 +8,7 @@ import networkx as nx
 from zope.interface import implements
 
 # pylint: disable-msg=E0611,F0401
-from openmdao.main.mpiwrap import MPI, MPI_info, PETSc
+from openmdao.main.mpiwrap import MPI, MPI_info, PETSc, get_norm
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.finite_difference import FiniteDifference, DirectionalFD
 from openmdao.main.linearsolver import ScipyGMRES, PETSc_KSP, LinearGS
@@ -2402,18 +2402,3 @@ def get_full_nodeset(scope, group):
         else:
             names.add(name)
     return names
-
-
-def get_norm(vec):
-    """Either do a distributed norm or a local numpy
-    norm depending on whether we're running under MPI.
-
-    vec: VecWrapper
-        The vector to take the norm of
-    """
-
-    if MPI:
-        vec.petsc_vec.assemble()
-        return vec.petsc_vec.norm()
-    else:
-        return numpy.linalg.norm(vec.array)
