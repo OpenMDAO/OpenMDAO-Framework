@@ -846,8 +846,7 @@ class System(object):
         """ Single linear solve solution applied to whatever input is sitting
         in the RHS vector.
         """
-
-        if numpy.linalg.norm(self.rhs_vec.array) < 1e-15:
+        if get_norm(self.rhs_vec) < 1e-15:
             self.sol_vec.array[:] = 0.0
             return self.sol_vec.array
 
@@ -2403,3 +2402,18 @@ def get_full_nodeset(scope, group):
         else:
             names.add(name)
     return names
+
+
+def get_norm(vec):
+    """Either do a distributed norm or a local numpy
+    norm depending on whether we're running under MPI.
+
+    vec: VecWrapper
+        The vector to take the norm of
+    """
+
+    if MPI:
+        vec.petsc_vec.assemble()
+        return vec.petsc_vec.norm()
+    else:
+        return numpy.linalg.norm(vec.array)
