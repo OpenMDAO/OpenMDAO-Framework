@@ -882,6 +882,7 @@ class MPITests_2Proc(MPITestCase):
         
                 self.create_passthrough('comp1.x1')
                 self.create_passthrough('comp5.y1')
+                self.create_passthrough('comp1.y2')
         
                 self.driver.system_type = 'serial'
         
@@ -896,6 +897,10 @@ class MPITests_2Proc(MPITestCase):
         top.driver.add_parameter('sub1.x1', low=-10, high=10)
         top.driver.add_parameter('sub2.x1', low=-10, high=10)
         top.driver.add_objective('sub1.y1 + sub2.y1')
+        
+        # These make it lock up
+        top.driver.add_constraint('sub1.y2 < 100')
+        #top.driver.add_constraint('sub2.y2 < 100')
         
         top.sub1.x1 = 2.0     
         top.sub2.x1 = 3.0
