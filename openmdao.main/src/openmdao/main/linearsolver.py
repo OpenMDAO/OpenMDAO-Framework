@@ -9,7 +9,7 @@ import traceback
 import numpy as np
 from scipy.sparse.linalg import gmres, LinearOperator
 
-from openmdao.main.mpiwrap import MPI, PETSc
+from openmdao.main.mpiwrap import MPI, PETSc, get_norm
 from openmdao.util.graph import fix_single_tuple
 from openmdao.util.log import logger
 
@@ -59,11 +59,7 @@ class LinearSolver(object):
         system.rhs_vec.array[:] *= -1.0
         system.rhs_vec.array[:] += system.rhs_buf[:]
 
-        if MPI:
-            system.rhs_vec.petsc_vec.assemble()
-            return system.rhs_vec.petsc_vec.norm()
-        else:
-            return np.linalg.norm(system.rhs_vec.array)
+        return get_norm(system.rhs_vec)
 
 
 class ScipyGMRES(LinearSolver):
@@ -563,7 +559,7 @@ class LinearGS(LinearSolver):
                             #print "Z4", system.vec['du'].array, system.vec['dp'].array, system.vec['df'].array; sys.stdout.flush()
                     system.rhs_vec.array[:] = system.sol_buf[:]
                     #print "Z5", system.vec['du'].array, system.vec['dp'].array, system.vec['df'].array; sys.stdout.flush()
-                    
+
                     subsystem.solve_linear(options)
                     #print "Z6", system.vec['du'].array, system.vec['dp'].array, system.vec['df'].array; sys.stdout.flush()
 
