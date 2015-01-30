@@ -1309,12 +1309,13 @@ class AssemblySystem(SimpleSystem):
         """ Calculates and saves the Jacobian for this subassy. """
 
         inner_system = self._comp._system
+        options = self._comp.driver.gradient_options
 
         # Calculate and save Jacobian for this assy
         inputs = [item.partition('.')[-1] for item in self.list_inputs()]
         outputs = [item.partition('.')[-1] for item in self.list_outputs()]
         self.J = inner_system.calc_gradient(inputs=inputs, outputs=outputs,
-                                            options=self.options)
+                                            options=options)
 
     def set_complex_step(self, complex_step=False):
         """ Toggles complex_step plumbing for this system and all
