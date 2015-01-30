@@ -518,8 +518,6 @@ class LinearGS(LinearSolver):
                 for subsystem in system.subsystems(local=True):
                     print subsystem.name
                     sys.stdout.flush()
-                    if subsystem.name in ['_pseudo_1', '_pseudo_2']:
-                        continue
                     print "Z1", system.vec['du'].array, system.vec['dp'].array, system.vec['df'].array
                     sys.stdout.flush()
                     system.scatter('du', 'dp', subsystem=subsystem)
