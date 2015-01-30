@@ -2,6 +2,9 @@
 (Not to be confused with the OpenMDAO Solver classes.)
 """
 
+import sys
+import traceback
+
 # pylint: disable=E0611, F0401
 import numpy as np
 from scipy.sparse.linalg import gmres, LinearOperator
@@ -10,6 +13,7 @@ from openmdao.main.mpiwrap import MPI, PETSc
 from openmdao.util.graph import fix_single_tuple
 from openmdao.util.log import logger
 
+
 class LinearSolver(object):
     """ A base class for linear solvers """
 
@@ -17,6 +21,35 @@ class LinearSolver(object):
         """ Set up any LinearSolver object """
         self._system = system
         self.options = system.options
+
+        # Figure out base indentation for printing the residual during convergence.
+        level = 0
+        if hasattr(system, '_parent_system') and \
+           system._parent_system is not None and \
+           hasattr(system._parent_system, '_comp'):
+            drv = system._parent_system._comp
+            self.drv_name = drv.name
+            if drv.itername == '-driver':
+                level = 0
+            else:
+                level = drv.itername.count('.') + 1
+
+        else:
+            self.drv_name = system.name
+
+        self.indent = '   ' * level
+
+    def print_norm(self, driver_string, iteration, res, res0, msg=None, solver='LN'):
+        """ Prints out the norm of the residual in a neat readable format.
+        """
+
+        if msg is not None:
+            form = self.indent + '[%s]    %s: %s   %d | %s'
+            print form % (self.drv_name, solver, self.ln_string, iteration, msg)
+            return
+
+        form = self.indent + '[%s]    %s: %s   %d | %.9g %.9g'
+        print form % (self.drv_name, solver, self.ln_string, iteration, res, res/res0)
 
     def _norm(self):
         """ Computes the norm of the linear residual """
@@ -37,6 +70,8 @@ class ScipyGMRES(LinearSolver):
     """ Scipy's GMRES Solver. This is a serial solver, so
     it should never be used in an MPI setting.
     """
+
+    ln_string = 'GMRES'
 
     def __init__(self, system):
         """ Set up ScipyGMRES object """
@@ -177,6 +212,25 @@ class ScipyGMRES(LinearSolver):
 class PETSc_KSP(LinearSolver):
     """ PETSc's KSP solver with preconditioning. MPI is supported."""
 
+    ln_string = 'KSP'
+
+    # This class object is given to KSP as a callback object for printing the residual.
+    class Monitor(object):
+        """ Prints output from PETSc's KSP solvers """
+
+        def __init__(self, ksp):
+            """ Stores pointer to the ksp solver """
+            self._ksp = ksp
+            self._norm0 = 1.0
+
+        def __call__(self, ksp, counter, norm):
+            """ Store norm if first iteration, and print norm """
+            if counter == 0 and norm != 0.0:
+                self._norm0 = norm
+
+            if self._ksp.options.iprint > 0:
+                self._ksp.print_norm(self._ksp.ln_string, counter, norm, self._norm0)
+
     def __init__(self, system):
         """ Set up KSP object """
         super(PETSc_KSP, self).__init__(system)
@@ -193,6 +247,7 @@ class PETSc_KSP(LinearSolver):
         self.ksp.setType('fgmres')
         self.ksp.setGMRESRestart(1000)
         self.ksp.setPCSide(PETSc.PC.Side.RIGHT)
+        self.ksp.setMonitor(self.Monitor(self))
 
         pc_mat = self.ksp.getPC()
         pc_mat.setType('python')
@@ -258,10 +313,10 @@ class PETSc_KSP(LinearSolver):
 
                 i = 0
                 for out in outputs:
-                    
+
                     if isinstance(out, tuple):
                         out = out[0]
-                    
+
                     out_size = system.get_size(out)
 
                     if return_format == 'dict':
@@ -349,6 +404,8 @@ class LinearGS(LinearSolver):
     """ Linear block Gauss Seidel. MPI is not supported yet.
     Serial block solve of D x = b - (L+U) x """
 
+    ln_string = 'LIN_GS'
+
     def __init__(self, system):
         """ Set up LinearGS object """
         super(LinearGS, self).__init__(system)
@@ -369,8 +426,6 @@ class LinearGS(LinearSolver):
         num_input = system.get_size(inputs)
         num_output = system.get_size(outputs)
 
-        n_edge = system.vec['f'].array.size
-
         if return_format == 'dict':
             J = {}
             for okey in outputs:
@@ -385,11 +440,6 @@ class LinearGS(LinearSolver):
 
         if system.mode == 'adjoint':
             outputs, inputs = inputs, outputs
-            invec = system.vec['u']
-            outvec = system.vec['p']
-        else:
-            invec = system.vec['p']
-            outvec = system.vec['u']
 
         # If Forward mode, solve linear system for each parameter
         # If Reverse mode, solve linear system for each requested output
@@ -399,7 +449,8 @@ class LinearGS(LinearSolver):
             if isinstance(param, tuple):
                 param = param[0]
 
-            in_indices = invec.indices(system.scope, param)
+            in_indices = system.rhs_vec.indices(system.scope, param)
+            nj = len(in_indices)
             jbase = j
 
             for irhs in in_indices:
@@ -420,17 +471,17 @@ class LinearGS(LinearSolver):
                     if isinstance(item, tuple):
                         item = item[0]
 
-                    out_indices = outvec.indices(system.scope, item)
+                    out_indices = system.sol_vec.indices(system.scope, item)
                     nk = len(out_indices)
 
                     if return_format == 'dict':
                         if system.mode == 'forward':
                             if J[item][param] is None:
-                                J[item][param] = np.zeros((nk, len(in_indices)))
+                                J[item][param] = np.zeros((nk, nj))
                             J[item][param][:, j-jbase] = dx[out_indices]
                         else:
                             if J[param][item] is None:
-                                J[param][item] = np.zeros((len(in_indices), nk))
+                                J[param][item] = np.zeros((nj, nk))
                             J[param][item][j-jbase, :] = dx[out_indices]
 
                     else:
@@ -448,6 +499,7 @@ class LinearGS(LinearSolver):
     def solve(self, arg):
         """ Executes an iterative solver """
         system = self._system
+        #print "START", system.name
 
         system.rhs_buf[:] = arg[:]
         system.sol_buf[:] = system.sol_vec.array[:]
@@ -456,51 +508,74 @@ class LinearGS(LinearSolver):
 
         norm0, norm = 1.0, 1.0
         counter = 0
+        if self.options.iprint > 0:
+            self.print_norm(self.ln_string, counter, norm, norm0)
+
         while counter < options.maxiter and norm > options.atol and \
               norm/norm0 > options.rtol:
 
             if system.mode == 'forward':
-                #print "Start", system.name, system
+                #print "Start Forward", system.name, system; sys.stdout.flush()
                 for subsystem in system.subsystems(local=True):
-                    #print "Z1", system.vec['du'].array, system.vec['dp'].array, system.vec['df'].array
+                    #print subsystem.name; sys.stdout.flush()
+                    #print "Z1", system.vec['du'].array, system.vec['dp'].array, system.vec['df'].array; sys.stdout.flush()
                     system.scatter('du', 'dp', subsystem=subsystem)
-                    #print "Z2", system.vec['du'].array, system.vec['dp'].array, system.vec['df'].array
+                    #print "Z2", system.vec['du'].array, system.vec['dp'].array, system.vec['df'].array; sys.stdout.flush()
                     system.rhs_vec.array[:] = 0.0
                     subsystem.applyJ(system.flat_vars.keys())
                     system.rhs_vec.array[:] *= -1.0
                     system.rhs_vec.array[:] += system.rhs_buf[:]
                     sub_options = options if subsystem.options is None \
                                           else subsystem.options
-                    #print "Z4", system.vec['du'].array, system.vec['dp'].array, system.vec['df'].array
+                    #print "Z4", system.vec['du'].array, system.vec['dp'].array, system.vec['df'].array; sys.stdout.flush()
                     subsystem.solve_linear(sub_options)
                     #print "Z5", system.vec['du'].array, system.vec['dp'].array, system.vec['df'].array
-                    #print subsystem.name, system.rhs_vec.array, system.sol_vec.array
-                #print "End", system.name
+                    #print subsystem.name, system.rhs_vec.array, system.sol_vec.array; sys.stdout.flush()
+
+                #print "End", system.name; sys.stdout.flush()
             elif system.mode == 'adjoint':
+                #print "Start Adjoint", system.name, system; sys.stdout.flush()
 
                 rev_systems = [item for item in reversed(system.subsystems(local=True))]
 
                 for subsystem in rev_systems:
+                    #print "Outer", subsystem.name; sys.stdout.flush()
                     system.sol_buf[:] = system.rhs_buf[:]
 
                     # Instead of a double loop, we can use the graph to only
                     # call applyJ on the component behind us. This led to a
                     # nice speedup.
-                    succs = system.graph.successors(subsystem.node)
+                    succs = [str(node) for node in system.graph.successors(subsystem.node)]
 
                     for subsystem2 in rev_systems:
                         if subsystem2.name in succs:
+                            #print "Inner", subsystem2.name; sys.stdout.flush()
                             system.rhs_vec.array[:] = 0.0
                             args = subsystem.flat_vars.keys()
+                            #print "Z1", system.vec['du'].array, system.vec['dp'].array, system.vec['df'].array; sys.stdout.flush()
                             subsystem2.applyJ(args)
+                            #print "Z2", system.vec['du'].array, system.vec['dp'].array, system.vec['df'].array; sys.stdout.flush()
                             system.scatter('du', 'dp', subsystem=subsystem2)
+                            #print subsystem2.name, subsystem2.vec['dp'].keys(), subsystem2.vec['du'].keys()
+                            #print "Z3", system.vec['du'].array, system.vec['dp'].array, system.vec['df'].array; sys.stdout.flush()
                             system.sol_buf[:] -= system.rhs_vec.array[:]
                             system.vec['dp'].array[:] = 0.0
+                            #print "Z4", system.vec['du'].array, system.vec['dp'].array, system.vec['df'].array; sys.stdout.flush()
                     system.rhs_vec.array[:] = system.sol_buf[:]
+                    #print "Z5", system.vec['du'].array, system.vec['dp'].array, system.vec['df'].array; sys.stdout.flush()
+                    
                     subsystem.solve_linear(options)
+                    #print "Z6", system.vec['du'].array, system.vec['dp'].array, system.vec['df'].array; sys.stdout.flush()
+
             norm = self._norm()
             counter += 1
+            if self.options.iprint > 0:
+                self.print_norm(self.ln_string, counter, norm, norm0)
 
         #print 'return', options.parent.name, np.linalg.norm(system.rhs_vec.array), system.rhs_vec.array
-        #print 'Linear solution vec', system.sol_vec.array
+        #print 'Linear solution vec', system.sol_vec.array; sys.stdout.flush()
+        if len(system.vec['dp'].array) == 0:
+            psys = system._parent_system
+            #print "pZZ", psys.vec['du'].array, psys.vec['dp'].array, psys.vec['df'].array; sys.stdout.flush()
+
         return system.sol_vec.array

@@ -366,7 +366,7 @@ class InputVecWrapper(VecWrapperBase):
                 continue
 
             self._add_subview(scope, name)
-            
+
         # if self.name.endswith('.p'):
         #     print "P for %s: %s" % (system.name, self.keys())
 
@@ -450,7 +450,7 @@ class DataTransfer(object):
             var_idxs, input_idxs = merge_idxs(var_idxs, input_idxs)
             #print "ORIG INDXS: %s --> %s" % (var_idxs, input_idxs)
         except Exception as err:
-            raise RuntimeError("ERROR creating scatter for system %s in scope %s" %
+            raise RuntimeError("ERROR creating scatter for system %s in scope %s: %s" %
                                 (system.name, str(system.scope), str(err)))
 
         self.var_idxs = to_slice(var_idxs)
@@ -506,9 +506,9 @@ class DataTransfer(object):
 
         if self.scatter:
             #print "%s for %s\n%s <-- %s" % (destvec.name.rsplit('.', 1)[1],
-                                            #destvec.name.rsplit('.',1)[0],
-                                            #list(self.scatter_conns),
-                                            #src[self.scatter.dest_idxs if addv else self.scatter.src_idxs])
+            #                                destvec.name.rsplit('.',1)[0],
+            #                                list(self.scatter_conns),
+            #                                src[self.input_idxs if addv else self.var_idxs]); sys.stdout.flush()
             #print destvec.name
             #print self.scatter_conns
             #print srcvec.keys(), '-->'
@@ -583,6 +583,13 @@ def merge_idxs(src_idxs, dest_idxs):
     """
     assert(len(src_idxs) == len(dest_idxs))
 
+    # filter out any zero length idx array entries
+    src_idxs = [i for i in src_idxs if len(i)]
+    dest_idxs = [i for i in dest_idxs if len(i)]
+
+    if len(src_idxs) == 0:
+        return petsc_linspace(0, 0), petsc_linspace(0,0)
+
     src_tups = list(enumerate(src_idxs))
 
     src_sorted = sorted(src_tups, key=lambda x: x[1].min())
@@ -652,3 +659,5 @@ def _filter_ignored(scope, lst):
 
 def _filter_flat(scope, lst):
     return [n for n in lst if not scope._var_meta[n].get('noflat')]
+
+
