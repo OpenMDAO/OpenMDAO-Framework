@@ -2,6 +2,9 @@
 (Not to be confused with the OpenMDAO Solver classes.)
 """
 
+import sys
+import traceback
+
 # pylint: disable=E0611, F0401
 import numpy as np
 from scipy.sparse.linalg import gmres, LinearOperator
@@ -9,6 +12,7 @@ from scipy.sparse.linalg import gmres, LinearOperator
 from openmdao.main.mpiwrap import MPI, PETSc
 from openmdao.util.graph import fix_single_tuple
 from openmdao.util.log import logger
+
 
 class LinearSolver(object):
     """ A base class for linear solvers """
@@ -511,29 +515,31 @@ class LinearGS(LinearSolver):
               norm/norm0 > options.rtol:
 
             if system.mode == 'forward':
-                #print "Start Forward", system.name, system
+                #print "Start Forward", system.name, system; sys.stdout.flush()
                 for subsystem in system.subsystems(local=True):
-                    #print "Z1", system.vec['du'].array, system.vec['dp'].array, system.vec['df'].array
+                    #print subsystem.name; sys.stdout.flush()
+                    #print "Z1", system.vec['du'].array, system.vec['dp'].array, system.vec['df'].array; sys.stdout.flush()
                     system.scatter('du', 'dp', subsystem=subsystem)
-                    #print "Z2", system.vec['du'].array, system.vec['dp'].array, system.vec['df'].array
+                    #print "Z2", system.vec['du'].array, system.vec['dp'].array, system.vec['df'].array; sys.stdout.flush()
                     system.rhs_vec.array[:] = 0.0
                     subsystem.applyJ(system.flat_vars.keys())
                     system.rhs_vec.array[:] *= -1.0
                     system.rhs_vec.array[:] += system.rhs_buf[:]
                     sub_options = options if subsystem.options is None \
                                           else subsystem.options
-                    #print "Z4", system.vec['du'].array, system.vec['dp'].array, system.vec['df'].array
+                    #print "Z4", system.vec['du'].array, system.vec['dp'].array, system.vec['df'].array; sys.stdout.flush()
                     subsystem.solve_linear(sub_options)
                     #print "Z5", system.vec['du'].array, system.vec['dp'].array, system.vec['df'].array
-                    #print subsystem.name, system.rhs_vec.array, system.sol_vec.array
-                #print "End", system.name
+                    #print subsystem.name, system.rhs_vec.array, system.sol_vec.array; sys.stdout.flush()
+
+                #print "End", system.name; sys.stdout.flush()
             elif system.mode == 'adjoint':
-                #print "Start Adjoint", system.name, system
+                #print "Start Adjoint", system.name, system; sys.stdout.flush()
 
                 rev_systems = [item for item in reversed(system.subsystems(local=True))]
 
                 for subsystem in rev_systems:
-                    #print "Outer", subsystem.name
+                    #print "Outer", subsystem.name; sys.stdout.flush()
                     system.sol_buf[:] = system.rhs_buf[:]
 
                     # Instead of a double loop, we can use the graph to only
@@ -543,40 +549,46 @@ class LinearGS(LinearSolver):
 
                     for subsystem2 in rev_systems:
                         if subsystem2.name in succs:
-                            #print "Inner", subsystem2.name
+                            #print "Inner", subsystem2.name; sys.stdout.flush()
                             system.rhs_vec.array[:] = 0.0
                             args = subsystem.flat_vars.keys()
-                            #print "Z1", system.vec['du'].array, system.vec['dp'].array, system.vec['df'].array
+                            #print "Z1", system.vec['du'].array, system.vec['dp'].array, system.vec['df'].array; sys.stdout.flush()
                             subsystem2.applyJ(args)
-                            #print "Z2", system.vec['du'].array, system.vec['dp'].array, system.vec['df'].array
+                            #print "Z2", system.vec['du'].array, system.vec['dp'].array, system.vec['df'].array; sys.stdout.flush()
                             system.scatter('du', 'dp', subsystem=subsystem2)
                             #print subsystem2.name, subsystem2.vec['dp'].keys(), subsystem2.vec['du'].keys()
-                            #print "Z3", system.vec['du'].array, system.vec['dp'].array, system.vec['df'].array
+                            #print "Z3", system.vec['du'].array, system.vec['dp'].array, system.vec['df'].array; sys.stdout.flush()
                             system.sol_buf[:] -= system.rhs_vec.array[:]
                             system.vec['dp'].array[:] = 0.0
-                            #print "Z4", system.vec['du'].array, system.vec['dp'].array, system.vec['df'].array
+                            #print "Z4", system.vec['du'].array, system.vec['dp'].array, system.vec['df'].array; sys.stdout.flush()
                     system.rhs_vec.array[:] = system.sol_buf[:]
-                    #print "Z5", system.vec['du'].array, system.vec['dp'].array, system.vec['df'].array
+                    #print "Z5", system.vec['du'].array, system.vec['dp'].array, system.vec['df'].array; sys.stdout.flush()
+                    #print "len dp",len(system.vec['dp'].array); sys.stdout.flush()
                     if len(system.vec['dp'].array) == 0:
                         psys = system._parent_system
-                        #print "pZ5", psys.vec['du'].array, psys.vec['dp'].array, psys.vec['df'].array
-                    subsystem.solve_linear(options)
-                    #print "Z6", system.vec['du'].array, system.vec['dp'].array, system.vec['df'].array
+                        #print "pZ5", psys.vec['du'].array, psys.vec['dp'].array, psys.vec['df'].array; sys.stdout.flush()
+                    try:
+                        subsystem.solve_linear(options)
+                    except:
+                        traceback.print_exc(); sys.stderr.flush()
+                        raise
+                    #print "Z6", system.vec['du'].array, system.vec['dp'].array, system.vec['df'].array; sys.stdout.flush()
                     if len(system.vec['dp'].array) == 0:
                         psys = system._parent_system
-                        #print "pZ6", psys.vec['du'].array, psys.vec['dp'].array, psys.vec['df'].array
+                        #print "pZ6", psys.vec['du'].array, psys.vec['dp'].array, psys.vec['df'].array; sys.stdout.flush()
 
             norm = self._norm()
             if len(system.vec['dp'].array) == 0:
                 psys = system._parent_system
-                #print "pZ7afternorm", psys.vec['du'].array, psys.vec['dp'].array, psys.vec['df'].array
+                #print "pZ7afternorm", psys.vec['du'].array, psys.vec['dp'].array, psys.vec['df'].array; sys.stdout.flush()
             counter += 1
             if self.options.iprint > 0:
                 self.print_norm(self.ln_string, counter, norm, norm0)
 
         #print 'return', options.parent.name, np.linalg.norm(system.rhs_vec.array), system.rhs_vec.array
-        #print 'Linear solution vec', system.sol_vec.array
+        #print 'Linear solution vec', system.sol_vec.array; sys.stdout.flush()
         if len(system.vec['dp'].array) == 0:
             psys = system._parent_system
-            #print "pZZ", psys.vec['du'].array, psys.vec['dp'].array, psys.vec['df'].array
+            #print "pZZ", psys.vec['du'].array, psys.vec['dp'].array, psys.vec['df'].array; sys.stdout.flush()
+
         return system.sol_vec.array
