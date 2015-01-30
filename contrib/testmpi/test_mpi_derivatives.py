@@ -1018,10 +1018,8 @@ class MPITests_2Proc(MPITestCase):
         print top._pseudo_0.out0
         print top.driver.func_dict
 
-        collective_assert_rel_error(self, 9826.25, top._pseudo_0.out0,
-                                    0.0001)
-        collective_assert_rel_error(self, 9826.25, top.driver.func_dict['_pseudo_0.out0'],
-                                    0.0001)
+        collective_assert_rel_error(self, 9826.25, top._pseudo_0.out0, 0.0001)
+        collective_assert_rel_error(self, 9826.25, top.driver.func_dict['_pseudo_0.out0'], 0.0001)
 
         
 # FIXME: running this file as main currently doesn't work...
