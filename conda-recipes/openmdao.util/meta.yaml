@@ -1,9 +1,18 @@
+{% set pkg_version = environ['PKG_VERSION'] %}
+{% set remote = "https://github.com/OpenMDAO/OpenMDAO-Framework.git" %}
+
+{% if pkg_version == "dev" %}
+{% set source="git_url: {}\n  git_branch: {}".format(remote, pkg_version) %}
+{% else %}
+{% set source="  git_url: {}\n  git_branch: {}".format(remote, pkg_version) %}
+{% endif %}
+
 package:
  name: openmdao.util
- version: dev
+ version: !!str {{ pkg_version }}
 
 source:
- path:  ../../openmdao.util
+{{ source }}
     
 requirements:
   build:
@@ -13,7 +22,7 @@ requirements:
   run:
     - python
     - setuptools
-    - pycrypto
+    - pycrypto ==2.3
     - pyparsing
     - traits ==4.3.0
 

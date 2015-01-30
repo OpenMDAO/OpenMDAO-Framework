@@ -1,4 +1,3 @@
-echo $PKG_VERSION
 export CFLAGS="$CFLAGS -fPIC"
 
 if [ "$(uname -s)" = "Linux" ]; then
@@ -6,8 +5,10 @@ if [ "$(uname -s)" = "Linux" ]; then
 fi
 
 if [ -n "$OSX_ARCH" ]; then
-    export LDFLAGS="$LDFLAGS -dynamiclib -undefined dynamic_lookup -Xlinker -rpath -Xlinker @loader_path/../../../../../lib/openmdao"
+    export LDFLAGS="$LDFLAGS -dynamiclib -undefined dynamic_lookup -install_name ${PKG_NAME}.so -static-libgfortran -lgcc -lSystem -nodefaultlibs `find /usr/local/Cellar -name libquadmath.a | grep -v i386`"
 fi
 
-python setup.py build_ext
-python setup.py install
+${PYTHON} setup.py build_ext
+${PYTHON} setup.py install
+
+python -c "from pkg_resources import get_distribution; print get_distribution('$PKG_NAME').version" > __conda_version__.txt
