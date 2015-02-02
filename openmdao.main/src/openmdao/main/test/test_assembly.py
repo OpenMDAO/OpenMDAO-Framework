@@ -451,7 +451,7 @@ class AssemblyTestCase(unittest.TestCase):
         # Cyclic graphs are permitted in declaration.
         self.asm.connect('comp2.rout', 'comp1.r')
 
-        # Unconnected added twice shouldn't cause exception.
+        # duplicate entries in workflow should cause exception.
         asm = Assembly()
         asm.add('a', Simple())
         asm.add('b', Simple())
@@ -462,23 +462,11 @@ class AssemblyTestCase(unittest.TestCase):
         sequence = ['dup1', 'a', 'dup2', 'dup1', 'b', 'dup1', 'dup2']
         asm.driver.workflow.add(sequence)
         self.assertEqual([comp.name for comp in asm.driver.workflow], sequence)
-        asm.run()
-        self.assertEqual(dup1.exec_count, 3)
-        self.assertEqual(dup2.exec_count, 2)
-
-        asm = Assembly()
-        asm.add('a', Simple())
-        asm.add('b', Simple())
-        dup1 = asm.add('dup1', Simple())
-        dup2 = asm.add('dup2', Simple())
-        self.assertEqual(dup1.exec_count, 0)
-        self.assertEqual(dup2.exec_count, 0)
-        sequence = ['dup1', 'a', 'dup2', 'dup1', 'b', 'dup1', 'dup2']
-        asm.driver.workflow.add(sequence)
-        self.assertEqual([comp.name for comp in asm.driver.workflow], sequence)
-        asm.run()
-        self.assertEqual(dup1.exec_count, 3)
-        self.assertEqual(dup2.exec_count, 2)
+        try:
+            asm.run()
+        except RuntimeError as err:
+            self.assertEqual(str(err),
+                "driver workflow has duplicate entries: ['dup1', 'dup2']")
 
     def test_disconnect(self):
         # first, run connected
