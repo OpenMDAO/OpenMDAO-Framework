@@ -914,6 +914,8 @@ class SimpleSystem(System):
         else:
             if has_interface(comp, IComponent):
                 self._comp = comp
+                if isinstance(comp, PseudoComponent):
+                    comp._system = self
                 nodes = comp.get_full_nodeset()
                 cpus = comp.get_req_cpus()
             else:

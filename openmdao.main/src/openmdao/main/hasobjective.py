@@ -43,9 +43,13 @@ class Objective(ConnectedExprEvaluator):
         """
         if self.pcomp_name:
             scope = self._get_updated_scope(scope)
+            system = getattr(scope, self.pcomp_name)._system
             vname = self.pcomp_name + '.out0'
             try:
-                return scope._system.vec['u'][scope.name2collapsed[vname]]
+                if scope._var_meta[vname].get('scalar'):
+                    return system.vec['u'][scope.name2collapsed[vname]][0]
+                else:
+                    return system.vec['u'][scope.name2collapsed[vname]]
             except (KeyError, AttributeError):
                 pass
 
@@ -215,18 +219,11 @@ class HasObjectives(object):
     def eval_objectives(self):
         """Returns a list of values of the evaluated objectives."""
         scope = self._get_scope()
-        objs = []
-        for obj in self._objectives.values():
-            pcomp = getattr(scope, obj.pcomp_name)
-            objs.append(pcomp.out0)
-        return objs
+        return [obj.evaluate(scope) for obj in self._objectives.values()]
 
     def eval_named_objective(self, name):
         """Returns the value of objective `name`."""
-        scope = self._get_scope()
-        obj = self._objectives[name]
-        pcomp = getattr(scope, obj.pcomp_name)
-        return pcomp.out0
+        return self._objectives[name].evaluate(self._get_scope())
 
     def list_pseudocomps(self):
         """Returns a list of pseudocomponent names associated with our

@@ -231,9 +231,13 @@ class Constraint(object):
 
     def evaluate(self, scope):
         """Returns the value of the constraint as a sequence."""
-
-        pcomp = getattr(scope, self.pcomp_name)
-        val = pcomp.out0
+        # vname = self.pcomp_name + '.out0'
+        # try:
+        #     return scope._system.vec['u'][scope.name2collapsed[vname]]
+        # except (KeyError, AttributeError):
+        #     pass
+        
+        val = getattr(scope, self.pcomp_name).out0
 
         if isinstance(val, ndarray):
             return val.flatten()
