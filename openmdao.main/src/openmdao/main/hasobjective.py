@@ -37,6 +37,21 @@ class Objective(ConnectedExprEvaluator):
 
             self.pcomp_name = None
 
+    def evaluate(self, scope=None):
+        """Use the value in the u vector if it exists instead of pulling
+        the value from scope.
+        """
+        if self.pcomp_name:
+            scope = self._get_updated_scope(scope)
+            vname = self.pcomp_name + '.out0'
+            try:
+                return scope._system.vec['u'][scope.name2collapsed[vname]]
+            except (KeyError, AttributeError):
+                pass
+
+        return super(Objective, self).evaluate(scope)
+
+
 
 class HasObjectives(object):
     """This class provides an implementation of the IHasObjectives interface."""
