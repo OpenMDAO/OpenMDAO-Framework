@@ -231,12 +231,21 @@ class Constraint(object):
 
     def evaluate(self, scope):
         """Returns the value of the constraint as a sequence."""
-        # vname = self.pcomp_name + '.out0'
-        # try:
-        #     return scope._system.vec['u'][scope.name2collapsed[vname]]
-        # except (KeyError, AttributeError):
-        #     pass
-        
+        vname = self.pcomp_name + '.out0'
+        try:
+            system = getattr(scope,self.pcomp_name)._system
+            info = system.vec['u']._info[scope.name2collapsed[vname]]
+            # if a pseudocomp output is marked as hidden, that means that
+            # it's really a residual, but it's mapped in the vector to
+            # the corresponding state, so don't pull that value because
+            # we want the actual residual value
+            if info.hide: # it's a residual so pull from f vector
+                return -system.vec['f'][scope.name2collapsed[vname]]
+            else:
+                return info.view
+        except (KeyError, AttributeError):
+            pass
+
         val = getattr(scope, self.pcomp_name).out0
 
         if isinstance(val, ndarray):
