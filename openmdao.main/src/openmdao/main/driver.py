@@ -234,6 +234,13 @@ class Driver(Component):
     def check_config(self, strict=False):
         """Verify that our workflow is able to resolve all of its components."""
 
+        # duplicate entries in the workflow are not allowed
+        names = self.workflow.get_names()
+        dups = list(set([x for x in names if names.count(x) > 1]))
+        if len(dups) > 0:
+            raise RuntimeError("%s workflow has duplicate entries: %s" %
+                                (self.get_pathname(), str(dups)))
+
         # workflow will raise an exception if it can't resolve a Component
         super(Driver, self).check_config(strict=strict)
         self.workflow.check_config(strict=strict)
