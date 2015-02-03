@@ -16,11 +16,11 @@ from openmdao.main.mp_support import has_interface
 from openmdao.main.case import Case
 from openmdao.main.mpiwrap import MPI, MPI_info
 from openmdao.main.systems import SerialSystem, ParallelSystem, \
-                                  OpaqueSystem, VarSystem, CompoundSystem, \
-                                  partition_subsystems, ParamSystem, \
-                                  get_comm_if_active, collapse_to_system_node
+     OpaqueSystem, VarSystem, CompoundSystem, \
+     partition_subsystems, ParamSystem, \
+     get_comm_if_active, collapse_to_system_node
 from openmdao.main.depgraph import _get_inner_connections, get_nondiff_groups, \
-                                   collapse_nodes, simple_node_iter, CollapsedGraph
+     collapse_nodes, simple_node_iter, CollapsedGraph
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.interfaces import IVariableTree, IDriver
 from openmdao.main.depgraph import is_connection
@@ -160,7 +160,7 @@ class Workflow(object):
         """ Run the Components in this Workflow. """
         if not self._system.is_active():
             return
-            
+
         self._stop = False
         self._exec_count += 1
 
@@ -326,7 +326,7 @@ class Workflow(object):
         df vector."""
 
         self._system.calc_newton_direction(options=self.parent.gradient_options,
-                                          iterbase=self._iterbase())
+                                           iterbase=self._iterbase())
 
     def check_gradient(self, inputs=None, outputs=None, stream=sys.stdout, mode='auto'):
         """Compare the OpenMDAO-calculated gradient with one calculated
@@ -553,10 +553,10 @@ class Workflow(object):
                 if save_problem_formulation or \
                    self._check_path(path, includes, excludes):
                     self._rec_objectives.append(key)
-		    if key != objective.text:
-			outputs.append(name)
-		    else:
-			outputs.append(name + '.out0')
+                    if key != objective.text:
+                        outputs.append(name)
+                    else:
+                        outputs.append(name + '.out0')
 
         # Responses
         self._rec_responses = []
@@ -615,7 +615,7 @@ class Workflow(object):
                     outputs.append(output_name)
                     self._rec_outputs.append(output_name)
                     #self._rec_all_outputs.append(output_name)
-                    
+
         #####
         # also need get any outputs of comps that are not connected vars 
         #   and therefore not in the graph
@@ -625,7 +625,7 @@ class Workflow(object):
         #    
         #   also:
         #         scope._depgraph.list_outputs('comp2')
-        
+
         for comp in driver.workflow: 
             for output_name in scope._depgraph.list_outputs(comp.name):
                 if has_interface(comp, IDriver): # Only record outputs from drivers if they are framework variables
@@ -823,7 +823,7 @@ class Workflow(object):
         self._reduced_graph = None
         for comp in self:
             comp.pre_setup()
-    
+
     def setup_systems(self, system_type):
         """Get the subsystem for this workflow. Each
         subsystem contains a subgraph of this workflow's component
@@ -854,7 +854,7 @@ class Workflow(object):
         for node in params:
             param = node[0]
             reduced.node[param]['system'] = \
-                       ParamSystem(scope, reduced, param)
+                ParamSystem(scope, reduced, param)
 
         #outs = []
         #for p in parent_graph.predecessors(drvname):
@@ -872,7 +872,7 @@ class Workflow(object):
         cgraph = reduced.component_graph()
 
         opaque_map = {} # map of all internal comps to collapsed
-                              # name of opaque system
+                                # name of opaque system
         if self.scope._derivs_required:
             # collapse non-differentiable system groups into
             # opaque systems
@@ -946,7 +946,7 @@ class Workflow(object):
             self._system = cgraph.node[name].get('system')
         else:
             raise RuntimeError("setup_systems called on %s.workflow but component graph is empty!" %
-                                self.parent.get_pathname())
+                               self.parent.get_pathname())
 
     def get_req_cpus(self):
         """Return requested_cpus"""
@@ -983,7 +983,7 @@ def get_cycle_vars(graph, varmeta):
     # examine the graph to see if we have any cycles that we need to
     # deal with
     cycle_vars = []
-        
+
     # make a copy of the graph since we don't want to modify it
     g = graph.subgraph(graph.nodes_iter())
 
