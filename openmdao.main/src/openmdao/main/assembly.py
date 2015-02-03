@@ -49,6 +49,7 @@ from openmdao.main.systems import SerialSystem, _create_simple_sys
 from openmdao.util.graph import list_deriv_vars, base_var, fix_single_tuple
 from openmdao.util.log import logger
 from openmdao.util.debug import strict_chk_config
+from openmdao.util.typegroups import real_types
 
 from openmdao.util.graphplot import _clean_graph
 from networkx.readwrite import json_graph
@@ -1376,6 +1377,9 @@ class Assembly(Component):
         try:
             # TODO: add checking of local_size metadata...
             val, idx = get_val_and_index(child, vname)
+
+            if isinstance(val, real_types):
+                info['scalar'] = True
 
             if hasattr(val, 'shape'):
                 info['shape'] = val.shape

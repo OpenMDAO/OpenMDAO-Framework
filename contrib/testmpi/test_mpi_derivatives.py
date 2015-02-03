@@ -332,7 +332,7 @@ class MPITests_2Proc(MPITestCase):
         top.driver.add_constraint('comp3.y < 1000')
         top.run()
 
-        J = top.driver.calc_gradient(mode='forward',
+        J = top.driver.workflow.calc_gradient(mode='forward',
                                               return_format='dict')
         J = top.driver.workflow._system.get_combined_J(J)
 
@@ -367,13 +367,8 @@ class MPITests_2Proc(MPITestCase):
         top.driver.add_constraint('comp2.y < 1000')
         top.driver.add_constraint('comp3.y < 1000')
         top.run()
-<<<<<<< HEAD
-
-        J = top.driver.calc_gradient(mode='adjoint',
-=======
 
         J = top.driver.workflow.calc_gradient(mode='adjoint',
->>>>>>> a736f6120aa45720e345203a6227a976eff0e2a4
                                               return_format='dict')
         J = top.driver.workflow._system.get_combined_J(J)
 
@@ -408,13 +403,8 @@ class MPITests_2Proc(MPITestCase):
         top.driver.add_constraint('comp2.y < 1000')
         top.driver.add_constraint('comp3.y < 1000')
         top.run()
-<<<<<<< HEAD
-
-        J = top.driver.calc_gradient(mode='fd',
-=======
 
         J = top.driver.workflow.calc_gradient(mode='fd',
->>>>>>> a736f6120aa45720e345203a6227a976eff0e2a4
                                               return_format='dict')
         J = top.driver.workflow._system.get_combined_J(J)
 
@@ -706,6 +696,74 @@ class MPITests_2Proc(MPITestCase):
                                     J['comp5.y1']['comp1.x1'][0][0],
                                     313.0, 0.0001)
 
+    def test_diverge_converge_extended_adjoint(self):
+
+        top = set_as_top(Assembly())
+
+        exp1 = ['y1 = 2.0*x1**2',
+                'y2 = 3.0*x1']
+        deriv1 = ['dy1_dx1 = 4.0*x1',
+                  'dy2_dx1 = 3.0']
+
+        exp2 = ['y1 = 0.5*x1']
+        deriv2 = ['dy1_dx1 = 0.5']
+
+        exp3 = ['y1 = 3.5*x1']
+        deriv3 = ['dy1_dx1 = 3.5']
+
+        exp4 = ['y1 = x1 + 2.0*x2',
+                'y2 = 3.0*x1',
+                'y3 = x1*x2']
+        deriv4 = ['dy1_dx1 = 1.0',
+                  'dy1_dx2 = 2.0',
+                  'dy2_dx1 = 3.0',
+                  'dy2_dx2 = 0.0',
+                  'dy3_dx1 = x2',
+                  'dy3_dx2 = x1']
+
+        exp5 = ['y1 = x1 + 3.0*x2 + 2.0*x3']
+        deriv5 = ['dy1_dx1 = 1.0',
+                  'dy1_dx2 = 3.0',
+                  'dy1_dx3 = 2.0']
+
+        top.add('comp1', ExecCompWithDerivatives(exp1, deriv1))
+        top.add('comp2', ExecCompWithDerivatives(exp2, deriv2))
+        top.add('comp2b', ExecCompWithDerivatives(exp3, deriv3))
+        top.add('comp3', ExecCompWithDerivatives(exp3, deriv3))
+        top.add('comp3b', ExecCompWithDerivatives(exp3, deriv3))
+        top.add('comp4', ExecCompWithDerivatives(exp4, deriv4))
+        top.add('comp5', ExecCompWithDerivatives(exp5, deriv5))
+
+        top.driver.workflow.add(['comp1', 'comp2', 'comp2b', 'comp3', 'comp3b', 'comp4', 'comp5'])
+
+        top.connect('comp1.y1', 'comp2.x1')
+        top.connect('comp1.y2', 'comp3.x1')
+        top.connect('comp2.y1', 'comp2b.x1')
+        top.connect('comp3.y1', 'comp3b.x1')
+        top.connect('comp2b.y1', 'comp4.x1')
+        top.connect('comp3b.y1', 'comp4.x2')
+        top.connect('comp4.y1', 'comp5.x1')
+        top.connect('comp4.y2', 'comp5.x2')
+        top.connect('comp4.y3', 'comp5.x3')
+
+        top.comp1.x1 = 2.0
+        #top.driver.gradient_options.lin_solver = 'linear_gs'
+        #top.driver.gradient_options.maxiter = 1
+        top.run()
+
+        J = top.driver.calc_gradient(inputs=['comp1.x1'],
+                                     outputs=['comp5.y1'],
+                                     mode='adjoint',
+                                     return_format='dict')
+
+        #from openmdao.util.dotgraph import plot_system_tree
+        #plot_system_tree(self.top._system)
+
+        print J
+        collective_assert_rel_error(self,
+                                    J['comp5.y1']['comp1.x1'][0][0],
+                                    3300.5, 0.0001)
+
     def test_diverge_converge_nondiff_comp3_forward(self):
 
         self.top = set_as_top(Assembly())
@@ -767,6 +825,202 @@ class MPITests_2Proc(MPITestCase):
         collective_assert_rel_error(self,
                                     J['comp5.y1']['comp1.x1'][0][0],
                                     313.0, 0.0001)
+
+
+    def test_lin_GS_subassy(self):
+
+        class Sub(Assembly):
+
+            def configure(self):
+                exp1 = ['y1 = 2.0*x1**2',
+                        'y2 = 3.0*x1']
+                deriv1 = ['dy1_dx1 = 4.0*x1',
+                          'dy2_dx1 = 3.0']
+
+                exp2 = ['y1 = 0.5*x1']
+                deriv2 = ['dy1_dx1 = 0.5']
+
+                exp3 = ['y1 = 3.5*x1']
+                deriv3 = ['dy1_dx1 = 3.5']
+
+                exp4 = ['y1 = x1 + 2.0*x2',
+                        'y2 = 3.0*x1',
+                        'y3 = x1*x2']
+                deriv4 = ['dy1_dx1 = 1.0',
+                          'dy1_dx2 = 2.0',
+                          'dy2_dx1 = 3.0',
+                          'dy2_dx2 = 0.0',
+                          'dy3_dx1 = x2',
+                          'dy3_dx2 = x1']
+
+                exp5 = ['y1 = x1 + 3.0*x2 + 2.0*x3']
+                deriv5 = ['dy1_dx1 = 1.0',
+                          'dy1_dx2 = 3.0',
+                          'dy1_dx3 = 2.0']
+
+                self.add('comp1', ExecCompWithDerivatives(exp1, deriv1))
+                self.add('comp2', ExecCompWithDerivatives(exp2, deriv2))
+                self.add('comp2b', ExecCompWithDerivatives(exp3, deriv3))
+                self.add('comp3', ExecCompWithDerivatives(exp3, deriv3))
+                self.add('comp3b', ExecCompWithDerivatives(exp3, deriv3))
+                self.add('comp4', ExecCompWithDerivatives(exp4, deriv4))
+                self.add('comp5', ExecCompWithDerivatives(exp5, deriv5))
+
+                self.driver.workflow.add(['comp1', 'comp2', 'comp2b', 'comp3', 'comp3b', 'comp4', 'comp5'])
+
+                self.connect('comp1.y1', 'comp2.x1')
+                self.connect('comp1.y2', 'comp3.x1')
+                self.connect('comp2.y1', 'comp2b.x1')
+                self.connect('comp3.y1', 'comp3b.x1')
+                self.connect('comp2b.y1', 'comp4.x1')
+                self.connect('comp3b.y1', 'comp4.x2')
+                self.connect('comp4.y1', 'comp5.x1')
+                self.connect('comp4.y2', 'comp5.x2')
+                self.connect('comp4.y3', 'comp5.x3')
+
+                self.comp1.x1 = 2.0
+
+                self.create_passthrough('comp1.x1')
+                self.create_passthrough('comp5.y1')
+                self.create_passthrough('comp1.y2')
+
+                self.driver.system_type = 'serial'
+
+
+        top = set_as_top(Assembly())
+        top.add('sub1', Sub())
+        top.add('sub2', Sub())
+
+        top.replace('driver', SimpleDriver())
+        top.driver.workflow.add(['sub1', 'sub2'])
+
+        top.driver.add_parameter('sub1.x1', low=-10, high=10)
+        top.driver.add_parameter('sub2.x1', low=-10, high=10)
+        top.driver.add_objective('sub1.y1 + sub2.y1')
+
+        # These make it lock up
+        top.driver.add_constraint('sub1.y2 < 100')
+        #top.driver.add_constraint('sub2.y2 < 100')
+
+        top.sub1.x1 = 2.0
+        top.sub2.x1 = 3.0
+
+        top.driver.gradient_options.lin_solver = 'linear_gs'
+        top.driver.gradient_options.maxiter = 1
+        top.run()
+
+        # from openmdao.util.dotgraph import plot_system_tree
+        # plot_system_tree(top._system)
+
+        J = top.driver.calc_gradient(mode='adjoint',
+                                     return_format='dict')
+
+        collective_assert_rel_error(self,
+                                    J['_pseudo_0.out0']['sub1.x1'][0][0],
+                                    3300.5, 0.0001)
+        collective_assert_rel_error(self,
+                                    J['_pseudo_0.out0']['sub2.x1'][0][0],
+                                    7229.25, 0.0001)
+        collective_assert_rel_error(self,
+                                    J['_pseudo_1.out0']['sub1.x1'][0][0],
+                                    3.0, 0.0001)
+
+    def test_parallel_gather_for_objective(self):
+
+        class SpecialDriver(SimpleDriver):
+
+            def execute(self):
+
+                self.run_iteration()
+
+                self.func_dict = {}
+                for key, obj in self.get_objectives().iteritems():
+                    name = '%s.out0' % obj.pcomp_name
+                    self.func_dict[name] = np.array(obj.evaluate())
+
+        class Sub(Assembly):
+
+            def configure(self):
+                exp1 = ['y1 = 2.0*x1**2',
+                        'y2 = 3.0*x1']
+                deriv1 = ['dy1_dx1 = 4.0*x1',
+                          'dy2_dx1 = 3.0']
+
+                exp2 = ['y1 = 0.5*x1']
+                deriv2 = ['dy1_dx1 = 0.5']
+
+                exp3 = ['y1 = 3.5*x1']
+                deriv3 = ['dy1_dx1 = 3.5']
+
+                exp4 = ['y1 = x1 + 2.0*x2',
+                        'y2 = 3.0*x1',
+                        'y3 = x1*x2']
+                deriv4 = ['dy1_dx1 = 1.0',
+                          'dy1_dx2 = 2.0',
+                          'dy2_dx1 = 3.0',
+                          'dy2_dx2 = 0.0',
+                          'dy3_dx1 = x2',
+                          'dy3_dx2 = x1']
+
+                exp5 = ['y1 = x1 + 3.0*x2 + 2.0*x3']
+                deriv5 = ['dy1_dx1 = 1.0',
+                          'dy1_dx2 = 3.0',
+                          'dy1_dx3 = 2.0']
+
+                self.add('comp1', ExecCompWithDerivatives(exp1, deriv1))
+                self.add('comp2', ExecCompWithDerivatives(exp2, deriv2))
+                self.add('comp2b', ExecCompWithDerivatives(exp3, deriv3))
+                self.add('comp3', ExecCompWithDerivatives(exp3, deriv3))
+                self.add('comp3b', ExecCompWithDerivatives(exp3, deriv3))
+                self.add('comp4', ExecCompWithDerivatives(exp4, deriv4))
+                self.add('comp5', ExecCompWithDerivatives(exp5, deriv5))
+
+                self.driver.workflow.add(['comp1', 'comp2', 'comp2b', 'comp3', 'comp3b', 'comp4', 'comp5'])
+
+                self.connect('comp1.y1', 'comp2.x1')
+                self.connect('comp1.y2', 'comp3.x1')
+                self.connect('comp2.y1', 'comp2b.x1')
+                self.connect('comp3.y1', 'comp3b.x1')
+                self.connect('comp2b.y1', 'comp4.x1')
+                self.connect('comp3b.y1', 'comp4.x2')
+                self.connect('comp4.y1', 'comp5.x1')
+                self.connect('comp4.y2', 'comp5.x2')
+                self.connect('comp4.y3', 'comp5.x3')
+
+                self.comp1.x1 = 2.0
+
+                self.create_passthrough('comp1.x1')
+                self.create_passthrough('comp5.y1')
+                self.create_passthrough('comp1.y2')
+
+                self.driver.system_type = 'serial'
+
+
+        top = set_as_top(Assembly())
+        top.add('sub1', Sub())
+        top.add('sub2', Sub())
+
+        top.replace('driver', SpecialDriver())
+        top.driver.workflow.add(['sub1', 'sub2'])
+
+        top.driver.add_parameter('sub1.x1', low=-10, high=10)
+        top.driver.add_parameter('sub2.x1', low=-10, high=10)
+        top.driver.add_objective('sub1.y1 + sub2.y1')
+
+        top.sub1.x1 = 2.0
+        top.sub2.x1 = 3.0
+
+        top.run()
+
+        #from openmdao.util.dotgraph import plot_system_tree
+        #plot_system_tree(top._system)
+
+        print top._pseudo_0.out0
+        print top.driver.func_dict
+
+        collective_assert_rel_error(self, 9826.25, top._pseudo_0.out0, 0.0001)
+        collective_assert_rel_error(self, 9826.25, top.driver.func_dict['_pseudo_0.out0'], 0.0001)
+
 
 # FIXME: running this file as main currently doesn't work...
 # if __name__ == '__main__':

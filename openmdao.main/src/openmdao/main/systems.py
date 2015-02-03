@@ -8,7 +8,7 @@ import networkx as nx
 from zope.interface import implements
 
 # pylint: disable-msg=E0611,F0401
-from openmdao.main.mpiwrap import MPI, MPI_info, PETSc
+from openmdao.main.mpiwrap import MPI, MPI_info, PETSc, get_norm
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.finite_difference import FiniteDifference, DirectionalFD
 from openmdao.main.linearsolver import ScipyGMRES, PETSc_KSP, LinearGS
@@ -846,8 +846,7 @@ class System(object):
         """ Single linear solve solution applied to whatever input is sitting
         in the RHS vector.
         """
-
-        if numpy.linalg.norm(self.rhs_vec.array) < 1e-15:
+        if get_norm(self.rhs_vec) < 1e-15:
             self.sol_vec.array[:] = 0.0
             return self.sol_vec.array
 
@@ -915,6 +914,8 @@ class SimpleSystem(System):
         else:
             if has_interface(comp, IComponent):
                 self._comp = comp
+                if isinstance(comp, PseudoComponent):
+                    comp._system = self
                 nodes = comp.get_full_nodeset()
                 cpus = comp.get_req_cpus()
             else:
@@ -1309,12 +1310,13 @@ class AssemblySystem(SimpleSystem):
         """ Calculates and saves the Jacobian for this subassy. """
 
         inner_system = self._comp._system
+        options = self._comp.driver.gradient_options
 
         # Calculate and save Jacobian for this assy
         inputs = [item.partition('.')[-1] for item in self.list_inputs()]
         outputs = [item.partition('.')[-1] for item in self.list_outputs()]
         self.J = inner_system.calc_gradient(inputs=inputs, outputs=outputs,
-                                            options=self.options)
+                                            options=options)
 
     def set_complex_step(self, complex_step=False):
         """ Toggles complex_step plumbing for this system and all
