@@ -1485,24 +1485,22 @@ class Assembly(Component):
 
         self._var_meta = {}
 
-        try:
-            self.pre_setup()
-            self.setup_depgraph()
-            self.setup_reduced_graph(inputs=inputs, outputs=outputs)
-            self.setup_systems()
-            #if MPI.COMM_WORLD.rank == 0:
-                #from openmdao.util.dotgraph import plot_system_tree, plot_graph
-                #plot_system_tree(self._system)
-                #plot_graph(self._reduced_graph, 'red.pdf')
+        self.pre_setup()
+        
+        self.setup_depgraph()
+        self.setup_reduced_graph(inputs=inputs, outputs=outputs)
+        self.setup_systems()
+        #if MPI.COMM_WORLD.rank == 0:
+            #from openmdao.util.dotgraph import plot_system_tree, plot_graph
+            #plot_system_tree(self._system)
+            #plot_graph(self._reduced_graph, 'red.pdf')
 
-            self.setup_communicators(comm)
-            self.setup_variables()
-            self.setup_sizes()
-            self.setup_vectors()
-            self.setup_scatters()
-        except Exception:
-            traceback.print_exc()
-            raise
+        self.setup_communicators(comm)
+        self.setup_variables()
+        self.setup_sizes()
+        self.setup_vectors()
+        self.setup_scatters()
+        
         self.post_setup()
 
 

@@ -305,3 +305,7 @@ class UninitializedArray(unittest.TestCase):
             self.assertEqual(str(e), expected)
         else:
             self.fail("Should have raised error message: {}".format(expected))
+
+
+if __name__ == "__main__":
+    unittest.main()
