@@ -16,11 +16,11 @@ from openmdao.main.mp_support import has_interface
 from openmdao.main.case import Case
 from openmdao.main.mpiwrap import MPI, MPI_info
 from openmdao.main.systems import SerialSystem, ParallelSystem, \
-     OpaqueSystem, VarSystem, CompoundSystem, \
-     partition_subsystems, ParamSystem, \
-     get_comm_if_active, collapse_to_system_node
+                                  OpaqueSystem, VarSystem, CompoundSystem, \
+                                  partition_subsystems, ParamSystem, \
+                                  get_comm_if_active, collapse_to_system_node
 from openmdao.main.depgraph import _get_inner_connections, get_nondiff_groups, \
-     collapse_nodes, simple_node_iter, CollapsedGraph
+                                   collapse_nodes, simple_node_iter, CollapsedGraph
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.interfaces import IVariableTree, IDriver
 from openmdao.main.depgraph import is_connection
