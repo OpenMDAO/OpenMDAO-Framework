@@ -12,10 +12,9 @@ class TestMetamodelTutorial(unittest.TestCase):
         pass
     
     def tearDown(self):
-        if os.path.exists('DOE_Trainer.csv'):
-            os.remove('DOE_Trainer.csv')
-        if os.path.exists('DOE_Validate.csv'):
-            os.remove('DOE_Validate.csv')
+        for name in ['DOE_Trainer.csv', 'DOE_Validate.csv']:
+            if os.path.exists(name):
+                os.remove(name)
             
     def test_krig_sin(self):
         sim = set_as_top(Simulation())
