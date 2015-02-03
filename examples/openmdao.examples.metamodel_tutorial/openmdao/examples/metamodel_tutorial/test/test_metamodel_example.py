@@ -1,4 +1,5 @@
 
+import os
 import unittest
 from numpy import array
 
@@ -7,6 +8,15 @@ from openmdao.main.api import set_as_top
 
 class TestMetamodelTutorial(unittest.TestCase):
 
+    def setUp(self):
+        pass
+    
+    def tearDown(self):
+        if os.path.exists('DOE_Trainer.csv'):
+            os.remove('DOE_Trainer.csv')
+        if os.path.exists('DOE_Validate.csv'):
+            os.remove('DOE_Validate.csv')
+            
     def test_krig_sin(self):
         sim = set_as_top(Simulation())
         sim.run()
