@@ -868,7 +868,7 @@ class System(object):
         self.sol_vec.array[:] = 0.0
         self.vec['dp'].array[:] = 0.0
 
-        varkeys = self.vector_vars.keys()
+        varkeys = self.flat_vars.keys()
         ivar = varkeys.index(vname)
 
         if self.local_var_sizes[self.mpi.rank, ivar] > 0:
