@@ -65,7 +65,7 @@ class TestcaseSTLGroup(unittest.TestCase):
                 pass
 
     def test_vars_created(self):
-        """make sure the inputs and outputs are created properly"""
+        # make sure the inputs and outputs are created properly
 
         pn = self.top.plug_noz
 
