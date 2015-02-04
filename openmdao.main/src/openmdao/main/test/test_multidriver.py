@@ -210,8 +210,8 @@ class MultiDriverTestCase(unittest.TestCase):
 
         self.top.run()
 
-        assert_rel_error(self, self.opt_objective,
-                         self.top.driver1.eval_objective(), 0.01)
+        assert_rel_error(self, self.top.driver1.eval_objective(), 
+                         self.opt_objective, 0.01)
         self.assertAlmostEqual(self.opt_design_vars[0],
                                self.top.comp1.x, places=1)
         assert_rel_error(self, self.opt_design_vars[1], self.top.comp2.x, 0.01)
