@@ -2,7 +2,7 @@
 import unittest
 
 import time
-from numpy import array, ones, eye
+import numpy as np
 
 from openmdao.main.api import Component, Driver, Assembly, set_as_top
 from openmdao.main.datatypes.api import Float, Array
@@ -135,10 +135,10 @@ class ABCDArrayComp(Component):
 
     def __init__(self, arr_size=9):
         super(ABCDArrayComp, self).__init__()
-        self.add_trait('a', Array(ones(arr_size, float), iotype='in'))
-        self.add_trait('b', Array(ones(arr_size, float), iotype='in'))
-        self.add_trait('c', Array(ones(arr_size, float), iotype='out'))
-        self.add_trait('d', Array(ones(arr_size, float), iotype='out'))
+        self.add_trait('a', Array(np.ones(arr_size, float), iotype='in'))
+        self.add_trait('b', Array(np.ones(arr_size, float), iotype='in'))
+        self.add_trait('c', Array(np.ones(arr_size, float), iotype='out'))
+        self.add_trait('d', Array(np.ones(arr_size, float), iotype='out'))
 
     def execute(self):
         time.sleep(self.delay)
@@ -161,8 +161,8 @@ class TestArrayComp(unittest.TestCase):
         top.connect('C2.c', 'C4.a')
         top.connect('C3.d', 'C4.b')
 
-        top.C1.a = ones(size, float) * 3.0
-        top.C1.b = ones(size, float) * 7.0
+        top.C1.a = np.ones(size, float) * 3.0
+        top.C1.b = np.ones(size, float) * 7.0
 
         try:
             top.run()
@@ -249,7 +249,7 @@ class UninitializedArray(unittest.TestCase):
         """
 
         top = set_as_top(Assembly())
-        top.add('out1', self.C4(eye(2)))
+        top.add('out1', self.C4(np.eye(2)))
         top.add('in1', self.C2())
         top.connect('out1.x', 'in1.x')
         top.driver.workflow.add(['out1', 'in1'])
@@ -271,7 +271,7 @@ class UninitializedArray(unittest.TestCase):
         """ 
         
         top = set_as_top(Assembly())
-        top.add('out1', self.C4(array(range(5))))
+        top.add('out1', self.C4(np.array(range(5))))
         top.add('in1', self.C2())
         top.add('in2', self.C2())
         top.connect('out1.x', 'in1.x')
@@ -305,3 +305,65 @@ class UninitializedArray(unittest.TestCase):
             self.assertEqual(str(e), expected)
         else:
             self.fail("Should have raised error message: {}".format(expected))
+
+class Source(Component): 
+
+    s = Float(2, iotype="in")
+    out = Array(iotype="out")
+
+    def execute(self): 
+        self.out = self.s*np.ones(5)
+
+
+class Sink(Component): 
+
+    invar = Array(iotype="in")
+    out = Float(0, iotype="out")
+
+    def execute(self): 
+        self.out = np.sum(self.invar)
+
+
+class ArrayAsmb(Assembly): 
+
+    def configure(self): 
+        self.add('source', Source())
+        self.add('sink', Sink())
+
+        self.connect('source.out', 'sink.invar')
+
+        self.driver.workflow.add(['source','sink'])
+
+
+class TestArrayConnectErrors(unittest.TestCase): 
+
+    def test_wrong_initial_size(self): 
+        '''Give a clear error message if an array variable changes size at 
+        runtime compared to its initial value used to size the framework arrays''' 
+
+        t = set_as_top(ArrayAsmb())
+
+        t.source.out = np.zeros(2)
+        
+        try: 
+            t.run()
+        except RuntimeError as err:
+            self.assertEqual(str(err), 
+                             "Array size mis-match in 'source.out'. Initial shape was (2,) but found size (5,) at runtime")
+        else: 
+            self.fail('RuntimeError expected')
+
+    def test_unintialized_sink_array_var(self): 
+        '''Make sure you can run, even if the sink side of a connection is initialized''' 
+
+        t = set_as_top(ArrayAsmb())
+        t.add('driver', SimpleDriver())
+        t.driver.add_parameter('source.s', low=-10, high=10)
+        t.driver.add_constraint('sink.out < 10')
+
+        t.source.out = np.zeros((5,))
+        
+        t.run() # should run without error
+
+if __name__ == "__main__":
+    unittest.main()

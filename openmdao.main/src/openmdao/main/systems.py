@@ -868,8 +868,14 @@ class System(object):
         self.sol_vec.array[:] = 0.0
         self.vec['dp'].array[:] = 0.0
 
-        varkeys = self.vector_vars.keys()
-        ivar = varkeys.index(vname)
+        varkeys = self.flat_vars.keys()
+        if vname in varkeys:
+            ivar = varkeys.index(vname)
+        else:
+            base = vname[0].split('[',1)[0]
+            base = self.scope.name2collapsed[base]
+            ivar = varkeys.index(base)
+            ind += self.scope._var_meta[vname]['flat_idx']
 
         if self.local_var_sizes[self.mpi.rank, ivar] > 0:
             ind += numpy.sum(self.local_var_sizes[:, :ivar])
@@ -1950,11 +1956,14 @@ class OpaqueSystem(SimpleSystem):
         inner_u = self._inner_system.vec['u']
         inner_du = self._inner_system.vec['du']
 
-        vnames = self._inner_system.list_inputs() + \
-                 self._inner_system.list_states()
-        inner_u.set_from_scope(self.scope, vnames)
+        # Make sure the inner_vector is initialized with values from the
+        # scope. Only need to do the inputs that span the outer and inner
+        # vectors.
+        bnames = self.list_inputs() + \
+                 self.list_states()
+        inner_u.set_from_scope(self.scope, bnames)
         if self.complex_step is True:
-            inner_du.set_from_scope_complex(self.scope, vnames)
+            inner_du.set_from_scope_complex(self.scope, bnames)
 
         self._inner_system.run(iterbase, case_label=case_label, case_uuid=case_uuid)
 

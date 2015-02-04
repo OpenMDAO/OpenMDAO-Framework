@@ -77,11 +77,11 @@ class RecordingOptionsTestCase(unittest.TestCase):
             self.assertAlmostEqual(val, iteration_case_1[name])
 
     def test_problem_formulation_only(self):
-        """ verify options with no includes:
-                save_problem_formulation = True
-                includes = []
-                excludes = []
-        """
+        # verify options with no includes:
+        #        save_problem_formulation = True
+        #        includes = []
+        #        excludes = []
+        
         sout = StringIO.StringIO()
         self.top.recorders = [JSONCaseRecorder(sout)]
         self.top.recording_options.save_problem_formulation = True
@@ -112,11 +112,11 @@ class RecordingOptionsTestCase(unittest.TestCase):
             self.assertAlmostEqual(val, iteration_case_1[name])
 
     def test_includes_only(self):
-        """ verify options with includes but not problem formulation:
-                save_problem_formulation = False
-                includes = ['comp2*']
-                excludes = []
-        """
+        # verify options with includes but not problem formulation:
+        #        save_problem_formulation = False
+        #        includes = ['comp2*']
+        #        excludes = []
+
         sout = StringIO.StringIO()
         self.top.recorders = [JSONCaseRecorder(sout)]
         self.top.recording_options.save_problem_formulation = False
@@ -153,11 +153,11 @@ class RecordingOptionsTestCase(unittest.TestCase):
             self.assertAlmostEqual(val, iteration_case_1[name])
 
     def test_options_with_excludes(self):
-        """ verify options with excludes:
-                save_problem_formulation = True
-                includes = ['*']
-                excludes = ['*directory', '*force_fd', '*missing_deriv_policy', '*gradient_options*']
-        """
+        # verify options with excludes:
+        #        save_problem_formulation = True
+        #        includes = ['*']
+        #        excludes = ['*directory', '*force_fd', '*missing_deriv_policy', '*gradient_options*']
+        
         sout = StringIO.StringIO()
         self.top.recorders = [JSONCaseRecorder(sout)]
         self.top.recording_options.excludes = [
@@ -178,11 +178,11 @@ class RecordingOptionsTestCase(unittest.TestCase):
      
 
     def test_options_with_includes_excludes(self):
-        """ verify options with includes and excludes (excludes are processed after includes):
-                save_problem_formulation = True
-                includes = ['comp1']
-                excludes = ['*directory', '*force_fd', '*missing_deriv_policy']
-        """
+        # verify options with includes and excludes (excludes are processed after includes):
+        #        save_problem_formulation = True
+        #        includes = ['comp1']
+        #        excludes = ['*directory', '*force_fd', '*missing_deriv_policy']
+        
         sout = StringIO.StringIO()
         self.top.recorders = [JSONCaseRecorder(sout)]
         self.top.recording_options.includes = ['comp1*']

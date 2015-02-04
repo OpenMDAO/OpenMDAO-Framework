@@ -1469,6 +1469,13 @@ class Assembly(Component):
         if self._system.is_active():
             self._system.vec['u'].set_from_scope(self)
 
+    def propagate_srcs(self):
+        """Propagate array values from source variables to their destinations."""
+        for u,v in self.list_connections():
+            srcval = self.get(u)
+            if isinstance(srcval, ndarray):
+                self.set(v, srcval.copy())
+
     def _setup(self, inputs=None, outputs=None):
         """This is called automatically on the top level Assembly
         prior to execution.  It will also be called if
@@ -1485,24 +1492,24 @@ class Assembly(Component):
 
         self._var_meta = {}
 
-        try:
-            self.pre_setup()
-            self.setup_depgraph()
-            self.setup_reduced_graph(inputs=inputs, outputs=outputs)
-            self.setup_systems()
-            #if MPI.COMM_WORLD.rank == 0:
-                #from openmdao.util.dotgraph import plot_system_tree, plot_graph
-                #plot_system_tree(self._system)
-                #plot_graph(self._reduced_graph, 'red.pdf')
+        self.pre_setup()
 
-            self.setup_communicators(comm)
-            self.setup_variables()
-            self.setup_sizes()
-            self.setup_vectors()
-            self.setup_scatters()
-        except Exception:
-            traceback.print_exc()
-            raise
+        self.propagate_srcs()
+
+        self.setup_depgraph()
+        self.setup_reduced_graph(inputs=inputs, outputs=outputs)
+        self.setup_systems()
+        #if MPI.COMM_WORLD.rank == 0:
+            #from openmdao.util.dotgraph import plot_system_tree, plot_graph
+            #plot_system_tree(self._system)
+            #plot_graph(self._reduced_graph, 'red.pdf')
+
+        self.setup_communicators(comm)
+        self.setup_variables()
+        self.setup_sizes()
+        self.setup_vectors()
+        self.setup_scatters()
+
         self.post_setup()
 
 
