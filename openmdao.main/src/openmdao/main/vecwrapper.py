@@ -80,8 +80,14 @@ class VecWrapperBase(object):
             try:
                 view[idxs] = value.flat
             except Exception as err:
-                raise RuntimeError("cannot set array %s to value:\n %s\n %s" %
-                                    (name, str(value), str(err)))
+                if value.shape != view[idxs].shape:
+                    msg = "Array size mis-match in '%s'. " % name[0]
+                    msg += "Initial shape was %s " % str(view[idxs].shape)
+                    msg += "but found size %s at runtime" % str(value.shape)
+                else:
+                    msg = "cannot set array %s to value:\n %s\n %s" % \
+                                    (name, str(value), str(err))
+                raise RuntimeError(msg)
         else:
             view[idxs] = value
 
