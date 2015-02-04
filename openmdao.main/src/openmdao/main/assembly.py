@@ -1469,6 +1469,13 @@ class Assembly(Component):
         if self._system.is_active():
             self._system.vec['u'].set_from_scope(self)
 
+    def propagate_srcs(self):
+        """Propagate array values from source variables to their destinations."""
+        for u,v in self.list_connections():
+            srcval = self.get(u)
+            if isinstance(srcval, ndarray):
+                self.set(v, srcval.copy())
+
     def _setup(self, inputs=None, outputs=None):
         """This is called automatically on the top level Assembly
         prior to execution.  It will also be called if
@@ -1486,7 +1493,9 @@ class Assembly(Component):
         self._var_meta = {}
 
         self.pre_setup()
-        
+
+        self.propagate_srcs()
+
         self.setup_depgraph()
         self.setup_reduced_graph(inputs=inputs, outputs=outputs)
         self.setup_systems()
@@ -1500,7 +1509,7 @@ class Assembly(Component):
         self.setup_sizes()
         self.setup_vectors()
         self.setup_scatters()
-        
+
         self.post_setup()
 
 
