@@ -868,14 +868,14 @@ class System(object):
         self.sol_vec.array[:] = 0.0
         self.vec['dp'].array[:] = 0.0
 
-        varkeys = self.flat_vars.keys()
+        varkeys = self.vector_vars.keys()
         if vname in varkeys:
             ivar = varkeys.index(vname)
         else:
             base = vname[0].split('[',1)[0]
             base = self.scope.name2collapsed[base]
             ivar = varkeys.index(base)
-            ind += self.scope._var_meta[vname]['flat_idx']
+            ind = self.scope._var_meta[vname]['flat_idx'][ind]
 
         if self.local_var_sizes[self.mpi.rank, ivar] > 0:
             ind += numpy.sum(self.local_var_sizes[:, :ivar])
