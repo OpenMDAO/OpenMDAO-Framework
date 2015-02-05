@@ -875,7 +875,7 @@ class System(object):
             base = vname[0].split('[',1)[0]
             base = self.scope.name2collapsed[base]
             ivar = varkeys.index(base)
-            ind += self.scope._var_meta[vname]['flat_idx']
+            ind = self.scope._var_meta[vname]['flat_idx'][ind]
 
         if self.local_var_sizes[self.mpi.rank, ivar] > 0:
             ind += numpy.sum(self.local_var_sizes[:, :ivar])
