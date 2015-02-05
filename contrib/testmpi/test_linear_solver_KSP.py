@@ -15,6 +15,7 @@ from openmdao.main.api import Component, Assembly, set_as_top, Driver
 from openmdao.main.datatypes.api import Float, Array
 from openmdao.main.mpiwrap import PETSc
 from openmdao.main.test.simpledriver import SimpleDriver
+from openmdao.main.test.test_derivatives import ArrayComp2D
 from openmdao.util.testutil import assert_rel_error
 
 
@@ -231,6 +232,109 @@ class Testcase_PetSc_KSP(unittest.TestCase):
         J = J['_pseudo_0.out0']['comp.x']
         diff = np.abs(J - fake_jac()['comp.x'])
         assert_rel_error(self, diff.max(), 0.0, 1e-4)
+
+    def test_nested_2Darray(self):
+
+        top = Assembly()
+        top.add('nest', Assembly())
+        top.nest.add('comp', ArrayComp2D())
+        top.driver.gradient_options.lin_solver = 'petsc_ksp'
+        top.nest.driver.gradient_options.lin_solver = 'petsc_ksp'
+
+        top.driver.workflow.add(['nest'])
+        top.nest.driver.workflow.add(['comp'])
+        top.nest.create_passthrough('comp.x')
+        top.nest.create_passthrough('comp.y')
+        top.run()
+
+        J = top.driver.calc_gradient(inputs=['nest.x',],
+                                     outputs=['nest.y'],
+                                     mode='forward')
+
+        diff = J - top.nest.comp.J
+        assert_rel_error(self, diff.max(), 0.0, .000001)
+
+        J = top.driver.calc_gradient(inputs=['nest.x',],
+                                     outputs=['nest.y'],
+                                     mode='adjoint')
+        diff = J - top.nest.comp.J
+        assert_rel_error(self, diff.max(), 0.0, .000001)
+
+        J = top.driver.calc_gradient(inputs=['nest.x[0, 0]',],
+                                     outputs=['nest.y[0, 0]'],
+                                     mode='forward')
+
+        diff = J - top.nest.comp.J[0, 0]
+        assert_rel_error(self, diff.max(), 0.0, .000001)
+
+        J = top.driver.calc_gradient(inputs=['nest.x[0, 0]',],
+                                     outputs=['nest.y[0, 0]'],
+                                     mode='adjoint')
+
+        diff = J - top.nest.comp.J[0, 0]
+        assert_rel_error(self, diff.max(), 0.0, .000001)
+
+        J = top.driver.calc_gradient(inputs=['nest.x[0, 1]',],
+                                     outputs=['nest.y[1, 0]'],
+                                     mode='forward')
+
+        diff = J - top.nest.comp.J[1, 2]
+        assert_rel_error(self, diff.max(), 0.0, .000001)
+
+        J = top.driver.calc_gradient(inputs=['nest.x[0, 1]',],
+                                     outputs=['nest.y[1, 0]'],
+                                     mode='adjoint')
+
+        diff = J - top.nest.comp.J[1, 2]
+        assert_rel_error(self, diff.max(), 0.0, .000001)
+
+        J = top.driver.calc_gradient(inputs=['nest.x[0, 1]',],
+                                     outputs=['nest.y[1, 0]'],
+                                     mode='fd')
+
+        diff = J - top.nest.comp.J[1, 2]
+        assert_rel_error(self, diff.max(), 0.0, .000001)
+
+        J = top.driver.calc_gradient(inputs=['nest.x[0, -1]',],
+                                     outputs=['nest.y[-1, 0]'],
+                                     mode='forward')
+
+        diff = J - top.nest.comp.J[1, 2]
+        assert_rel_error(self, diff.max(), 0.0, .000001)
+
+        J = top.driver.calc_gradient(inputs=['nest.x[0, -1]',],
+                                     outputs=['nest.y[-1, 0]'],
+                                     mode='adjoint')
+
+        diff = J - top.nest.comp.J[1, 2]
+        assert_rel_error(self, diff.max(), 0.0, .000001)
+
+        J = top.driver.calc_gradient(inputs=['nest.x[0, -1]',],
+                                     outputs=['nest.y[-1, 0]'],
+                                     mode='fd')
+
+        diff = J - top.nest.comp.J[1, 2]
+        assert_rel_error(self, diff.max(), 0.0, .000001)
+
+        Jsub = top.nest.comp.J[2:3, 2:3]
+        J = top.driver.calc_gradient(inputs=['nest.x[1][:]',],
+                                     outputs=['nest.y[1][:]'],
+                                     mode='forward')
+
+        diff = J - Jsub
+
+        J = top.driver.calc_gradient(inputs=['nest.x[1][:]',],
+                                     outputs=['nest.y[1][:]'],
+                                     mode='adjoint')
+
+        diff = J - Jsub
+
+        top.run()
+        J = top.driver.calc_gradient(inputs=['nest.x[1][:]',],
+                                     outputs=['nest.y[1][:]'],
+                                     mode='fd')
+        diff = J - Jsub
+
 
 
 if __name__ == '__main__':
