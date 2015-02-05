@@ -100,8 +100,7 @@ If you are on **Windows,** type:
 
 **Run tests to verify valid install**
 
-OpenMDAO has a large test suite which allows you to check and make sure all of the functionality of OpenMDAO will work
-on your system. You can run these tests yourself to double check your installation.
+OpenMDAO has a large test suite which allows you to check and make sure all of the functionality of OpenMDAO will work on your system. You can run these tests yourself to double check your installation.
 
 To run all tests, type the following:
 
@@ -119,20 +118,18 @@ by typing:
 
    deactivate
 
+
 .. _Anaconda Installation:
+
 Anaconda Installation
 =====================
 
 Note:  A user must be connected to the Internet for the following installation to work.
 
-To perform an Anaconda Python installation of OpenMDAO, you'll need Anaconda or Miniconda.
-To get either of those, see the `Anaconda Installation Instructions <http://docs.continuum.io/anaconda/install.html>`_ .
-Once you have Anaconda installed, you need to get your Anaconda configuration ready for OpenMDAO.
+To perform an Anaconda Python installation of OpenMDAO, you'll need Anaconda or Miniconda. To get either of those, see the `Anaconda Installation Instructions <http://docs.continuum.io/anaconda/install.html>`_ . Once you have Anaconda installed, you need to get your Anaconda configuration ready for OpenMDAO.
 
 **Conda Environments**
-Anaconda environments are just like directories that contain particular versions of packages.
-These can be located anywhere, but if they are within the Anaconda installation directory,
-conda will know about them.  To list the conda environments you have after a new install:
+Anaconda environments are just like directories that contain particular versions of packages. These can be located anywhere, but if they are within the Anaconda installation directory, conda will know about them.  To list the conda environments you have after a new install:
 
 ::
 
@@ -141,25 +138,21 @@ conda will know about them.  To list the conda environments you have after a new
   #
   root                  *  /Users/<username>/anaconda
 
-Later on, we will explore creation of a new conda environment to hold your openmdao installation.
+By default, you're in your root env.  To create an another env, we would use conda create. Later on, we will explore creation of a new conda environment to hold your openmdao installation. More information about conda environments is available at Continuum Analytics' website.
+
 
 **Conda Configuration**
 
-Before we install OpenMDAO, we need to make a couple of minor configuration changes to Anaconda.
-In your home directory, there will be a .condarc file that stores your preferences and settings
-for your Anaconda installation.   The following conda config commands will make the changes needed,
-which are really just adding settings to your .condarc file.  If you're comfortable with doing so,
-you can edit the .condarc file directly to change these settings.
+Before we install OpenMDAO, we need to make a couple of minor configuration changes to Anaconda. In your home directory, there will be a .condarc file that stores your preferences and settings for your Anaconda installation. The following conda config commands will make the changes needed, but the commands' net result is adding settings to your .condarc file.  If you're comfortable with doing so, you can edit the .condarc file directly to change these settings.
 
-1.) Add OpenMDAO's channel to your config.  This makes it so that while installing, conda will search
-for required packages using OpenMDAO's packages on the binstar website.
+1.) Add OpenMDAO's channel to your config.  Adding our channel ensures that while installing, conda will search for required packages using OpenMDAO's packages that are hosted on the binstar website.
+
 ::
 
    conda config --add channels https://conda.binstar.org/OpenMDAO
 
-2.) This one is optional, but helps provide peace of mind.  In order to see from which
-channel conda expects to download during an installation try this:
-(i.e. to make sure packages are expected to come from OpenMDAO's channel.)
+
+2.) This one is optional, but helps provide peace of mind.  In order to be certain from which channel conda expects to download during an installation try this: (i.e. to make sure packages are expected to come from OpenMDAO's channel.)
 
 ::
 
@@ -181,12 +174,12 @@ Alternatively, you can edit your ~/.condarc file to include these lines:
 **Development Version Installation**
 
 To get a build of OpenMDAO's latest dev branch, you'll need to make sure you have
-git installed, so that you can grab the code.  Once you have git, these commands should
-get you the latest dev branch:
+git installed, so that you can clone the OpenMDAO repository.  Once you have git, these commands should get you the latest dev branch, and get it built and tested:
 
 Mac/Linux:
 
 ::
+
   #get source code of OpenMDAO
   git clone https://github.com/OpenMDAO/OpenMDAO-Framework.git
   cd OpenMDAO-Framework
@@ -200,53 +193,59 @@ Mac/Linux:
   #run the test suite
   openmdao test
 
-Windows (Note that the build and activations steps are different.):
+Windows (Note that the build and activations steps are different from above.):
 
 ::
 
+  #get source code of OpenMDAO
   git clone https://github.com/OpenMDAO/OpenMDAO-Framework.git
   cd OpenMDAO-Framework
+
+  #run the dev installer bat file
   conda-openmdao-dev.bat
+
+  #activate the conda openmdao environment
   activate openmdao
+
+  #run the test suite
   openmdao test
 
 **Release Version Installation**
 
-For a release version install, you still need follow the configuration steps above.  To install
-OpenMDAO's latest release into your root Anaconda environment, only one command is needed:
+For a release version install, you still need follow the configuration step above to add the OpenMDAO channel.  To install OpenMDAO's latest release into your root Anaconda environment, only one command is needed:
 
 ::
 
   conda install openmdao
 
-However, OpenMDAO has a lot of dependencies, and so perhaps you want to put OpenMDAO into its own
-secluded conda environment,and not in your root env.  Create a new conda env to hold the install,
-Let's say, for example, for the 0.12.0 release we call the env "openmdao-0.12.0" (but keep in mind that
-we could call it "foobar").
+However, OpenMDAO has a lot of dependencies, and so you may wish to put OpenMDAO into its own secluded conda environment.  Create a new conda env to hold the install. Let's say, for example, that for the 0.12.0 release we call the env "openmdao-0.12.0" (but keep in mind that we could call it anything--the name is not magical).
 
 ::
 
   conda create --name openmdao-0.12.0 python
 
-Then, to install version 0.12.0 into that newly-created env, the --name argument specifies
-into which conda env you install:
+Then, to install version 0.12.0 into that newly-created env, the --name argument specifies into which conda env you install:
 
 ::
 
   #gets latest release, puts it in env "openmdao-0.12.0"
   conda install --name openmdao-0.12.0 openmdao
 
-  conda install --name openmdao-0.12.0 openmdao==0.12.0  #gets specific release
+  #gets specific release using "=="
+  conda install --name openmdao-0.12.0 openmdao==0.12.0
+
+  #activate the new release's env (in Windows, drop the word "source")
+  source activate openmdao-0.12.0
+
+  #run the test suite to confirm successful installation
+  openmdao test
 
 
-If you choose not to add us to your channels, you have to install with the -c channel option
+Once you have completed installation and testing, you're ready to move on to use OpenMDAO.  When you're finished using the environment you've created, you can leave it by activating another env, or simply typing:
 
 ::
 
-  conda install -c https://conda.binstar.org/openmdao --name openmdao-0.12.0 openmdao=0.12.0
-
-
-
+  deactivate
 
 .. _Site-Wide VirtualEnv Installation:
 
