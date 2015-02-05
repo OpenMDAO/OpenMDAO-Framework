@@ -24,7 +24,7 @@ class ImplicitWithSolver(ImplicitComponent):
         You can override this function to provide your own internal solve."""
         #print "start solve", self.name
         x0 = self.get_state()
-        fsolve(self._solve_callback, x0, xtol=1e-12)
+        fsolve(self._solve_callback, x0, xtol=1e-8)
         #print "end solve", self.name
 
     def _solve_callback(self, X):
@@ -516,6 +516,7 @@ class Testcase_implicit(unittest.TestCase):
         model.driver.add_constraint('comp1.z = comp2.z')
         model.driver.add_constraint('comp2.x = comp1.x')
         model.driver.add_constraint('comp2.y = comp1.y')
+        model.driver.tol
 
         model.run()
 
