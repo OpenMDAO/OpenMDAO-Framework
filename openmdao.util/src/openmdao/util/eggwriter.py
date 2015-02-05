@@ -118,9 +118,12 @@ def write(name, version, doc, entry_map, src_files, distributions, modules,
         for path in filenames:
             if path.endswith('.py'):
                 path = os.path.join(dirpath[2:], path)  # Skip leading './'
-                files.append(path)
-                size += os.path.getsize(path)
-                sources.append(path)
+
+                # No reason for a file to appear twice in our file list.
+                if path not in files:
+                    files.append(path)
+                    size += os.path.getsize(path)
+                    sources.append(path)
 
     # Package info -> EGG-INFO/PKG-INFO
     pkg_info = []
