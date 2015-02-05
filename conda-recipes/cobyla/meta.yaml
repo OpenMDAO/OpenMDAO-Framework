@@ -13,8 +13,9 @@ requirements:
         - python
         - setuptools
         - numpy ==1.7.1
+        - libpython # [win]
 
     run:
         - python
         - numpy >=1.7.1
-        - libpython # [win32]
+        - libpython # [win]

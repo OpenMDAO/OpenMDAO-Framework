@@ -25,6 +25,8 @@ Source Documentation
 
 .. _openmdao.lib.casehandler.api.py: 
 
+.. _metamodel:
+
 .. toctree::
    :maxdepth: 3 
    :glob:
