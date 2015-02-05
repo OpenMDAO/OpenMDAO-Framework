@@ -868,7 +868,7 @@ class System(object):
         self.sol_vec.array[:] = 0.0
         self.vec['dp'].array[:] = 0.0
 
-        varkeys = self.flat_vars.keys()
+        varkeys = self.vector_vars.keys()
         if vname in varkeys:
             ivar = varkeys.index(vname)
         else:
