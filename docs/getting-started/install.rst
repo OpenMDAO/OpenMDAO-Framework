@@ -1,6 +1,8 @@
 
 .. _Installing-OpenMDAO:
 
+.. _Installation:
+
 .. _VirtualEnv Installation:
 
 VirtualEnv Installation
@@ -128,6 +130,34 @@ Note:  A user must be connected to the Internet for the following installation t
 
 To perform an Anaconda Python installation of OpenMDAO, you'll need Anaconda or Miniconda. To get either of those, see the `Anaconda Installation Instructions <http://docs.continuum.io/anaconda/install.html>`_ . Once you have Anaconda installed, you need to get your Anaconda configuration ready for OpenMDAO.
 
+**Conda Configuration**
+
+Before we install OpenMDAO, we need to make a couple of minor configuration changes to Anaconda. In your home directory, there will be a .condarc file that stores your preferences and settings for your Anaconda installation. The following conda config commands will make the changes needed, but the commands' net result is adding settings to your .condarc file.  If you're comfortable with doing so, you can edit the .condarc file directly to change these settings.
+
+1.) Add OpenMDAO's channel to your config.  Adding our channel ensures that while installing, conda will search for required packages using OpenMDAO packages that are hosted on `the binstar website <https://binstar.org/openmdao>`_ .
+
+::
+
+   conda config --add channels https://conda.binstar.org/OpenMDAO
+
+
+2.) This one is optional, but helps provide peace of mind.  In order to be certain from which channel conda expects to download during an installation try showing channel URLs: (i.e. to make sure a particular package is expected to download from OpenMDAO's channel.)
+
+::
+
+   conda config --set show_channel_urls TRUE
+
+
+Alternatively, to make both these changes, you can edit your ~/.condarc file to include these lines:
+
+::
+
+  show_channel_urls: True
+
+  channels:
+    - https://conda.binstar.org/OpenMDAO
+    - defaults
+
 **Conda Environments**
 Anaconda environments are just like directories that contain particular versions of packages. These can be located anywhere, but if they are within the Anaconda installation directory, conda will know about them.  To list the conda environments you have after a new install:
 
@@ -138,38 +168,7 @@ Anaconda environments are just like directories that contain particular versions
   #
   root                  *  /Users/<username>/anaconda
 
-By default, you're in your root env.  To create an another env, we would use conda create. Later on, we will explore creation of a new conda environment to hold your openmdao installation. More information about conda environments is available at Continuum Analytics' website.
-
-
-**Conda Configuration**
-
-Before we install OpenMDAO, we need to make a couple of minor configuration changes to Anaconda. In your home directory, there will be a .condarc file that stores your preferences and settings for your Anaconda installation. The following conda config commands will make the changes needed, but the commands' net result is adding settings to your .condarc file.  If you're comfortable with doing so, you can edit the .condarc file directly to change these settings.
-
-1.) Add OpenMDAO's channel to your config.  Adding our channel ensures that while installing, conda will search for required packages using OpenMDAO's packages that are hosted on the binstar website.
-
-::
-
-   conda config --add channels https://conda.binstar.org/OpenMDAO
-
-
-2.) This one is optional, but helps provide peace of mind.  In order to be certain from which channel conda expects to download during an installation try this: (i.e. to make sure packages are expected to come from OpenMDAO's channel.)
-
-::
-
-   conda config --set show_channel_urls TRUE
-
-
-Alternatively, you can edit your ~/.condarc file to include these lines:
-
-::
-
-  show_channel_urls: True
-
-  channels:
-    - https://conda.binstar.org/OpenMDAO
-    - defaults
-
-
+By default, you're in your root env.  To create an another env, we would use conda create. Later on, we will explore creation of a new conda environment to hold your openmdao installation. More information about conda environments is available at `Continuum Analytics' website <http://www.continuum.io/blog/conda>`_ .
 
 **Development Version Installation**
 
