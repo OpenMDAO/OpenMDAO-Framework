@@ -128,13 +128,13 @@ Anaconda Installation
 
 Many users in the scientific community use Anaconda, a free enterprise-ready Python distribution for large-scale
 data processing, predictive analytics, and scientific computing. If you're one of our many OpenMDAO users who also
-use Anaconda, we have a way to install it for you. 
+use Anaconda, we have a way to install it for you.
 
 Please note that you must be connected to the Internet for the following installation to work.
 
 To perform an Anaconda Python installation of OpenMDAO, you'll need Anaconda or Miniconda. To get either
 of them, see the `Anaconda Installation Instructions <http://docs.continuum.io/anaconda/install.html>`_.
-Once you have Anaconda installed, you'll need to get your Anaconda configuration ready for OpenMDAO.urs
+Once you have Anaconda installed, you'll need to get your Anaconda configuration ready for OpenMDAO.
 
 **Conda Configuration**
 
@@ -145,7 +145,7 @@ settings to your ``.condarc`` file. If you're comfortable doing so, you can edit
 directly to change these settings.
 
 1. Add OpenMDAO's channel to your config. Adding our channel ensures that during installation, conda will search for
-   required packages using OpenMDAO packages that are hosted on the `binstar website <https://binstar.org/openmdao>`_.
+   required packages using OpenMDAO packages that are hosted on the `Binstar website <https://binstar.org/openmdao>`_.
 
    ::
 
@@ -188,8 +188,8 @@ By default, you're in your root env.  To create another env, we would use the co
 how to create a new conda environment to hold your openmdao installation. More information about conda environments is
 available at `Continuum Analytics' website <http://www.continuum.io/blog/conda>`_.
 
-Development Version Installation
----------------------------------
+*Development Version Installation in Anaconda*
+----------------------------------------------
 
 To get a build of OpenMDAO's latest dev branch, you'll need to make sure you have Git installed so that you can clone
 the OpenMDAO repository.  Once you have Git, these commands should get you the latest dev branch and get it built and
@@ -231,8 +231,8 @@ tested:
   #run the test suite
   openmdao test
 
-Release Version Installation
------------------------------
+*Release Version Installation in Anaconda*
+------------------------------------------
 
 For a release version install, you'll still need to follow the configuration step above to add the OpenMDAO channel.  To
 install OpenMDAO's latest release into your root Anaconda environment, only one command is needed:
