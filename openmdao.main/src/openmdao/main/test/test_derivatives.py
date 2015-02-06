@@ -679,23 +679,23 @@ class Testcase_derivatives(unittest.TestCase):
         top.driver.add_parameter('comp.x', low=-1000, high=1000)
         top.comp.x = 14
         top.comp.run()
-        
+
         top.comp.x = 14
-        
+
         top.comp.run()
         top.driver.calc_gradient(outputs=['comp.y'])
 
     def test_non_2d_jacobian(self):
         comp = SimpleComp()
         comp.provideJ = lambda : np.array([2.0])
-    
+
         top = set_as_top(Assembly())
         top.add('comp', comp)
         top.add('driver', SimpleDriver())
         top.driver.workflow.add(['comp'])
         top.driver.add_parameter('comp.x', low=-1000, high=1000)
         top.comp.x = 14
-        
+
         try:
             top.comp.run()
             top.driver.calc_gradient(outputs=['comp.y'])
@@ -708,14 +708,14 @@ class Testcase_derivatives(unittest.TestCase):
     def test_bad_sized_jacobian(self):
         comp = SimpleComp()
         comp.provideJ = lambda : np.array([[2.0, 2.0]])
-    
+
         top = set_as_top(Assembly())
         top.add('comp', comp)
         top.add('driver', SimpleDriver())
         top.driver.workflow.add(['comp'])
         top.driver.add_parameter('comp.x', low=-1000, high=1000)
         top.comp.x = 14
-        
+
         try:
             top.comp.run()
             top.driver.calc_gradient(outputs=['comp.y'])
@@ -1387,10 +1387,10 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         J = top.driver.calc_gradient(inputs=[('comp1.x', 'comp1.z'), ('comp2.x', 'comp2.z')],
                                      outputs=['comp2.y'],
                                      mode='fd')
-        
+
         #from openmdao.util.dotgraph import plot_graph, plot_system_tree
         #plot_system_tree(top._system, 'newsys.pdf')
-        
+
         #print J
         assert_rel_error(self, J[0, 0], 0.0, .001)
         assert_rel_error(self, J[0, 1], 5.0, .001)
@@ -2058,7 +2058,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
 
     def test_nested_2Darray_gradient_sub(self):
 
-        # This tests the 
+        # This tests the
         top = Assembly()
         top.add('nest', Assembly())
         top.add('driver', SimpleDriver())
@@ -2068,7 +2068,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         top.nest.driver.workflow.add(['comp'])
         top.nest.create_passthrough('comp.x')
         top.nest.create_passthrough('comp.y')
-        
+
         top.driver.add_parameter('nest.x[0][0]', low=-100, high=100)
         top.driver.add_objective('nest.y[0][1]')
         top.run()
@@ -2081,14 +2081,14 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         J = top.nest._system.calc_gradient(inputs=['x[0][0]'],
                                            outputs=['y[0][1]'],
                                            options=options)
-        
+
         diff = J - top.nest.comp.J[1, 0]
         assert_rel_error(self, diff.max(), 0.0, .000001)
 
         # Force_fd on the assy
         options=top.driver.gradient_options
         options.force_fd = True
-        
+
         J = top.nest._system.calc_gradient(inputs=['x[0][0]'],
                                            outputs=['y[0][1]'],
                                            options=options)
