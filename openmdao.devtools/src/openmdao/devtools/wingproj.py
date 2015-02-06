@@ -10,7 +10,7 @@ from optparse import OptionParser
 
 from openmdao.util.fileutil import find_in_path, find_in_dir_list, find_files, find_up
 
-def _modify_wpr_file(template, outfile, version='4.0'):
+def _modify_wpr_file(template, outfile, version):
     config = ConfigParser.ConfigParser()
     config.read(template)
     if sys.platform == 'darwin':
@@ -73,7 +73,7 @@ def run_wing():
                       dest="projpath", default='',
                       help="location of WingIDE project file")
     parser.add_option("-v", "--version", action="store", type="string",
-                      dest="version", default='4.0',
+                      dest="version", default='5.0',
                       help="version of WingIDE")
     (options, args) = parser.parse_args(sys.argv[1:])
 
@@ -100,17 +100,27 @@ def run_wing():
 
     # in order to find all of our shared libraries,
     # put their directories in LD_LIBRARY_PATH
-    env = os.environ
-    if sys.platform != 'win32':
-        libs = env.get('LD_LIBRARY_PATH','').split(os.pathsep)
+    env = {}
+    env.update(os.environ)
+    if sys.platform == 'darwin':
+        libpname = 'DYLD_LIBRARY_PATH'
+        libext = '*.dyld'
+    elif not sys.platform.startswith('win'):
+        libpname = 'LD_LIBRARY_PATH'
+        libext = '*.so'
+    else:
+        libpname = None
+
+    if libpname:
+        libs = env.get(libpname,'').split(os.pathsep)
         rtop = find_up('.git')
         if not rtop:
             rtop = find_up('.git')
         if rtop:
             rtop = os.path.dirname(rtop)
-            sodirs = set([os.path.dirname(x) for x in find_files(rtop,'*.so')])
+            sodirs = set([os.path.dirname(x) for x in find_files(rtop, libext)])
             libs.extend(sodirs)
-            env['LD_LIBRARY_PATH'] = os.pathsep.join(libs)
+            env[libpname] = os.pathsep.join(libs)
 
     if sys.platform == 'darwin':
         cmd = ['open', projpath]
@@ -119,6 +129,7 @@ def run_wing():
             wingpath = _find_wing()
         cmd = [wingpath, projpath]
     try:
+        print "wing command: ",' '.join(cmd)
         Popen(cmd, env=env)
     except Exception as err:
         print "Failed to run command '%s'." % ' '.join(cmd)
