@@ -7,14 +7,12 @@ Implicit Components
 In the basic tutorial, we learned how to define an OpenMDAO component that represents an
 explicit function of outputs with respect to its inputs.
 
-    .. math::
-         y = F(x)
+          ``y = F(x)``
 
 OpenMDAO also allows us to define a component that represents an implicit function of the
 same variables:
 
-    .. math::
-       R(x, y) = 0
+          ``R(x, y) = 0``
 
 Here, the variable `x` is a known input that is passed to the implicit
 component, but the variable `y`, called the `state`, is an unknown that needs
@@ -39,11 +37,10 @@ For the sake of convenience, we've broadened the definition of an implicit compo
 to include additional inputs and outputs that aren't part of the implicit
 equations.
 
-    .. math::
-           R(x, y) = 0
 
-    .. math::
-           z = F(x, y, u)
+              ``R(x, y) = 0``
+
+              ``z = F(x, y, u)``
 
 In this set of equations, `u` is an input that does not affect the residuals, and `z` is
 an output that is not a state but satisfies an additional explicit equation. This is
@@ -53,17 +50,13 @@ Let's set up a simple component that can solve this set of equations, three
 of which are implicit while one is explicit:
 
 
-    .. math::
-           r0(x, y, z) = c*(3x + 2y - z) - 1 = 0
+              ``r0(x, y, z) = c*(3x + 2y - z) - 1 = 0``
 
-    .. math::
-           r1(x, y, z) = 2x - 2y + 4z + 2 = 0
+              ``r1(x, y, z) = 2x - 2y + 4z + 2 = 0``
 
-    .. math::
-           r2(x, y, z) = -x + y/2. - z =0
+              ``r2(x, y, z) = -x + y/2. - z =0``
 
-    .. math::
-           y_out = c + x + y + z
+              ``y_out = c + x + y + z``
 
 In these equations, the states are `x`, `y`, and `z`, and the residuals are
 `r0`, `r1`, and `r2`. The variable `c` is a normal input, and `y_out` is an
@@ -85,7 +78,7 @@ Let's write our first implicit component.
 
     import numpy as np
     from scipy.optimize import fsolve
-    
+
     from openmdao.main.api import ImplicitComponent
     from openmdao.main.datatypes.api import Float, Array
 
@@ -125,7 +118,7 @@ Let's write our first implicit component.
         def solve(self):
             """Calculates the states that satisfy residuals using scipy.fsolve.
             You can override this function to provide your own internal solve."""
-            
+
             x0 = self.get_state()
             fsolve(self._solve_callback, x0, xtol=1e-12)
 
@@ -136,7 +129,7 @@ Let's write our first implicit component.
             self.set_state(X)
             self.evaluate()
             return self.get_residuals()
-        
+
 We have taken our three residuals and placed them in a single variable array
 called `res`, but we could also create a separate floating point variable
 for each of them. Also, the initial values of our states serve as the
@@ -167,7 +160,7 @@ and run the model. We will let the implicit component solve its own residuals.
         1.0 -2.3333... -2.1666...
 
 The implicit component completes its iteration until the state values satisfy
-the residual equations. 
+the residual equations.
 
 We can also configure an OpenMDAO solver to solve for the states. Here, we
 set up a new assembly with the Broyden solver as the top driver. Then we
