@@ -1193,6 +1193,10 @@ class Assembly(Component):
                 for constraint in obj.get_constraints().values():
                     constraint.activate(obj)
 
+            if hasattr(obj, 'get_2sided_constraints'):
+                for constraint in obj.get_2sided_constraints().values():
+                    constraint.activate(obj)
+
             if hasattr(obj, 'get_objectives'):
                 for objective in obj.get_objectives().values():
                     objective.activate(obj)
@@ -1233,9 +1237,9 @@ class Assembly(Component):
         keep.update([c.name for c in self._top_driver.iteration_set()])
 
         # keep any connected boundary vars
-        for u,v in chain(dgraph.list_connections(), list_driver_connections(dgraph)):
+        for u,v in dgraph.list_connections():
             if is_boundary_node(dgraph, u):
-                    keep.add(u)
+                keep.add(u)
             if is_boundary_node(dgraph, v):
                 keep.add(v)
 
@@ -1565,7 +1569,7 @@ def _get_scoped_inputs(comp, g, explicit_ins):
     if explicit_ins is None:
         explicit_ins = ()
 
-    for u,v in chain(g.list_connections(), list_driver_connections(g)):
+    for u,v in g.list_connections():
         if v.startswith(cnamedot):
             inputs.add(v)
 
@@ -1583,7 +1587,7 @@ def _get_scoped_outputs(comp, g, explicit_outs):
     if explicit_outs is None:
         explicit_outs = ()
 
-    for u,v in chain(g.list_connections(), list_driver_connections(g)):
+    for u,v in g.list_connections():
         if u.startswith(cnamedot):
             outputs.add(u)
 

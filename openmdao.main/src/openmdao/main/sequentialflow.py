@@ -65,6 +65,7 @@ class SequentialWorkflow(Workflow):
         self._names = None
         self._iternames = None
         self._initnames = None
+        self._ordering = None
 
     def check_config(self, strict=False):
         super(SequentialWorkflow, self).check_config(strict=strict)

@@ -606,16 +606,13 @@ class DependencyGraph(DGraphBase):
                     if self.in_degree(node) < 1 or self.out_degree(node) < 1:
                         self.remove_node(node)
 
-    def list_connections(self, show_passthrough=True):
-        conns = self._conns.get(show_passthrough)
+    def list_connections(self, drivers=True):
+        conns = self._conns.get(drivers)
         if conns is None:
-            conns = list_data_connections(self) + list_driver_connections(self)
-
-            if show_passthrough is False:
-                conns = [(u,v) for u,v in conns
-                           if not ('.' in u or '.' in v)]
-
-            self._conns[show_passthrough] = conns
+            conns = list_data_connections(self)
+            if drivers:
+                conns.extend(list_driver_connections(self))
+            self._conns[drivers] = conns
         return conns[:]
 
     def _all_child_vars(self, node, direction=None):
@@ -807,7 +804,6 @@ class DependencyGraph(DGraphBase):
     def prune_unconnected_vars(self):
         """Remove unconnected variable nodes"""
         conns = self.list_connections()
-        conns.extend([(u,v) for u,v in list_driver_connections(self)])
         convars = set([u for u,v in conns])
         convars.update([v for u,v in conns])
         convars.update([base_var(self,v) for v in convars])
@@ -1629,7 +1625,7 @@ def break_cycles(graph):
     severed_edges = []
 
     if hasattr(graph, 'list_connections'):
-        conns = set(graph.list_connections())
+        conns = set(graph.list_connections(drivers=False))
     else:
         conns = graph.edges()
 

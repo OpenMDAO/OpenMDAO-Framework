@@ -349,35 +349,38 @@ class HasConstraintsTestCase(unittest.TestCase):
     def test_pseudocomps(self):
         self.asm.add('driver', MyDriver())
         self.asm.driver.workflow.add(['comp1','comp2'])
+        self.asm._setup()
         self.assertEqual(self.asm._depgraph.list_connections(),
                          [])
         self.asm.driver.add_constraint('comp1.c-comp2.a>5.')
+        self.asm._setup()
         self.assertEqual(self.asm._pseudo_0._orig_expr, '5.-(comp1.c-comp2.a)')
-        self.assertEqual(set(self.asm._depgraph.list_connections()),
-                         set([('comp2.a', '_pseudo_0.in1'), ('comp1.c', '_pseudo_0.in0')]))
-        self.assertEqual(set(self.asm._exprmapper.list_connections()),
+        self.assertEqual(set(self.asm._depgraph.list_connections(drivers=False)),
                          set([('comp2.a', '_pseudo_0.in1'), ('comp1.c', '_pseudo_0.in0')]))
 
         self.asm.driver.remove_constraint('comp1.c-comp2.a>5.')
-        self.assertEqual(self.asm._depgraph.list_connections(), [])
-        self.assertEqual(self.asm._exprmapper.list_connections(), [])
+        self.asm._setup()
+        self.assertEqual(self.asm._depgraph.list_connections(drivers=False), [])
 
         self.asm.driver.add_constraint('comp1.c > 0.')
-        self.assertEqual(set(self.asm._depgraph.list_connections()),
-                         set([('comp1.c', '_pseudo_1.in0')]))
-        self.assertEqual(set(self.asm._exprmapper.list_connections()),
+        self.asm._setup()
+        self.assertEqual(set(self.asm._depgraph.list_connections(drivers=False)),
                          set([('comp1.c', '_pseudo_1.in0')]))
 
+        self.asm._setup()
         self.assertEqual(self.asm._pseudo_1._orig_expr, '-(comp1.c)')
 
         self.asm.driver.add_constraint('comp1.c-comp2.a<5.')
+        self.asm._setup()
         self.assertEqual(self.asm._pseudo_2._orig_expr, 'comp1.c-comp2.a-(5.)')
 
         self.asm.driver.add_constraint('comp1.c < 0.')
+        self.asm._setup()
         self.assertEqual(self.asm._pseudo_3._orig_expr, 'comp1.c')
 
         # unit conversions don't show up in constraints or objectives
         self.asm.driver.add_constraint('comp3.c-comp4.a>5.')
+        self.asm._setup()
         self.assertEqual(self.asm._pseudo_4._orig_expr, '5.-(comp3.c-comp4.a)')
 
         self.asm.driver.clear_constraints()
