@@ -337,13 +337,13 @@ class _Encoder(json.JSONEncoder):
     """ Special encoder to deal with types not handled by default encoder. """
 
     def default(self, obj):
-        fixed = _fixup(obj)
+        fixed = _fix_object_for_json_encoder(obj)
         if fixed is obj:
             super(_Encoder, self).default(obj)
         return fixed
 
 
-def _fixup(value):
+def _fix_object_for_json_encoder(value):
     """
     Fix object for json encoder, also bson. Stock bson doesn't handle a lot
     of types, just skips them.
@@ -351,21 +351,21 @@ def _fixup(value):
     if isinstance(value, dict):
         new_value = {}
         for key, val in value.items():
-            new_value[key] = _fixup(val)
+            new_value[key] = _fix_object_for_json_encoder(val)
         return new_value
     elif isinstance(value, (list, tuple, set, frozenset)):
-        return [_fixup(val) for val in value]
+        return [_fix_object_for_json_encoder(val) for val in value]
     elif isinstance(value, ndarray):
         d = dumps(Binary( cPickle.dumps( value, protocol=2) ) )
         return json.loads(d)
         #return dumps(Binary( cPickle.dumps( value, protocol=2) ) )
     elif isinstance(value, VariableTree):
-        return dict([(name, _fixup(getattr(value, name)))
+        return dict([(name, _fix_object_for_json_encoder(getattr(value, name)))
                      for name in value.list_vars()])
     elif hasattr(value, 'json_encode') and callable(value.json_encode):
         return value.json_encode()
     elif hasattr(value, '__dict__'):
-        return _fixup(value.__dict__)
+        return _fix_object_for_json_encoder(value.__dict__)
     return value
 
 
@@ -442,7 +442,7 @@ class BSONCaseRecorder(_BaseRecorder):
 
     def _dump(self, info):
         """ Return BSON data, report any bad keys & values encountered. """
-        return bson.dumps(_fixup(info))
+        return bson.dumps(_fix_object_for_json_encoder(info))
 
     def close(self):
         """
