@@ -410,6 +410,7 @@ class HasConstraintsTestCase(unittest.TestCase):
         result = {}
 
         self.asm.driver.add_constraint('comp1.c = 0')
+        self.asm._setup()
         self.assertEqual(self.asm._pseudo_0.__class__, SimpleEQ0PComp)
         self.asm.run()
         arg['in0'] = np.array([3.3])
@@ -418,6 +419,7 @@ class HasConstraintsTestCase(unittest.TestCase):
         self.assertEqual(result['out0'][0], 3.3)
 
         self.asm.driver.add_constraint('comp1.d = 5.4')
+        self.asm._setup()
         self.assertEqual(self.asm._pseudo_1.__class__, SimpleEQ0PComp)
         self.asm.run()
         arg['in0'] = np.array([3.3])
@@ -426,6 +428,7 @@ class HasConstraintsTestCase(unittest.TestCase):
         self.assertEqual(result['out0'][0], 3.3)
 
         self.asm.driver.add_constraint('comp2.c = comp3.a')
+        self.asm._setup()
         self.assertEqual(self.asm._pseudo_2.__class__, SimpleEQConPComp)
         self.asm.run()
         arg['in0'] = np.array([7.2])
@@ -436,6 +439,7 @@ class HasConstraintsTestCase(unittest.TestCase):
 
         self.asm.driver.clear_constraints()
         self.asm.driver.add_constraint('comp2.c - comp3.a=0.0')
+        self.asm._setup()
         self.assertEqual(self.asm._pseudo_3.__class__, SimpleEQConPComp)
         self.asm.run()
         arg['in0'] = np.array([7.2])
@@ -446,6 +450,7 @@ class HasConstraintsTestCase(unittest.TestCase):
 
         self.asm.driver.clear_constraints()
         self.asm.driver.add_constraint('0=comp2.c - comp3.a')
+        self.asm._setup()
         self.assertEqual(self.asm._pseudo_4.__class__, SimpleEQConPComp)
         self.asm.run()
         arg['in0'] = np.array([7.2])
