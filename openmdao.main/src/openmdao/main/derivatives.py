@@ -534,7 +534,10 @@ def get_bounds(obj, input_keys, output_keys, J):
             msg = 'Jacobian is the wrong size. Expected ' + \
                 '(%dx%d) but got (%dx%d)' % (num_output, num_input,
                                              J_output, J_input)
-            obj.raise_exception(msg, RuntimeError)
+            if ISystem.providedBy(obj):
+                raise RuntimeError(msg)
+            else:
+                obj.raise_exception(msg, RuntimeError)
 
     return ibounds, obounds
 

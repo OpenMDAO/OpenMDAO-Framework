@@ -325,11 +325,13 @@ class Component(Container):
                 self.raise_exception("required variables %s were"
                                      " not set" % reqs, RuntimeError)
 
+        self._new_config = False
+
     def _check_deriv_var(self, var_name):
         try:
             val = self.get(var_name)
         except AttributeError:
-            msg = "'{var_name}' was given in 'list_deriv_vars'"\
+            msg = "'{var_name}' was given in 'list_deriv_vars' "\
                   "but '{var_name}' is undefined"
 
             msg = msg.format(var_name=var_name, comp_name=self.__class__.__name__)
@@ -431,8 +433,10 @@ class Component(Container):
             self.cpath_updated()
 
         if self._new_config:
-            self.check_config()
-            self._new_config = False
+            self._setup()
+
+    def _setup(self, inputs=None, outputs=None):
+        self.check_config()
 
     def execute(self):
         """Perform calculations or other actions, assuming that inputs
@@ -477,6 +481,9 @@ class Component(Container):
         Adjoint Mode.
         """
         applyJT(system, variables)
+
+    def name_changed(self, old, new):
+        pass
 
     def _post_execute(self):
         """Update output variables and anything else needed after execution.

@@ -471,9 +471,9 @@ class DependencyGraph(DGraphBase):
             if srcpath not in self:
                 self.add_subvar(srcpath)
                 added_nodes.append(srcpath)
-                if self.in_degree(srcpath) == 0:
-                    self.add_edge(base_var(self, srcpath), srcpath)
-                    #self.remove_edge(srcpath, base_var(self, srcpath))
+                #if self.in_degree(srcpath) == 0:
+                    #self.add_edge(base_var(self, srcpath), srcpath)
+                    ##self.remove_edge(srcpath, base_var(self, srcpath))
 
         if destpath == base_dest:
             pass
@@ -609,7 +609,7 @@ class DependencyGraph(DGraphBase):
     def list_connections(self, show_passthrough=True):
         conns = self._conns.get(show_passthrough)
         if conns is None:
-            conns = list_data_connections(self)
+            conns = list_data_connections(self) + list_driver_connections(self)
 
             if show_passthrough is False:
                 conns = [(u,v) for u,v in conns
@@ -894,7 +894,8 @@ class DependencyGraph(DGraphBase):
         for node, data in self.nodes_iter(data=True):
             if 'comp' in data:
                 comp = getattr(scope, node, None)
-                if comp and has_interface(comp, IImplicitComponent) and getattr(comp, 'eval_only'):
+                if comp and has_interface(comp, IImplicitComponent) \
+                     and getattr(comp, 'eval_only'):
                         eval_only.add(node)
 
         for node, data in self.nodes_iter(data=True):
@@ -1741,7 +1742,8 @@ def gsort(g, names):
     while True:
         tmp = final[:i]
         tset = set(tmp)
-        unames = [f for f in final[i+1:] if f in ups.get(final[i],empty) and f not in tset]
+        unames = [f for f in final[i+1:] if f in ups.get(final[i],empty) and
+                     f not in tset]
         if unames:
             tmp.extend(unames)
             tmp.extend([f for f in final[i:] if f not in unames])

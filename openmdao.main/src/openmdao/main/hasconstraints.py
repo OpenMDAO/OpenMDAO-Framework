@@ -65,6 +65,7 @@ class Constraint(object):
     """ Object that stores info for a single constraint. """
 
     def __init__(self, lhs, comparator, rhs, scope):
+        self._activated = False
         self.lhs = ExprEvaluator(lhs, scope=scope)
         unresolved_vars = self.lhs.get_unresolved()
 
@@ -103,7 +104,7 @@ class Constraint(object):
         """Make this constraint active by creating the appropriate
         connections in the dependency graph.
         """
-        if self.pcomp_name is None:
+        if not self._activated:
             if self.comparator == '=':
                 subtype = 'equality'
             else:
@@ -161,7 +162,27 @@ class Constraint(object):
 
             self.pcomp_name = pseudo.name
             self.lhs.scope.add(pseudo.name, pseudo)
-            getattr(self.lhs.scope, pseudo.name).make_connections(self.lhs.scope, driver)
+            self._activated = True
+        else:
+            pseudo = getattr(self.lhs.scope, self.pcomp_name)
+
+        self.lhs.scope._depgraph.add_component(pseudo.name, pseudo)
+        getattr(self.lhs.scope, pseudo.name).make_connections(self.lhs.scope, driver)
+
+    def deactivate(self):
+        """Remove this constraint from the dependency graph and remove
+        its pseudocomp from the scoping object.
+        """
+        if self.pcomp_name:
+            scope = self.lhs.scope
+            try:
+                pcomp = getattr(scope, self.pcomp_name)
+            except AttributeError:
+                pass
+            else:
+                scope.remove(self.pcomp_name)
+            finally:
+                self.pcomp_name = None
 
     def _combined_expr(self):
         """Given a constraint object, take the lhs, operator, and
@@ -208,21 +229,6 @@ class Constraint(object):
             newexpr = '%s-(%s)' % (first, second)
 
         return ExprEvaluator(newexpr, scope)
-
-    def deactivate(self):
-        """Remove this constraint from the dependency graph and remove
-        its pseudocomp from the scoping object.
-        """
-        if self.pcomp_name:
-            scope = self.lhs.scope
-            try:
-                pcomp = getattr(scope, self.pcomp_name)
-            except AttributeError:
-                pass
-            else:
-                scope.remove(pcomp.name)
-            finally:
-                self.pcomp_name = None
 
     def copy(self):
         """ Returns a copy of our self. """
@@ -272,6 +278,11 @@ class Constraint(object):
         else:
             return self.lhs.get_referenced_varpaths(copy=copy, refs=refs).union(
                     self.rhs.get_referenced_varpaths(copy=copy, refs=refs))
+
+    def name_changed(self, old, new):
+        """Update expressions if necessary when an object is renamed."""
+        self.rhs.name_changed(old, new)
+        self.lhs.name_changed(old, new)
 
     def __str__(self):
         return ' '.join((str(self.lhs), self.comparator, str(self.rhs)))
@@ -352,6 +363,7 @@ class Constraint2Sided(Constraint):
 
             self.pcomp_name = pseudo.name
             scope.add(pseudo.name, pseudo)
+            self.lhs.scope._depgraph.add_component(pseudo.name, pseudo)
             getattr(scope, pseudo.name).make_connections(scope, driver)
 
     def _combined_expr(self):
@@ -375,6 +387,12 @@ class Constraint2Sided(Constraint):
         constraint.
         """
         return self.center.get_referenced_varpaths(copy=copy, refs=refs)
+
+    def name_changed(self, old, new):
+        """Update expressions if necessary when an object is renamed."""
+        self.rhs.name_changed(old, new)
+        self.lhs.name_changed(old, new)
+        self.center.name_changed(old, new)
 
     def __str__(self):
         return ' '.join((str(self.lhs), str(self.center), str(self.rhs), self.comparator))
@@ -422,6 +440,24 @@ class _HasConstraintsBase(object):
             msg = "Constraint '%s' was not found. Remove failed." % key
             self.parent.raise_exception(msg, AttributeError)
         self.parent.config_changed()
+
+    def name_changed(self, old, new):
+        """Change any constraints that reference the old
+        name of an object that has now been changed to a new name.
+
+        old: string
+            Original name of the object
+
+        new: string
+            New name of the object
+        """
+        for name, obj in self._constraints.items():
+            orig = str(obj)
+            obj.name_changed(old, new)
+            trans = str(obj)
+            if orig != trans and name == orig:
+                self._constraints[trans] = obj
+                del self._constraints[name]
 
     def get_references(self, name):
         """Return references to component `name` in
@@ -610,7 +646,7 @@ class HasEqConstraints(_HasConstraintsBase):
         constraint.linear = linear
 
         if IDriver.providedBy(self.parent):
-            constraint.activate(self.parent)
+            #constraint.activate(self.parent)
             self.parent.config_changed()
 
         name = ident if name is None else name
@@ -631,7 +667,7 @@ class HasEqConstraints(_HasConstraintsBase):
         """
         if constraint.comparator == '=':
             if IDriver.providedBy(self.parent):
-                constraint.activate(self.parent)
+                #constraint.activate(self.parent)
                 self.parent.config_changed()
             self._constraints[name] = constraint
         else:
@@ -745,7 +781,7 @@ class HasIneqConstraints(_HasConstraintsBase):
         constraint = Constraint(lhs, rel, rhs, scope=_get_scope(self, scope))
         constraint.linear = linear
         if IDriver.providedBy(self.parent):
-            constraint.activate(self.parent)
+            #constraint.activate(self.parent)
             self.parent.config_changed()
 
         if name is None:
@@ -769,7 +805,7 @@ class HasIneqConstraints(_HasConstraintsBase):
         if constraint.comparator != '=':
             self._constraints[name] = constraint
             if IDriver.providedBy(self.parent):
-                constraint.activate(self.parent)
+                #constraint.activate(self.parent)
                 self.parent.config_changed()
         else:
             self.parent.raise_exception("Equality constraint '%s' is not"
@@ -1149,7 +1185,7 @@ class Has2SidedConstraints(_HasConstraintsBase):
         constraint.linear = linear
 
         if IDriver.providedBy(self.parent):
-            constraint.activate(self.parent)
+            #constraint.activate(self.parent)
             self.parent.config_changed()
 
         if name is None:
@@ -1198,7 +1234,7 @@ class Has2SidedConstraints(_HasConstraintsBase):
         """
         self._constraints[name] = constraint
         if IDriver.providedBy(self.parent):
-            constraint.activate(self.parent)
+            #constraint.activate(self.parent)
             self.parent.config_changed()
 
     def mimic(self, target):

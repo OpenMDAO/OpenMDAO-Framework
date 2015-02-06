@@ -1609,22 +1609,8 @@ class SerialSystem(CompoundSystem):
             g = self.graph.subgraph(self.graph.nodes())
             break_cycles(g)
 
-        for node in self.graph.nodes_iter():
-            if node not in self._ordering:
-                edges = list(nx.dfs_edges(g, node))
-                succ = [v for u,v in edges]
-                pred = [u for u,v in edges]
-                i = 0
-                for i,n in enumerate(self._ordering):
-                    if n in succ:
-                        break
-                    elif n in pred:
-                        i += 1
-                        break
-                if i < len(self._ordering):
-                    self._ordering.insert(i, node)
-                else:
-                    self._ordering.append(node)
+        self._ordering.extend([n for n in self.graph.nodes_iter()
+                                 if n not in self._ordering])
 
         self._ordering = gsort(g, self._ordering)
 

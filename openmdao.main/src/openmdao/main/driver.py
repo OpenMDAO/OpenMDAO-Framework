@@ -10,6 +10,7 @@ from math import isnan
 # pylint: disable=E0611,F0401
 
 from networkx.algorithms.components import strongly_connected_components
+import networkx as nx
 
 from openmdao.main.mpiwrap import PETSc
 from openmdao.main.component import Component
@@ -17,7 +18,7 @@ from openmdao.main.dataflow import Dataflow
 from openmdao.main.datatypes.api import Bool, Enum, Float, Int, Slot, \
                                         List, VarTree
 from openmdao.main.depgraph import find_all_connecting, \
-                                   collapse_driver
+                                   collapse_driver, gsort
 from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, \
                                          HasIneqConstraints
 from openmdao.main.hasevents import HasEvents
@@ -140,6 +141,8 @@ class Driver(Component):
         self.workflow = Dataflow(self)
         self._required_compnames = None
         self._reduced_graph = None
+        self._iter_set = None
+        self._full_iter_set = None
 
         # clean up unwanted trait from Component
         self.remove_trait('missing_deriv_policy')
@@ -166,13 +169,12 @@ class Driver(Component):
         """collapse subdriver iteration sets into single nodes."""
         # collapse all subdrivers in our graph
         itercomps = {}
-        itercomps['#parent'] = self.workflow.get_names(full=True)
 
         for child_drv in self.subdrivers(recurse=False):
             itercomps[child_drv.name] = [c.name for c in child_drv.iteration_set()]
 
         for child_drv in self.subdrivers(recurse=False):
-            excludes = set()
+            excludes = set(self._iter_set)
             for name, comps in itercomps.items():
                 if name != child_drv.name:
                     for cname in comps:
@@ -185,10 +187,9 @@ class Driver(Component):
         # in our workflow
         to_remove = set()
         for name, comps in itercomps.items():
-            if name != '#parent':
-                for comp in comps:
-                    if comp not in itercomps['#parent']:
-                        to_remove.add(comp)
+            for comp in comps:
+                if comp not in self._iter_set:
+                    to_remove.add(comp)
 
         g.remove_nodes_from(to_remove)
 
@@ -232,10 +233,9 @@ class Driver(Component):
         return self._reduced_graph
 
     def check_config(self, strict=False):
-        """Verify that our workflow is able to resolve all of its components."""
 
         # duplicate entries in the workflow are not allowed
-        names = self.workflow.get_names()
+        names = self.workflow._explicit_names
         dups = list(set([x for x in names if names.count(x) > 1]))
         if len(dups) > 0:
             raise RuntimeError("%s workflow has duplicate entries: %s" %
@@ -253,23 +253,91 @@ class Driver(Component):
 
         return self.itername
 
-    def iteration_set(self, solver_only=False):
+    def compute_itersets(self, cgraph):
+        """Return a list of all components required to run a full
+        iteration of this driver.
+        """
+        if self._iter_set is None:
+            self._iter_set = set(self.workflow._explicit_names)
+            for pcomp in self.list_pseudocomps():
+                self._iter_set.add(pcomp)
+                self._iter_set.update(cgraph.predecessors(pcomp))
+            self._full_iter_set = set()
+
+            # First, have all of our subdrivers (recursively) determine
+            # their connected compnents, because we need those to determine
+            # our full set.
+            subdrivers = set()
+            to_remove = set()
+            for name in self._iter_set:
+                comp = getattr(self.parent, name)
+                if has_interface(comp, IDriver):
+                    subdrivers.add(comp)
+                    cgcopy = cgraph.subgraph(cgraph.nodes_iter())
+                    cgcopy.remove_nodes_from([self.name])
+                    comp.compute_itersets(cgcopy)
+                    to_remove.update(comp._full_iter_set)
+
+            # make our own copy of the graph to play with
+            cgraph = cgraph.subgraph(cgraph.nodes_iter())
+
+            # create fake edges to/from the driver and each of its
+            # components so we can get everything that's relevant
+            # by getting all nodes that are strongly connected to the
+            # driver in the graph.
+            for drv in subdrivers:
+                for name in drv._full_iter_set:
+                    cgraph.add_edge(drv.name, name)
+                    cgraph.add_edge(name, drv.name)
+
+            for name in self._iter_set:
+                cgraph.add_edge(self.name, name)
+                cgraph.add_edge(name, self.name)
+
+            comps = []
+            for comps in strongly_connected_components(cgraph):
+                if self.name in comps:
+                    break
+
+            self._full_iter_set.update(comps)
+            self._full_iter_set.update(self._iter_set)
+            self._full_iter_set.remove(self.name)
+
+            to_remove -= self._iter_set
+
+            self._iter_set = self._full_iter_set - to_remove
+
+    def compute_ordering(self, cgraph):
+        """Given a component graph, each driver can determine its iteration
+        set and the ordering of its workflow.
+        """
+        # call compute_ordering on all subdrivers
+        for name in self._iter_set:
+            obj = getattr(self.parent, name)
+            if has_interface(obj, IDriver):
+                obj.compute_ordering(cgraph)
+
+        cgraph = cgraph.subgraph(self._full_iter_set)
+
+        self._collapse_subdrivers(cgraph)
+
+        # now figure out the order of our iter_set
+        self._ordering = self.workflow._explicit_names + \
+                         [n for n in self._iter_set
+                           if n not in self.workflow._explicit_names]
+
+        # remove any nodes that got collapsed into subdrivers
+        self._ordering = [n for n in self._ordering if n in cgraph]
+
+        self._ordering = gsort(cgraph, self._ordering)
+
+        self.workflow._ordering = self._ordering
+
+    def iteration_set(self):
         """Return a set of all Components in our workflow and
         recursively in any workflow in any Driver in our workflow.
-
-        solver_only: Bool
-            Only recurse into solver drivers. These are the only kinds
-            of drivers whose derivatives get absorbed into the parent
-            driver's graph.
         """
-        allcomps = set()
-        for child in self.workflow:
-            allcomps.add(child)
-            if has_interface(child, IDriver):
-                if solver_only and not has_interface(child, ISolver):
-                    continue
-                allcomps.update(child.iteration_set())
-        return allcomps
+        return set([getattr(self.parent, n) for n in self._full_iter_set])
 
     @rbac(('owner', 'user'))
     def get_expr_depends(self):
@@ -356,6 +424,8 @@ class Driver(Component):
                 for start in setcomps:
                     full.update(find_all_connecting(compgraph, start, end))
 
+            if self.name in full:
+                full.remove(self.name)
             self._required_compnames = full
 
         return self._required_compnames
@@ -372,6 +442,34 @@ class Driver(Component):
                 if hasattr(delegate, 'list_pseudocomps'):
                     pcomps.extend(delegate.list_pseudocomps())
         return pcomps
+
+    def name_changed(self, old, new):
+        """Change any workflows or delegates that reference the old
+        name of an object that has now been changed to a new name.
+
+        old: string
+            Original name of the object
+
+        new: string
+            New name of the object
+        """
+
+        # alert any delegates of the name change
+        if hasattr(self, '_delegates_'):
+            for dname in self._delegates_:
+                inst = getattr(self, dname)
+                if isinstance(inst, (HasParameters, HasConstraints,
+                                     HasEqConstraints, HasIneqConstraints,
+                                     HasObjective, HasObjectives, HasResponses)):
+                    inst.name_changed(old, new)
+
+        # update our workflow
+        for i, name in enumerate(self.workflow._explicit_names):
+            if name == old:
+                self.workflow._explicit_names[i] = new
+
+        # force update of workflow full names
+        self.workflow.config_changed()
 
     def get_references(self, name):
         """Return a dict of parameter, constraint, and objective
@@ -524,6 +622,8 @@ class Driver(Component):
         super(Driver, self).config_changed(update_parent)
         self._required_compnames = None
         self._depgraph = None
+        self._iter_set = None
+        self._full_iter_set = None
         if self.workflow is not None:
             self.workflow.config_changed()
 
@@ -558,7 +658,7 @@ class Driver(Component):
             level = 0 + indent
         else:
             level = self.itername.count('.') + 1 + indent
-            
+
         indent = '   ' * level
         if msg is not None:
             form = indent + '[%s] %s: %s   %d | %s'
@@ -584,13 +684,19 @@ class Driver(Component):
     def setup_scatters(self):
         self.workflow.setup_scatters()
 
+        # FIXME: move this somewhere else...
+        if hasattr(self._system, 'graph'):
+            self.workflow._cycle_vars = get_cycle_vars(self._system.graph, scope._var_meta)
+        else:
+            self.workflow._cycle_vars = []
+
     @rbac(('owner', 'user'))
     def get_full_nodeset(self):
         """Return the full set of nodes in the depgraph
         belonging to this driver (includes full iteration set).
         """
         names = super(Driver, self).get_full_nodeset()
-        names.update(self.workflow.get_full_nodeset())
+        names.update(self._full_iter_set)
         return names
 
     def calc_gradient(self, inputs=None, outputs=None, mode='auto',
@@ -665,58 +771,60 @@ class Driver(Component):
         self.workflow._calc_gradient_inputs = inputs[:]
         self.workflow._calc_gradient_outputs = outputs[:]
 
-        if force_regen:
-            top = self
-            while top.parent is not None:
-                top = top.parent
+        try:
+            if force_regen:
+                top = self
+                while top.parent is not None:
+                    top = top.parent
 
-            top._setup(inputs=inputs, outputs=outputs)
+                top._setup(inputs=inputs, outputs=outputs)
 
-        if options is None:
-            options = self.gradient_options
+            if options is None:
+                options = self.gradient_options
 
-        self.workflow._calc_gradient_inputs = inputs[:]
-        self.workflow._calc_gradient_outputs = outputs[:]
-        
-        J = self.workflow.calc_gradient(inputs, outputs, mode, return_format,
-                                        options=options)
+            J = self.workflow.calc_gradient(inputs, outputs, mode, return_format,
+                                            options=options)
 
-        # Finally, we need to untransform the jacobian if any parameters have
-        # scalers.
-        if not hasattr(self, 'get_parameters'):
-            return J
+            # Finally, we need to untransform the jacobian if any parameters have
+            # scalers.
+            if not hasattr(self, 'get_parameters'):
+                return J
 
-        params = self.get_parameters()
+            params = self.get_parameters()
 
-        if len(params) == 0:
-            return J
+            if len(params) == 0:
+                return J
 
-        i = 0
-        for group in inputs:
+            i = 0
+            for group in inputs:
 
-            if isinstance(group, str):
-                pname = name = group
-            else:
-                pname = tuple(group)
-                name = group[0]
+                if isinstance(group, str):
+                    pname = name = group
+                else:
+                    pname = tuple(group)
+                    name = group[0]
 
-            # Note: 'dict' is the only valid return_format for MPI runs.
-            if return_format == 'dict':
-                if pname in params:
-                    scaler = params[pname].scaler
-                    if scaler != 1.0:
-                        for okey in J.keys():
-                            J[okey][name] = J[okey][name]*scaler
+                # Note: 'dict' is the only valid return_format for MPI runs.
+                if return_format == 'dict':
+                    if pname in params:
+                        scaler = params[pname].scaler
+                        if scaler != 1.0:
+                            for okey in J.keys():
+                                J[okey][name] = J[okey][name]*scaler
 
-            else:
-                width = len(self._system.vec['u'][name])
+                else:
+                    width = len(self._system.vec['u'][name])
 
-                if pname in params:
-                    scaler = params[pname].scaler
-                    if scaler != 1.0:
-                        J[:, i:i+width] = J[:, i:i+width]*scaler
+                    if pname in params:
+                        scaler = params[pname].scaler
+                        if scaler != 1.0:
+                            J[:, i:i+width] = J[:, i:i+width]*scaler
 
-                i += width
+                    i += width
+
+        finally:
+            self.workflow._calc_gradient_inputs = None
+            self.workflow._calc_gradient_outputs = None
 
         return J
 
@@ -897,9 +1005,6 @@ class Driver(Component):
     @rbac(('owner', 'user'))
     def setup_depgraph(self, dgraph):
         self._reduced_graph = None
-        # # add connections for params, constraints, etc.
-        # pass
-
         if self.workflow._calc_gradient_inputs is not None:
             for param in self.workflow._calc_gradient_inputs:
                 dgraph.add_param(self.name, param)

@@ -11,15 +11,21 @@ class Objective(ConnectedExprEvaluator):
     def __init__(self, *args, **kwargs):
         super(Objective, self).__init__(*args, **kwargs)
         self.pcomp_name = None
+        self._activated = False
 
     def activate(self, driver):
         """Make this constraint active by creating the appropriate
         connections in the dependency graph.
         """
-        if self.pcomp_name is None:
+        if not self._activated:
             pseudo = PseudoComponent(self.scope, self, pseudo_type='objective')
             self.pcomp_name = pseudo.name
             self.scope.add(pseudo.name, pseudo)
+            self._activated = True
+        else:
+            pseudo = getattr(self.scope, self.pcomp_name)
+
+        self.scope._depgraph.add_component(pseudo.name, pseudo)
         getattr(self.scope, self.pcomp_name).make_connections(self.scope, driver)
 
     def deactivate(self):
@@ -143,11 +149,10 @@ class HasObjectives(object):
         name = expr if name is None else name
 
         if IDriver.providedBy(self.parent):
-            expreval.activate(self.parent)
+            #expreval.activate(self.parent)
             self.parent.config_changed()
 
         self._objectives[name] = expreval
-
 
     def remove_objective(self, expr):
         """Removes the specified objective expression. Spaces within
@@ -163,6 +168,23 @@ class HasObjectives(object):
                                         "that is not in this driver." % expr,
                                         AttributeError)
         self.parent.config_changed()
+
+    def name_changed(self, old, new):
+        """Change any objectives that reference the old
+        name of an object that has now been changed to a new name.
+
+        old: string
+            Original name of the object
+
+        new: string
+            New name of the object
+        """
+        for name, obj in self._objectives.items():
+            orig = obj.text
+            trans = obj.name_changed(old, new)
+            if orig != trans and name == orig:  # expr changed and no alias
+                del self._objectives[name]
+                self._objectives[trans] = obj
 
     def get_references(self, name):
         """Return references to component `name` in preparation for subsequent

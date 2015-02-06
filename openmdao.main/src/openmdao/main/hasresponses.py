@@ -13,15 +13,21 @@ class Response(ConnectedExprEvaluator):
     def __init__(self, *args, **kwargs):
         super(Response, self).__init__(*args, **kwargs)
         self.pcomp_name = None
+        self._activated = False
 
     def activate(self, driver):
         """Make this response active by creating the appropriate
         connections in the dependency graph.
         """
-        if self.pcomp_name is None:
+        if not self._activated:
             pseudo = PseudoComponent(self.scope, self, pseudo_type='objective')
             self.pcomp_name = pseudo.name
             self.scope.add(pseudo.name, pseudo)
+            self._activated = True
+        else:
+            pseudo = getattr(self.scope, self.pcomp_name)
+
+        self.scope._depgraph.add_component(pseudo.name, pseudo)
         getattr(self.scope, self.pcomp_name).make_connections(self.scope,
                                                               driver)
 
@@ -119,7 +125,7 @@ class HasResponses(object):
 
         name = expr if name is None else name
 
-        expreval.activate(self.parent)
+        #expreval.activate(self.parent)
 
         self._responses[name] = expreval
         self.parent.config_changed()

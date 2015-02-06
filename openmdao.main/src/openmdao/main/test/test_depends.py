@@ -169,12 +169,13 @@ class DependsTestCase(unittest.TestCase):
         self.top.disconnect('comp8')
         
     def test_disconnect2(self):
+        self.top.run()
         self.assertEqual(set(self.top._depgraph.list_outputs('sub', connected=True)),
                          set(['sub.d3','sub.c4']))
         self.top.disconnect('comp8')
+        self.top._setup()
         self.assertEqual(self.top._depgraph.list_outputs('sub', connected=True),
                          [])
-        self.assertEqual(self.top.sub._exprmapper.get_source('c4'), 'comp4.c')
         
     def test_lazy1(self):
         self.top.run()
@@ -285,6 +286,7 @@ class DependsTestCase(unittest.TestCase):
         sub.add('driver', DumbDriver())
         sub.driver.add_objective('comp6.c')
         sub.driver.add_objective('comp5.d')
+        self.top._setup()
         self.assertEqual(sub.driver._get_required_compnames(),
                          set(['comp5', 'comp6', '_pseudo_0', '_pseudo_1']))
         sub.driver.add_parameter('comp2.a', low=0.0, high=10.0)
@@ -356,17 +358,21 @@ class DependsTestCase2(unittest.TestCase):
         self.top.add('c2', Simple())
         self.top.add('c1', Simple())
         self.top.driver.workflow.add(['c1','c2'])
+        self.top.run()
     
     def test_connected_vars(self):
         self.assertEqual(self.top._depgraph.list_outputs('c1', connected=True), [])
         self.assertEqual(self.top._depgraph.list_outputs('c2', connected=True), [])
         self.top.connect('c1.c', 'c2.a')
+        self.top._setup()
         self.assertEqual(self.top._depgraph.list_outputs('c1', connected=True), ['c1.c'])
         self.assertEqual(self.top._depgraph.list_inputs('c2', connected=True), ['c2.a'])
         self.top.connect('c1.d', 'c2.b')
+        self.top._setup()
         self.assertEqual(set(self.top._depgraph.list_outputs('c1', connected=True)), set(['c1.c', 'c1.d']))
         self.assertEqual(set(self.top._depgraph.list_inputs('c2', connected=True)), set(['c2.a', 'c2.b']))
         self.top.disconnect('c1.d', 'c2.b')
+        self.top._setup()
         self.assertEqual(self.top._depgraph.list_outputs('c1', connected=True), ['c1.c'])
         self.assertEqual(self.top._depgraph.list_inputs('c2', connected=True), ['c2.a'])
                 
@@ -376,12 +382,15 @@ class DependsTestCase2(unittest.TestCase):
         self.assertEqual(set(self.top._depgraph.list_outputs('c1', connected=False))-c1extras, set(['c1.c', 'c1.d']))
         self.assertEqual(set(self.top._depgraph.list_inputs('c2', connected=False))-c2extras, set(['c2.a', 'c2.b']))
         self.top.connect('c1.c', 'c2.a')
+        self.top._setup()
         self.assertEqual(set(self.top._depgraph.list_outputs('c1', connected=False))-c1extras, set(['c1.d']))
         self.assertEqual(set(self.top._depgraph.list_inputs('c2', connected=False))-c2extras, set(['c2.b']))
         self.top.connect('c1.d', 'c2.b')
+        self.top._setup()
         self.assertEqual(set(self.top._depgraph.list_outputs('c1', connected=False))-c1extras, set())
         self.assertEqual(set(self.top._depgraph.list_inputs('c2', connected=False))-c2extras, set())
         self.top.disconnect('c1.d', 'c2.b')
+        self.top._setup()
         self.assertEqual(set(self.top._depgraph.list_outputs('c1', connected=False))-c1extras, set(['c1.d']))
         self.assertEqual(set(self.top._depgraph.list_inputs('c2', connected=False))-c2extras, set(['c2.b']))
                 
@@ -673,12 +682,12 @@ class ExprDependsTestCase(unittest.TestCase):
                 visited.add(obj)
                 if isinstance(obj, Assembly):
                     connection_set.update(obj.list_connections())
-                    connection_set.update(obj._exprmapper.list_connections())
-                    connection_set.update(obj._depgraph.list_connections())
+                    #connection_set.update(obj._exprmapper.list_connections())
+                    #connection_set.update(obj._depgraph.list_connections())
                     for name in obj.list_containers():
                         comp = getattr(obj, name)
                         if isinstance(comp, Assembly):
-                            connection_set.update(comp._depgraph.list_connections())
+                            #connection_set.update(comp._depgraph.list_connections())
                             if isinstance(comp, Assembly):
                                 objstack.append(comp)
         return connection_set
@@ -686,8 +695,8 @@ class ExprDependsTestCase(unittest.TestCase):
     def test_connection_cleanup(self):
         global exec_order
         top = _nested_model()
-        initial_connections = set(top.sub.list_connections())
         top.run()
+        initial_connections = set(top.sub.list_connections())
         top.sub.connect('comp1.c', 'comp3.b')
         self.assertEqual(set(top.sub.list_connections())-initial_connections, 
                          set([('comp1.c','comp3.b')]))
@@ -703,12 +712,12 @@ class ExprDependsTestCase(unittest.TestCase):
         top.sub.connect('comp1.c*3.0', 'comp4.a')
         top.sub.connect('comp1.c', 'comp3.b')
         top.sub.disconnect('comp1.c','comp3.b')
+        top._setup()
         self.assertEqual(set(top.sub.list_connections())-initial_connections, 
-                         set([('_pseudo_0.out0', 'comp4.a'), 
-                              ('comp1.c', '_pseudo_0.in0')]))
+                         set([('comp1.c*3.0', 'comp4.a')]))
         self.assertEqual(initial_connections-set(top.sub.list_connections()), 
                          set())
-        self.assertEqual(set(top.sub.list_connections(visible_only=True, show_expressions=True))-initial_connections, 
+        self.assertEqual(set(top.sub.list_connections())-initial_connections, 
                          set([('comp1.c*3.0', 'comp4.a')]))
         for u,v in self._all_nested_connections(top.sub):
             self.assertTrue(not ('comp1.c' in u and 'comp3.b' in v))
@@ -718,21 +727,21 @@ class ExprDependsTestCase(unittest.TestCase):
         try:
             top.sub.connect('comp1.c', 'comp4.a+comp4.b')
         except Exception as err:
-            self.assertEqual(str(err), "sub: Can't connect 'comp1.c' to 'comp4.a+comp4.b': bad connected expression 'comp4.a+comp4.b' must reference exactly one variable")
+            self.assertEqual(str(err), "sub: Can't connect 'comp1.c' to 'comp4.a+comp4.b': can't evaluate expression 'comp4.a+comp4.b': bad connected expression 'comp4.a+comp4.b' must reference exactly one variable")
         else:
             self.fail("Exception expected")
             
         try:
             top.sub.connect('comp1.c', 'comp4.a[foo]')
         except Exception as err:
-            self.assertEqual(str(err), "sub: Can't connect 'comp1.c' to 'comp4.a[foo]': bad destination expression 'comp4.a[foo]': only constant indices are allowed for arrays and slices")
+            self.assertEqual(str(err), "sub: Can't connect 'comp1.c' to 'comp4.a[foo]': can't evaluate expression 'comp4.a[foo]': bad destination expression 'comp4.a[foo]': only constant indices are allowed for arrays and slices")
         else:
             self.fail("Exception expected")
             
         try:
             top.sub.connect('comp1.c', 'comp4.a(5)')
         except Exception as err:
-            self.assertEqual(str(err), "sub: Can't connect 'comp1.c' to 'comp4.a(5)': bad destination expression 'comp4.a(5)': not assignable")
+            self.assertEqual(str(err), "sub: Can't connect 'comp1.c' to 'comp4.a(5)': can't evaluate expression 'comp4.a(5)': bad destination expression 'comp4.a(5)': not assignable")
         else:
             self.fail("Exception expected")
                     

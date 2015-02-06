@@ -50,6 +50,7 @@ from openmdao.util.graph import list_deriv_vars, base_var, fix_single_tuple
 from openmdao.util.log import logger
 from openmdao.util.debug import strict_chk_config
 from openmdao.util.typegroups import real_types
+from openmdao.units import PhysicalQuantity
 
 from openmdao.util.graphplot import _clean_graph
 from networkx.readwrite import json_graph
@@ -167,14 +168,13 @@ class Assembly(Component):
         # connections as well as for all driver parameters and
         # constraints/objectives.  This is the starting graph for
         # all later transformations.
-        self._depgraph = DependencyGraph()
-        self._reduced_graph = nx.DiGraph()
-        self._setup_depgraph = None
+        self._depgraph = None
+        self._reduced_graph = None
 
-        for name, trait in self.class_traits().items():
-            if trait.iotype:  # input or output
-                self._depgraph.add_boundary_var(self, name, iotype=trait.iotype)
-
+        # for name, trait in self.class_traits().items():
+        #     if trait.iotype:  # input or output
+        #         self._depgraph.add_boundary_var(self, name, iotype=trait.iotype)
+        #
         self._exprmapper = ExprMapper(self)
         self.J_input_keys = None
         self.J_output_keys = None
@@ -190,21 +190,6 @@ class Assembly(Component):
         self.missing_deriv_policy = 'assume_zero'
 
         self.add('recording_options', RecordingOptions())
-
-    def _pre_execute(self):
-        """Prepares for execution by calling various initialization methods
-        if necessary.
-
-        Overrides of this function must call this version.
-        """
-        new_config = self._new_config
-        super(Assembly, self)._pre_execute()
-
-        if new_config and self.parent is None:
-            self._setup()  # only call _setup from top level
-
-        if self.parent is None:
-            self.configure_recording(self.recording_options)
 
     @property
     def _top_driver(self):
@@ -251,51 +236,28 @@ class Assembly(Component):
                     wflows.append((obj.workflow, obj.workflow.index(name)))
         return wflows
 
-    def _add_after_parent_set(self, name, obj):
-        if has_interface(obj, IComponent):
-            self._depgraph.add_component(name, obj)
-        elif has_interface(obj, IContainer) and name not in self._depgraph:
-            t = self.get_trait(name)
-            if t is not None:
-                io = t.iotype
-                if io:
-                    # since we just removed this container and it was
-                    # being used as an io variable, we need to put
-                    # it back in the dep graph
-                    self._depgraph.add_boundary_var(self, name, iotype=io)
-
-    def add_trait(self, name, trait, refresh=True):
-        """Overrides base definition of *add_trait* in order to
-        update the depgraph.
-        """
-        super(Assembly, self).add_trait(name, trait, refresh)
-        if trait.iotype and name not in self._depgraph:
-            self._depgraph.add_boundary_var(self, name,
-                                            iotype=trait.iotype)
-
     def rename(self, oldname, newname):
         """Renames a child of this object from oldname to newname."""
-        self._check_rename(oldname, newname)
-        conns = self.find_referring_connections(oldname)
-        wflows = self.find_in_workflows(oldname)
+        self.config_changed()
 
-        obj = self.remove(oldname)
+        self._check_rename(oldname, newname)
+
+        # components may have old name in their workflows/objectives/params/constraints,
+        # so give them a chance to update
+        for comp in self.get_comps():
+            comp.name_changed(oldname, newname)
+
+        for u,v in self._connections:
+            u.name_changed(oldname, newname)
+            v.name_changed(oldname, newname)
+
+        obj = self.get(oldname)
         obj.name = newname
         self.add(newname, obj)
 
-        # oldname has now been removed from workflows, but newname may be in the
-        # wrong location, so force it to be at the same index as before removal
-        for wflow, idx in wflows:
-            wflow.remove(newname)
-            wflow.add(newname, idx)
-
-        old_rgx = re.compile(r'(\W?)%s.' % oldname)
-
-        # recreate all of the broken connections after translating
-        # oldname to newname
-        for u, v in conns:
-            self.connect(re.sub(old_rgx, r'\g<1>%s.' % newname, u),
-                         re.sub(old_rgx, r'\g<1>%s.' % newname, v))
+        # this just removes from traits dicts, but doesn't remove from
+        # workflows, etc.
+        self.remove_trait(oldname)
 
     def replace(self, target_name, newobj):
         """Replace one object with another, attempting to mimic the
@@ -394,14 +356,6 @@ class Assembly(Component):
             self.disconnect(name)
         elif name in self.list_inputs() or name in self.list_outputs():
             self.disconnect(name)
-
-        if has_interface(obj, IDriver):
-            for pcomp in obj.list_pseudocomps():
-                if pcomp in self._depgraph:
-                    self._depgraph.remove(pcomp)
-
-        if name in self._depgraph:
-            self._depgraph.remove(name)
 
         return super(Assembly, self).remove(name)
 
@@ -507,13 +461,18 @@ class Assembly(Component):
         """
 
         super(Assembly, self).check_config(strict=strict)
-        self._check_input_collisions()
-        self._check_unset_req_vars()
-        self._check_unexecuted_comps(strict)
+        try:
+            self._check_input_collisions(self._depgraph)
+            self._check_unset_req_vars()
+        except:
+            info = sys.exc_info()
+            self._new_config = True
+            raise info[0], info[1], info[2]
 
-    def _check_input_collisions(self):
-        graph = self._depgraph
-        dests = set([v for u, v in self.list_connections() if 'drv_conn_ext' not in graph[u][v]])
+    def _check_input_collisions(self, graph):
+        dests = set([v for u, v in graph.list_connections() if
+                        'drv_conn_ext' not in graph[u][v] and
+                        'drv_conn'  not in graph[u][v]])
         allbases = set([base_var(graph, v) for v in dests])
         unconnected_bases = allbases - dests
         connected_bases = allbases - unconnected_bases
@@ -575,12 +534,18 @@ class Assembly(Component):
                 pre.append('driver') # run the normal top driver after running the 'pre' comps
                 self._pre_driver.workflow.add(pre)
                 self._pre_driver.name = '_pre_driver'
+                self._pre_driver._iter_set = set(pre)
+                self._pre_driver._full_iter_set = self.driver._full_iter_set.union(pre)
                 self._depgraph.add_node('_pre_driver', comp=True, driver=True)
 
             if post:
                 errfunct("The following components are not in any workflow"
                          " and WILL NOT EXECUTE: %s" % list(diff))
                 self._unexecuted = list(post)
+                for name in self._unexecuted:
+                    comp = getattr(self, name)
+                    if has_interface(comp, IDriver) or has_interface(comp, IAssembly):
+                        comp.setup_systems()
 
     def _check_unset_req_vars(self):
         """Find 'required' variables that have not been set."""
@@ -633,49 +598,11 @@ class Assembly(Component):
                                          getter='get_attr_w_copy')
         self._connections.append((srcexpr, destexpr))
 
-        # Among other things, check if already connected.
-        _, _, pcomp_type = \
-                   self._exprmapper.check_connect(src, dest, self)
-
-        if pcomp_type is not None:
-            if pcomp_type == 'units':
-                pseudocomp = UnitConversionPComp(self, srcexpr, destexpr,
-                                                 pseudo_type=pcomp_type)
-            else:
-                pseudocomp = PseudoComponent(self, srcexpr, destexpr,
-                                             pseudo_type=pcomp_type)
-            self.add(pseudocomp.name, pseudocomp)
-            pseudocomp.make_connections(self)
-        else:
-            pseudocomp = None
-            self._depgraph.check_connect(src, dest)
-            dcomps = destexpr.get_referenced_compnames()
-            scomps = srcexpr.get_referenced_compnames()
-            for dname in dcomps:
-                if dname in scomps:
-                    self.raise_exception("Can't connect '%s' to '%s'. Both"
-                                         " refer to the same component." %
-                                         (src, dest), RuntimeError)
-            for cname in chain(dcomps, scomps):
-                comp = getattr(self, cname)
-                if has_interface(comp, IComponent):
-                    comp.config_changed(update_parent=False)
-
-            for vname in chain(srcexpr.get_referenced_varpaths(copy=False),
-                               destexpr.get_referenced_varpaths(copy=False)):
-                if not self.contains(vname):
-                    self.raise_exception("Can't find '%s'" % vname,
-                                         AttributeError)
-
-            self._depgraph.connect(self, src, dest)
-
-        self._exprmapper.connect(srcexpr, destexpr, self, pseudocomp)
-
         dest = destexpr.evaluate()
         if isinstance(dest, ndarray) and dest.size == 0:
             destexpr.set(srcexpr.evaluate(), self)
 
-        self.config_changed(update_parent=False)
+        self.config_changed()
 
     @rbac(('owner', 'user'))
     def disconnect(self, varpath, varpath2=None):
@@ -697,37 +624,6 @@ class Assembly(Component):
                                   and v.text==varpath2.strip()]
             self._connections = [tup for tup in self._connections
                                     if tup not in to_remove]
-
-
-            to_remove, pcomps = self._exprmapper.disconnect(varpath, varpath2)
-
-            graph = self._depgraph
-
-            if to_remove:
-                for u, v in graph.list_connections():
-                    if (u, v) in to_remove:
-                        graph.disconnect(u, v)
-                        to_remove.remove((u, v))
-
-            if to_remove:  # look for pseudocomp expression connections
-                for node, data in graph.nodes_iter(data=True):
-                    if 'srcexpr' in data:
-                        for u, v in to_remove:
-                            if data['srcexpr'] == u or data['destexpr'] == v:
-                                pcomps.add(node)
-
-            for name in pcomps:
-                if '_pseudo_' not in varpath:
-                    self.remove(name)
-                else:
-                    try:
-                        self.remove_trait(name)
-                    except Exception:
-                        pass
-                try:
-                    graph.remove(name)
-                except (KeyError, nx.exception.NetworkXError):
-                    pass
         finally:
             self.config_changed(update_parent=False)
 
@@ -884,33 +780,14 @@ class Assembly(Component):
         """A child has changed its input lists and/or output lists,
         so we need to update the graph.
         """
-        # if this is called during __setstate__, self._depgraph may not
-        # exist yet, so...
-        if hasattr(self, '_depgraph'):
-            self._depgraph.child_config_changed(child, adding=adding,
-                                                removing=removing)
+        self.config_changed()
 
-    def list_connections(self, show_passthrough=True,
-                               visible_only=False,
-                               show_expressions=False):
+    def list_connections(self): #, show_passthrough=True,
+                               #visible_only=False,
+                               #show_expressions=False):
         """Return a list of tuples of the form (outvarname, invarname).
         """
-        conns = self._depgraph.list_connections(show_passthrough=show_passthrough)
-        if visible_only:
-            newconns = []
-            for u, v in conns:
-                if u.startswith('_pseudo_'):
-                    pcomp = getattr(self, u.split('.', 1)[0])
-                    newconns.extend(pcomp.list_connections(is_hidden=True,
-                                     show_expressions=show_expressions))
-                elif v.startswith('_pseudo_'):
-                    pcomp = getattr(self, v.split('.', 1)[0])
-                    newconns.extend(pcomp.list_connections(is_hidden=True,
-                                     show_expressions=show_expressions))
-                else:
-                    newconns.append((u, v))
-            return newconns
-        return conns
+        return [(u.text, v.text) for u,v in self._connections]
 
     def check_gradient(self, name=None, inputs=None, outputs=None,
                        stream=sys.stdout, mode='auto',
@@ -1114,18 +991,10 @@ class Assembly(Component):
     def setup_systems(self):
         rgraph = self._reduced_graph
 
-        # store metadata (size, etc.) for all relevant vars
-        self._get_all_var_metadata(self._reduced_graph)
-
         # create systems for all simple components
         for node, data in rgraph.nodes_iter(data=True):
             if 'comp' in data:
                 data['system'] = _create_simple_sys(self, rgraph, node)
-
-        for name in self._unexecuted:
-            comp = getattr(self, name)
-            if has_interface(comp, IDriver) or has_interface(comp, IAssembly):
-                comp.setup_systems()
 
         self._top_driver.setup_systems()
 
@@ -1217,20 +1086,132 @@ class Assembly(Component):
     def setup_scatters(self):
         self._system.setup_scatters()
 
-    def setup_depgraph(self, dgraph=None):
-        # we have our own depgraph to use
-        dgraph = self._depgraph.subgraph(self._depgraph.nodes_iter())
-        self._setup_depgraph = dgraph
+    def _needs_pseudo(self, srcexpr, destexpr):
+        """Return a non-None pseudo_type if srcexpr and destexpr require a
+        pseudocomp to be created.
+        """
+        srcrefs = list(srcexpr.refs())
+        if srcrefs and srcrefs[0] != srcexpr.text:
+            # expression is more than just a simple variable reference,
+            # so we need a pseudocomp
+            return 'multi_var_expr'
 
-        for comp in self.get_comps_and_pseudos():
+        destmeta = destexpr.get_metadata('units')
+        srcmeta = srcexpr.get_metadata('units')
+
+        # compare using get_unit_name() to account for unit aliases
+        if srcmeta:
+            srcunit = srcmeta[0][1]
+            if srcunit:
+                srcunit = PhysicalQuantity(1., srcunit).unit
+        else:
+            srcunit = None
+
+        if destmeta:
+            destunit = destmeta[0][1]
+            if destunit:
+                destunit = PhysicalQuantity(1., destunit).unit
+        else:
+            destunit = None
+
+        if destunit and srcunit:
+            if destunit.powers != srcunit.powers or \
+               destunit.factor != srcunit.factor or \
+               destunit.offset != srcunit.offset:
+                return 'units'
+
+        return None
+
+    def setup_depgraph(self, dgraph=None):
+        # create our depgraph
+        self._depgraph = DependencyGraph()
+
+        # add all of the components and their var nodes, and any of
+        # our own variables as boundary var nodes.
+        for name in self.list_inputs():
+            self._depgraph.add_boundary_var(self, name,
+                                            iotype='in')
+
+        for name in self.list_outputs():
+            self._depgraph.add_boundary_var(self, name,
+                                            iotype='out')
+
+        for cname in self.list_containers():
+            obj = getattr(self, cname)
+            if cname not in self._depgraph and has_interface(obj, IComponent):
+                self._depgraph.add_component(cname, obj)
+
+        # add our connections to the graph.  Some connections, e.g.,
+        # connections with unit conversions and connections involving
+        # multivariable source expressions, will require the creation of
+        # PseudoComponents.  These must also be represented in the graph.
+        for srcexpr, destexpr in self._connections:
+            src = srcexpr.text
+            dest = destexpr.text
+            pcomp_type = self._needs_pseudo(srcexpr, destexpr)
+            if pcomp_type:
+                if pcomp_type == 'units':
+                    pseudocomp = UnitConversionPComp(self, srcexpr, destexpr,
+                                                     pseudo_type=pcomp_type)
+                else:
+                    pseudocomp = PseudoComponent(self, srcexpr, destexpr,
+                                                 pseudo_type=pcomp_type)
+                self.add(pseudocomp.name, pseudocomp)
+                self._depgraph.add_component(pseudocomp.name, pseudocomp)
+                pseudocomp.make_connections(self)
+            else:
+                pseudocomp = None
+                self._depgraph.check_connect(src, dest)
+                dcomps = destexpr.get_referenced_compnames()
+                scomps = srcexpr.get_referenced_compnames()
+                for dname in dcomps:
+                    if dname in scomps:
+                        self.raise_exception("Can't connect '%s' to '%s'. Both"
+                                             " refer to the same component." %
+                                             (src, dest), RuntimeError)
+                for cname in chain(dcomps, scomps):
+                    comp = getattr(self, cname)
+                    if has_interface(comp, IComponent):
+                        comp.config_changed(update_parent=False)
+
+                for vname in chain(srcexpr.get_referenced_varpaths(copy=False),
+                                   destexpr.get_referenced_varpaths(copy=False)):
+                    if not self.contains(vname):
+                        self.raise_exception("Can't find '%s'" % vname,
+                                             AttributeError)
+
+                self._depgraph.connect(self, src, dest)
+
+        # add connections for params, constraints, etc.
+        for cname in self.list_containers():
+            obj = getattr(self, cname)
+            if hasattr(obj, 'get_parameters'):
+                for param in obj.get_parameters().values():
+                    self._depgraph.add_param(obj.name, tuple(param.targets))
+
+            if hasattr(obj, 'get_constraints'):
+                for constraint in obj.get_constraints().values():
+                    constraint.activate(obj)
+
+            if hasattr(obj, 'get_objectives'):
+                for objective in obj.get_objectives().values():
+                    objective.activate(obj)
+
+            if hasattr(obj, 'get_responses'):
+                for res in obj.get_responses().values():
+                    res.activate(obj)
+
+        #self._setup_depgraph = self._depgraph.subgraph(self._depgraph.nodes_iter())
+
+        for comp in self.get_comps():
             if has_interface(comp, IDriver) or has_interface(comp, IAssembly):
-                comp.setup_depgraph(dgraph)
+                comp.setup_depgraph(self._depgraph)
 
     def setup_reduced_graph(self, inputs=None, outputs=None):
         """Create the graph we need to do the breakdown of the model
         into Systems.
         """
-        dgraph = self._setup_depgraph
+        dgraph = self._depgraph.subgraph(self._depgraph.nodes_iter())
 
         # keep all states
         # FIXME: I think this should only keep states of comps that are directly relevant...
@@ -1347,6 +1328,31 @@ class Assembly(Component):
                 comp.setup_reduced_graph(inputs=_get_scoped_inputs(comp, dgraph, inputs),
                                          outputs=_get_scoped_outputs(comp, dgraph, outputs))
 
+    def compute_ordering(self, graph):
+        """Given a component graph, each driver can determine its iteration
+        set and the ordering of its workflow.  Each Assembly has its own
+        component graph, so the passed in graph is ignored.
+        """
+        compgraph = self._depgraph.component_graph()
+        self._top_driver.compute_ordering(compgraph)
+        for comp in self.get_comps():
+            if has_interface(comp, IAssembly):
+                comp.compute_ordering(None)
+
+    def compute_itersets(self, graph):
+        """Determine the iteration sets for all drivers."""
+        compgraph = self._depgraph.component_graph()
+        self.driver.compute_itersets(compgraph)
+
+        # this call may create a new top level driver for components
+        # that need to execute once before the normal top level
+        # driver executes.
+        self._check_unexecuted_comps(strict=False)
+
+        for comp in self.get_comps():
+            if has_interface(comp, IAssembly):
+                comp.compute_itersets(None)
+
     def _get_var_info(self, node):
         """Collect any variable metadata from the
         model here.
@@ -1449,14 +1455,17 @@ class Assembly(Component):
         for name in simple_node_iter(node):
             self._var_meta[name] = meta
 
-    def get_comps_and_pseudos(self):
-        for node, data in self._depgraph.nodes_iter(data=True):
-            if 'comp' in data:
-                yield getattr(self, node)
-
     def pre_setup(self):
         self._provideJ_bounds = None
-        self.driver.pre_setup()
+        self._top_driver.pre_setup()
+
+        # make sure all pseudcomps are initialized
+        for obj in self.__dict__.values():
+            if isinstance(obj, PseudoComponent):
+                obj.ensure_init()
+
+        # store metadata (size, etc.) for all relevant vars
+        self._get_all_var_metadata(self._reduced_graph)
 
     def post_setup(self):
         for comp in self.get_comps():
@@ -1472,6 +1481,9 @@ class Assembly(Component):
         differ from the lists of parameters or objectives/constraints
         that are inherent to the model.
         """
+        # only perform full setup if we're the top Assembly
+        if self.parent:
+            return
 
         if MPI:
             MPI.COMM_WORLD.Set_errhandler(MPI.ERRORS_ARE_FATAL)
@@ -1482,20 +1494,28 @@ class Assembly(Component):
         self._var_meta = {}
 
         try:
-            self.pre_setup()
             self.setup_depgraph()
+            self.compute_itersets(None)
+            self.compute_ordering(None)
             self.setup_reduced_graph(inputs=inputs, outputs=outputs)
             self.setup_systems()
+            self.pre_setup()
+
+            self.check_config()
             #if MPI.COMM_WORLD.rank == 0:
-                #from openmdao.util.dotgraph import plot_system_tree, plot_graph
-                #plot_system_tree(self._system)
-                #plot_graph(self._reduced_graph, 'red.pdf')
+            #from openmdao.util.dotgraph import plot_system_tree, plot_graph
+            #plot_system_tree(self._system,'sys.pdf')
+            #plot_graph(self._reduced_graph, 'red.pdf')
 
             self.setup_communicators(comm)
             self.setup_variables()
             self.setup_sizes()
             self.setup_vectors()
             self.setup_scatters()
+
+            if self.parent is None:
+                self.configure_recording(self.recording_options)
+
         except Exception:
             traceback.print_exc()
             raise
@@ -1521,8 +1541,8 @@ def dump_iteration_tree(obj, f=sys.stdout, full=True, tabsize=4, derivs=False):
                     #         % (' '*(tablevel+tabsize+2), inputs))
                     # f.write("%s*deriv outputs: %s\n"
                     #         % (' '*(tablevel+tabsize+2), outputs))
-            names = set(obj.workflow.get_names())
-            for comp in obj.workflow:
+            names = set(obj.workflow._explicit_names)
+            for comp in obj._ordering:
                 if not full and comp.name not in names:
                     continue
                 if is_instance(comp, Driver) or is_instance(comp, Assembly):

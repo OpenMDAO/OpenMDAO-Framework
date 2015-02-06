@@ -907,8 +907,8 @@ class HasParameters(object):
 
         if IDriver.providedBy(self.parent):
             # add a graph connection from the driver to the param target
-            dgraph = self.parent.get_depgraph()
-            dgraph.add_param(self.parent.name, tuple(target.targets))
+            #dgraph = self.parent.get_depgraph()
+            #dgraph.add_param(self.parent.name, tuple(target.targets))
 
             self.parent.config_changed()
 
@@ -956,11 +956,6 @@ class HasParameters(object):
                                          % (name,), AttributeError)
 
         if IDriver.providedBy(self.parent):
-            # remove param connections from dep graph
-            dgraph = self.parent.get_depgraph()
-            dgraph.remove_param(self.parent.name,
-                                tuple(param.targets))
-
             self.parent.config_changed()
 
     def config_parameters(self):

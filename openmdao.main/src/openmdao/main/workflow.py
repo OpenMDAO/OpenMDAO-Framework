@@ -68,6 +68,11 @@ class Workflow(object):
 
         self._need_prescatter = False
 
+        self._ordering = None
+
+        self._calc_gradient_inputs = None
+        self._calc_gradient_outputs = None
+
         if members:
             for member in members:
                 if not isinstance(member, basestring):
@@ -514,8 +519,6 @@ class Workflow(object):
         (dependencies, etc.) has changed.
         """
         self._system = None
-        self._calc_gradient_inputs = None
-        self._calc_gradient_outputs = None
 
     def remove(self, comp):
         """Remove a component from this Workflow by name."""
@@ -524,13 +527,6 @@ class Workflow(object):
     def get_names(self, full=False):
         """Return a list of component names in this workflow."""
         raise NotImplementedError("This Workflow has no 'get_names' function")
-
-    def get_components(self, full=False):
-        """Returns a list of all component objects in the workflow. No ordering
-        is assumed.
-        """
-        scope = self.scope
-        return [getattr(scope, name) for name in self.get_names(full)]
 
     def __iter__(self):
         """Returns an iterator over the components in the workflow in
@@ -542,7 +538,6 @@ class Workflow(object):
         raise NotImplementedError("This Workflow has no '__len__' function")
 
     def pre_setup(self):
-        self._reduced_graph = None
         for comp in self:
             comp.pre_setup()
 
@@ -568,11 +563,11 @@ class Workflow(object):
         params = set()
         for s in parent_graph.successors(drvname):
             if parent_graph[drvname][s].get('drv_conn') == drvname:
-	        if reduced.in_degree(s):
-		    continue
-                params.add(s)
-                reduced.add_node(s[0], comp='param')
-                reduced.add_edge(s[0], s)
+                if reduced.in_degree(s):
+                    continue
+            params.add(s)
+            reduced.add_node(s[0], comp='param')
+            reduced.add_edge(s[0], s)
 
         # we need to connect a param comp node to all param nodes
         for node in params:
@@ -638,18 +633,13 @@ class Workflow(object):
             self._system = SerialSystem(scope, reduced, cgraph,
                                         str(tuple(sorted(cgraph.nodes()))))
 
-        self._system.set_ordering([p[0] for p in params]+
-                                  [c.name for c in self], opaque_map)
+        self._system.set_ordering([p[0] for p in params]+self._ordering,
+                                  opaque_map)
 
         self._system._parent_system = self.parent._system
 
         for comp in self:
             comp.setup_systems()
-
-        if hasattr(self._system, 'graph'):
-            self._cycle_vars = get_cycle_vars(self._system.graph, scope._var_meta)
-        else:
-            self._cycle_vars = []
 
     def _auto_setup_systems(self, scope, reduced, cgraph):
         """

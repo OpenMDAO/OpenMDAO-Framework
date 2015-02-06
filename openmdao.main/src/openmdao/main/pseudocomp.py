@@ -286,7 +286,8 @@ class PseudoComponent(object):
         the appropriate nodes in the dependency graph.
         """
         for src, dest in self.list_connections():
-            scope.connect(src, dest)
+            #scope.connect(src, dest)
+            scope._depgraph.connect(scope, src, dest)
 
         if driver is not None:
             scope._depgraph.add_driver_input(driver.name,

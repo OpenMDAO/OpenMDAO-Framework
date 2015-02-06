@@ -6,7 +6,7 @@ from numpy import array, eye, arange, roll, tile
 from openmdao.main.datatypes.array import Array
 from openmdao.main.expreval import ExprEvaluator, ConnectedExprEvaluator, \
                                    ExprExaminer
-from openmdao.main.printexpr import ExprPrinter, print_node
+from openmdao.main.printexpr import ExprPrinter, print_node, transform_expression
 from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.main.datatypes.api import Float, List, Slot, Dict
 from openmdao.util.testutil import assert_rel_error
@@ -743,6 +743,21 @@ class ExprExaminerTestCase(unittest.TestCase):
         self._examine("x()", simplevar=False, assignable=False, refs=set(['x']))
         self._examine("x(7)", simplevar=False, assignable=False, refs=set(['x']))
         self._examine("x==6", simplevar=False, assignable=False, refs=set(['x']))
+
+
+class TransformTestCase(unittest.TestCase):
+
+    def test_xforms(self):
+        tests = [
+            ('abc.de.g.abc', {'abc':'ABC'}, 'ABC.de.g.abc'),
+        ]
+
+        for orig, mapping, expected in tests:
+            xformed = transform_expression(orig, mapping)
+            self.assertEqual(expected, xformed)
+
+
+
 
 if __name__ == "__main__":
     unittest.main()

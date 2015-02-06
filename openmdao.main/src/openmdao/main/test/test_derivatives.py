@@ -602,7 +602,7 @@ class Testcase_derivatives(unittest.TestCase):
         try:
             top.run()
         except Exception as err:
-            msg = "comp: 'w' was given in 'list_deriv_vars'"\
+            msg = "comp: 'w' was given in 'list_deriv_vars' "\
             "but 'w' is undefined"
 
             self.assertEqual(str(err), msg)
@@ -1096,12 +1096,10 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         top.driver.workflow.add(['comp1', 'comp2'])
         top.driver.add_objective('comp1.y + comp2.y + 5*comp1.x')
 
-        objs = top.driver.get_objectives().values()
-        obj = '%s.out0' % objs[0].pcomp_name
-
         top.comp1.x = 1.0
         top.run()
-
+        objs = top.driver.get_objectives().values()
+        obj = '%s.out0' % objs[0].pcomp_name
         J = top.driver.calc_gradient(inputs=['comp1.x'],
                                      outputs=[obj], mode='forward')
 

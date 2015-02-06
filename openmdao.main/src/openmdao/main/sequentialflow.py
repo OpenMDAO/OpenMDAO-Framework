@@ -34,7 +34,11 @@ class SequentialWorkflow(Workflow):
 
     def __iter__(self):
         """Returns an iterator over the components in the workflow."""
-        return iter(self.get_components(full=True))
+        if self._ordering is None:
+            lst = self._explicit_names
+        else:
+            lst = self._ordering
+        return iter([getattr(self.scope, n) for n in lst])
 
     def __len__(self):
         return len(self.get_names(full=True))
@@ -185,13 +189,11 @@ class SequentialWorkflow(Workflow):
         if not isinstance(compname, basestring):
             msg = "Components must be removed by name from a workflow."
             raise TypeError(msg)
-        allnames = self.get_names(full=True)
         try:
             self._explicit_names.remove(compname)
         except ValueError:
             pass
-        if compname in allnames:
-            self.config_changed()
+        self.config_changed()
 
     def clear(self):
         """Remove all components from this workflow."""
@@ -207,4 +209,3 @@ class SequentialWorkflow(Workflow):
                                             if hasattr(par, n)]
         else:
             self._explicit_names = src._explicit_names[:]
-
