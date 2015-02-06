@@ -349,9 +349,10 @@ def _fixup(value):
     of types, just skips them.
     """
     if isinstance(value, dict):
+        new_value = {}
         for key, val in value.items():
-            value[key] = _fixup(val)
-        return value
+            new_value[key] = _fixup(val)
+        return new_value
     elif isinstance(value, (list, tuple, set, frozenset)):
         return [_fixup(val) for val in value]
     elif isinstance(value, ndarray):
