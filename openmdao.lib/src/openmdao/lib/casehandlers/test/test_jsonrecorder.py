@@ -6,6 +6,7 @@ import re
 import shutil
 import sys
 import unittest
+import copy
 
 from struct import unpack
 from cStringIO import StringIO
@@ -41,6 +42,45 @@ class LoadsComp(Component):
 
     def execute(self):
         self.loads_out = self.loads_in
+
+class ComplexClass:
+    def __init__(self, realpart, imagpart):
+        self.r = realpart
+        self.i = imagpart
+
+class ClassWithNestedObjects:
+    def __init__(self, cx1, cx2):
+        self.cx1 = cx1
+        self.cx2 = cx2
+        
+class CompWithNestedPythonObjects(Component):
+
+    cx_nested_in = Instance(ClassWithNestedObjects(ComplexClass(1.0,2.0),ComplexClass(3.0,4.0)), 
+            iotype="in", desc="nested complex number")
+    cx_nested_out = Instance(ClassWithNestedObjects(ComplexClass(5.0,6.0),ComplexClass(7.0,8.0)), 
+            iotype="out", desc="nested complex number")
+
+    def execute(self):
+        self.cx_nested_out = copy.deepcopy(self.cx_nested_in)
+
+
+class TestCaseForNestedObjects(unittest.TestCase):
+
+    def setUp(self):
+        self.top = set_as_top(Assembly())
+        self.top.add('comp1', CompWithNestedPythonObjects())
+        self.top.driver.workflow.add(['comp1'])
+
+    def tearDown(self):
+        self.top = None
+
+    def test_jsonrecorder_with_nest_object(self):
+        # make sure bug 87740468 is fixed
+        sout = StringIO()
+        self.top.recorders = [JSONCaseRecorder('junk.json')]
+
+        self.top.run()
+        self.assertTrue(isinstance(self.top.comp1.cx_nested_in.cx1, ComplexClass)) # should NOT be a dict
 
 
 class TestCase(unittest.TestCase):
