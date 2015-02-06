@@ -774,6 +774,9 @@ class System(object):
                       iterbase='', return_format='array'):
         """ Return the gradient for this system. """
 
+        print 'Name', self.name
+        print 'inputs', inputs
+        print 'outputs', outputs
         if not self.is_active():
             return
 
