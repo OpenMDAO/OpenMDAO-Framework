@@ -368,6 +368,9 @@ class FiniteDifference(object):
                 # avoid adding to the same array entry multiple times for
                 # param groups
                 break
+            
+        if self.system.name.split('.')[-1] == '_inner_asm':
+            uvec.set_to_scope(self.system.scope, vnames=srcs)
 
     def set_value_complex(self, srcs, val, index, undo_complex=False):
         """Set/unset a complex value in the model"""
