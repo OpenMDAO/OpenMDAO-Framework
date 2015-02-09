@@ -10,10 +10,10 @@ installed in it as 'develop' eggs.
 
 To set up using conda:
 
-    OS X/Linux
+    #OS X/Linux
     . conda-openmdao-dev.sh
     
-    Windows
+    #Windows
     conda-openmdao-dev.bat
 
 For more information, go to http://openmdao.org/dev_docs
