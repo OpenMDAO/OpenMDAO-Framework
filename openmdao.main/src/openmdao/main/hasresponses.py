@@ -12,37 +12,35 @@ class Response(ConnectedExprEvaluator):
 
     def __init__(self, *args, **kwargs):
         super(Response, self).__init__(*args, **kwargs)
+        self._pseudo = None
         self.pcomp_name = None
-        self._activated = False
 
     def activate(self, driver):
         """Make this response active by creating the appropriate
         connections in the dependency graph.
         """
-        if not self._activated:
-            pseudo = PseudoComponent(self.scope, self, pseudo_type='objective')
-            self.pcomp_name = pseudo.name
-            self.scope.add(pseudo.name, pseudo)
-            self._activated = True
-        else:
-            pseudo = getattr(self.scope, self.pcomp_name)
+        if self._pseudo is None:
+            self._pseudo = PseudoComponent(self.scope, self, pseudo_type='objective')
 
-        self.scope._depgraph.add_component(pseudo.name, pseudo)
-        getattr(self.scope, self.pcomp_name).make_connections(self.scope,
-                                                              driver)
+        self.pcomp_name = self._pseudo.name
+        self.scope.add(self._pseudo.name, self._pseudo)
+
+        self.scope._depgraph.add_component(self._pseudo.name, self._pseudo)
+        getattr(self.scope, self._pseudo.name).make_connections(self.scope,
+                                                                driver)
 
     def deactivate(self):
         """Remove this response from the dependency graph and remove
         its pseudocomp from the scoping object.
         """
-        if self.pcomp_name:
+        if self._pseudo is not None:
             scope = self.scope
             try:
-                getattr(scope, self.pcomp_name)
+                getattr(scope, self._pseudo.name)
             except AttributeError:
                 pass
             else:
-                scope.remove(self.pcomp_name)
+                scope.remove(self._pseudo.name)
 
             self.pcomp_name = None
 

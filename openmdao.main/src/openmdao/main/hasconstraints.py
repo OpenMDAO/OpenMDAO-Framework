@@ -65,8 +65,9 @@ class Constraint(object):
     """ Object that stores info for a single constraint. """
 
     def __init__(self, lhs, comparator, rhs, scope):
-        self._activated = False
         self.lhs = ExprEvaluator(lhs, scope=scope)
+        self._pseudo = None
+        self.pcomp_name = None
         unresolved_vars = self.lhs.get_unresolved()
 
         if unresolved_vars:
@@ -87,7 +88,6 @@ class Constraint(object):
                                                           expr=expression,
                                                           msg=msg)
         self.comparator = comparator
-        self.pcomp_name = None
         self._size = None
 
         # Linear flag: constraints are nonlinear by default
@@ -104,7 +104,7 @@ class Constraint(object):
         """Make this constraint active by creating the appropriate
         connections in the dependency graph.
         """
-        if not self._activated:
+        if self._pseudo is None:
             if self.comparator == '=':
                 subtype = 'equality'
             else:
@@ -154,35 +154,37 @@ class Constraint(object):
                 elif len(lrefs) == 1 and len(rrefs) == 0 and rightval is not None:
                     pseudo_class = SimpleEQ0PComp
 
-            pseudo = pseudo_class(self.lhs.scope,
-                                  self._combined_expr(),
-                                  pseudo_type='constraint',
-                                  subtype=subtype,
-                                  exprobject=self)
+            self._pseudo = pseudo_class(self.lhs.scope,
+                                        self._combined_expr(),
+                                        pseudo_type='constraint',
+                                        subtype=subtype,
+                                        exprobject=self)
 
-            self.pcomp_name = pseudo.name
-            self.lhs.scope.add(pseudo.name, pseudo)
-            self._activated = True
-        else:
-            pseudo = getattr(self.lhs.scope, self.pcomp_name)
+        # add the pseudocomp back to the assembly
+        self.lhs.scope.add(self._pseudo.name, self._pseudo)
 
-        self.lhs.scope._depgraph.add_component(pseudo.name, pseudo)
-        getattr(self.lhs.scope, pseudo.name).make_connections(self.lhs.scope, driver)
+        # set the name and update the depgraph
+        self.pcomp_name = self._pseudo.name
+        self.lhs.scope._depgraph.add_component(self._pseudo.name, self._pseudo)
+        getattr(self.lhs.scope, self._pseudo.name).make_connections(self.lhs.scope, driver)
 
     def deactivate(self):
         """Remove this constraint from the dependency graph and remove
         its pseudocomp from the scoping object.
         """
-        if self.pcomp_name:
+        if self._pseudo is not None:
             scope = self.lhs.scope
             try:
-                pcomp = getattr(scope, self.pcomp_name)
+                pcomp = getattr(scope, self._pseudo.name)
             except AttributeError:
                 pass
             else:
-                scope.remove(self.pcomp_name)
+                scope.remove(self._pseudo.name)
             finally:
                 self.pcomp_name = None
+
+    def is_active(self):
+        return self.pcomp_name is not None
 
     def _combined_expr(self):
         """Given a constraint object, take the lhs, operator, and
@@ -301,6 +303,9 @@ class Constraint2Sided(Constraint):
         self.lhs = ExprEvaluator(lhs, scope=scope)
         unresolved_vars = self.lhs.get_unresolved()
 
+        self._pseudo = None
+        self.pcomp_name = None
+
         if unresolved_vars:
             msg = "Left hand side of constraint '{0}' has invalid variables {1}"
             expression = ' '.join((lhs, comparator, center, comparator,
@@ -332,7 +337,6 @@ class Constraint2Sided(Constraint):
                                                           expr=expression,
                                                           msg=msg)
         self.comparator = comparator
-        self.pcomp_name = None
         self._size = None
 
         # Linear flag: constraints are nonlinear by default
@@ -345,7 +349,7 @@ class Constraint2Sided(Constraint):
         """Make this constraint active by creating the appropriate
         connections in the dependency graph.
         """
-        if self.pcomp_name is None:
+        if self._pseudo is None:
 
             scope = self.lhs.scope
             refs = list(self.center.ordered_refs())
@@ -355,16 +359,16 @@ class Constraint2Sided(Constraint):
             if len(refs) == 1 and self.center.text == refs[0]:
                 pseudo_class = SimpleEQ0PComp
 
-            pseudo = pseudo_class(scope,
-                                  self.center,
-                                  pseudo_type='constraint',
-                                  subtype='inequality',
-                                  exprobject=self)
+            self._pseudo = pseudo_class(scope,
+                                        self.center,
+                                        pseudo_type='constraint',
+                                        subtype='inequality',
+                                        exprobject=self)
 
-            self.pcomp_name = pseudo.name
-            scope.add(pseudo.name, pseudo)
-            self.lhs.scope._depgraph.add_component(pseudo.name, pseudo)
-            getattr(scope, pseudo.name).make_connections(scope, driver)
+        self.pcomp_name = self._pseudo.name
+        scope.add(self._pseudo.name, self._pseudo)
+        self.lhs.scope._depgraph.add_component(self._pseudo.name, self._pseudo)
+        getattr(scope, self._pseudo.name).make_connections(scope, driver)
 
     def _combined_expr(self):
         """Only need the center expression
