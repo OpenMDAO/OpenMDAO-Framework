@@ -1156,9 +1156,7 @@ class Assembly(Component):
                 else:
                     pseudocomp = PseudoComponent(self, srcexpr, destexpr,
                                                  pseudo_type=pcomp_type)
-                self.add(pseudocomp.name, pseudocomp)
-                self._depgraph.add_component(pseudocomp.name, pseudocomp)
-                pseudocomp.make_connections(self)
+                pseudocomp.activate(self)
             else:
                 pseudocomp = None
                 self._depgraph.check_connect(src, dest)
@@ -1459,14 +1457,18 @@ class Assembly(Component):
         for name in simple_node_iter(node):
             self._var_meta[name] = meta
 
+    def setup_init(self):
+        """This is for any last minute configuration (like with
+        ArchitectureAssembly).
+        """
+        pass
+        # for comp in self.get_comps():
+        #     comp.setup_init()
+
+    #FIXME: rename this to init_var_sizes()
     def pre_setup(self):
         self._provideJ_bounds = None
         self._top_driver.pre_setup()
-
-        # make sure all pseudcomps are initialized
-        for obj in self.__dict__.values():
-            if isinstance(obj, PseudoComponent):
-                obj.ensure_init()
 
         # store metadata (size, etc.) for all relevant vars
         self._get_all_var_metadata(self._reduced_graph)
@@ -1498,6 +1500,7 @@ class Assembly(Component):
         self._var_meta = {}
 
         try:
+            self.setup_init()
             self.setup_depgraph()
             self.compute_itersets(None)
             self.compute_ordering(None)

@@ -281,6 +281,11 @@ class PseudoComponent(object):
     def contains(self, name):
         return name == 'out0' or name in self._inputs
 
+    def activate(self, scope, driver=None):
+        scope.add(self.name, self)
+        scope._depgraph.add_component(self.name, self)
+        getattr(scope, self.name).make_connections(scope, driver)
+
     def make_connections(self, scope, driver=None):
         """Connect all of the inputs and outputs of this comp to
         the appropriate nodes in the dependency graph.

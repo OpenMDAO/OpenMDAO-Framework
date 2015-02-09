@@ -258,28 +258,27 @@ class Driver(Component):
         iteration of this driver.
         """
         if self._iter_set is None:
-            self._iter_set = set(self.workflow._explicit_names)
-            for pcomp in self.list_pseudocomps():
-                self._iter_set.add(pcomp)
-                self._iter_set.update(cgraph.predecessors(pcomp))
             self._full_iter_set = set()
 
+            # make our own copy of the graph to play with
+            cgraph = cgraph.subgraph(cgraph.nodes_iter())
+
+            myset = set(self.workflow._explicit_names +
+                        self.list_pseudocomps())
+
             # First, have all of our subdrivers (recursively) determine
-            # their connected compnents, because we need those to determine
+            # their iteration sets, because we need those to determine
             # our full set.
             subdrivers = set()
-            to_remove = set()
-            for name in self._iter_set:
+            subcomps = set()
+            for name in myset:
                 comp = getattr(self.parent, name)
                 if has_interface(comp, IDriver):
                     subdrivers.add(comp)
                     cgcopy = cgraph.subgraph(cgraph.nodes_iter())
                     cgcopy.remove_nodes_from([self.name])
                     comp.compute_itersets(cgcopy)
-                    to_remove.update(comp._full_iter_set)
-
-            # make our own copy of the graph to play with
-            cgraph = cgraph.subgraph(cgraph.nodes_iter())
+                    subcomps.update(comp._full_iter_set)
 
             # create fake edges to/from the driver and each of its
             # components so we can get everything that's relevant
@@ -290,7 +289,16 @@ class Driver(Component):
                     cgraph.add_edge(drv.name, name)
                     cgraph.add_edge(name, drv.name)
 
-            for name in self._iter_set:
+            # add predecessors to my pseudocomps if they aren't
+            # already in the itersets of my subdrivers
+            for pcomp in self.list_pseudocomps():
+                for pred in cgraph.predecessors(pcomp):
+                    if pred not in subcomps:
+                        myset.add(pred)
+
+            # now create fake edges from us to all of the comps
+            # that we know about in our iterset
+            for name in myset:
                 cgraph.add_edge(self.name, name)
                 cgraph.add_edge(name, self.name)
 
@@ -300,12 +308,12 @@ class Driver(Component):
                     break
 
             self._full_iter_set.update(comps)
-            self._full_iter_set.update(self._iter_set)
+            self._full_iter_set.update(myset) # don't think I need this
             self._full_iter_set.remove(self.name)
 
-            to_remove -= self._iter_set
+            subcomps -= myset
 
-            self._iter_set = self._full_iter_set - to_remove
+            self._iter_set = self._full_iter_set - subcomps
 
     def compute_ordering(self, cgraph):
         """Given a component graph, each driver can determine its iteration
@@ -391,7 +399,7 @@ class Driver(Component):
         if recurse:
             itercomps = self.iteration_set()
         else:
-            itercomps = list(self.workflow)
+            itercomps = list([getattr(self.parent,n) for n in self._iter_set])
 
         for comp in itercomps:
             if has_interface(comp, IDriver):

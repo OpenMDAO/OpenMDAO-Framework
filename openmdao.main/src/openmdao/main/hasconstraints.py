@@ -160,13 +160,8 @@ class Constraint(object):
                                         subtype=subtype,
                                         exprobject=self)
 
-        # add the pseudocomp back to the assembly
-        self.lhs.scope.add(self._pseudo.name, self._pseudo)
-
-        # set the name and update the depgraph
         self.pcomp_name = self._pseudo.name
-        self.lhs.scope._depgraph.add_component(self._pseudo.name, self._pseudo)
-        getattr(self.lhs.scope, self._pseudo.name).make_connections(self.lhs.scope, driver)
+        self._pseudo.activate(self.lhs.scope, driver)
 
     def deactivate(self):
         """Remove this constraint from the dependency graph and remove
@@ -366,9 +361,7 @@ class Constraint2Sided(Constraint):
                                         exprobject=self)
 
         self.pcomp_name = self._pseudo.name
-        scope.add(self._pseudo.name, self._pseudo)
-        self.lhs.scope._depgraph.add_component(self._pseudo.name, self._pseudo)
-        getattr(scope, self._pseudo.name).make_connections(scope, driver)
+        self._pseudo.activate(scope, driver)
 
     def _combined_expr(self):
         """Only need the center expression

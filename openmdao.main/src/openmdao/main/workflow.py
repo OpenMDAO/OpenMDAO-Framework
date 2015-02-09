@@ -280,10 +280,10 @@ class Workflow(object):
                 if save_problem_formulation or \
                    self._check_path(path, includes, excludes):
                     self._rec_objectives.append(key)
-                if key != objective.text:
-                    outputs.append(name)
-                else:
-                    outputs.append(name + '.out0')
+                    if key != objective.text:
+                        outputs.append(name)
+                    else:
+                        outputs.append(name + '.out0')
 
         # Responses
         self._rec_responses = []
@@ -556,7 +556,7 @@ class Workflow(object):
 
         # collapse driver iteration sets into a single node for
         # the driver.
-        reduced.collapse_subdrivers(self.get_names(full=True),
+        reduced.collapse_subdrivers(self.parent._iter_set,
                                     self.subdrivers())
 
         reduced = reduced.full_subgraph(self.get_names(full=True))

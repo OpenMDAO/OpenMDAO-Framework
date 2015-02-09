@@ -34,11 +34,11 @@ class SequentialWorkflow(Workflow):
 
     def __iter__(self):
         """Returns an iterator over the components in the workflow."""
-        if self._ordering is None:
-            lst = self._explicit_names
-        else:
-            lst = self._ordering
-        return iter([getattr(self.scope, n) for n in lst])
+        # if self._ordering is None:
+        #     lst = self._explicit_names
+        # else:
+        #     lst = self._ordering
+        return iter([getattr(self.scope, n) for n in self.parent._ordering])
 
     def __len__(self):
         return len(self.get_names(full=True))

@@ -23,11 +23,7 @@ class Response(ConnectedExprEvaluator):
             self._pseudo = PseudoComponent(self.scope, self, pseudo_type='objective')
 
         self.pcomp_name = self._pseudo.name
-        self.scope.add(self._pseudo.name, self._pseudo)
-
-        self.scope._depgraph.add_component(self._pseudo.name, self._pseudo)
-        getattr(self.scope, self._pseudo.name).make_connections(self.scope,
-                                                                driver)
+        self._pseudo.activate(self.scope, driver)
 
     def deactivate(self):
         """Remove this response from the dependency graph and remove
