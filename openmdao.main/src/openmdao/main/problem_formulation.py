@@ -191,19 +191,27 @@ class ArchitectureAssembly(Assembly):
         self.check_config()
         super(ArchitectureAssembly, self).configure_recording(recording_options)
 
-    def check_config(self, strict=False):
-        """Checks the configuration of the assembly to make sure it's compatible
-        with the architecture. Then initializes all the values in the
-        parameters and coupling vars and configures the architecture if it
-        hasn't been done already.
-        """
-        super(ArchitectureAssembly, self).check_config(strict=strict)
+    def setup_init(self):
         if self.architecture is not None:
-            self.architecture.check_config(strict=strict)
+            self.architecture.check_config(strict=False)
             if not self.architecture.configured:
                 self.architecture.configure()
                 self.architecture.configured = True
+        super(ArchitectureAssembly, self).setup_init()
 
+    # def check_config(self, strict=False):
+    #     """Checks the configuration of the assembly to make sure it's compatible
+    #     with the architecture. Then initializes all the values in the
+    #     parameters and coupling vars and configures the architecture if it
+    #     hasn't been done already.
+    #     """
+    #     super(ArchitectureAssembly, self).check_config(strict=strict)
+    #     if self.architecture is not None:
+    #         self.architecture.check_config(strict=strict)
+    #         if not self.architecture.configured:
+    #             self.architecture.configure()
+    #             self.architecture.configured = True
+    #
     def get_local_des_vars_by_comp(self):
         """Return a dictionary of component names/list of parameters for
         all single-target parameters."""
@@ -311,6 +319,7 @@ class ArchitectureAssembly(Assembly):
                 if hasattr(delegate, 'list_pseudocomps'):
                     pcomps.extend(delegate.list_pseudocomps())
         return pcomps
+
 
 class OptProblem(ArchitectureAssembly):
     """Class for specifying test problems for optimization

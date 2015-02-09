@@ -981,8 +981,8 @@ class Assembly(Component):
         """Returns a list of all of objects contained in this
         Assembly implementing the IComponent interface.
         """
-        conts = [getattr(self, n) for n in sorted(self.list_containers())]
-        return [c for c in conts if has_interface(c, IComponent)]
+        return set([c for _,c in self.items()
+                      if has_interface(c, IComponent)])
 
     def get_system(self):
         return self._system
@@ -1461,9 +1461,8 @@ class Assembly(Component):
         """This is for any last minute configuration (like with
         ArchitectureAssembly).
         """
-        pass
-        # for comp in self.get_comps():
-        #     comp.setup_init()
+        for comp in self.get_comps():
+            comp.setup_init()
 
     #FIXME: rename this to init_var_sizes()
     def pre_setup(self):

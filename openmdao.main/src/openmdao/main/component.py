@@ -1391,6 +1391,10 @@ class Component(Container):
         pass
 
     @rbac(('owner', 'user'))
+    def setup_init(self):
+        pass
+
+    @rbac(('owner', 'user'))
     def pre_setup(self):
         pass
 

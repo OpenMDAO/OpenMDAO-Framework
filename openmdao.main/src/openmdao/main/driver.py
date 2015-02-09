@@ -1033,8 +1033,8 @@ class Driver(Component):
 
     @rbac(('owner', 'user'))
     def pre_setup(self):
-        self._reduced_graph = None
-        self.workflow.pre_setup()
+        for cname in self._iter_set:
+            getattr(self.parent, cname).pre_setup()
 
 
 def _flattened_names(name, val, names=None):

@@ -285,6 +285,8 @@ class PseudoComponent(object):
         scope.add(self.name, self)
         scope._depgraph.add_component(self.name, self)
         getattr(scope, self.name).make_connections(scope, driver)
+        self._initialized = False
+        self.ensure_init()
 
     def make_connections(self, scope, driver=None):
         """Connect all of the inputs and outputs of this comp to
@@ -381,15 +383,20 @@ class PseudoComponent(object):
                     getattr(self, in_name).name = in_name
 
             # set the initial value of the output
-            setattr(self, 'out0', self._srcexpr.evaluate())
+            outval = self._srcexpr.evaluate()
+            setattr(self, 'out0', outval)
 
-            self._initialized = True
+            if outval is not None:
+                self._initialized = True
 
     def list_deriv_vars(self):
         return tuple(self._inputs), ('out0',)
 
     def get_req_cpus(self):
         return 1
+
+    def setup_init(self):
+        self.ensure_init()
 
     def pre_setup(self):
         self.ensure_init()

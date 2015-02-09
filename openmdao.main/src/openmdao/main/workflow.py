@@ -538,10 +538,6 @@ class Workflow(object):
     def __len__(self):
         raise NotImplementedError("This Workflow has no '__len__' function")
 
-    def pre_setup(self):
-        for comp in self:
-            comp.pre_setup()
-
     def setup_systems(self, system_type):
         """Get the subsystem for this workflow. Each
         subsystem contains a subgraph of this workflow's component
@@ -559,7 +555,7 @@ class Workflow(object):
         reduced.collapse_subdrivers(self.parent._iter_set,
                                     self.subdrivers())
 
-        reduced = reduced.full_subgraph(self.get_names(full=True))
+        reduced = reduced.full_subgraph(self.parent._iter_set)
 
         params = set()
         for s in parent_graph.successors(drvname):
