@@ -123,6 +123,37 @@ by typing:
 
 .. _Anaconda Installation:
 
+.. _Site-Wide VirtualEnv Installation:
+
+Site-Wide VirtualEnv Installation
+=================================
+
+At some sites it can be convenient to have a standard OpenMDAO configuration
+available to all users.  This would include the base OpenMDAO installation,
+possibly a collection of pre-installed plugins, site-specific configuration
+files, etc.  Using the ``go-openmdao.py`` script of an activated environment,
+you can create a zip file containing everything needed to install an OpenMDAO
+configuration on a user's system.
+
+To create the zip file, type the following from within an activated environment
+(in this case version 0.12.0 on a Linux machine):
+
+::
+
+    python go-openmdao.py --relocatable
+
+This will create ``openmdao-0.12.0-linux-x86_64.zip``.
+
+Now, to install at some other location, you need to extract all the files from
+the created zip file and execute ``script-fixup.py``, which is part of the
+generated zip file:
+
+::
+
+    unzip openmdao-0.12.0-linux-x86_64.zip
+    cd openmdao-0.12.0
+    python script-fixup.py
+
 Anaconda Installation
 =====================
 
@@ -173,8 +204,7 @@ Alternatively, to make both these changes, you can edit your ``~/.condarc`` file
 
 **Conda Environments**
 
-Anaconda environments are just like directories that contain particular versions of packages. These can be located
-anywhere, but if they are within the Anaconda installation directory, conda will know about them.  To list the conda
+Anaconda environments are just like directories that contain particular versions of packages. These can be located anywhere, but if they are within the Anaconda installation directory, conda will know about them.  To list the conda
 environments that you will have after a new install, type the following:
 
 ::
@@ -184,124 +214,47 @@ environments that you will have after a new install, type the following:
   #
   root                  *  /Users/<username>/anaconda
 
-By default, you're in your root env.  To create another env, we would use the conda `create` command. Later on, we'll explore
+By default, you're in your root environment.  To create another environment, we would use the conda `create` command. Later on, we'll explore
 how to create a new conda environment to hold your openmdao installation. More information about conda environments is
 available at `Continuum Analytics' website <http://www.continuum.io/blog/conda>`_.
 
-*Development Version Installation in Anaconda*
-----------------------------------------------
-
-To get a build of OpenMDAO's latest dev branch, you'll need to make sure you have Git installed so that you can clone
-the OpenMDAO repository.  Once you have Git, these commands should get you the latest dev branch and get it built and
-tested:
-
-**Mac/Linux**
-
-::
-
-  #get source code of OpenMDAO
-  git clone https://github.com/OpenMDAO/OpenMDAO-Framework.git
-  cd OpenMDAO-Framework
-
-  #run the dev installer using bash
-  bash conda-openmdao-dev.sh
-
-  #activate the conda openmdao environment
-  source activate openmdao
-
-  #run the test suite
-  openmdao test
-
-**Windows**
-
-(Note that the build and activation steps are different from above.)
-
-::
-
-  #get source code of OpenMDAO
-  git clone https://github.com/OpenMDAO/OpenMDAO-Framework.git
-  cd OpenMDAO-Framework
-
-  #run the dev installer bat file
-  conda-openmdao-dev.bat
-
-  #activate the conda openmdao environment
-  activate openmdao
-
-  #run the test suite
-  openmdao test
-
-*Release Version Installation in Anaconda*
+*Installation in Anaconda*
 ------------------------------------------
 
-For a release version install, you'll still need to follow the configuration step above to add the OpenMDAO channel.  To
-install OpenMDAO's latest release into your root Anaconda environment, only one command is needed:
+You'll still need to follow the configuration step above to add the OpenMDAO channel. To install OpenMDAO's latest release into your root Anaconda environment, only one command is needed:
 
 ::
 
   conda install openmdao
 
-However, OpenMDAO has a lot of dependencies, so you may wish to put OpenMDAO into its own secluded conda environment. You
-may want to create a new conda env to hold the install. Let's say, for example, that for the 0.12.0 release we call the
-env ``openmdao-0.12.0``	(but keep in mind that we could call it anything--the name is not magical). To create the conda env,
-type:
+However, OpenMDAO has a lot of dependencies, so you may wish to put OpenMDAO into its own secluded conda environment. Let's say, for example, that for the 0.12.0 release we call the environment ``openmdao-0.12.0`` (but keep in mind that we could call it anything--the name is not magical). To create the conda environment and install openmdao into the created environment type:
 
 ::
 
-  conda create --name openmdao-0.12.0 python
+  conda create --name openmdao-0.12.0 openmdao
 
-Then, to install version 0.12.0 into that newly created env, the ``--name`` argument specifies into which conda env you
-install:
+To activate the environment:
 
-::
+OS X and Linux ::
 
-  #gets latest release, puts it in env "openmdao-0.12.0"
-  conda install --name openmdao-0.12.0 openmdao
-
-  #gets specific release using "=="
-  conda install --name openmdao-0.12.0 openmdao==0.12.0
-
-  #activate the new release's env (in Windows, drop the word "source")
   source activate openmdao-0.12.0
 
-  #run the test suite to confirm successful installation
+Windows ::
+
+  activate openmdao-0.12.0
+
+Once the environment is activated, you can run the OpenMDAO test suite to confirm successful installation. To do so, type:
+
+::
+
   openmdao test
 
+Once you have completed installation and testing, you're ready to use OpenMDAO.  When you're finished using the environment that you've created, you can leave it by activating another environment or simply typing:
 
-Once you have completed installation and testing, you're ready to use OpenMDAO.  When you're finished using
-the environment that you've created, you can leave it by activating another env or simply typing:
+OS X and Linux ::
 
-::
+  source deactivate
+  
+Windows ::
 
   deactivate
-
-.. _Site-Wide VirtualEnv Installation:
-
-Site-Wide VirtualEnv Installation
-=================================
-
-At some sites it can be convenient to have a standard OpenMDAO configuration
-available to all users.  This would include the base OpenMDAO installation,
-possibly a collection of pre-installed plugins, site-specific configuration
-files, etc.  Using the ``go-openmdao.py`` script of an activated environment,
-you can create a zip file containing everything needed to install an OpenMDAO
-configuration on a user's system.
-
-To create the zip file, type the following from within an activated environment
-(in this case version 0.12.0 on a Linux machine):
-
-::
-
-    python go-openmdao.py --relocatable
-
-This will create ``openmdao-0.12.0-linux-x86_64.zip``.
-
-Now, to install at some other location, you need to extract all the files from
-the created zip file and execute ``script-fixup.py``, which is part of the
-generated zip file:
-
-::
-
-    unzip openmdao-0.12.0-linux-x86_64.zip
-    cd openmdao-0.12.0
-    python script-fixup.py
