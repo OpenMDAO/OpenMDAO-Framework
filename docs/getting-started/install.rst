@@ -204,8 +204,7 @@ Alternatively, to make both these changes, you can edit your ``~/.condarc`` file
 
 **Conda Environments**
 
-Anaconda environments are just like directories that contain particular versions of packages. These can be located
-anywhere, but if they are within the Anaconda installation directory, conda will know about them.  To list the conda
+Anaconda environments are just like directories that contain particular versions of packages. These can be located anywhere, but if they are within the Anaconda installation directory, conda will know about them.  To list the conda
 environments that you will have after a new install, type the following:
 
 ::
@@ -222,13 +221,13 @@ available at `Continuum Analytics' website <http://www.continuum.io/blog/conda>`
 *Installation in Anaconda*
 ------------------------------------------
 
-You'll still need to follow the configuration step above to add the OpenMDAO channel.  To install OpenMDAO's latest release into your root Anaconda environment, only one command is needed:
+You'll still need to follow the configuration step above to add the OpenMDAO channel. To install OpenMDAO's latest release into your root Anaconda environment, only one command is needed:
 
 ::
 
   conda install openmdao
 
-However, OpenMDAO has a lot of dependencies, so you may wish to put OpenMDAO into its own secluded conda environment. You may want to create a new conda environment to hold the install. Let's say, for example, that for the 0.12.0 release we call the environment ``openmdao-0.12.0`` (but keep in mind that we could call it anything--the name is not magical). To create the conda environment and install openmdao into the created environment type:
+However, OpenMDAO has a lot of dependencies, so you may wish to put OpenMDAO into its own secluded conda environment. Let's say, for example, that for the 0.12.0 release we call the environment ``openmdao-0.12.0`` (but keep in mind that we could call it anything--the name is not magical). To create the conda environment and install openmdao into the created environment type:
 
 ::
 
