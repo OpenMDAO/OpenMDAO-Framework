@@ -349,9 +349,9 @@ class Constraint2Sided(Constraint):
         """Make this constraint active by creating the appropriate
         connections in the dependency graph.
         """
+        scope = self.lhs.scope
         if self._pseudo is None:
 
-            scope = self.lhs.scope
             refs = list(self.center.ordered_refs())
             pseudo_class = PseudoComponent
 

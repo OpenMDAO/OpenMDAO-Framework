@@ -44,7 +44,7 @@ class SequentialWorkflow(Workflow):
         return len(self.get_names(full=True))
 
     def __contains__(self, comp):
-        return comp in self.get_names(full=True)
+        return comp in self.parent._iter_set
 
     def index(self, comp):
         """Return index number for a component in this workflow."""

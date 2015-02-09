@@ -280,10 +280,10 @@ class Workflow(object):
                 if save_problem_formulation or \
                    self._check_path(path, includes, excludes):
                     self._rec_objectives.append(key)
-		    if key != objective.text:
-			outputs.append(name)
-		    else:
-			outputs.append(name + '.out0')
+                if key != objective.text:
+                    outputs.append(name)
+                else:
+                    outputs.append(name + '.out0')
 
         # Responses
         self._rec_responses = []
@@ -353,7 +353,8 @@ class Workflow(object):
         #   also:
         #         scope._depgraph.list_outputs('comp2')
 
-        for comp in driver.workflow:
+        for cname in driver._ordering:
+            comp = getattr(self.scope, cname)
             for output_name in scope._depgraph.list_outputs(comp.name):
                 if has_interface(comp, IDriver): # Only record outputs from drivers if they are framework variables
                     metadata = scope.get_metadata(output_name)
