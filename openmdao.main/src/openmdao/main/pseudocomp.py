@@ -575,10 +575,12 @@ class UnitConversionPComp(PseudoComponent):
     derivatives, especially for vector inputs.
     """
 
-    def config_changed(self, update_parent=True):
-        """ Calculate and save our unit conversion factor.
+    def ensure_init(self):
+        """Make sure our inputs and outputs have been
+        initialized.
         """
-        super(UnitConversionPComp, self).config_changed(update_parent)
+        if not self._initialized:
+            super(UnitConversionPComp, self).ensure_init()
 
         src    = PhysicalQuantity(1.0, self._srcunits)
         target = self._meta['out0'].get('units')
