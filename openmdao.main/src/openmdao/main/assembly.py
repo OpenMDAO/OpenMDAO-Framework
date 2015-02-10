@@ -540,10 +540,6 @@ class Assembly(Component):
                 errfunct("The following components are not in any workflow"
                          " and WILL NOT EXECUTE: %s" % list(diff))
                 self._unexecuted = list(post)
-                for name in self._unexecuted:
-                    comp = getattr(self, name)
-                    if has_interface(comp, IDriver) or has_interface(comp, IAssembly):
-                        comp.setup_systems()
 
     def _check_unset_req_vars(self):
         """Find 'required' variables that have not been set."""
@@ -1510,6 +1506,12 @@ class Assembly(Component):
             self.compute_ordering(None)
             self.setup_reduced_graph(inputs=inputs, outputs=outputs)
             self.setup_systems()
+
+            for name in self._unexecuted:
+                comp = getattr(self, name)
+                if has_interface(comp, IDriver) or has_interface(comp, IAssembly):
+                    comp.setup_systems()
+
             self.pre_setup()
 
             self.check_config()

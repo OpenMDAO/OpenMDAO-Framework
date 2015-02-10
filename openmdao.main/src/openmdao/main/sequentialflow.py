@@ -167,12 +167,12 @@ class SequentialWorkflow(Workflow):
                         msg = "You cannot add a driver to its own workflow"
                         raise AttributeError(msg)
 
-                    # Check for circular dependency in driver workflow
-                    if hasattr(target, 'iteration_set'):
-                        iterset = target.iteration_set()
-                        if parent in iterset:
-                            msg = "Driver recursion loop detected"
-                            raise AttributeError(msg)
+                    ## Check for circular dependency in driver workflow
+                    #if hasattr(target, 'iteration_set'):
+                        #iterset = target.iteration_set()
+                        #if parent in iterset:
+                            #msg = "Driver recursion loop detected"
+                            #raise AttributeError(msg)
 
                 if index is None:
                     self._explicit_names.append(node)
