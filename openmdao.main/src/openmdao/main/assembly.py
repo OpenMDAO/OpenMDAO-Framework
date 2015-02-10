@@ -45,6 +45,7 @@ from openmdao.main.depgraph import DependencyGraph, all_comps, \
                                    simple_node_iter, \
                                    is_boundary_node
 from openmdao.main.systems import SerialSystem, _create_simple_sys
+from openmdao.main.vecwrapper import petsc_idxs
 
 from openmdao.util.graph import list_deriv_vars, base_var, fix_single_tuple
 from openmdao.util.log import logger
@@ -1390,9 +1391,9 @@ class Assembly(Component):
 
             if '[' in vname:  # array index into basevar
                 base = vname.split('[',1)[0]
-                flat_idx = get_flattened_index(idx,
+                flat_idx = petsc_idxs(get_flattened_index(idx,
                                         get_var_shape(base, child),
-                                        cvt_to_slice=False)
+                                        cvt_to_slice=False))
             else:
                 base = None
                 flat_idx = None

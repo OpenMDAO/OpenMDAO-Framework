@@ -490,12 +490,12 @@ class System(object):
             #        components...
             if name in self.vector_vars:
                 isrc = self.vector_vars.keys().index(name)
-                idxs = numpy.array(range(varmeta[name]['size']), 'i')
+                #idxs = numpy.array(range(varmeta[name]['size']), 'i')
+                idxs = petsc_linspace(0, varmeta[name]['size'])
             else:
                 base = name[0].split('[', 1)[0]
                 if base == name[0]:
                     continue
-                #isrc = self.vector_vars.keys().index(self.scope.name2collapsed[base])
                 idxs = varmeta[name].get('flat_idx')
 
             self.arg_idx[name] = idxs# + numpy.sum(self.local_var_sizes[:self.mpi.rank, isrc])
