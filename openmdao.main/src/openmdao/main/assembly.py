@@ -232,7 +232,7 @@ class Assembly(Component):
         for item in self.list_containers():
             if item != name:
                 obj = self.get(item)
-                if isinstance(obj, Driver) and name in obj.workflow:
+                if isinstance(obj, Driver) and name in obj.workflow._explicit_names:
                     wflows.append((obj.workflow, obj.workflow.index(name)))
         return wflows
 
