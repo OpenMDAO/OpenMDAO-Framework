@@ -1123,6 +1123,13 @@ class Assembly(Component):
         return None
 
     def setup_depgraph(self, dgraph=None):
+        # get rid of any leftover pseudocomps from last time
+        for name in self.__dict__.keys():
+            if name.startswith('_pseudo_'):
+                obj = getattr(self, name)
+                if isinstance(obj, PseudoComponent):
+                    self.remove(name)
+
         # create our depgraph
         self._depgraph = DependencyGraph()
 

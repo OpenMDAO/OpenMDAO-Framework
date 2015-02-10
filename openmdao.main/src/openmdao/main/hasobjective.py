@@ -11,16 +11,18 @@ class Objective(ConnectedExprEvaluator):
     def __init__(self, *args, **kwargs):
         super(Objective, self).__init__(*args, **kwargs)
         self._pseudo = None
-        self.pcomp_name = None
+        unresolved_vars = self.get_unresolved()
+        if unresolved_vars:
+            msg = "Can't add objective '{0}' because of invalid variables {1}"
+            raise ConnectedExprEvaluator._invalid_expression_error(unresolved_vars, self.text, msg)
+
+        self._pseudo = PseudoComponent(self.scope, self, pseudo_type='objective')
+        self.pcomp_name = self._pseudo.name
 
     def activate(self, driver):
         """Make this constraint active by creating the appropriate
         connections in the dependency graph.
         """
-        if self._pseudo is None:
-            self._pseudo = PseudoComponent(self.scope, self, pseudo_type='objective')
-
-        self.pcomp_name = self._pseudo.name
         self._pseudo.activate(self.scope, driver)
 
     def deactivate(self):
@@ -35,11 +37,6 @@ class Objective(ConnectedExprEvaluator):
                 pass
             else:
                 scope.remove(self._pseudo.name)
-
-            self.pcomp_name = None
-
-    def is_active(self):
-        return self.pcomp_name is not None
 
     def evaluate(self, scope=None):
         """Use the value in the u vector if it exists instead of pulling
@@ -137,12 +134,10 @@ class HasObjectives(object):
                                         AttributeError)
 
         scope = self._get_scope(scope)
-        expreval = Objective(expr, scope)
-        unresolved_vars = expreval.get_unresolved()
-        if unresolved_vars:
-            msg = "Can't add objective '{0}' because of invalid variables {1}"
-            error = ConnectedExprEvaluator._invalid_expression_error(unresolved_vars, expreval.text, msg)
-            self.parent.raise_exception(str(error), type(error))
+        try:
+            expreval = Objective(expr, scope)
+        except Exception as err:
+            self.parent.raise_exception(str(err), type(err))
 
         name = expr if name is None else name
 

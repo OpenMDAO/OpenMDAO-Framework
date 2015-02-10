@@ -93,6 +93,8 @@ class Constraint(object):
         # Linear flag: constraints are nonlinear by default
         self.linear = False
 
+        self._create_pseudo()
+
     @property
     def size(self):
         """Total scalar items in this constraint."""
@@ -100,67 +102,69 @@ class Constraint(object):
             self._size = len(self.evaluate(self.lhs.scope))
         return self._size
 
+    def _create_pseudo(self):
+        """Create our pseudo component."""
+        if self.comparator == '=':
+            subtype = 'equality'
+        else:
+            subtype = 'inequality'
+
+        # check for simple structure of equality constraint,
+        # either
+        #     var1 = var2
+        #  OR
+        #     var1 - var2 = 0
+        #  OR
+        #     var1 = 0
+        lrefs = list(self.lhs.ordered_refs())
+        rrefs = list(self.rhs.ordered_refs())
+
+        try:
+            leftval = float(self.lhs.text)
+        except ValueError:
+            leftval = None
+
+        try:
+            rightval = float(self.rhs.text)
+        except ValueError:
+            rightval = None
+
+        pseudo_class = PseudoComponent
+
+        if self.comparator == '=':
+            # look for var1-var2=0
+            if len(lrefs) == 2 and len(rrefs) == 0:
+                if rightval == 0. and \
+                        _remove_spaces(self.lhs.text) == \
+                            lrefs[0]+'-'+lrefs[1]:
+                    pseudo_class = SimpleEQConPComp
+            # look for 0=var1-var2
+            elif len(lrefs) == 0 and len(rrefs) == 2:
+                if leftval==0. and \
+                       _remove_spaces(self.rhs.text) == \
+                            rrefs[0]+'-'+rrefs[1]:
+                    pseudo_class = SimpleEQConPComp
+            # look for var1=var2
+            elif len(lrefs) == 1 and len(rrefs) == 1:
+                if lrefs[0] == self.lhs.text and \
+                           rrefs[0] == self.rhs.text:
+                    pseudo_class = SimpleEQConPComp
+            # look for var1=0
+            elif len(lrefs) == 1 and len(rrefs) == 0 and rightval is not None:
+                pseudo_class = SimpleEQ0PComp
+
+        self._pseudo = pseudo_class(self.lhs.scope,
+                                    self._combined_expr(),
+                                    pseudo_type='constraint',
+                                    subtype=subtype,
+                                    exprobject=self)
+
+        self.pcomp_name = self._pseudo.name
+
     def activate(self, driver):
         """Make this constraint active by creating the appropriate
         connections in the dependency graph.
         """
-        if self._pseudo is None:
-            if self.comparator == '=':
-                subtype = 'equality'
-            else:
-                subtype = 'inequality'
-
-            # check for simple structure of equality constraint,
-            # either
-            #     var1 = var2
-            #  OR
-            #     var1 - var2 = 0
-            #  OR
-            #     var1 = 0
-            lrefs = list(self.lhs.ordered_refs())
-            rrefs = list(self.rhs.ordered_refs())
-
-            try:
-                leftval = float(self.lhs.text)
-            except ValueError:
-                leftval = None
-
-            try:
-                rightval = float(self.rhs.text)
-            except ValueError:
-                rightval = None
-
-            pseudo_class = PseudoComponent
-
-            if self.comparator == '=':
-                # look for var1-var2=0
-                if len(lrefs) == 2 and len(rrefs) == 0:
-                    if rightval == 0. and \
-                            _remove_spaces(self.lhs.text) == \
-                                lrefs[0]+'-'+lrefs[1]:
-                        pseudo_class = SimpleEQConPComp
-                # look for 0=var1-var2
-                elif len(lrefs) == 0 and len(rrefs) == 2:
-                    if leftval==0. and \
-                           _remove_spaces(self.rhs.text) == \
-                                rrefs[0]+'-'+rrefs[1]:
-                        pseudo_class = SimpleEQConPComp
-                # look for var1=var2
-                elif len(lrefs) == 1 and len(rrefs) == 1:
-                    if lrefs[0] == self.lhs.text and \
-                               rrefs[0] == self.rhs.text:
-                        pseudo_class = SimpleEQConPComp
-                # look for var1=0
-                elif len(lrefs) == 1 and len(rrefs) == 0 and rightval is not None:
-                    pseudo_class = SimpleEQ0PComp
-
-            self._pseudo = pseudo_class(self.lhs.scope,
-                                        self._combined_expr(),
-                                        pseudo_type='constraint',
-                                        subtype=subtype,
-                                        exprobject=self)
-
-        self.pcomp_name = self._pseudo.name
         self._pseudo.activate(self.lhs.scope, driver)
 
     def deactivate(self):
@@ -175,11 +179,6 @@ class Constraint(object):
                 pass
             else:
                 scope.remove(self._pseudo.name)
-            finally:
-                self.pcomp_name = None
-
-    def is_active(self):
-        return self.pcomp_name is not None
 
     def _combined_expr(self):
         """Given a constraint object, take the lhs, operator, and
@@ -340,28 +339,25 @@ class Constraint2Sided(Constraint):
         self.low = self.lhs.evaluate()
         self.high = self.rhs.evaluate()
 
-    def activate(self, driver):
-        """Make this constraint active by creating the appropriate
-        connections in the dependency graph.
-        """
+        self._create_pseudo()
+
+    def _create_pseudo(self):
+        """Create our pseudo component."""
         scope = self.lhs.scope
-        if self._pseudo is None:
+        refs = list(self.center.ordered_refs())
+        pseudo_class = PseudoComponent
 
-            refs = list(self.center.ordered_refs())
-            pseudo_class = PseudoComponent
+        # look for a<var1<b
+        if len(refs) == 1 and self.center.text == refs[0]:
+            pseudo_class = SimpleEQ0PComp
 
-            # look for a<var1<b
-            if len(refs) == 1 and self.center.text == refs[0]:
-                pseudo_class = SimpleEQ0PComp
-
-            self._pseudo = pseudo_class(scope,
-                                        self.center,
-                                        pseudo_type='constraint',
-                                        subtype='inequality',
-                                        exprobject=self)
+        self._pseudo = pseudo_class(scope,
+                                    self.center,
+                                    pseudo_type='constraint',
+                                    subtype='inequality',
+                                    exprobject=self)
 
         self.pcomp_name = self._pseudo.name
-        self._pseudo.activate(scope, driver)
 
     def _combined_expr(self):
         """Only need the center expression

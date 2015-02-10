@@ -13,16 +13,13 @@ class Response(ConnectedExprEvaluator):
     def __init__(self, *args, **kwargs):
         super(Response, self).__init__(*args, **kwargs)
         self._pseudo = None
-        self.pcomp_name = None
+        self._pseudo = PseudoComponent(self.scope, self, pseudo_type='objective')
+        self.pcomp_name = self._pseudo.name
 
     def activate(self, driver):
         """Make this response active by creating the appropriate
         connections in the dependency graph.
         """
-        if self._pseudo is None:
-            self._pseudo = PseudoComponent(self.scope, self, pseudo_type='objective')
-
-        self.pcomp_name = self._pseudo.name
         self._pseudo.activate(self.scope, driver)
 
     def deactivate(self):
@@ -37,8 +34,6 @@ class Response(ConnectedExprEvaluator):
                 pass
             else:
                 scope.remove(self._pseudo.name)
-
-            self.pcomp_name = None
 
 
 class HasResponses(object):
