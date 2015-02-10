@@ -35,6 +35,7 @@ class TestArchTestSuite(unittest.TestCase):
 
                 try:
                     print problem_name, architecture_name
+                    problem._setup()
                     problem.check_config()
 
                 except:

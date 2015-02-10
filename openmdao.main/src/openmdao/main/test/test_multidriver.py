@@ -158,6 +158,7 @@ class MultiDriverTestCase(unittest.TestCase):
     def test_var_depends(self):
         print "*** test_var_depends ***"
         self.rosen_setUp()
+        self.top._setup()
         srcs, dests = self.top.driver.get_expr_var_depends(recurse=True)
         self.assertEqual(set(['comp1.x', 'comp2.x', 'comp3.x', 'comp4.x']), dests)
         self.assertEqual(set(['_pseudo_0.out0','_pseudo_1.out0','_pseudo_2.out0','_pseudo_3.out0']),
@@ -166,6 +167,7 @@ class MultiDriverTestCase(unittest.TestCase):
         self.assertEqual(set(), srcs)
         self.assertEqual(set(), dests)
         self.top.driver1.remove_parameter('comp2.x')
+        self.top._setup()
         srcs, dests = self.top.driver.get_expr_var_depends(recurse=True)
         self.assertEqual(set(['comp1.x', 'comp3.x', 'comp4.x']), dests)
         self.assertEqual(set(['_pseudo_0.out0','_pseudo_1.out0','_pseudo_2.out0','_pseudo_3.out0']), srcs)
@@ -210,7 +212,7 @@ class MultiDriverTestCase(unittest.TestCase):
 
         self.top.run()
 
-        assert_rel_error(self, self.top.driver1.eval_objective(), 
+        assert_rel_error(self, self.top.driver1.eval_objective(),
                          self.opt_objective, 0.01)
         self.assertAlmostEqual(self.opt_design_vars[0],
                                self.top.comp1.x, places=1)

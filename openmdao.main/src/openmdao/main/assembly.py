@@ -233,7 +233,7 @@ class Assembly(Component):
             if item != name:
                 obj = self.get(item)
                 if isinstance(obj, Driver) and name in obj.workflow._explicit_names:
-                    wflows.append((obj.workflow, obj.workflow.index(name)))
+                    wflows.append((obj.workflow, obj.workflow._explicit_names.index(name)))
         return wflows
 
     def rename(self, oldname, newname):
@@ -288,8 +288,6 @@ class Assembly(Component):
                                        % (target_name, type(tobj).__name__,
                                           type(newobj).__name__), sys.exc_info())
 
-        exprconns = [(u, v) for u, v in self._exprmapper.list_connections()
-                                 if '_pseudo_' not in u and '_pseudo_' not in v]
         conns = self.find_referring_connections(target_name)
         wflows = self.find_in_workflows(target_name)
 
@@ -312,7 +310,7 @@ class Assembly(Component):
                                  "the replacement object: %s" % missing)
 
         # remove expr connections
-        for u, v in exprconns:
+        for u, v in conns:
             self.disconnect(u, v)
 
         # remove any existing connections to replacement object
@@ -323,7 +321,7 @@ class Assembly(Component):
                                        # and any connections to it
 
         # recreate old connections
-        for u, v in exprconns:
+        for u, v in conns:
             try:
                 self.connect(u, v)
             except Exception as err:
@@ -1123,13 +1121,6 @@ class Assembly(Component):
         return None
 
     def setup_depgraph(self, dgraph=None):
-        # get rid of any leftover pseudocomps from last time
-        for name in self.__dict__.keys():
-            if name.startswith('_pseudo_'):
-                obj = getattr(self, name)
-                if isinstance(obj, PseudoComponent):
-                    self.remove(name)
-
         # create our depgraph
         self._depgraph = DependencyGraph()
 
@@ -1468,6 +1459,13 @@ class Assembly(Component):
         """This is for any last minute configuration (like with
         ArchitectureAssembly).
         """
+        # get rid of any leftover pseudocomps from last time
+        for name in self.__dict__.keys():
+            if name.startswith('_pseudo_'):
+                obj = getattr(self, name)
+                if isinstance(obj, PseudoComponent):
+                    self.remove(name)
+
         for comp in self.get_comps():
             comp.setup_init()
 
@@ -1555,7 +1553,8 @@ def dump_iteration_tree(obj, f=sys.stdout, full=True, tabsize=4, derivs=False):
                     # f.write("%s*deriv outputs: %s\n"
                     #         % (' '*(tablevel+tabsize+2), outputs))
             names = set(obj.workflow._explicit_names)
-            for comp in obj._ordering:
+            for cname in obj._ordering:
+                comp = getattr(obj.parent, cname)
                 if not full and comp.name not in names:
                     continue
                 if is_instance(comp, Driver) or is_instance(comp, Assembly):
