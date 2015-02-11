@@ -1526,9 +1526,6 @@ class Assembly(Component):
             self.setup_vectors()
             self.setup_scatters()
 
-            if self.parent is None:
-                self.configure_recording(self.recording_options)
-
         except Exception:
             traceback.print_exc()
             raise

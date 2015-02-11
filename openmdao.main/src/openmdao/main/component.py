@@ -435,6 +435,9 @@ class Component(Container):
         if self._new_config:
             self._setup()
 
+        if self.parent is None and has_interface(self, IAssembly):
+            self.configure_recording(self.recording_options)
+
     def _setup(self, inputs=None, outputs=None):
         self.check_config()
 

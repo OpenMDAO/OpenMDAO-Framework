@@ -1105,7 +1105,7 @@ class DependencyGraph(DGraphBase):
         variable in the VariableTree.
         """
         vtvars = dict([(n,None) for n in self if isinstance(scope.get(n), VariableTree)])
-        conns = [(u,v) for u,v in self.list_connections() if u in vtvars]
+        conns = [(u,v) for u,v in self.list_connections(drivers=False) if u in vtvars]
 
         depgraph = self.subgraph(self.nodes_iter())
 
