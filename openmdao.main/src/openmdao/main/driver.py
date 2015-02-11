@@ -594,7 +594,7 @@ class Driver(Component):
         return names
 
     def calc_gradient(self, inputs=None, outputs=None, mode='auto',
-                      return_format='array', force_regen=True, return_format='array'):
+                      return_format='array', force_regen=True):
         """Returns the Jacobian of derivatives between inputs and outputs.
 
         inputs: list of strings
