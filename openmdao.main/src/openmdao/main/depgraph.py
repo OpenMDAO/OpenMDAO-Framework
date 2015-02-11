@@ -1840,7 +1840,7 @@ def _add_collapsed_node(g, src, dests):
         pmeta = g[newname][s]
         cmeta = g[newname][cname] if g.has_edge(newname, cname) else {}
         g.remove_edge(newname, s)
-        if g.node[cname].get('comp'):
+        if g.node.get(cname,{}).get('comp'):
             if s == cname or cname in g[s]:
                 if 'drv_conn' in cmeta:
                     to_add.append((newname, cname, {'drv_conn': cmeta['drv_conn']}))
