@@ -446,6 +446,35 @@ class Assembly(Component):
 
         return newtrait
 
+    def _find_unexecuted_comps(self):
+        self._unexecuted = []
+        cgraph = self._depgraph.component_graph()
+        wfcomps = set([c.name for c in self.driver.iteration_set()])
+        wfcomps.add('driver')
+        diff = set(cgraph.nodes()) - wfcomps
+        self._pre_driver = None
+        if diff:
+            out_edges = nx.edge_boundary(cgraph, diff)
+            pre = [u for u, v in out_edges]
+            self._unexecuted = list(diff - set(pre))
+
+            if pre:
+                ## HACK ALERT!
+                ## If there are upstream comps that are not in any workflow,
+                ## create a hidden top level driver called _pre_driver. That
+                ## driver will be executed once per execution of the Assembly.
+
+                # can't call add here for _pre_driver because that calls
+                # config_changed...
+                self._pre_driver = Driver()
+                self._pre_driver.parent = self
+                pre.append('driver') # run the normal top driver after running the 'pre' comps
+                self._pre_driver.workflow.add(pre)
+                self._pre_driver.name = '_pre_driver'
+                self._pre_driver._iter_set = set(pre)
+                self._pre_driver._full_iter_set = self.driver._full_iter_set.union(pre)
+                self._depgraph.add_node('_pre_driver', comp=True, driver=True)
+
     @rbac(('owner', 'user'))
     def check_config(self, strict=False):
         """
@@ -462,6 +491,7 @@ class Assembly(Component):
         try:
             self._check_input_collisions(self._depgraph)
             self._check_unset_req_vars()
+            self._check_unexecuted_comps(strict)
         except:
             info = sys.exc_info()
             self._new_config = True
@@ -496,50 +526,25 @@ class Assembly(Component):
                                  RuntimeError)
 
     def _check_unexecuted_comps(self, strict):
-        self._unexecuted = []
-        cgraph = self._depgraph.component_graph()
-        wfcomps = set([c.name for c in self.driver.iteration_set()])
-        wfcomps.add('driver')
-        diff = set(cgraph.nodes()) - wfcomps
-        self._pre_driver = None
-        if diff:
+        if strict_chk_config(strict):
+            errfunct = self.raise_exception
+        else:
+            errfunct = self._logger.warning
+
+        if self._pre_driver:
             msg = "The following components are not in any workflow but " \
                   "are needed by other workflows"
-            if strict_chk_config(strict):
-                errfunct = self.raise_exception
-            else:
-                errfunct = self._logger.warning
+            if not strict_chk_config(strict):
                 msg += ", so they will be executed once per execution of " \
                        "this Assembly"
 
-            out_edges = nx.edge_boundary(cgraph, diff)
-            pre = [u for u, v in out_edges]
-            post = diff - set(pre)
+            pre = self._pre_driver._iter_set - set(['driver'])
+            msg += ": %s" % list(sorted(pre))
+            errfunct(msg)
 
-            if pre:
-                msg += ": %s" % pre
-                errfunct(msg)
-
-                ## HACK ALERT!
-                ## If there are upstream comps that are not in any workflow,
-                ## create a hidden top level driver called _pre_driver. That
-                ## driver will be executed once per execution of the Assembly.
-
-                # can't call add here for _pre_driver because that calls
-                # config_changed...
-                self._pre_driver = Driver()
-                self._pre_driver.parent = self
-                pre.append('driver') # run the normal top driver after running the 'pre' comps
-                self._pre_driver.workflow.add(pre)
-                self._pre_driver.name = '_pre_driver'
-                self._pre_driver._iter_set = set(pre)
-                self._pre_driver._full_iter_set = self.driver._full_iter_set.union(pre)
-                self._depgraph.add_node('_pre_driver', comp=True, driver=True)
-
-            if post:
-                errfunct("The following components are not in any workflow"
-                         " and WILL NOT EXECUTE: %s" % list(diff))
-                self._unexecuted = list(post)
+        if self._unexecuted:
+            errfunct("The following components are not in any workflow"
+                     " and WILL NOT EXECUTE: %s" % list(self._unexecuted))
 
     def _check_unset_req_vars(self):
         """Find 'required' variables that have not been set."""
@@ -1348,7 +1353,7 @@ class Assembly(Component):
         # this call may create a new top level driver for components
         # that need to execute once before the normal top level
         # driver executes.
-        self._check_unexecuted_comps(strict=False)
+        self._find_unexecuted_comps()
 
         for comp in self.get_comps():
             if has_interface(comp, IAssembly):
