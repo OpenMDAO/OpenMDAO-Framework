@@ -104,12 +104,15 @@ class HasResponses(object):
                                         AttributeError)
 
         scope = self._get_scope(scope)
-        expreval = Response(expr, scope)
-        unresolved_vars = expreval.get_unresolved()
+        try:
+            expreval = Response(expr, scope)
+            unresolved_vars = expreval.get_unresolved()
+        except AttributeError:
+            unresolved_vars = [expr]
         if unresolved_vars:
             msg = "Can't add response '{0}' because of invalid variables {1}"
             error = ConnectedExprEvaluator._invalid_expression_error(unresolved_vars,
-                                                                     expreval.text, msg)
+                                                                     expr, msg)
             self.parent.raise_exception(str(error), type(error))
 
         name = expr if name is None else name
