@@ -46,7 +46,7 @@ class System(object):
         self._residuals = None
 
         self._reduced_graph = graph.full_subgraph(nodes)
-        self._reduced_graph.fix_dangling_vars()
+        self._reduced_graph.fix_dangling_vars(scope)
 
         self._mapped_resids = {}
 

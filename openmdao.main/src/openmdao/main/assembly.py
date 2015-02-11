@@ -1024,6 +1024,11 @@ class Assembly(Component):
             # system...
             self._system = rgraph.node[self._top_driver.name]['system']
 
+        for name in self._unexecuted:
+            comp = getattr(self, name)
+            if has_interface(comp, IDriver) or has_interface(comp, IAssembly):
+                comp.setup_systems()
+
     @rbac(('owner', 'user'))
     def get_req_cpus(self):
         """Return requested_cpus"""
@@ -1313,7 +1318,7 @@ class Assembly(Component):
         #rgraph.collapse_subdrivers([], [self._top_driver])
         #self._driver_collapsed_graph = rgraph
 
-        collapsed_graph.fix_dangling_vars()
+        collapsed_graph.fix_dangling_vars(self)
 
         self._reduced_graph = collapsed_graph
 
@@ -1506,11 +1511,6 @@ class Assembly(Component):
             self.compute_ordering(None)
             self.setup_reduced_graph(inputs=inputs, outputs=outputs)
             self.setup_systems()
-
-            for name in self._unexecuted:
-                comp = getattr(self, name)
-                if has_interface(comp, IDriver) or has_interface(comp, IAssembly):
-                    comp.setup_systems()
 
             self.pre_setup()
 

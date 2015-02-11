@@ -595,7 +595,7 @@ class Workflow(object):
             systems = {}
             for group in get_nondiff_groups(reduced, cgraph, self.scope):
                 gtup = tuple(sorted(group))
-                system = OpaqueSystem(scope, self.scope._reduced_graph,
+                system = OpaqueSystem(scope, parent_graph,
                                       cgraph.subgraph(group),
                                       str(gtup))
                 systems[gtup] = system

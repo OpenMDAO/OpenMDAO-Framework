@@ -1398,7 +1398,7 @@ class CollapsedGraph(DGraphBase):
 
         nx.relabel_nodes(self, varmap, copy=False)
 
-    def fix_dangling_vars(self):
+    def fix_dangling_vars(self, scope):
         """If there are any dangling var nodes left in the
         collapsed graph g, connect them to a var comp.
         """
@@ -1406,8 +1406,12 @@ class CollapsedGraph(DGraphBase):
         for node, data in self.nodes(data=True):
             if 'comp' not in data and 'iotype' in data:
                 base = node[0].split('[', 1)[0]
+                bvar = scope.name2collapsed.get(base)
                 if self.in_degree(node) == 0:
                     if base in self and 'comp' in self.node[base]:
+                        newname = base
+                    elif bvar in self:
+                        self.add_node(base, comp='invar')
                         newname = base
                     else:
                         if data['iotype'] == 'in':
