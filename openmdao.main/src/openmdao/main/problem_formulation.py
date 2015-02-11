@@ -363,6 +363,7 @@ class OptProblem(ArchitectureAssembly):
 
         try:
             for k, v in self.get_objectives().iteritems():
+                v.activate(self)
                 sol = self.solution[k]
                 error[k] = v.evaluate()-sol
         except KeyError:

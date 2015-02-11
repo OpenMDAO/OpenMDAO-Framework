@@ -44,9 +44,9 @@ class Objective(ConnectedExprEvaluator):
         """
         if self.pcomp_name:
             scope = self._get_updated_scope(scope)
-            system = getattr(scope, self.pcomp_name)._system
-            vname = self.pcomp_name + '.out0'
             try:
+                system = getattr(scope, self.pcomp_name)._system
+                vname = self.pcomp_name + '.out0'
                 if scope._var_meta[vname].get('scalar'):
                     return system.vec['u'][scope.name2collapsed[vname]][0]
                 else:

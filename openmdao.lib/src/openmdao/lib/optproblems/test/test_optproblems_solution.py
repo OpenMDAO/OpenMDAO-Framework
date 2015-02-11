@@ -78,6 +78,7 @@ class TestOptProblems(unittest.TestCase):
 
             prob = getattr(prob_package,prob_class)() #create instance of the OptProblem
             prob = set_as_top(prob)
+            prob._setup()
 
             try:
                 prob.check_solution(strict=True)
