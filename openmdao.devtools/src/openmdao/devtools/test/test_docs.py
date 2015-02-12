@@ -9,9 +9,9 @@ from argparse import Namespace
 class SphinxDocsTestCase(unittest.TestCase):
     def test_docs(self):
         openmdao_cmd = os.path.join(os.path.dirname(sys.executable), 'openmdao')
-        
-	if sys.platform == "win32":
-	    openmdao_cmd = "{}.exe".format(openmdao_cmd)
+
+        if sys.platform == "win32":
+            openmdao_cmd = "{}.exe".format(openmdao_cmd)
 
         #If path doesn't exist,
         #sys.executable must be part of a
@@ -23,7 +23,7 @@ class SphinxDocsTestCase(unittest.TestCase):
                 'scripts',
                 'openmdao'
             )
-            
+
         p = Popen([openmdao_cmd, 'test_docs'], stdout=PIPE, stderr=STDOUT,
                   env=os.environ, cwd=os.getcwd())
         output = p.communicate()[0]

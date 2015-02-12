@@ -76,7 +76,7 @@ class System(object):
                     self._in_nodes.append(n)
 
         self._in_nodes = sorted(self._in_nodes)
-        #print "%s: _in_nodes = %s" % (str(self.name), self._in_nodes)
+        #print "%s (%s): _in_nodes = %s" % (str(self.name), type(self), self._in_nodes)
         self._out_nodes = sorted(self._out_nodes)
 
         self.mpi = MPI_info()
@@ -490,12 +490,12 @@ class System(object):
             #        components...
             if name in self.vector_vars:
                 isrc = self.vector_vars.keys().index(name)
-                idxs = numpy.array(range(varmeta[name]['size']), 'i')
+                #idxs = numpy.array(range(varmeta[name]['size']), 'i')
+                idxs = petsc_linspace(0, varmeta[name]['size'])
             else:
                 base = name[0].split('[', 1)[0]
                 if base == name[0]:
                     continue
-                #isrc = self.vector_vars.keys().index(self.scope.name2collapsed[base])
                 idxs = varmeta[name].get('flat_idx')
 
             self.arg_idx[name] = idxs# + numpy.sum(self.local_var_sizes[:self.mpi.rank, isrc])
@@ -869,7 +869,13 @@ class System(object):
         self.vec['dp'].array[:] = 0.0
 
         varkeys = self.vector_vars.keys()
-        ivar = varkeys.index(vname)
+        if vname in varkeys:
+            ivar = varkeys.index(vname)
+        else:
+            base = vname[0].split('[',1)[0]
+            base = self.scope.name2collapsed[base]
+            ivar = varkeys.index(base)
+            ind = self.scope._var_meta[vname]['flat_idx'][ind]
 
         if self.local_var_sizes[self.mpi.rank, ivar] > 0:
             ind += numpy.sum(self.local_var_sizes[:, :ivar])
@@ -984,9 +990,6 @@ class SimpleSystem(System):
 
         for vname in chain(mystates, mynonstates):
             if vname not in self.variables:
-                base = base_var(self.scope._depgraph, vname[0])
-                if base != vname[0] and base in topsys._reduced_graph:
-                    continue
                 self.variables[vname] = varmeta[vname].copy()
 
         mapped_states = resid_state_map.values()
@@ -1935,11 +1938,14 @@ class OpaqueSystem(SimpleSystem):
         inner_u = self._inner_system.vec['u']
         inner_du = self._inner_system.vec['du']
 
-        vnames = self._inner_system.list_inputs() + \
-                 self._inner_system.list_states()
-        inner_u.set_from_scope(self.scope, vnames)
+        # Make sure the inner_vector is initialized with values from the
+        # scope. Only need to do the inputs that span the outer and inner
+        # vectors.
+        bnames = self.list_inputs() + \
+                 self.list_states()
+        inner_u.set_from_scope(self.scope, bnames)
         if self.complex_step is True:
-            inner_du.set_from_scope_complex(self.scope, vnames)
+            inner_du.set_from_scope_complex(self.scope, bnames)
 
         self._inner_system.run(iterbase, case_label=case_label, case_uuid=case_uuid)
 

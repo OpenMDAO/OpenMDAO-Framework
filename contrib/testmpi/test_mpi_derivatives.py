@@ -826,6 +826,131 @@ class MPITests_2Proc(MPITestCase):
                                     J['comp5.y1']['comp1.x1'][0][0],
                                     313.0, 0.0001)
 
+    def test_one_two_one_two_one_forward(self):
+
+        self.top = set_as_top(Assembly())
+
+        exp1 = ['y1 = 2.0*x1**2',
+                'y2 = 3.0*x1']
+        deriv1 = ['dy1_dx1 = 4.0*x1',
+                  'dy2_dx1 = 3.0']
+
+        exp2 = ['y1 = 0.5*x1']
+        deriv2 = ['dy1_dx1 = 0.5']
+
+        exp3 = ['y1 = 3.5*x1']
+        deriv3 = ['dy1_dx1 = 3.5']
+
+        exp4 = ['y1 = x1 + 2.0*x2',
+                'y2 = 3.0*x1 - 5.0*x2']
+        deriv4 = ['dy1_dx1 = 1.0',
+                  'dy1_dx2 = 2.0',
+                  'dy2_dx1 = 3.0',
+                  'dy2_dx2 = -5.0',]
+
+        exp5 = ['y1 = 0.8*x1']
+        deriv5 = ['dy1_dx1 = 0.8']
+
+        exp6 = ['y1 = 0.5*x1']
+        deriv6 = ['dy1_dx1 = 0.5']
+
+        exp7 = ['y1 = x1 + 3.0*x2']
+        deriv7 = ['dy1_dx1 = 1.0',
+                  'dy1_dx2 = 3.0']
+
+        self.top.add('comp1', ExecCompWithDerivatives(exp1, deriv1))
+        self.top.add('comp2', ExecCompWithDerivatives(exp2, deriv2))
+        self.top.add('comp3', ExecCompWithDerivatives(exp3, deriv3))
+        self.top.add('comp4', ExecCompWithDerivatives(exp4, deriv4))
+        self.top.add('comp5', ExecCompWithDerivatives(exp5, deriv5))
+        self.top.add('comp6', ExecCompWithDerivatives(exp6, deriv6))
+        self.top.add('comp7', ExecCompWithDerivatives(exp7, deriv7))
+
+        self.top.driver.workflow.add(['comp1', 'comp2', 'comp3', 'comp4', 'comp5', 'comp6', 'comp7'])
+
+        self.top.connect('comp1.y1', 'comp2.x1')
+        self.top.connect('comp1.y2', 'comp3.x1')
+        self.top.connect('comp2.y1', 'comp4.x1')
+        self.top.connect('comp3.y1', 'comp4.x2')
+        self.top.connect('comp4.y1', 'comp5.x1')
+        self.top.connect('comp4.y2', 'comp6.x1')
+        self.top.connect('comp5.y1', 'comp7.x1')
+        self.top.connect('comp6.y1', 'comp7.x2')
+
+        self.top.comp1.x1 = 2.0
+        self.top.run()
+
+        J = self.top.driver.calc_gradient(inputs=['comp1.x1'],
+                                          outputs=['comp7.y1'],
+                                          mode='forward',
+                                          return_format='dict')
+
+        collective_assert_rel_error(self,
+                                    J['comp7.y1']['comp1.x1'][0][0],
+                                    -40.75, 0.0001)
+
+    def test_one_two_one_two_one_adjoint(self):
+
+        self.top = set_as_top(Assembly())
+
+        exp1 = ['y1 = 2.0*x1**2',
+                'y2 = 3.0*x1']
+        deriv1 = ['dy1_dx1 = 4.0*x1',
+                  'dy2_dx1 = 3.0']
+
+        exp2 = ['y1 = 0.5*x1']
+        deriv2 = ['dy1_dx1 = 0.5']
+
+        exp3 = ['y1 = 3.5*x1']
+        deriv3 = ['dy1_dx1 = 3.5']
+
+        exp4 = ['y1 = x1 + 2.0*x2',
+                'y2 = 3.0*x1 - 5.0*x2']
+        deriv4 = ['dy1_dx1 = 1.0',
+                  'dy1_dx2 = 2.0',
+                  'dy2_dx1 = 3.0',
+                  'dy2_dx2 = -5.0',]
+
+        exp5 = ['y1 = 0.8*x1']
+        deriv5 = ['dy1_dx1 = 0.8']
+
+        exp6 = ['y1 = 0.5*x1']
+        deriv6 = ['dy1_dx1 = 0.5']
+
+        exp7 = ['y1 = x1 + 3.0*x2']
+        deriv7 = ['dy1_dx1 = 1.0',
+                  'dy1_dx2 = 3.0']
+
+        self.top.add('comp1', ExecCompWithDerivatives(exp1, deriv1))
+        self.top.add('comp2', ExecCompWithDerivatives(exp2, deriv2))
+        self.top.add('comp3', ExecCompWithDerivatives(exp3, deriv3))
+        self.top.add('comp4', ExecCompWithDerivatives(exp4, deriv4))
+        self.top.add('comp5', ExecCompWithDerivatives(exp5, deriv5))
+        self.top.add('comp6', ExecCompWithDerivatives(exp6, deriv6))
+        self.top.add('comp7', ExecCompWithDerivatives(exp7, deriv7))
+
+        self.top.driver.workflow.add(['comp1', 'comp2', 'comp3', 'comp4', 'comp5', 'comp6', 'comp7'])
+
+        self.top.connect('comp1.y1', 'comp2.x1')
+        self.top.connect('comp1.y2', 'comp3.x1')
+        self.top.connect('comp2.y1', 'comp4.x1')
+        self.top.connect('comp3.y1', 'comp4.x2')
+        self.top.connect('comp4.y1', 'comp5.x1')
+        self.top.connect('comp4.y2', 'comp6.x1')
+        self.top.connect('comp5.y1', 'comp7.x1')
+        self.top.connect('comp6.y1', 'comp7.x2')
+
+        self.top.comp1.x1 = 2.0
+        self.top.run()
+
+        J = self.top.driver.calc_gradient(inputs=['comp1.x1'],
+                                          outputs=['comp7.y1'],
+                                          mode='adjoint',
+                                          return_format='dict')
+
+        collective_assert_rel_error(self,
+                                    J['comp7.y1']['comp1.x1'][0][0],
+                                    -40.75, 0.0001)
 
     def test_lin_GS_subassy(self):
 

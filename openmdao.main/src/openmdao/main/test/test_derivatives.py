@@ -2054,6 +2054,33 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
                                      mode='fd')
         diff = J - Jsub
 
+    def test_nested_2Darray_gradient_sub(self):
+
+        # This tests the
+        top = Assembly()
+        top.add('nest', Assembly())
+        top.add('driver', SimpleDriver())
+        top.nest.add('comp', ArrayComp2D())
+
+        top.driver.workflow.add(['nest'])
+        top.nest.driver.workflow.add(['comp'])
+        top.nest.create_passthrough('comp.x')
+        top.nest.create_passthrough('comp.y')
+
+        top.driver.add_parameter('nest.x[0][0]', low=-100, high=100)
+        top.driver.add_objective('nest.y[0][1]')
+
+        # Force_fd on the assy
+        options = top.nest.driver.gradient_options
+        options.force_fd = True
+
+        top.run()
+        J = top.driver.calc_gradient()
+        
+        self.assertTrue('x[0][0]' in top.nest._system.vec['u']._info)
+        
+        assert_rel_error(self, J[0][0], 4.0, .000001)
+
     def test_nested_2Darray_simul_element_and_full_connection(self):
 
         top = Assembly()

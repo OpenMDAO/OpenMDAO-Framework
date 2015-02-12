@@ -64,7 +64,7 @@ def _get_scope(obj, scope=None):
 class Constraint(object):
     """ Object that stores info for a single constraint. """
 
-    def __init__(self, lhs, comparator, rhs, scope):
+    def __init__(self, lhs, comparator, rhs, scope, jacs=None):
         self.lhs = ExprEvaluator(lhs, scope=scope)
         self._pseudo = None
         self.pcomp_name = None
@@ -92,6 +92,9 @@ class Constraint(object):
 
         # Linear flag: constraints are nonlinear by default
         self.linear = False
+        
+        # User-defined jacobian function
+        self.jacs = jacs
 
         self._create_pseudo()
 
@@ -229,7 +232,7 @@ class Constraint(object):
     def copy(self):
         """ Returns a copy of our self. """
         return Constraint(str(self.lhs), self.comparator, str(self.rhs),
-                          scope=self.lhs.scope)
+                          scope=self.lhs.scope, jacs=self.jacs)
 
     def evaluate(self, scope):
         """Returns the value of the constraint as a sequence."""
@@ -293,7 +296,7 @@ class Constraint(object):
 class Constraint2Sided(Constraint):
     """ Object that stores info for a double-sided constraint. """
 
-    def __init__(self, lhs, center, rhs, comparator, scope):
+    def __init__(self, lhs, center, rhs, comparator, scope, jacs=None):
         self.lhs = ExprEvaluator(lhs, scope=scope)
         unresolved_vars = self.lhs.get_unresolved()
 
@@ -338,6 +341,9 @@ class Constraint2Sided(Constraint):
 
         self.low = self.lhs.evaluate()
         self.high = self.rhs.evaluate()
+        
+        # User-defined jacobian function
+        self.jacs = jacs
 
         self._create_pseudo()
 
@@ -367,7 +373,8 @@ class Constraint2Sided(Constraint):
     def copy(self):
         """ Returns a copy of our self. """
         return Constraint2Sided(str(self.lhs), str(self.center), str(self.rhs),
-                          self.comparator, scope=self.lhs.scope)
+                          self.comparator, scope=self.lhs.scope, 
+                          jacs=self.jacs)
 
     def get_referenced_compnames(self):
         """Returns a set of names of each component referenced by this
@@ -584,7 +591,8 @@ class HasEqConstraints(_HasConstraintsBase):
     constraints but does not support inequality constraints.
     """
 
-    def add_constraint(self, expr_string, name=None, scope=None, linear=False):
+    def add_constraint(self, expr_string, name=None, scope=None, linear=False, 
+                       jacs=None):
         """Adds a constraint in the form of a boolean expression string
         to the driver.
 
@@ -602,6 +610,12 @@ class HasEqConstraints(_HasConstraintsBase):
             Set this to True to define this constraint is linear. Behavior
             depends on whether and how your optimizer supports it. Deault is
             False or nonlinear constraint.
+            
+        jacs: dict
+            Dictionary of user-defined functions that return the flattened
+            Jacobian of this constraint with repsect to the parameters of
+            the driver, as indicated by the dictionary keys. Default is None
+            to let OpenMDAO determine the derivatives.
         """
         try:
             lhs, rel, rhs = _parse_constraint(expr_string)
@@ -609,13 +623,13 @@ class HasEqConstraints(_HasConstraintsBase):
             self.parent.raise_exception(str(err), type(err))
         if rel == '=':
             self._add_eq_constraint(lhs, rhs, name=name, scope=scope,
-                                    linear=linear)
+                                    linear=linear, jacs=jacs)
         else:
             msg = "Inequality constraints are not supported on this driver"
             self.parent.raise_exception(msg, ValueError)
 
     def _add_eq_constraint(self, lhs, rhs, name=None, scope=None,
-                           linear=False):
+                           linear=False, jacs=None):
         """Adds an equality constraint as two strings, a left-hand side and
         a right-hand side.
         """
@@ -635,7 +649,8 @@ class HasEqConstraints(_HasConstraintsBase):
                                         ' in the driver. Add failed.'
                                         % name, ValueError)
 
-        constraint = Constraint(lhs, '=', rhs, scope=_get_scope(self, scope))
+        constraint = Constraint(lhs, '=', rhs, scope=_get_scope(self, scope), 
+                                jacs=jacs)
         constraint.linear = linear
 
         if IDriver.providedBy(self.parent):
@@ -681,7 +696,6 @@ class HasEqConstraints(_HasConstraintsBase):
             return dict((key, value) for key, value in self._constraints.iteritems() \
                         if value.linear==linear)
 
-
     def total_eq_constraints(self):
         """Returns the total number of constraint values."""
         return sum([c.size for c in self._constraints.values()])
@@ -720,7 +734,8 @@ class HasIneqConstraints(_HasConstraintsBase):
     constraints but does not support equality constraints.
     """
 
-    def add_constraint(self, expr_string, name=None, scope=None, linear=False):
+    def add_constraint(self, expr_string, name=None, scope=None, linear=False,
+                       jacs=None):
         """Adds a constraint in the form of a boolean expression string
         to the driver.
 
@@ -738,16 +753,22 @@ class HasIneqConstraints(_HasConstraintsBase):
             Set this to True to define this constraint is linear. Behavior
             depends on whether and how your optimizer supports it. Deault is
             False or nonlinear constraint.
+
+        jacs: dict
+            Dictionary of user-defined functions that return the flattened
+            Jacobian of this constraint with repsect to the parameters of
+            the driver, as indicated by the dictionary keys. Default is None
+            to let OpenMDAO determine the derivatives.
         """
         try:
             lhs, rel, rhs = _parse_constraint(expr_string)
         except Exception as err:
             self.parent.raise_exception(str(err), type(err))
         self._add_ineq_constraint(lhs, rel, rhs, name=name, scope=scope,
-                                  linear=linear)
+                                  linear=linear, jacs=jacs)
 
     def _add_ineq_constraint(self, lhs, rel, rhs, name=None, scope=None,
-                             linear=False):
+                             linear=False, jacs=None):
         """Adds an inequality constraint as three strings; a left-hand side,
         a comparator ('<','>','<=', or '>='), and a right-hand side.
         """
@@ -771,8 +792,10 @@ class HasIneqConstraints(_HasConstraintsBase):
                                         ' in the driver. Add failed.'
                                         % name, ValueError)
 
-        constraint = Constraint(lhs, rel, rhs, scope=_get_scope(self, scope))
+        constraint = Constraint(lhs, rel, rhs, scope=_get_scope(self, scope), 
+                                jacs=jacs)
         constraint.linear = linear
+        
         if IDriver.providedBy(self.parent):
             #constraint.activate(self.parent)
             self.parent.config_changed()
@@ -890,7 +913,8 @@ class HasConstraints(object):
         """
         return self._eq._item_count() + self._ineq._item_count()
 
-    def add_constraint(self, expr_string, name=None, scope=None, linear=False):
+    def add_constraint(self, expr_string, name=None, scope=None, linear=False,
+                       jacs=None):
         """Adds a constraint in the form of a boolean expression string
         to the driver.
 
@@ -908,6 +932,12 @@ class HasConstraints(object):
             Set this to True to define this constraint is linear. Behavior
             depends on whether and how your optimizer supports it. Deault is
             False or nonlinear constraint.
+            
+        jacs: dict
+            Dictionary of user-defined functions that return the flattened
+            Jacobian of this constraint with repsect to the parameters of
+            the driver, as indicated by the dictionary keys. Default is None
+            to let OpenMDAO determine the derivatives.
         """
         try:
             lhs, rel, rhs = _parse_constraint(expr_string)
@@ -915,17 +945,18 @@ class HasConstraints(object):
             self.parent.raise_exception(str(err), type(err))
         if rel == '=':
             self._eq._add_eq_constraint(lhs, rhs, name=name, scope=scope,
-                                        linear=linear)
+                                        linear=linear, jacs=jacs)
         elif isinstance(rhs, tuple):
             if not IHas2SidedConstraints.providedBy(self.parent):
                 msg = 'Double-sided constraints are not supported on ' + \
                       'this driver.'
                 self.parent.raise_exception(msg, AttributeError)
-            self.parent.add_2sided_constraint(rhs[0], lhs, rhs[1], rel, name=name,
-                                              scope=scope, linear=linear)
+            self.parent.add_2sided_constraint(rhs[0], lhs, rhs[1], rel, 
+                                              name=name, scope=scope, 
+                                              linear=linear, jacs=jacs)
         else:
             self._ineq._add_ineq_constraint(lhs, rel, rhs, name=name, scope=scope,
-                                            linear=linear)
+                                            linear=linear, jacs=jacs)
 
     def add_existing_constraint(self, scope, constraint, name=None):
         """Adds an existing Constraint object to the driver.
@@ -1140,7 +1171,7 @@ class Has2SidedConstraints(_HasConstraintsBase):
     """
 
     def add_2sided_constraint(self, lhs, center, rhs, rel, name=None, scope=None,
-                               linear=False):
+                               linear=False, jacs=None):
         """Adds an 2-sided constraint as four strings; a left-hand side, a
         center, a right-hand side, and a comparator ('<','>','<=', or '>=')
         """
@@ -1174,7 +1205,7 @@ class Has2SidedConstraints(_HasConstraintsBase):
                                         % name, ValueError)
 
         constraint = Constraint2Sided(lhs, center, rhs, rel,
-                                      scope=_get_scope(self, scope))
+                                      scope=_get_scope(self, scope), jacs=jacs)
         constraint.linear = linear
 
         if IDriver.providedBy(self.parent):

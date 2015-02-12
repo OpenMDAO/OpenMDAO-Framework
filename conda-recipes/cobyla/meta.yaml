@@ -1,6 +1,6 @@
 package:
     name: cobyla
-    version: !!str 1.0.2
+    version: !!str {{ environ['PKG_VERSION'] }}
 
 source:
     path: ../../contrib/cobyla
@@ -12,10 +12,10 @@ requirements:
     build:
         - python
         - setuptools
-        - numpy
-        - libgfortran #[osx]
+        - numpy ==1.7.1
+        - libpython # [win]
 
     run:
         - python
-        - numpy
-        - libgfortran #[osx]
+        - numpy >=1.7.1
+        - libpython # [win]

@@ -6,13 +6,14 @@ import unittest
 
 from openmdao.main.api import Assembly, Component, Driver, set_as_top
 from openmdao.main.datatypes.api import Float, Array
-from openmdao.util.decorators import add_delegate
 from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, \
      HasIneqConstraints, Constraint, Has2SidedConstraints
 from openmdao.main.interfaces import IHas2SidedConstraints, implements
+from openmdao.main.pseudocomp import SimpleEQConPComp, SimpleEQ0PComp
+from openmdao.main.test.simpledriver import SimpleDriver
 from openmdao.test.execcomp import ExecComp
 from openmdao.units.units import PhysicalQuantity
-from openmdao.main.pseudocomp import SimpleEQConPComp, SimpleEQ0PComp
+from openmdao.util.decorators import add_delegate
 from openmdao.util.testutil import assert_rel_error
 
 @add_delegate(HasConstraints)
@@ -458,6 +459,121 @@ class HasConstraintsTestCase(unittest.TestCase):
         result['out0'] = np.array([0.0])
         self.asm._pseudo_4.apply_deriv(arg, result)
         self.assertEqual(result['out0'][0], 4.1)
+        
+    def test_custom_jacobian(self):
+        
+        class AComp(Component):
+            
+            x = Array([[1.0, 3.0], [-2.0, 4.0]], iotype='in')
+            y = Array(np.zeros((2, 2)), iotype='out')
+
+            def __init__(self):
+                super(AComp, self).__init__()
+                self.J = np.array([[3.5, -2.5, 1.5, 4.0],
+                                   [4.0, 2.0, -1.1, 3.4],
+                                   [7.7, 6.6, 4.4, 1.1],
+                                   [0.1, 3.3, 6.8, -5.5]])
+            
+            def execute(self):
+                """ Run arraycomp"""
+                y = self.J.dot(self.x.flatten())
+                self.y = y.reshape((2,2))
+                
+            def list_deriv_vars(self):
+                """ x and y """
+                input_keys = ('x',)
+                output_keys = ('y',)
+                return input_keys, output_keys
+
+            def provideJ(self):
+                """Analytical first derivatives"""
+                return self.J
+            
+            
+        def fake_jac():
+            """ Returns a User-defined Jacobian. The values are
+            totally wrong to facilitate testing. """
+            jacs = {}
+            jacs['comp.x'] = np.array([[100.0, 101, 102, 103],
+                                       [104, 105, 106, 107],
+                                       [108, 109, 110, 111],
+                                       [112, 113, 114, 115]])
+            
+            return jacs
+        
+        top = set_as_top(Assembly())
+        top.add('driver', SimpleDriver())
+        top.add('comp', AComp())
+        top.driver.workflow.add('comp')
+        top.driver.add_parameter('comp.x', low=10, high=10)
+        top.driver.add_constraint('comp.y < 1', jacs=fake_jac)
+        
+        # Scipy gmres, inequality constraints
+        top._setup()
+        top.run()
+        
+        J = top.driver.calc_gradient(mode='forward', return_format='dict')
+        J = J['_pseudo_0.out0']['comp.x']
+        diff = np.abs(J - top.comp.J)
+        assert_rel_error(self, diff.max(), 0.0, 1e-4)
+        
+        J = top.driver.calc_gradient(mode='adjoint', return_format='dict')
+        J = J['_pseudo_0.out0']['comp.x']
+        diff = np.abs(J - fake_jac()['comp.x'])
+        assert_rel_error(self, diff.max(), 0.0, 1e-4)
+
+        # Scipy gmres, equality constraints
+        top.driver.clear_constraints()
+        top._pseudo_count = 0
+        top.driver.add_constraint('comp.y = 1', jacs=fake_jac)
+        top._setup()
+        top.run()
+        
+        J = top.driver.calc_gradient(mode='forward', return_format='dict')
+        J = J['_pseudo_0.out0']['comp.x']
+        diff = np.abs(J - top.comp.J)
+        assert_rel_error(self, diff.max(), 0.0, 1e-4)
+        
+        J = top.driver.calc_gradient(mode='adjoint', return_format='dict')
+        J = J['_pseudo_0.out0']['comp.x']
+        diff = np.abs(J - fake_jac()['comp.x'])
+        assert_rel_error(self, diff.max(), 0.0, 1e-4)
+
+        # Scipy gmres, double-sided constraints
+        top.driver.clear_constraints()
+        top._pseudo_count = 0
+        top.driver.add_constraint('0 < comp.y < 1', jacs=fake_jac)
+        top._setup()
+        top.run()
+        
+        J = top.driver.calc_gradient(mode='forward', return_format='dict')
+        J = J['_pseudo_0.out0']['comp.x']
+        diff = np.abs(J - top.comp.J)
+        assert_rel_error(self, diff.max(), 0.0, 1e-4)
+        
+        J = top.driver.calc_gradient(mode='adjoint', return_format='dict')
+        J = J['_pseudo_0.out0']['comp.x']
+        diff = np.abs(J - fake_jac()['comp.x'])
+        assert_rel_error(self, diff.max(), 0.0, 1e-4)
+
+        # Linear GS, equality constraints
+        top.driver.clear_constraints()
+        top._pseudo_count = 0
+        top.driver.add_constraint('comp.y = 1', jacs=fake_jac)
+        top.driver.gradient_options.lin_solver = 'linear_gs'
+        top._setup()
+        top.run()
+        
+        J = top.driver.calc_gradient(mode='forward', return_format='dict')
+        J = J['_pseudo_0.out0']['comp.x']
+        diff = np.abs(J - top.comp.J)
+        assert_rel_error(self, diff.max(), 0.0, 1e-4)
+        
+        J = top.driver.calc_gradient(mode='adjoint', return_format='dict')
+        J = J['_pseudo_0.out0']['comp.x']
+        diff = np.abs(J - fake_jac()['comp.x'])
+        assert_rel_error(self, diff.max(), 0.0, 1e-4)
+
 
 class Has2SidedConstraintsTestCase(unittest.TestCase):
 

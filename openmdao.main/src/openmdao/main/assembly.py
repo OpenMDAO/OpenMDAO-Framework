@@ -45,6 +45,7 @@ from openmdao.main.depgraph import DependencyGraph, all_comps, \
                                    simple_node_iter, \
                                    is_boundary_node
 from openmdao.main.systems import SerialSystem, _create_simple_sys
+from openmdao.main.vecwrapper import petsc_idxs
 
 from openmdao.util.graph import list_deriv_vars, base_var, fix_single_tuple
 from openmdao.util.log import logger
@@ -1417,9 +1418,9 @@ class Assembly(Component):
 
             if '[' in vname:  # array index into basevar
                 base = vname.split('[',1)[0]
-                flat_idx = get_flattened_index(idx,
+                flat_idx = petsc_idxs(get_flattened_index(idx,
                                         get_var_shape(base, child),
-                                        cvt_to_slice=False)
+                                        cvt_to_slice=False))
             else:
                 base = None
                 flat_idx = None
@@ -1509,6 +1510,13 @@ class Assembly(Component):
         if self._system.is_active():
             self._system.vec['u'].set_from_scope(self)
 
+    def propagate_srcs(self):
+        """Propagate array values from source variables to their destinations."""
+        for u,v in self.list_connections():
+            srcval = self.get(u)
+            if isinstance(srcval, ndarray):
+                self.set(v, srcval.copy())
+
     def _setup(self, inputs=None, outputs=None):
         """This is called automatically on the top level Assembly
         prior to execution.  It will also be called if
@@ -1553,6 +1561,7 @@ class Assembly(Component):
         except Exception:
             traceback.print_exc()
             raise
+
         self.post_setup()
 
 

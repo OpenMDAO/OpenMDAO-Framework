@@ -299,7 +299,7 @@ class TestCase(unittest.TestCase):
         self.tempdir = tempfile.mkdtemp(prefix='test_eggsave-')
         os.chdir(self.tempdir)
         SimulationRoot.chroot(self.tempdir)
-        
+
         self.model = set_as_top(Model())
         self.model.name = 'Egg_TestModel'
         self.child_objs = [self.model.Source, self.model.Sink,
@@ -318,16 +318,16 @@ class TestCase(unittest.TestCase):
                 shutil.rmtree(self.tempdir)
             except OSError:
                 pass
-        
+
         # Not always added, but we need to ensure the egg is not in sys.path.
         egg_name = self.egg_name
         paths = sys.path
-        
+
         if egg_name is not None:
             if sys.platform == "win32":
                 egg_name = egg_name.lower()
                 paths = [path.lower() for path in sys.path]
-                
+
             for i, path in enumerate(paths):
                 if path.endswith(egg_name) or egg_name in path:
                     del sys.path[i]
@@ -445,7 +445,7 @@ class TestCase(unittest.TestCase):
         self.assertEqual(self.model.Sink.binary_file.binary, True)
 
         self.assertEqual(self.model.Sink.executions, 3)
-        
+
 
         # Restore in test directory.
         orig_dir = os.getcwd()
@@ -997,7 +997,15 @@ comp.run()
 
     def create_and_check_model(self, factory, name, file_data):
         """ Create a complete model instance and check it's operation. """
-        model = factory.create('Egg_TestModel', name=name)
+
+        # Suppress a warning that has cropped up in these tests. The warning
+        # complains that our temp directory is an unsafe location for an
+        # extraction path.
+        import warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            model = factory.create('Egg_TestModel', name=name)
+
         logging.debug('model.directory = %s' % model.directory)
         if model is None:
             self.fail("Create of '%s' failed." % name)

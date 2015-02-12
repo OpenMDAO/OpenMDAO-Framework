@@ -230,7 +230,7 @@ class Workflow(object):
         df vector."""
 
         self._system.calc_newton_direction(options=self.parent.gradient_options,
-                                          iterbase=self._iterbase())
+                                           iterbase=self._iterbase())
 
     def configure_recording(self, recording_options=None):
         """Called at start of top-level run to configure case recording.
@@ -570,7 +570,7 @@ class Workflow(object):
         for node in params:
             param = node[0]
             reduced.node[param]['system'] = \
-                       ParamSystem(scope, reduced, param)
+                ParamSystem(scope, reduced, param)
 
         #outs = []
         #for p in parent_graph.predecessors(drvname):
@@ -588,7 +588,7 @@ class Workflow(object):
         cgraph = reduced.component_graph()
 
         opaque_map = {} # map of all internal comps to collapsed
-                              # name of opaque system
+                                # name of opaque system
         if self.scope._derivs_required:
             # collapse non-differentiable system groups into
             # opaque systems
@@ -657,7 +657,7 @@ class Workflow(object):
             self._system = cgraph.node[name].get('system')
         else:
             raise RuntimeError("setup_systems called on %s.workflow but component graph is empty!" %
-                                self.parent.get_pathname())
+                               self.parent.get_pathname())
 
     def get_req_cpus(self):
         """Return requested_cpus"""
