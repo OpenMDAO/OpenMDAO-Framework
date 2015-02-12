@@ -730,21 +730,21 @@ class ExprDependsTestCase(unittest.TestCase):
         try:
             top.sub.connect('comp1.c', 'comp4.a+comp4.b')
         except Exception as err:
-            self.assertEqual(str(err), "sub: Can't connect 'comp1.c' to 'comp4.a+comp4.b': can't evaluate expression 'comp4.a+comp4.b': bad connected expression 'comp4.a+comp4.b' must reference exactly one variable")
+            self.assertEqual(str(err), "sub: Can't connect 'comp1.c' to 'comp4.a+comp4.b': : bad connected expression 'comp4.a+comp4.b' must reference exactly one variable")
         else:
             self.fail("Exception expected")
 
         try:
             top.sub.connect('comp1.c', 'comp4.a[foo]')
         except Exception as err:
-            self.assertEqual(str(err), "sub: Can't connect 'comp1.c' to 'comp4.a[foo]': can't evaluate expression 'comp4.a[foo]': bad destination expression 'comp4.a[foo]': only constant indices are allowed for arrays and slices")
+            self.assertEqual(str(err), "sub: Can't connect 'comp1.c' to 'comp4.a[foo]': : bad destination expression 'comp4.a[foo]': only constant indices are allowed for arrays and slices")
         else:
             self.fail("Exception expected")
 
         try:
             top.sub.connect('comp1.c', 'comp4.a(5)')
         except Exception as err:
-            self.assertEqual(str(err), "sub: Can't connect 'comp1.c' to 'comp4.a(5)': can't evaluate expression 'comp4.a(5)': bad destination expression 'comp4.a(5)': not assignable")
+            self.assertEqual(str(err), "sub: Can't connect 'comp1.c' to 'comp4.a(5)': : bad destination expression 'comp4.a(5)': not assignable")
         else:
             self.fail("Exception expected")
 

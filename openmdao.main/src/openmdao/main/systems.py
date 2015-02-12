@@ -1345,8 +1345,7 @@ class CompoundSystem(System):
     """A System that has subsystems."""
 
     def __init__(self, scope, graph, subg, name=None):
-        super(CompoundSystem, self).__init__(scope, graph,
-                                             simple_node_iter(subg.nodes()), name)
+        super(CompoundSystem, self).__init__(scope, graph, subg.nodes(), name)
         self.driver = None
         self.graph = subg
         self._local_subsystems = []  # subsystems in the same process

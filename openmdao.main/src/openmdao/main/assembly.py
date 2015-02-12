@@ -600,11 +600,7 @@ class Assembly(Component):
             dest = (dest,)
         for dst in dest:
             dst = eliminate_expr_ws(dst)
-            try:
-                self._connect(src, dst)
-            except:
-                self.reraise_exception("Can't connect '%s' to '%s'" % (src, dst),
-                                        sys.exc_info())
+            self._connect(src, dst)
 
     def _connect(self, src, dest):
         """Handle one connection destination. This should only be called via
@@ -614,7 +610,8 @@ class Assembly(Component):
             srcexpr, destexpr = self._check_connect(src, dest)
         except:
             info = sys.exc_info()
-            self.reraise_exception("Can't connect '%s' to '%s': ", info)
+            self.reraise_exception("Can't connect '%s' to '%s': " %
+                                           (src, dest), info)
 
         self._connections.append((srcexpr, destexpr))
 
