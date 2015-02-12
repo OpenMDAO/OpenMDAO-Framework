@@ -490,7 +490,6 @@ class System(object):
             #        components...
             if name in self.vector_vars:
                 isrc = self.vector_vars.keys().index(name)
-                #idxs = numpy.array(range(varmeta[name]['size']), 'i')
                 idxs = petsc_linspace(0, varmeta[name]['size'])
             else:
                 base = name[0].split('[', 1)[0]
