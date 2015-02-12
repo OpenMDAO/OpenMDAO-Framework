@@ -565,6 +565,24 @@ class Assembly(Component):
                         self.raise_exception("required variable '%s' was"
                                              " not set" % vname, RuntimeError)
 
+    def _check_connect(self, src, dest):
+        """Check validity of connecting a source expression to a destination
+        expression.
+        """
+
+        destexpr = ConnectedExprEvaluator(dest, self, is_dest=True)
+        srcexpr = ConnectedExprEvaluator(src, self,
+                                         getter='get_attr_w_copy')
+
+        srccomps = srcexpr.get_referenced_compnames()
+        destcomps = list(destexpr.get_referenced_compnames())
+
+        if destcomps and destcomps[0] in srccomps:
+            raise RuntimeError("'%s' and '%s' refer to the same component."
+                               % (src, dest))
+
+        return srcexpr, destexpr
+
     @rbac(('owner', 'user'))
     def connect(self, src, dest):
         """Connect one source variable or expression to one or more
@@ -584,7 +602,7 @@ class Assembly(Component):
             dst = eliminate_expr_ws(dst)
             try:
                 self._connect(src, dst)
-            except Exception:
+            except:
                 self.reraise_exception("Can't connect '%s' to '%s'" % (src, dst),
                                         sys.exc_info())
 
@@ -592,9 +610,12 @@ class Assembly(Component):
         """Handle one connection destination. This should only be called via
         the connect() function, never directly.
         """
-        destexpr = ConnectedExprEvaluator(dest, self, is_dest=True)
-        srcexpr = ConnectedExprEvaluator(src, self,
-                                         getter='get_attr_w_copy')
+        try:
+            srcexpr, destexpr = self._check_connect(src, dest)
+        except:
+            info = sys.exc_info()
+            self.reraise_exception("Can't connect '%s' to '%s': ", info)
+
         self._connections.append((srcexpr, destexpr))
 
         dest = destexpr.evaluate()
@@ -1152,37 +1173,38 @@ class Assembly(Component):
         for srcexpr, destexpr in self._connections:
             src = srcexpr.text
             dest = destexpr.text
-            pcomp_type = self._needs_pseudo(srcexpr, destexpr)
-            if pcomp_type:
-                if pcomp_type == 'units':
-                    pseudocomp = UnitConversionPComp(self, srcexpr, destexpr,
+            try:
+                pcomp_type = self._needs_pseudo(srcexpr, destexpr)
+                if pcomp_type:
+                    if pcomp_type == 'units':
+                        pseudocomp = UnitConversionPComp(self, srcexpr, destexpr,
+                                                         pseudo_type=pcomp_type)
+                    else:
+                        pseudocomp = PseudoComponent(self, srcexpr, destexpr,
                                                      pseudo_type=pcomp_type)
+                    pseudocomp.activate(self)
                 else:
-                    pseudocomp = PseudoComponent(self, srcexpr, destexpr,
-                                                 pseudo_type=pcomp_type)
-                pseudocomp.activate(self)
-            else:
-                pseudocomp = None
-                self._depgraph.check_connect(src, dest)
-                dcomps = destexpr.get_referenced_compnames()
-                scomps = srcexpr.get_referenced_compnames()
-                for dname in dcomps:
-                    if dname in scomps:
-                        self.raise_exception("Can't connect '%s' to '%s'. Both"
-                                             " refer to the same component." %
-                                             (src, dest), RuntimeError)
-                for cname in chain(dcomps, scomps):
-                    comp = getattr(self, cname)
-                    if has_interface(comp, IComponent):
-                        comp.config_changed(update_parent=False)
+                    pseudocomp = None
+                    self._depgraph.check_connect(src, dest)
+                    dcomps = destexpr.get_referenced_compnames()
+                    scomps = srcexpr.get_referenced_compnames()
+                    for dname in dcomps:
+                        if dname in scomps:
+                            raise RuntimeError("Both refer to the same component.")
+                    for cname in chain(dcomps, scomps):
+                        comp = getattr(self, cname)
+                        if has_interface(comp, IComponent):
+                            comp.config_changed(update_parent=False)
 
-                for vname in chain(srcexpr.get_referenced_varpaths(copy=False),
-                                   destexpr.get_referenced_varpaths(copy=False)):
-                    if not self.contains(vname):
-                        self.raise_exception("Can't find '%s'" % vname,
-                                             AttributeError)
+                    for vname in chain(srcexpr.get_referenced_varpaths(copy=False),
+                                       destexpr.get_referenced_varpaths(copy=False)):
+                        if not self.contains(vname):
+                            raise AttributeError("Can't find '%s'" % vname)
 
-                self._depgraph.connect(self, src, dest)
+                    self._depgraph.connect(self, src, dest)
+            except:
+                self.reraise_exception("Can't connect '%s' to '%s': " %
+                                             (src, dest), sys.exc_info())
 
         # add connections for params, constraints, etc.
         for cname in self.list_containers():

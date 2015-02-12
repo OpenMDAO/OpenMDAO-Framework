@@ -538,7 +538,7 @@ class DataTransfer(object):
                                                  system.scope.get_attr_w_copy(src))
                             except Exception:
                                 system.scope.reraise_exception("cannot set '%s' from '%s'" %
-                                                               (dest, src))
+                                                               (dest, src), sys.exc_info())
 
     def dump(self, system, srcvec, destvec, nest=0, stream=sys.stdout):
         if not self.scatter_conns:
@@ -659,5 +659,3 @@ def _filter_ignored(scope, lst):
 
 def _filter_flat(scope, lst):
     return [n for n in lst if not scope._var_meta[n].get('noflat')]
-
-
