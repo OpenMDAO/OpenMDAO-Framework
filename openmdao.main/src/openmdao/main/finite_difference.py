@@ -239,10 +239,6 @@ class FiniteDifference(object):
                     self.get_outputs(self.y, outputs)
 
                     # Forward difference
-                    #print src
-                    #print 'y', self.y
-                    #print 'y_base', self.y_base
-                    #print 'fd_step', fd_step
                     Jfd = (self.y - self.y_base)/fd_step
 
                     # Undo step
@@ -372,7 +368,7 @@ class FiniteDifference(object):
                 # avoid adding to the same array entry multiple times for
                 # param groups
                 break
-            
+
         if self.system.name.split('.')[-1] == '_inner_asm':
             uvec.set_to_scope(self.system.scope, vnames=srcs)
 
