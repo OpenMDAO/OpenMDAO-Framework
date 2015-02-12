@@ -1330,8 +1330,7 @@ class CollapsedGraph(DGraphBase):
         """
         excludes = set(excludes)
         excludes.add(driver.name)
-        names = [c.name for c in driver.iteration_set()]
-        names.append(driver.name)
+        names = driver.get_full_nodeset()
         nodes = [n for n in self.internal_nodes(names)
                     if n not in excludes]
 

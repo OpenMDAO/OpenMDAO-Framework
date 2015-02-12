@@ -705,6 +705,18 @@ class Driver(Component):
         """
         names = super(Driver, self).get_full_nodeset()
         names.update(self._full_iter_set)
+
+        srcvars, destvars = self.get_expr_var_depends()
+        ours = srcvars
+        ours.update(destvars)
+
+        # check for any VarSystems that correspond to our params/constraints/obj
+        # because they should also 'belong' to us
+        if self.parent._reduced_graph:
+            cgraph = self.parent._reduced_graph.component_graph()
+            for node in cgraph:
+                if node in ours:
+                    names.add(node)
         return names
 
     def calc_gradient(self, inputs=None, outputs=None, mode='auto',
