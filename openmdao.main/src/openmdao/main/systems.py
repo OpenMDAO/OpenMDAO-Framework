@@ -76,7 +76,7 @@ class System(object):
                     self._in_nodes.append(n)
 
         self._in_nodes = sorted(self._in_nodes)
-        #print "%s: _in_nodes = %s" % (str(self.name), self._in_nodes)
+        #print "%s (%s): _in_nodes = %s" % (str(self.name), type(self), self._in_nodes)
         self._out_nodes = sorted(self._out_nodes)
 
         self.mpi = MPI_info()
@@ -490,12 +490,12 @@ class System(object):
             #        components...
             if name in self.vector_vars:
                 isrc = self.vector_vars.keys().index(name)
-                idxs = numpy.array(range(varmeta[name]['size']), 'i')
+                #idxs = numpy.array(range(varmeta[name]['size']), 'i')
+                idxs = petsc_linspace(0, varmeta[name]['size'])
             else:
                 base = name[0].split('[', 1)[0]
                 if base == name[0]:
                     continue
-                #isrc = self.vector_vars.keys().index(self.scope.name2collapsed[base])
                 idxs = varmeta[name].get('flat_idx')
 
             self.arg_idx[name] = idxs# + numpy.sum(self.local_var_sizes[:self.mpi.rank, isrc])
@@ -1348,8 +1348,7 @@ class CompoundSystem(System):
     """A System that has subsystems."""
 
     def __init__(self, scope, graph, subg, name=None):
-        super(CompoundSystem, self).__init__(scope, graph,
-                                             simple_node_iter(subg.nodes()), name)
+        super(CompoundSystem, self).__init__(scope, graph, subg.nodes(), name)
         self.driver = None
         self.graph = subg
         self._local_subsystems = []  # subsystems in the same process

@@ -628,6 +628,13 @@ def petsc_linspace(start, end):
     else:
         return numpy.arange(start, end, dtype='i')
 
+def petsc_idxs(idxs):
+    """ Return an index vector of the right int type for PETSc """
+    if MPI:
+        return numpy.array(idxs, dtype=PETSc.IntType)
+
+    return idxs
+
 def _filter(scope, lst):
     filtered = _filter_subs(lst)
     filtered = _filter_flat(scope, filtered)
