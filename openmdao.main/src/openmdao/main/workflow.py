@@ -592,15 +592,15 @@ class Workflow(object):
         #driver.get_reduced_graph()
         #self._rec_all_outputs = []
         self._rec_outputs = []
-        for comp in driver.workflow: 
+        for comp in driver.workflow:
             successors = driver._reduced_graph.successors(comp.name)
             for output_name, aliases in successors:
 
-                # From Bret: it does make sense to skip subdrivers like you said, except for the 
-                #      case where a driver has actual outputs of its own.  So you may have to keep 
+                # From Bret: it does make sense to skip subdrivers like you said, except for the
+                #      case where a driver has actual outputs of its own.  So you may have to keep
                 #  subdriver successors if the edge between the subdriver and the successor
                 #  is an actual data connection.
-                # look at the edge metadata to see if there's maybe a 'conn' in there for real connections. 
+                # look at the edge metadata to see if there's maybe a 'conn' in there for real connections.
                 if has_interface(comp, IDriver):
                     if not is_connection(driver._reduced_graph, comp.name, output_name):
                         continue
@@ -617,16 +617,16 @@ class Workflow(object):
                     #self._rec_all_outputs.append(output_name)
 
         #####
-        # also need get any outputs of comps that are not connected vars 
+        # also need get any outputs of comps that are not connected vars
         #   and therefore not in the graph
-        # could use 
+        # could use
         #   scope._depgraph
         #      there's 'iotype' metadata in the var nodes
-        #    
+        #
         #   also:
         #         scope._depgraph.list_outputs('comp2')
 
-        for comp in driver.workflow: 
+        for comp in driver.workflow:
             for output_name in scope._depgraph.list_outputs(comp.name):
                 if has_interface(comp, IDriver): # Only record outputs from drivers if they are framework variables
                     metadata = scope.get_metadata(output_name)
@@ -893,7 +893,7 @@ class Workflow(object):
                 for c in gtup:
                     opaque_map[c] = gtup
 
-            # get rid of any back edges for opaque boundary nodes that 
+            # get rid of any back edges for opaque boundary nodes that
             # originate inside of the opaque system
             to_remove = []
             for node in systems:

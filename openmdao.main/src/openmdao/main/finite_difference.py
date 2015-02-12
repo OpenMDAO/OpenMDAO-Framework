@@ -239,10 +239,10 @@ class FiniteDifference(object):
                     self.get_outputs(self.y, outputs)
 
                     # Forward difference
-                    print src
-                    print 'y', self.y
-                    print 'y_base', self.y_base
-                    print 'fd_step', fd_step
+                    #print src
+                    #print 'y', self.y
+                    #print 'y_base', self.y_base
+                    #print 'fd_step', fd_step
                     Jfd = (self.y - self.y_base)/fd_step
 
                     # Undo step
@@ -328,7 +328,7 @@ class FiniteDifference(object):
         uvec.set_from_array(self.y_base, outputs)
         uvec.set_to_scope(self.scope)
 
-        print 'after FD', self.J
+        #print 'after FD', self.J
         return self.J
 
     def get_outputs(self, x, outputs):
