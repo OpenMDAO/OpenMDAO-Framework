@@ -1339,10 +1339,6 @@ class Assembly(Component):
         # remove all vars that don't connect components
         collapsed_graph.prune(coll_keep)
 
-        #rgraph = collapsed_graph.subgraph(collapsed_graph.nodes_iter())
-        #rgraph.collapse_subdrivers([], [self._top_driver])
-        #self._driver_collapsed_graph = rgraph
-
         collapsed_graph.fix_dangling_vars(self)
 
         self._reduced_graph = collapsed_graph
