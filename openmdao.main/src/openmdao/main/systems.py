@@ -76,7 +76,7 @@ class System(object):
                     self._in_nodes.append(n)
 
         self._in_nodes = sorted(self._in_nodes)
-        #print "%s: _in_nodes = %s" % (str(self.name), self._in_nodes)
+        #print "%s (%s): _in_nodes = %s" % (str(self.name), type(self), self._in_nodes)
         self._out_nodes = sorted(self._out_nodes)
 
         self.mpi = MPI_info()
@@ -1348,8 +1348,7 @@ class CompoundSystem(System):
     """A System that has subsystems."""
 
     def __init__(self, scope, graph, subg, name=None):
-        super(CompoundSystem, self).__init__(scope, graph,
-                                             simple_node_iter(subg.nodes()), name)
+        super(CompoundSystem, self).__init__(scope, graph, subg.nodes(), name)
         self.driver = None
         self.graph = subg
         self._local_subsystems = []  # subsystems in the same process
