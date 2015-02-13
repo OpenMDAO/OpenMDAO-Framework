@@ -30,3 +30,6 @@ from openmdao.lib.casehandlers.query import CaseDataset
 from openmdao.lib.casehandlers.csv_post_processor import caseset_query_to_csv
 from openmdao.lib.casehandlers.dump_post_processor import caseset_query_dump
 from openmdao.lib.casehandlers.html_post_processor import caseset_query_to_html
+
+from openmdao.lib.casehandlers.hdf5case import HDF5CaseRecorder
+
