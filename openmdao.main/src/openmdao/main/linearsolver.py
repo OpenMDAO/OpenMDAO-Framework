@@ -91,7 +91,7 @@ class LinearSolver(object):
             if param in jacs:
                 J[con][param] = jacs[param]
                 
-            # Assume zero if user did not explicitly defined.
+            # Assume zero if user did not explicitly define.
             else:
                 psize = self._system.get_size(param)
                 csize = self._system.get_size(con)
