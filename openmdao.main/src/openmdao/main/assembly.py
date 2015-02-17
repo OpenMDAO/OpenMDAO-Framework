@@ -501,6 +501,14 @@ class Assembly(Component):
             self._new_config = True
             raise info[0], info[1], info[2]
 
+    @rbac(('owner', 'user'))
+    def collect_metadata(self):
+        # store metadata (size, etc.) for all relevant vars
+        self._get_all_var_metadata(self._reduced_graph)
+        for comp in self.get_comps():
+            if has_interface(comp, IAssembly):
+                comp.collect_metadata()
+
     def _check_input_collisions(self, graph):
         dests = set([v for u, v in graph.list_connections() if
                         'drv_conn_ext' not in graph[u][v] and
@@ -1558,9 +1566,6 @@ class Assembly(Component):
         self._provideJ_bounds = None
         self._top_driver.pre_setup()
 
-        # store metadata (size, etc.) for all relevant vars
-        self._get_all_var_metadata(self._reduced_graph)
-
     def post_setup(self):
         for comp in self.get_comps():
             comp.post_setup()
@@ -1605,6 +1610,9 @@ class Assembly(Component):
             self.pre_setup()
 
             self.check_config()
+
+            self.collect_metadata()
+
             #if MPI.COMM_WORLD.rank == 0:
             #from openmdao.util.dotgraph import plot_system_tree, plot_graph
             #plot_system_tree(self._system,'sys.pdf')

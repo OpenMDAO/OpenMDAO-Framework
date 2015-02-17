@@ -301,8 +301,7 @@ class Component(Container):
             if not hasattr(self, 'apply_derivT'):
                 self.raise_exception("method 'apply_derivT' must be also specified "
                                      " if 'apply_deriv' is specified")
-
-        if hasattr(self, 'provideJ'):
+        elif hasattr(self, 'provideJ'):
             self._check_deriv_vars()
 
         visited = set([id(self), id(self.parent)])
