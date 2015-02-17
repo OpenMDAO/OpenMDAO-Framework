@@ -217,50 +217,55 @@ class HDF5CaseRecorder(object):
 
         simulation_info_grp = self.hdf5_file_object.create_group("simulation_info")
 
-        simulation_info_grp.attrs['OpenMDAO_Version'] = info['OpenMDAO_Version']
-        simulation_info_grp.attrs['comp_graph'] = info['comp_graph']
-        simulation_info_grp.attrs['graph'] = info['graph']
-        simulation_info_grp.attrs['uuid'] = info['uuid']
-        simulation_info_grp.attrs['name'] = info['name']
+        self.write_to_hdf5( simulation_info_grp, 'OpenMDAO_Version', info['OpenMDAO_Version'])
+        self.write_to_hdf5( simulation_info_grp, 'comp_graph', info['comp_graph'])
+        self.write_to_hdf5( simulation_info_grp, 'graph', info['graph'])
+        self.write_to_hdf5( simulation_info_grp, 'uuid', info['uuid'])
+        self.write_to_hdf5( simulation_info_grp, 'name', info['name'])
 
        
         constants_grp = simulation_info_grp.create_group("constants")
         for k,v in info['constants'].items():
-            if v == None :
-                constants_grp.attrs[k] = np.array([])
-            elif isinstance(v,dict):
-                dict_grp = constants_grp.create_group(k)
-                for name, value in v.items():
-                    dict_grp.attrs[name] = value
-            else:
-                constants_grp.attrs[k] = v
+            self.write_to_hdf5( constants_grp, k, v )
+
+            # if v == None :
+            #     constants_grp.attrs[k] = np.array([])
+            # elif isinstance(v,dict):
+            #     dict_grp = constants_grp.create_group(k)
+            #     for name, value in v.items():
+            #         dict_grp.attrs[name] = value
+            # else:
+            #     constants_grp.attrs[k] = v
 
         expressions_grp = simulation_info_grp.create_group("expressions")
         for k,v in info['expressions'].items():
-            if not isinstance(v,dict):
-                expressions_grp.attrs[k] = v
-            else:
-                dict_grp = expressions_grp.create_group(k)
-                for name, value in v.items():
-                    dict_grp.attrs[name] = value
+           self.write_to_hdf5( expressions_grp, k, v )
+           # if not isinstance(v,dict):
+           #      expressions_grp.attrs[k] = v
+           #  else:
+           #      dict_grp = expressions_grp.create_group(k)
+           #      for name, value in v.items():
+           #          dict_grp.attrs[name] = value
             
         variable_metadata_grp = simulation_info_grp.create_group("variable_metadata")
         for k,v in info['variable_metadata'].items():
-            if not isinstance(v,dict):
-                variable_metadata_grp.attrs[k] = v
-            else:
-                dict_grp = variable_metadata_grp.create_group(k)
-                for name, value in v.items():
-                    if value != None :
-                        dict_grp.attrs[name] = value
-                    else:
-                        dict_grp.attrs[name] = np.array([])
+            self.write_to_hdf5( variable_metadata_grp, k, v )
+            # if not isinstance(v,dict):
+            #     variable_metadata_grp.attrs[k] = v
+            # else:
+            #     dict_grp = variable_metadata_grp.create_group(k)
+            #     for name, value in v.items():
+            #         if value != None :
+            #             dict_grp.attrs[name] = value
+            #         else:
+            #             dict_grp.attrs[name] = np.array([])
 
         for i, info in enumerate(self.get_driver_info()):
             driver_info_name = 'driver_info_%s' % (i+1)
             driver_info_group = self.hdf5_file_object.create_group(driver_info_name)
             for k,v in info.items():
-                driver_info_group.attrs[k] = v
+                self.write_to_hdf5( driver_info_group, k, v )
+                # driver_info_group.attrs[k] = v
 
     def record(self, driver, inputs, outputs, exc, case_uuid, parent_uuid):
         """ Dump the given run data. """
@@ -271,19 +276,39 @@ class HDF5CaseRecorder(object):
         self._count += 1
         iteration_case_group = self.hdf5_file_object.create_group(iteration_case_name)
         for k,v in info.items():
-            if isinstance(v,dict):
-                dict_grp = iteration_case_group.create_group(k)
-                for name, value in v.items():
-                    if isinstance( value, np.ndarray):
-                        dict_grp.create_dataset(name, data=value)
-                    else:
-                        dict_grp.attrs[name] = value
-            elif isinstance( v, np.ndarray):
-                iteration_case_group.create_dataset(k, data=v)
-            elif v == None :
-                iteration_case_group.attrs[k] = np.array([])
-            else:
-                iteration_case_group.attrs[k] = v
+            self.write_to_hdf5( iteration_case_group, k, v )
+            # if isinstance(v,dict):
+            #     dict_grp = iteration_case_group.create_group(k)
+            #     for name, value in v.items():
+            #         if isinstance( value, np.ndarray):
+            #             dict_grp.create_dataset(name, data=value,compression="gzip")
+            #         else:
+            #             dict_grp.attrs[name] = value
+            # elif isinstance( v, np.ndarray):
+            #     iteration_case_group.create_dataset(k, data=v,compression="gzip")
+            # elif v == None :
+            #     iteration_case_group.attrs[k] = np.array([])
+            # else:
+            #     iteration_case_group.attrs[k] = v
+
+    def write_to_hdf5(self, group, name, value ):
+
+        if isinstance(value,dict):
+            dict_grp = group.create_group(name)
+            dict_grp.attrs['__dict__'] = True # To indicate that this HDF5 group represents an actual Python dict
+            for k, v in value.items():
+                self.write_to_hdf5( dict_grp, k, v )
+        elif isinstance( value, VariableTree):
+            vartree_grp = group.create_group(name)
+            vartree_grp.attrs['__vartree__'] = True
+            for k in value.list_vars():
+                self.write_to_hdf5( vartree_grp, k, value.get(k) )
+        elif isinstance( value, np.ndarray):
+            group.create_dataset(name, data=value,compression="gzip")
+        elif value == None :
+            group.attrs[name] = np.array([])
+        else:
+            group.attrs[name] = value
 
     def close(self):
         """

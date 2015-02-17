@@ -65,6 +65,8 @@ class CaseDataset(object):
             self._reader = _BSONReader(filename)
         elif format == 'json':
             self._reader = _JSONReader(filename)
+        elif format == 'hdf5':
+            self._reader = _HDF5Reader(filename)
         else:
             raise ValueError("dataset format must be 'json' or 'bson'")
 
@@ -660,6 +662,140 @@ class _JSONReader(_Reader):
         data = '{\n' + self._inp.read(reclen)
         return json.loads(data,object_hook=object_hook)
         #return loads(data)
+
+
+
+
+
+        
+import h5py
+import numpy as np
+
+
+
+
+class _HDF5Reader(object):
+    """ Reads a :class:`HDF5CaseRecorder` file. """
+
+    def __init__(self, filename):
+
+        self._inp = h5py.File(filename,'r')
+
+        self._simulation_info = self.read_simulation_info()
+        self._state = 'drivers'
+        self._info = None
+
+    def read_from_hdf5(self, value ):
+        
+        # If value is an HDF5 Group do
+        if isinstance(value, h5py._hl.group.Group):
+            d = {}
+            group = value
+            # Loop over what is inside that group
+            for name, value in group.attrs.items() :
+                d[ name ] = self.read_from_hdf5( value )
+            for name, value in group.items() :
+                d[ name ] = self.read_from_hdf5( value )
+            return d
+        else: # it is just a value so return it 
+            return value
+        
+    def read_simulation_info( self ):
+        sim_info_grp = self._inp['simulation_info'] # the HDF5 simulation_info group
+
+        # This group contains:
+            # attributes
+            # other groups
+            # datasets
+        
+        sim_info = {}
+
+        # Loop over attributes
+        for name, value in sim_info_grp.attrs.items() :
+            sim_info[ name ] = self.read_from_hdf5( value )
+        
+        # Loop over non attributes. e.g. datasets and groups?
+        for name, value in sim_info_grp.items() :
+            sim_info[ name ] = self.read_from_hdf5( value )
+        
+        return sim_info
+    
+        # 
+    
+        # to get at attributes use
+        #    self._inp['simulation_info/expressions'].get('comp.x').attrs.keys()
+        #    self._inp['simulation_info'].attrs.keys()
+
+        
+        # to get at non attributes
+        #  self._inp['simulation_info/expressions'].keys()
+
+
+    def drivers(self):
+        """ Return list of 'driver_info' dictionaries. """
+
+        driver_info = []
+        
+        # Loop over all the groups with names like '/driver_info_nnn'
+        for name in self._inp.keys() :
+            if name.startswith( 'driver_info_'):
+                driver_info.append( self.read_from_hdf5( self._inp[name] ) )
+        
+        #info = self._next()
+        #while info:
+            #if '_driver_id' not in info:
+                #driver_info.append(info)
+            #else:
+                #self._info = info
+                #return driver_info
+            #info = self._next()
+        return driver_info
+
+    def cases(self):
+        """ Return sequence of 'iteration_case' dictionaries. """
+
+        case_number = 1
+        case_name = "iteration_case_%d" % case_number
+        info = self.read_from_hdf5( self._inp[case_name] )
+        while info:
+            yield info
+            case_number += 1
+            case_name = "iteration_case_%d" % case_number
+            if case_name in self._inp.keys() :
+                info = self.read_from_hdf5( self._inp[case_name] )
+            else:
+                info = None
+
+
+        # if self._state != 'cases' or self._info is None:
+        #     self.drivers()  # Read up to first case.
+        #     if self._state != 'cases':
+        #         return
+
+        # yield self._info  # Read when looking for drivers.
+        # self._info = None
+
+        # info = self._next()
+        # while info:
+        #     yield info
+        #     info = self._next()
+        # self._state = 'eof'
+
+    def _next(self):
+        """ Return next dictionary of data. """
+        pass
+        # data = self._inp.readline()
+        # while '__length_' not in data:
+        #     if not data:
+        #         return None
+        #     data = self._inp.readline()
+
+        # key, _, value = data.partition(':')  # '"__length_1": NNN'
+        # reclen = int(value) - 1
+        # data = self._inp.readline()  # ', "dictname": {'
+        # data = '{\n' + self._inp.read(reclen)
+        # return json.loads(data,object_hook=object_hook)
+        # #return loads(data)
 
 def object_hook(dct, compile_re=True):
     if "$binary" in dct:

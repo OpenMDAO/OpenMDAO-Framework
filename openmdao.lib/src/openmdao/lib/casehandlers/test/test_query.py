@@ -15,7 +15,7 @@ import numpy as np
 from openmdao.main.api import Assembly, Component, VariableTree, set_as_top
 from openmdao.main.datatypes.api import Array, Float, VarTree
 from openmdao.lib.casehandlers.api import CaseDataset, \
-                                          JSONCaseRecorder, BSONCaseRecorder
+                                          JSONCaseRecorder, BSONCaseRecorder, HDF5CaseRecorder
 from openmdao.lib.drivers.api import FixedPointIterator, SLSQPdriver
 from openmdao.lib.optproblems import sellar
 from openmdao.util.testutil import assert_rel_error
@@ -115,8 +115,51 @@ def create_files():
     prob = set_as_top(SellarMDF())
     #prob.name = "top"
     prob.recorders = [JSONCaseRecorder('sellar_json.new'),
-                      BSONCaseRecorder('sellar_bson.new')]
+                      BSONCaseRecorder('sellar_bson.new'),
+                      HDF5CaseRecorder('sellar_hdf5.new')
+                      ]
     prob.run()
+
+
+class TestHDF5Case(unittest.TestCase):
+
+    def setUp(self):
+        create_files()  # Uncomment to create 'sellar.new'
+        path = os.path.join(os.path.dirname(__file__), 'sellar.hdf5')
+        self.cds = CaseDataset(path, 'hdf5')
+        self.startdir = os.getcwd()
+        self.tempdir = tempfile.mkdtemp(prefix='test_query-')
+        os.chdir(self.tempdir)
+
+    def tearDown(self):
+        self.cds = None
+        os.chdir(self.startdir)
+        if not os.environ.get('OPENMDAO_KEEPDIRS', False):
+            try:
+                shutil.rmtree(self.tempdir)
+            except OSError:
+                pass
+
+
+    def test_query(self):
+        # Full dataset.
+        vnames = self.cds.data.var_names().fetch()
+        expected = ['_driver_id', '_id', '_parent_id', u'_pseudo_0.out0', u'_pseudo_1.out0',
+                    u'_pseudo_2.out0', u'driver.workflow.itername', 'error_message', 'error_status',
+                    u'half.derivative_exec_count', u'half.exec_count', u'half.itername', u'half.z2a', u'half.z2b', 
+                    u'sub._pseudo_0.out0', u'sub.derivative_exec_count', u'sub.dis1.derivative_exec_count', 
+                    u'sub.dis1.exec_count', u'sub.dis1.itername', u'sub.dis1.y1', u'sub.dis1.y2', 
+                    u'sub.dis2.derivative_exec_count', u'sub.dis2.exec_count', u'sub.dis2.itername', 
+                    u'sub.dis2.y2', u'sub.driver.workflow.itername', u'sub.exec_count', u'sub.globals.z1', 
+                    u'sub.itername', u'sub.states', u'sub.states.y[0]', u'sub.states.y[1]', u'sub.x1', 'timestamp']
+
+        self.assertEqual(vnames, expected)
+
+        cases = self.cds.data.fetch()
+        self.assertEqual(len(cases), 242)
+        self.assertEqual(len(cases[0]), len(expected))
+
+
 
 
 class TestCase(unittest.TestCase):

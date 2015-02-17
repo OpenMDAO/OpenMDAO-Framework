@@ -12,15 +12,55 @@ from cStringIO import StringIO
 
 from openmdao.main import __version__
 from openmdao.main.api import Assembly, Component, Case, VariableTree, set_as_top
-from openmdao.main.datatypes.api import Array, Instance, List, VarTree
+from openmdao.main.datatypes.api import Array, Instance, List, VarTree, Float
 from openmdao.test.execcomp import ExecComp
 from openmdao.lib.casehandlers.api import HDF5CaseRecorder, CaseDataset
 from openmdao.lib.casehandlers.api import JSONCaseRecorder, BSONCaseRecorder, verify_json, CaseDataset
+
+from openmdao.lib.drivers.conmindriver import CONMINdriver
+
 
 
 from openmdao.lib.drivers.api import SensitivityDriver, CaseIteratorDriver, \
                                      SLSQPdriver
 from openmdao.util.testutil import assert_raises
+
+
+class TestContainer(VariableTree):
+
+    dummy1 = Float(desc='default value of 0.0') #this value is being grabbed by the optimizer
+    dummy2 = Float(11.0)
+
+
+class TestComponent(Component):
+
+    dummy_data = VarTree(TestContainer(), iotype='in')
+    x = Float(iotype='out')
+
+    def execute(self):
+        self.x = (self.dummy_data.dummy1-3)**2 - self.dummy_data.dummy2
+
+
+class TestAssembly(Assembly):
+
+    def configure(self):
+        self.add('dummy_top', TestContainer())
+        self.add('comp', TestComponent())
+        self.add('driver', CONMINdriver())
+
+        self.driver.workflow.add(['comp'])
+        #self.driver.iprint = 4 #debug verbosity
+        self.driver.add_objective('comp.x')
+        self.driver.add_parameter('comp.dummy_data.dummy1', low=-10.0, high=10.0)
+
+class TestVarTreeCase(unittest.TestCase):
+
+    def test_vartree_hdf5_recording(self):
+        blah = set_as_top(TestAssembly())
+        blah.recorders = [HDF5CaseRecorder('vartree.hdf5')]
+        blah.run()
+
+
 
 
 class TExecComp(ExecComp):
@@ -83,9 +123,9 @@ class TestOptimizationCase(unittest.TestCase):
     def tearDown(self):
         self.top = None
 
-    def test_optimization(self):
+    def test_optimization_hdf5_recording(self):
 
-        self.top.recorders = [HDF5CaseRecorder('optimization.hdf5'), JSONCaseRecorder('optimization.json')]
+        self.top.recorders = [HDF5CaseRecorder('optimization.hdf5')]
         self.top.run()
 
 class TestCase(unittest.TestCase):
