@@ -315,6 +315,15 @@ class Driver(Component):
 
             self._iter_set = self._full_iter_set - subcomps
 
+            # the following fixes a test failure when using DOEdriver with
+            # an empty workflow.  This adds any comps that own DOEdriver
+            # parameters to the DOEdriver's iteration set.
+            conns = self.get_expr_depends()
+            self._iter_set.update([u for u,v in conns if u != self.name])
+            self._iter_set.update([v for u,v in conns if v != self.name])
+
+            self._full_iter_set.update(self._iter_set)
+
     def compute_ordering(self, cgraph):
         """Given a component graph, each driver can determine its iteration
         set and the ordering of its workflow.
@@ -355,7 +364,7 @@ class Driver(Component):
         inside of this Driver's iteration set.
         """
         iternames = set([c.name for c in self.iteration_set()])
-        deps = []
+        deps = set()
         for src, dest in super(Driver, self).get_expr_depends():
             if src not in iternames and dest not in iternames:
                 deps.add((src, dest))
