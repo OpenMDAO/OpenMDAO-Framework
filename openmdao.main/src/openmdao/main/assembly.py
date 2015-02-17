@@ -324,6 +324,9 @@ class Assembly(Component):
         # recreate old connections
         for u, v in conns:
             try:
+                # don't recreate the connection unless we can resolve both ends
+                self.get(u)
+                self.get(v)
                 self.connect(u, v)
             except Exception as err:
                 self._logger.warning("Couldn't connect '%s' to '%s': %s",
@@ -608,19 +611,78 @@ class Assembly(Component):
         the connect() function, never directly.
         """
         try:
-            srcexpr, destexpr = self._check_connect(src, dest)
+            try:
+                srcexpr, destexpr = self._check_connect(src, dest)
+
+                self._connections.append((srcexpr, destexpr))
+
+                destval = destexpr.evaluate()
+                if isinstance(destval, ndarray) and destval.size == 0:
+                    destexpr.set(srcexpr.evaluate(), self)
+
+                self._check_dest(srcexpr, destexpr)
+
+            except AttributeError as err:
+                exc_type, value, traceback = sys.exc_info()
+
+                invalid_vars = srcexpr.get_unresolved() + destexpr.get_unresolved()
+                parts = invalid_vars[0].rsplit('.', 1)
+
+                parent = repr(self.name) if self.name else 'top level assembly'
+                vname = repr(parts[0])
+
+                if len(parts) > 1:
+                    parent = repr(parts[0])
+                    vname = repr(parts[1])
+
+                msg = "{parent} has no variable {vname}"
+                msg = msg.format(parent=parent, vname=vname)
+
+                raise exc_type, exc_type(msg), traceback
         except:
             info = sys.exc_info()
             self.reraise_exception("Can't connect '%s' to '%s': " %
-                                           (src, dest), info)
-
-        self._connections.append((srcexpr, destexpr))
-
-        dest = destexpr.evaluate()
-        if isinstance(dest, ndarray) and dest.size == 0:
-            destexpr.set(srcexpr.evaluate(), self)
+                                   (src, dest), info)
 
         self.config_changed()
+
+    def _check_dest(self, srcexpr, destexpr):
+        """Attempt to validate a connection"""
+        srcvars = srcexpr.get_referenced_varpaths(copy=False)
+        destvar = destexpr.get_referenced_varpaths().pop()
+        destcompname, destcomp, destvarname = _split_varpath(self, destvar)
+        desttrait = None
+        srccomp = None
+
+        if not isinstance(destcomp, PseudoComponent) and \
+           not destvar.startswith('parent.') and not len(srcvars) > 1:
+            for srcvar in srcvars:
+                if not srcvar.startswith('parent.'):
+                    srccompname, srccomp, srcvarname = _split_varpath(self, srcvar)
+                    if not isinstance(srccomp, PseudoComponent):
+                        src_io = 'in' if srccomp is self else 'out'
+                        srccomp.get_dyn_trait(srcvarname, src_io)
+                        if desttrait is None:
+                            dest_io = 'out' if destcomp is self else 'in'
+                            desttrait = destcomp.get_dyn_trait(destvarname, dest_io)
+
+                if not isinstance(srccomp, PseudoComponent) and \
+                   desttrait is not None:
+                    # punt if dest is not just a simple var name.
+                    # validity will still be checked at execution time
+                    if destvar == destexpr.text:
+                        ttype = desttrait.trait_type
+                        if not ttype:
+                            ttype = desttrait
+                        srcval = srcexpr.evaluate()
+                        if ttype.validate:
+                            ttype.validate(destcomp, destvarname, srcval)
+                        else:
+                            # no validate function on destination trait. Most likely
+                            # it's a property trait.  No way to validate without
+                            # unknown side effects. Have to wait until later
+                            # when data actually gets passed via the connection.
+                            pass
 
     @rbac(('owner', 'user'))
     def disconnect(self, varpath, varpath2=None):
@@ -1633,3 +1695,18 @@ def _get_scoped_outputs(comp, g, explicit_outs):
         return None
 
     return [n.split('.',1)[1] for n in outputs]
+
+def _split_varpath(cont, path):
+    """Return a tuple of compname,component,varname given a path
+    name of the form 'compname.varname'. If the name is of the form
+    'varname', then compname will be None and comp is cont.
+    """
+    try:
+        compname, varname = path.split('.', 1)
+    except ValueError:
+        return (None, cont, path)
+
+    t = cont.get_trait(compname)
+    if t and t.iotype:
+        return (None, cont, path)
+    return (compname, getattr(cont, compname), varname)

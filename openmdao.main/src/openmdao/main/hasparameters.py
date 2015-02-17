@@ -998,7 +998,10 @@ class HasParameters(object):
         """
         for pname, param in refs.items():
             try:
-                self.add_parameter(param)
+                if param._expreval.check_resolve():
+                    self.add_parameter(param)
+                else:
+                    raise AttributeError("'%s' doesn't exist." % pname)
             except Exception as err:
                 self.parent._logger.warning("Couldn't restore parameter '%s': %s"
                                             % (pname, str(err)))

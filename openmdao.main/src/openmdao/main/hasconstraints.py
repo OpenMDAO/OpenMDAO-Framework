@@ -92,7 +92,7 @@ class Constraint(object):
 
         # Linear flag: constraints are nonlinear by default
         self.linear = False
-        
+
         # User-defined jacobian function
         self.jacs = jacs
 
@@ -278,6 +278,13 @@ class Constraint(object):
             return self.lhs.get_referenced_varpaths(copy=copy, refs=refs).union(
                     self.rhs.get_referenced_varpaths(copy=copy, refs=refs))
 
+    def check_resolve(self):
+        """Returns True if this constraint has no unresolved references."""
+        return self.lhs.check_resolve() and self.rhs.check_resolve()
+
+    def get_unresolved(self):
+        return list(set(self.lhs.get_unresolved()).union(self.rhs.get_unresolved()))
+
     def name_changed(self, old, new):
         """Update expressions if necessary when an object is renamed."""
         self.rhs.name_changed(old, new)
@@ -341,7 +348,7 @@ class Constraint2Sided(Constraint):
 
         self.low = self.lhs.evaluate()
         self.high = self.rhs.evaluate()
-        
+
         # User-defined jacobian function
         self.jacs = jacs
 
@@ -373,7 +380,7 @@ class Constraint2Sided(Constraint):
     def copy(self):
         """ Returns a copy of our self. """
         return Constraint2Sided(str(self.lhs), str(self.center), str(self.rhs),
-                          self.comparator, scope=self.lhs.scope, 
+                          self.comparator, scope=self.lhs.scope,
                           jacs=self.jacs)
 
     def get_referenced_compnames(self):
@@ -502,12 +509,17 @@ class _HasConstraintsBase(object):
         for name, constraint in refs.items():
             if name in self._constraints:
                 self.remove_constraint(name)
-            try:
-                self.add_constraint(str(constraint), name,
-                                    constraint.lhs.scope)
-            except Exception as err:
-                self.parent._logger.warning("Couldn't restore constraint '%s': %s"
-                                            % (name, str(err)))
+
+            if not constraint.check_resolve():
+                self.parent._logger.warning("Couldn't restore constraint '%s': %s are unresolved." %
+                                             (name, constraint.get_unresolved()))
+            else:
+                try:
+                    self.add_constraint(str(constraint), name,
+                                        constraint.lhs.scope)
+                except Exception as err:
+                    self.parent._logger.warning("Couldn't restore constraint '%s': %s"
+                                                % (name, str(err)))
 
     def clear_constraints(self):
         """Removes all constraints."""
@@ -591,7 +603,7 @@ class HasEqConstraints(_HasConstraintsBase):
     constraints but does not support inequality constraints.
     """
 
-    def add_constraint(self, expr_string, name=None, scope=None, linear=False, 
+    def add_constraint(self, expr_string, name=None, scope=None, linear=False,
                        jacs=None):
         """Adds a constraint in the form of a boolean expression string
         to the driver.
@@ -610,7 +622,7 @@ class HasEqConstraints(_HasConstraintsBase):
             Set this to True to define this constraint is linear. Behavior
             depends on whether and how your optimizer supports it. Deault is
             False or nonlinear constraint.
-            
+
         jacs: dict
             Dictionary of user-defined functions that return the flattened
             Jacobian of this constraint with repsect to the parameters of
@@ -649,7 +661,7 @@ class HasEqConstraints(_HasConstraintsBase):
                                         ' in the driver. Add failed.'
                                         % name, ValueError)
 
-        constraint = Constraint(lhs, '=', rhs, scope=_get_scope(self, scope), 
+        constraint = Constraint(lhs, '=', rhs, scope=_get_scope(self, scope),
                                 jacs=jacs)
         constraint.linear = linear
 
@@ -792,10 +804,10 @@ class HasIneqConstraints(_HasConstraintsBase):
                                         ' in the driver. Add failed.'
                                         % name, ValueError)
 
-        constraint = Constraint(lhs, rel, rhs, scope=_get_scope(self, scope), 
+        constraint = Constraint(lhs, rel, rhs, scope=_get_scope(self, scope),
                                 jacs=jacs)
         constraint.linear = linear
-        
+
         if IDriver.providedBy(self.parent):
             #constraint.activate(self.parent)
             self.parent.config_changed()
@@ -932,7 +944,7 @@ class HasConstraints(object):
             Set this to True to define this constraint is linear. Behavior
             depends on whether and how your optimizer supports it. Deault is
             False or nonlinear constraint.
-            
+
         jacs: dict
             Dictionary of user-defined functions that return the flattened
             Jacobian of this constraint with repsect to the parameters of
@@ -951,8 +963,8 @@ class HasConstraints(object):
                 msg = 'Double-sided constraints are not supported on ' + \
                       'this driver.'
                 self.parent.raise_exception(msg, AttributeError)
-            self.parent.add_2sided_constraint(rhs[0], lhs, rhs[1], rel, 
-                                              name=name, scope=scope, 
+            self.parent.add_2sided_constraint(rhs[0], lhs, rhs[1], rel,
+                                              name=name, scope=scope,
                                               linear=linear, jacs=jacs)
         else:
             self._ineq._add_ineq_constraint(lhs, rel, rhs, name=name, scope=scope,

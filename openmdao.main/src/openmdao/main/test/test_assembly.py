@@ -378,10 +378,12 @@ class AssemblyTestCase(unittest.TestCase):
         # to an input
         try:
             self.asm.create_passthrough('comp2.r')
+            self.asm._setup()
         except RuntimeError, err:
             self.assertEqual(str(err),
                              ": Can't connect 'r' to 'comp2.r': : 'comp2.r'"
-                             " is already connected to source 'comp1.rout'")
+                             " is already connected to 'comp1.rout'")
+            self.asm.disconnect('r', 'comp2.r')
         else:
             self.fail('RuntimeError expected')
         self.asm.set('comp1.s', 'some new string')
@@ -404,8 +406,8 @@ class AssemblyTestCase(unittest.TestCase):
         try:
             self.asm.connect('comp1.rout', 'comp2.rout')
         except RuntimeError, err:
-            self.assertEqual(": Can't connect 'comp1.rout' to 'comp2.rout':"
-                             " 'comp2.rout' must be an input variable",
+            self.assertEqual(": Can't connect 'comp1.rout' to 'comp2.rout': :"
+                             " comp2: 'rout' must be an input variable",
                              str(err))
         else:
             self.fail('exception expected')
@@ -414,7 +416,7 @@ class AssemblyTestCase(unittest.TestCase):
         try:
             self.asm.connect('comp1.rout', 'comp1.r')
         except Exception, err:
-            self.assertEqual(": Can't connect 'comp1.rout' to 'comp1.r':"
+            self.assertEqual(": Can't connect 'comp1.rout' to 'comp1.r': :"
                              " 'comp1.rout' and 'comp1.r' refer to the same"
                              " component.", str(err))
         else:
@@ -553,10 +555,10 @@ class AssemblyTestCase(unittest.TestCase):
         asm.nested.create_passthrough('comp1.c')
         try:
             asm.nested.connect('comp2.d', 'c')
+            asm._setup()
         except RuntimeError as err:
             self.assertEqual(str(err),
-                             "nested: Can't connect 'comp2.d' to 'c': nested:"
-                             " 'c' is already connected to source 'comp1.c'")
+                             "nested: Can't connect 'comp2.d' to 'c': : 'c' is already connected to 'comp1.c'")
         else:
             self.fail('RuntimeError expected')
 

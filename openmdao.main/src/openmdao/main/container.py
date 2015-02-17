@@ -1274,7 +1274,7 @@ class Container(SafeHasTraits):
                         t_iotype = self.get_iotype(cname)
                     if (iotype == 'in' and t_iotype not in ('in', 'state')) or \
                        (iotype == 'out' and t_iotype not in ('out', 'in', 'state', 'residual')):
-                        self.raise_exception('%s must be an %s variable' %
+                        self.raise_exception("'%s' must be an %s variable" %
                                              (pathname, _iodict[iotype]),
                                              RuntimeError)
                 return trait

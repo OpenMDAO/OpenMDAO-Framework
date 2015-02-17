@@ -103,6 +103,7 @@ class DriverTestCase2(unittest.TestCase):
         top.driver.add_parameter('Pileinputs.Lp', low=-100, high=100)
         top.driver.add_objective('SPIstiffness.Lp + comp.y')
 
+        top._setup()
         comps = top.driver._get_required_compnames()
         self.assertTrue(len(comps) == 2)
         self.assertTrue('comp' in comps)

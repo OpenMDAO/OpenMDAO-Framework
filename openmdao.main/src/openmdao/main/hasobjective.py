@@ -216,11 +216,16 @@ class HasObjectives(object):
         # Old objective seems to get removed automatically so no need to
         # clear objectives and recreate them.
         for name, obj in refs.items():
-            try:
-                self.add_objective(str(obj), name, obj.scope)
-            except Exception as err:
+            if not obj.check_resolve():
                 self.parent._logger.warning("Couldn't restore objective"
-                                            " '%s': %s" % (name, str(err)))
+                                            " '%s': %s were unresolved" %
+                                            (name, obj.get_unresolved()))
+            else:
+                try:
+                    self.add_objective(str(obj), name, obj.scope)
+                except Exception as err:
+                    self.parent._logger.warning("Couldn't restore objective"
+                                                " '%s': %s" % (name, str(err)))
 
     def get_objectives(self):
         """Returns an OrderedDict of objective expressions."""

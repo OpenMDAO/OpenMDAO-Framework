@@ -171,11 +171,13 @@ class HasResponses(object):
             Value returned by :meth:`get_references`.
         """
 
-        # Old response seems to get removed automatically so no need to
-        # clear responses and recreate them.
         for name, response in refs.items():
             try:
-                self.add_response(str(response), name, response.scope)
+                if response.check_resolve():
+                    self.add_response(str(response), name, response.scope)
+                else:
+                    raise AttributeError("'%s' are unresolved." %
+                                               response.get_unresolved())
             except Exception as err:
                 self.parent._logger.warning("Couldn't restore response '%s':"
                                             " %s" % (name, err))
