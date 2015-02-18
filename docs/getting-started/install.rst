@@ -121,8 +121,6 @@ by typing:
    deactivate
 
 
-.. _Anaconda Installation:
-
 .. _Site-Wide VirtualEnv Installation:
 
 Site-Wide VirtualEnv Installation
@@ -153,6 +151,9 @@ generated zip file:
     unzip openmdao-0.12.0-linux-x86_64.zip
     cd openmdao-0.12.0
     python script-fixup.py
+
+
+.. _`Anaconda-Installation`:
 
 Anaconda Installation
 =====================
@@ -218,8 +219,7 @@ By default, you're in your root environment.  To create another environment, we 
 how to create a new conda environment to hold your openmdao installation. More information about conda environments is
 available at `Continuum Analytics' website <http://www.continuum.io/blog/conda>`_.
 
-*Installation in Anaconda*
-------------------------------------------
+**Installation**
 
 You'll still need to follow the configuration step above to add the OpenMDAO channel. To install OpenMDAO's latest release into your root Anaconda environment, only one command is needed:
 
@@ -254,7 +254,7 @@ Once you have completed installation and testing, you're ready to use OpenMDAO. 
 OS X and Linux ::
 
   source deactivate
-  
+
 Windows ::
 
   deactivate

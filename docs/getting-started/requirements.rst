@@ -17,10 +17,10 @@ OpenMDAO requires that the following software be installed at the system level o
 
   - In general, OpenMDAO supports the specified versions of Python found at ``python.org``.
 
-  - Some alternative Python builds, such as Anaconda and Python(x,y) are supported by the team.
+  - Two alternative Python builds that are supported by the team are :ref:`Anaconda <Anaconda-Installation>` and Python(x,y).
 
-
-  - Enthought, ActiveState Python, and other Python distributions are not supported, though some may work with OpenMDAO.
+  - Enthought, ActiveState Python, and other Python distributions are not supported, though some
+    of these distributions may work with OpenMDAO.
 
   - OpenMDAO does not support Python 3.x or any Python versions below 2.7.5 Having the incorrect Python
     installation in the PATH and/or not having the OpenMDAO-approved Python version in the PATH will only
