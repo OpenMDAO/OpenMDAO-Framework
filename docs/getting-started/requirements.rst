@@ -22,7 +22,7 @@ OpenMDAO requires that the following software be installed at the system level o
 
   - Enthought, ActiveState Python, and other Python distributions are not supported, though some may work with OpenMDAO.
 
-  - OpenMDAO does not support Python 3.x or any Python versions below 2.7. Having the incorrect Python
+  - OpenMDAO does not support Python 3.x or any Python versions below 2.7.5 Having the incorrect Python
     installation in the PATH and/or not having the OpenMDAO-approved Python version in the PATH will only
     lead to problems.
 
