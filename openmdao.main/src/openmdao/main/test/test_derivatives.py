@@ -2078,9 +2078,9 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
 
         top.run()
         J = top.driver.calc_gradient()
-        
+
         self.assertTrue('x[0][0]' in top.nest._system.vec['u']._info)
-        
+
         assert_rel_error(self, J[0][0], 4.0, .000001)
 
     def test_nested_2Darray_simul_element_and_full_connection(self):
