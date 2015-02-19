@@ -30,7 +30,7 @@ from openmdao.main.interfaces import IDriver, IHasEvents, ISolver, \
 from openmdao.main.mp_support import has_interface
 from openmdao.main.rbac import rbac
 from openmdao.main.vartree import VariableTree
-from openmdao.main.workflow import Workflow
+from openmdao.main.workflow import Workflow, get_cycle_vars
 
 from openmdao.util.decorators import add_delegate
 
@@ -702,8 +702,9 @@ class Driver(Component):
         self.workflow.setup_scatters()
 
         # FIXME: move this somewhere else...
-        if hasattr(self._system, 'graph'):
-            self.workflow._cycle_vars = get_cycle_vars(self._system.graph, scope._var_meta)
+        if hasattr(self.workflow._system, 'graph'):
+            self.workflow._cycle_vars = get_cycle_vars(self.workflow._system.graph,
+                                                       self.parent._var_meta)
         else:
             self.workflow._cycle_vars = []
 
