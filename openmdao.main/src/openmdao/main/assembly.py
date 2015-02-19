@@ -452,6 +452,7 @@ class Assembly(Component):
 
     def _find_unexecuted_comps(self):
         self._unexecuted = []
+        self._pre_drive = None
         cgraph = self._depgraph.component_graph()
         wfcomps = set([c.name for c in self.driver.iteration_set()])
         wfcomps.add('driver')
@@ -1303,7 +1304,7 @@ class Assembly(Component):
             if has_interface(comp, IDriver) or has_interface(comp, IAssembly):
                 comp.setup_depgraph(self._depgraph)
 
-    def setup_reduced_graph(self, inputs=None, outputs=None):
+    def setup_reduced_graph(self, inputs=None, outputs=None, drvname=None):
         """Create the graph we need to do the breakdown of the model
         into Systems.
         """
@@ -1410,6 +1411,15 @@ class Assembly(Component):
         collapsed_graph.prune(coll_keep)
 
         collapsed_graph.fix_dangling_vars(self)
+
+        if drvname:
+            for node in collapsed_graph:
+                if collapsed_graph.in_degree(node) > 1 and isinstance(node, tuple):
+                    for pred in collapsed_graph.predecessors(node):
+                        if pred != drvname:
+                            collapsed_graph.remove_edge(pred, node)
+                            if collapsed_graph.in_degree(node) == 1:
+                                break
 
         self._reduced_graph = collapsed_graph
 
@@ -1580,7 +1590,7 @@ class Assembly(Component):
             if isinstance(srcval, ndarray):
                 self.set(v, srcval.copy())
 
-    def _setup(self, inputs=None, outputs=None):
+    def _setup(self, inputs=None, outputs=None, drvname=None):
         """This is called automatically on the top level Assembly
         prior to execution.  It will also be called if
         calc_gradient is called with input or output lists that
@@ -1604,7 +1614,7 @@ class Assembly(Component):
             self.setup_depgraph()
             self.compute_itersets(None)
             self.compute_ordering(None)
-            self.setup_reduced_graph(inputs=inputs, outputs=outputs)
+            self.setup_reduced_graph(inputs=inputs, outputs=outputs, drvname=drvname)
             self.setup_systems()
 
             self.pre_setup()

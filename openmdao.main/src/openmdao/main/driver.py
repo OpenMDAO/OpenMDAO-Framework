@@ -257,72 +257,71 @@ class Driver(Component):
         """Return a list of all components required to run a full
         iteration of this driver.
         """
-        if self._iter_set is None:
-            self._full_iter_set = set()
+        self._full_iter_set = set()
 
-            # make our own copy of the graph to play with
-            cgraph = cgraph.subgraph(cgraph.nodes_iter())
+        # make our own copy of the graph to play with
+        cgraph = cgraph.subgraph(cgraph.nodes_iter())
 
-            myset = set(self.workflow._explicit_names +
-                        self.list_pseudocomps())
+        myset = set(self.workflow._explicit_names +
+                    self.list_pseudocomps())
 
-            # First, have all of our subdrivers (recursively) determine
-            # their iteration sets, because we need those to determine
-            # our full set.
-            subdrivers = set()
-            subcomps = set()
-            for name in myset:
-                comp = getattr(self.parent, name)
-                if has_interface(comp, IDriver):
-                    subdrivers.add(comp)
-                    cgcopy = cgraph.subgraph(cgraph.nodes_iter())
-                    cgcopy.remove_nodes_from([self.name])
-                    comp.compute_itersets(cgcopy)
-                    subcomps.update(comp._full_iter_set)
+        # First, have all of our subdrivers (recursively) determine
+        # their iteration sets, because we need those to determine
+        # our full set.
+        subdrivers = set()
+        subcomps = set()
+        for name in myset:
+            comp = getattr(self.parent, name)
+            if has_interface(comp, IDriver):
+                subdrivers.add(comp)
+                cgcopy = cgraph.subgraph(cgraph.nodes_iter())
+                cgcopy.remove_nodes_from([self.name])
+                comp.compute_itersets(cgcopy)
+                subcomps.update(comp._full_iter_set)
 
-            # create fake edges to/from the driver and each of its
-            # components so we can get everything that's relevant
-            # by getting all nodes that are strongly connected to the
-            # driver in the graph.
-            for drv in subdrivers:
-                for name in drv._full_iter_set:
-                    cgraph.add_edge(drv.name, name)
-                    cgraph.add_edge(name, drv.name)
+        # create fake edges to/from the driver and each of its
+        # components so we can get everything that's relevant
+        # by getting all nodes that are strongly connected to the
+        # driver in the graph.
+        for drv in subdrivers:
+            for name in drv._full_iter_set:
+                cgraph.add_edge(drv.name, name)
+                cgraph.add_edge(name, drv.name)
 
-            # add predecessors to my pseudocomps if they aren't
-            # already in the itersets of my subdrivers
-            for pcomp in self.list_pseudocomps():
-                for pred in cgraph.predecessors(pcomp):
-                    if pred not in subcomps:
-                        myset.add(pred)
+        # add predecessors to my pseudocomps if they aren't
+        # already in the itersets of my subdrivers
+        for pcomp in self.list_pseudocomps():
+            for pred in cgraph.predecessors(pcomp):
+                if pred not in subcomps:
+                    myset.add(pred)
 
-            # now create fake edges from us to all of the comps
-            # that we know about in our iterset
-            for name in myset:
-                cgraph.add_edge(self.name, name)
-                cgraph.add_edge(name, self.name)
+        # now create fake edges from us to all of the comps
+        # that we know about in our iterset
+        for name in myset:
+            cgraph.add_edge(self.name, name)
+            cgraph.add_edge(name, self.name)
 
-            comps = []
-            for comps in strongly_connected_components(cgraph):
-                if self.name in comps:
-                    break
+        comps = []
+        for comps in strongly_connected_components(cgraph):
+            if self.name in comps:
+                break
 
-            self._full_iter_set.update(comps)
-            self._full_iter_set.update(myset) # don't think I need this
-            self._full_iter_set.remove(self.name)
+        self._full_iter_set.update(comps)
+        self._full_iter_set.update(myset) # don't think I need this
+        self._full_iter_set.remove(self.name)
 
-            subcomps -= myset
+        subcomps -= myset
 
-            self._iter_set = self._full_iter_set - subcomps
+        self._iter_set = self._full_iter_set - subcomps
 
-            # the following fixes a test failure when using DOEdriver with
-            # an empty workflow.  This adds any comps that own DOEdriver
-            # parameters to the DOEdriver's iteration set.
-            conns = self.get_expr_depends()
-            self._iter_set.update([u for u,v in conns if u != self.name])
-            self._iter_set.update([v for u,v in conns if v != self.name])
+        # the following fixes a test failure when using DOEdriver with
+        # an empty workflow.  This adds any comps that own DOEdriver
+        # parameters to the DOEdriver's iteration set.
+        conns = self.get_expr_depends()
+        self._iter_set.update([u for u,v in conns if u != self.name])
+        self._iter_set.update([v for u,v in conns if v != self.name])
 
-            self._full_iter_set.update(self._iter_set)
+        self._full_iter_set.update(self._iter_set)
 
     def compute_ordering(self, cgraph):
         """Given a component graph, each driver can determine its iteration
@@ -807,7 +806,7 @@ class Driver(Component):
                 while top.parent is not None:
                     top = top.parent
 
-                top._setup(inputs=inputs, outputs=outputs)
+                top._setup(inputs=inputs, outputs=outputs, drvname=self.name)
 
             if options is None:
                 options = self.gradient_options
