@@ -123,13 +123,15 @@ class VecWrapperBase(object):
         bnds = [(i.start, i.start+i.size) for i in infos]
         return (min([u for u,v in bnds]), max([v for u,v in bnds]))
 
-    def indices(self, scope, name):
+    def indices(self, system, name):
         """Return the index array corresponding to a single name."""
         if name not in self._info:
+            scope = system.scope
             if isinstance(name, basestring):
                 name = scope.name2collapsed[name]
             if name[0].split('[',1)[0] in self._info:
                 self._add_subview(scope, name)
+                self._add_tuple_members(system, [name])
         _, start, _, size, _ = self._info[name]
         return petsc_linspace(start, start+size)
 
@@ -625,6 +627,13 @@ def petsc_linspace(start, end):
         return numpy.arange(start, end, dtype=PETSc.IntType)
     else:
         return numpy.arange(start, end, dtype='i')
+
+def petsc_idxs(idxs):
+    """ Return an index vector of the right int type for PETSc """
+    if MPI:
+        return numpy.array(idxs, dtype=PETSc.IntType)
+
+    return idxs
 
 def _filter(scope, lst):
     filtered = _filter_subs(lst)

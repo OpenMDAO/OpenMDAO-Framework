@@ -1,4 +1,4 @@
-.. _source_documentation: 
+.. _source_documentation:
 
 ====================
 Source Documentation
@@ -19,16 +19,14 @@ Source Documentation
 
 .. _openmdao.lib.doegenerators.api:
 
-.. _doedriver.py: 
+.. _doedriver.py:
 
-.. _fullfactorial.py: 
+.. _fullfactorial.py:
 
-.. _openmdao.lib.casehandler.api.py: 
+.. _openmdao.lib.casehandler.api.py:
 
 .. toctree::
-   :maxdepth: 3 
+   :maxdepth: 3
    :glob:
-   
+
    packages/*
-
-

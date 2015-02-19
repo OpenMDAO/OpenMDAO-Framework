@@ -12,10 +12,10 @@ requirements:
     build:
         - python
         - setuptools
-        - numpy
-        - libgfortran #[osx]
+        - numpy ==1.7.1
+        - libpython # [win]
 
     run:
         - python
-        - numpy
-        - libgfortran #[osx]
+        - numpy >=1.7.1
+        - libpython # [win]

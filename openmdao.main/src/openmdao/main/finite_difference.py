@@ -146,7 +146,7 @@ class FiniteDifference(object):
         if return_format == 'dict':
             self.J = {}
             for okey in outputs:
-                
+
                 self.J[okey] = {}
                 for ikey in inputs:
                     if isinstance(ikey, tuple):
@@ -160,7 +160,7 @@ class FiniteDifference(object):
                         osize = self.system.vec['u'][okey].size
 
                     isize = self.system.vec['p'][ikey].size
-                    
+
                     self.J[okey][ikey] = zeros((osize, isize))
         else:
             self.J = zeros((out_size, in_size))
@@ -177,11 +177,11 @@ class FiniteDifference(object):
 
         # For MPI, don't compute outputs that aren't on our processor.
         if MPI:
-            outputs = [out for out in self.outputs 
+            outputs = [out for out in self.outputs
                        if out in self.system.vec['u']]
         else:
             outputs = self.outputs
-            
+
         uvec.set_to_array(self.y_base, outputs)
 
         for j, src, in enumerate(self.inputs):
@@ -369,6 +369,9 @@ class FiniteDifference(object):
                 # param groups
                 break
 
+        if self.system.name.split('.')[-1] == '_inner_asm':
+            uvec.set_to_scope(self.system.scope, vnames=srcs)
+
     def set_value_complex(self, srcs, val, index, undo_complex=False):
         """Set/unset a complex value in the model"""
 
@@ -547,7 +550,7 @@ class DirectionalFD(object):
         # Pack the results dictionary
         j = 0
         for key in self.outputs:
-            indices = self.system.vec['u'].indices(self.system.scope, key)
+            indices = self.system.vec['u'].indices(self.system, key)
             i1, i2 = j, j+len(indices)
 
             old_val = self.scope.get(key)

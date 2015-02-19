@@ -29,7 +29,7 @@ class LinearSolver(object):
            system._parent_system is not None and \
            hasattr(system._parent_system, '_comp'):
             drv = system._parent_system._comp
-            
+
             # Figure out base indentation for printing the residual during
             # convergence.
             self.drv_name = drv.name
@@ -37,7 +37,7 @@ class LinearSolver(object):
                 level = 0
             else:
                 level = drv.itername.count('.') + 1
-                
+
             # Figure out if the user defined custom constraint gradients.
             if hasattr(drv, 'get_constraints'):
                 for constraint in drv.get_constraints().values():
@@ -76,18 +76,26 @@ class LinearSolver(object):
         system.rhs_vec.array[:] += system.rhs_buf[:]
 
         return get_norm(system.rhs_vec)
-    
+
     def user_defined_jacobian(self, con, params, J):
         """ Inserts the user-defined Jacobian into the full Jacobian rather
         than doing any calculation. """
-        
+
         if not isinstance(J, dict):
             msg = 'Only PyOptSparse supports custom Jacobians'
             raise RuntimeError(msg)
-        
+
         jacs = self.custom_jacs[con]()
         for param in params:
-            J[con][param] = jacs[param]
+            
+            if param in jacs:
+                J[con][param] = jacs[param]
+                
+            # Assume zero if user did not explicitly define.
+            else:
+                psize = self._system.get_size(param)
+                csize = self._system.get_size(con)
+                J[con][param] = np.zeros((csize, psize))
 
 
 class ScipyGMRES(LinearSolver):
@@ -142,7 +150,7 @@ class ScipyGMRES(LinearSolver):
             if isinstance(param, tuple):
                 param = param[0]
 
-            in_indices = system.vec['u'].indices(system.scope, param)
+            in_indices = system.vec['u'].indices(system, param)
             jbase = j
 
             # Did the user define a custom Jacobian for a constraint?
@@ -150,7 +158,7 @@ class ScipyGMRES(LinearSolver):
                 self.user_defined_jacobian(param, outputs, J)
                 j += len(in_indices)
                 continue
-            
+
             for irhs in in_indices:
 
                 RHS[irhs] = 1.0
@@ -166,7 +174,7 @@ class ScipyGMRES(LinearSolver):
                     if isinstance(item, tuple):
                         item = item[0]
 
-                    out_indices = system.vec['u'].indices(system.scope, item)
+                    out_indices = system.vec['u'].indices(system, item)
                     nk = len(out_indices)
 
                     if return_format == 'dict':
@@ -341,7 +349,7 @@ class PETSc_KSP(LinearSolver):
                 self.user_defined_jacobian(param, outputs, J)
                 j += param_size
                 continue
-            
+
             for irhs in xrange(param_size):
 
                 # Solve the system with PetSC KSP
@@ -485,7 +493,7 @@ class LinearGS(LinearSolver):
             if isinstance(param, tuple):
                 param = param[0]
 
-            in_indices = system.rhs_vec.indices(system.scope, param)
+            in_indices = system.rhs_vec.indices(system, param)
             nj = len(in_indices)
             jbase = j
 
@@ -494,7 +502,7 @@ class LinearGS(LinearSolver):
                 self.user_defined_jacobian(param, outputs, J)
                 j += nj
                 continue
-            
+
             for irhs in in_indices:
 
                 system.clear_dp()
@@ -513,7 +521,7 @@ class LinearGS(LinearSolver):
                     if isinstance(item, tuple):
                         item = item[0]
 
-                    out_indices = system.sol_vec.indices(system.scope, item)
+                    out_indices = system.sol_vec.indices(system, item)
                     nk = len(out_indices)
 
                     if return_format == 'dict':
