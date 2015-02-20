@@ -538,6 +538,22 @@ class Workflow(object):
     def __len__(self):
         raise NotImplementedError("This Workflow has no '__len__' function")
 
+    def setup_init(self):
+        self._system = None
+        self._reduced_graph = None
+        self._component_graph = None
+
+        self._rec_required = None  # Case recording configuration.
+        self._rec_parameters = None
+        self._rec_objectives = None
+        self._rec_responses = None
+        self._rec_constraints = None
+        self._rec_outputs = None
+
+        self._need_prescatter = False
+
+        self._ordering = None
+
     def setup_systems(self, system_type):
         """Get the subsystem for this workflow. Each
         subsystem contains a subgraph of this workflow's component

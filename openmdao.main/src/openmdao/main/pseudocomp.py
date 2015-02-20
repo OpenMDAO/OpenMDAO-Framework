@@ -98,7 +98,6 @@ class PseudoComponent(object):
         self._inmap = {}  # mapping of component vars to our inputs
         self._meta = {}
         self._inputs = []
-        self._initialized = False
 
         # Flags and caching used by the derivatives calculation
         self.force_fd = False
@@ -285,7 +284,6 @@ class PseudoComponent(object):
         scope.add(self.name, self)
         scope._depgraph.add_component(self.name, self)
         getattr(scope, self.name).make_connections(scope, driver)
-        self._initialized = False
         self.ensure_init()
 
     def make_connections(self, scope, driver=None):
@@ -373,21 +371,17 @@ class PseudoComponent(object):
         """Make sure our inputs and outputs have been
         initialized.
         """
-        if not self._initialized:
-            # set the current value of the connected variable
-            # into our input
-            for ref, in_name in self._inmap.items():
-                setattr(self, in_name,
-                        ExprEvaluator(ref).evaluate(self.parent))
-                if has_interface(getattr(self, in_name), IContainer):
-                    getattr(self, in_name).name = in_name
+        # set the current value of the connected variable
+        # into our input
+        for ref, in_name in self._inmap.items():
+            setattr(self, in_name,
+                    ExprEvaluator(ref).evaluate(self.parent))
+            if has_interface(getattr(self, in_name), IContainer):
+                getattr(self, in_name).name = in_name
 
-            # set the initial value of the output
-            outval = self._srcexpr.evaluate()
-            setattr(self, 'out0', outval)
-
-            if outval is not None:
-                self._initialized = True
+        # set the initial value of the output
+        outval = self._srcexpr.evaluate()
+        setattr(self, 'out0', outval)
 
     def list_deriv_vars(self):
         return tuple(self._inputs), ('out0',)
@@ -396,7 +390,8 @@ class PseudoComponent(object):
         return 1
 
     def setup_init(self):
-        self.ensure_init()
+        self.Jsize = None
+        self._provideJ_bounds = None
 
     def pre_setup(self):
         self.ensure_init()
@@ -428,12 +423,10 @@ class PseudoComponent(object):
         the value is not flattenable into an array of floats,
         raise a TypeError.
         """
-        self.ensure_init()
         val, idx = get_val_and_index(self, path)
         return flattened_value(path, val)
 
     def set_flattened_value(self, path, value):
-        self.ensure_init()
         val,rop = deep_getattr(self, path.split('[',1)[0])
         idx = get_index(path)
         if isinstance(val, int_types):
@@ -579,8 +572,7 @@ class UnitConversionPComp(PseudoComponent):
         """Make sure our inputs and outputs have been
         initialized.
         """
-        if not self._initialized:
-            super(UnitConversionPComp, self).ensure_init()
+        super(UnitConversionPComp, self).ensure_init()
 
         src    = PhysicalQuantity(1.0, self._srcunits)
         target = self._meta['out0'].get('units')

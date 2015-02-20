@@ -265,19 +265,20 @@ class Driver(Component):
         myset = set(self.workflow._explicit_names +
                     self.list_pseudocomps())
 
+        comps = [getattr(self.parent, n) for n in self.workflow._explicit_names]
+        subdrivers = [c for c in comps if has_interface(c, IDriver)]
+
         # First, have all of our subdrivers (recursively) determine
         # their iteration sets, because we need those to determine
         # our full set.
-        subdrivers = set()
+        #subdrivers = set()
         subcomps = set()
-        for name in myset:
-            comp = getattr(self.parent, name)
-            if has_interface(comp, IDriver):
-                subdrivers.add(comp)
-                cgcopy = cgraph.subgraph(cgraph.nodes_iter())
-                cgcopy.remove_nodes_from([self.name])
-                comp.compute_itersets(cgcopy)
-                subcomps.update(comp._full_iter_set)
+        for comp in subdrivers:
+            cgcopy = cgraph.subgraph(cgraph.nodes_iter())
+            cgcopy.remove_nodes_from([self.name]+[c.name for c in subdrivers
+                                                    if c is not comp])
+            comp.compute_itersets(cgcopy)
+            subcomps.update(comp._full_iter_set)
 
         # create fake edges to/from the driver and each of its
         # components so we can get everything that's relevant
@@ -656,6 +657,17 @@ class Driver(Component):
                         pairs.append((params[0], cnst.pcomp_name+'.out0'))
         return pairs
 
+    def setup_init(self):
+        super(Driver, self).setup_init()
+
+        self._required_compnames = None
+        self._iter_set = None
+        self._full_iter_set = None
+        self._depgraph = None
+        self._reduced_graph = None
+
+        self.workflow.setup_init()
+
     @rbac(('owner', 'user'))
     def setup_systems(self):
         """Set up system trees from here down to all of our
@@ -665,7 +677,8 @@ class Driver(Component):
             self._system = self.parent._reduced_graph.node[self.name]['system']
             self.workflow.setup_systems(self.system_type)
 
-    def print_norm(self, driver_string, iteration, res, res0, msg=None, indent=0, solver='NL'):
+    def print_norm(self, driver_string, iteration, res, res0, msg=None,
+                   indent=0, solver='NL'):
         """ Prints out the norm of the residual in a neat readable format.
         """
 
@@ -1054,7 +1067,7 @@ class Driver(Component):
 
     @rbac(('owner', 'user'))
     def pre_setup(self):
-        for cname in self._iter_set:
+        for cname in self._ordering:
             getattr(self.parent, cname).pre_setup()
 
 

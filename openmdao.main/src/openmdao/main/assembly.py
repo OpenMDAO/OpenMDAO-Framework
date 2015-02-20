@@ -176,7 +176,7 @@ class Assembly(Component):
         #     if trait.iotype:  # input or output
         #         self._depgraph.add_boundary_var(self, name, iotype=trait.iotype)
         #
-        self._exprmapper = ExprMapper(self)
+        #self._exprmapper = ExprMapper(self)
         self.J_input_keys = None
         self.J_output_keys = None
 
@@ -1559,8 +1559,18 @@ class Assembly(Component):
 
     def setup_init(self):
         """This is for any last minute configuration (like with
-        ArchitectureAssembly).
+        ArchitectureAssembly).  Components' setup_init methods
+        are NOT called in execution order because that isn't
+        known at this point.
         """
+        self._var_meta = {}
+        self._pre_driver = None
+        self._unexecuted = []
+        self.J_input_keys = self.J_output_keys = None
+        self._provideJ_bounds = None
+        self._system = None
+        self._derivs_required = False
+
         # get rid of any leftover pseudocomps from last time
         for name in self.__dict__.keys():
             if name.startswith('_pseudo_'):
@@ -1573,7 +1583,6 @@ class Assembly(Component):
 
     #FIXME: rename this to init_var_sizes()
     def pre_setup(self):
-        self._provideJ_bounds = None
         self._top_driver.pre_setup()
 
     def post_setup(self):
@@ -1582,13 +1591,6 @@ class Assembly(Component):
 
         if self._system.is_active():
             self._system.vec['u'].set_from_scope(self)
-
-    def propagate_srcs(self):
-        """Propagate array values from source variables to their destinations."""
-        for u,v in self.list_connections():
-            srcval = self.get(u)
-            if isinstance(srcval, ndarray):
-                self.set(v, srcval.copy())
 
     def _setup(self, inputs=None, outputs=None, drvname=None):
         """This is called automatically on the top level Assembly
@@ -1607,14 +1609,13 @@ class Assembly(Component):
         else:
             comm = None
 
-        self._var_meta = {}
-
         try:
             self.setup_init()
             self.setup_depgraph()
             self.compute_itersets(None)
             self.compute_ordering(None)
-            self.setup_reduced_graph(inputs=inputs, outputs=outputs, drvname=drvname)
+            self.setup_reduced_graph(inputs=inputs, outputs=outputs,
+                                     drvname=drvname)
             self.setup_systems()
 
             self.pre_setup()

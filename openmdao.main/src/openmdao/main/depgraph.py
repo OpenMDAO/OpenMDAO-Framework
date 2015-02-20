@@ -1104,7 +1104,12 @@ class DependencyGraph(DGraphBase):
         to VariableTrees and replace them with a variable node for each
         variable in the VariableTree.
         """
-        vtvars = dict([(n,None) for n in self if isinstance(scope.get(n), VariableTree)])
+        vtvars = {}
+        for n in self:
+            if '[' not in n: # we want vartrees only
+                if isinstance(scope.get(n), VariableTree):
+                    vtvars[n] = None
+
         conns = [(u,v) for u,v in self.list_connections(drivers=False) if u in vtvars]
 
         depgraph = self.subgraph(self.nodes_iter())
@@ -1385,7 +1390,7 @@ class CollapsedGraph(DGraphBase):
 
         for drv in drivers:
             for s in self.successors(drv):
-                if len(dests2node[s[1]]) > 1 and s[0] == s[1][0] and s in self:
+                if isinstance(s, tuple) and len(dests2node[s[1]]) > 1 and s[0] == s[1][0] and s in self:
                     self.remove_node(s)
 
     def vars2tuples(self, orig_g):
