@@ -1050,6 +1050,9 @@ comp.run()
         self.assertEqual(model.Oddball.executions, 3)
 
     def test_main_module(self):
+        #something about new windows machine configuration
+        #makes this test fail only when the test is run remotely
+        #and only on windows.  skipping for now.
         if sys.platform == 'win32' or sys.platform == 'win64':
             raise nose.SkipTest()
 
