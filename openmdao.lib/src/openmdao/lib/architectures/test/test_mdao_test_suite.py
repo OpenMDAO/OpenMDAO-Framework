@@ -15,7 +15,7 @@ class TestArchTestSuite(unittest.TestCase):
         ]
 
         architectures = [
-            BLISS,
+            #BLISS,  # keep this commented out until BLISS is updated
             MDF,
             IDF,
             CO,
@@ -34,15 +34,15 @@ class TestArchTestSuite(unittest.TestCase):
                 problem.architecture = architecture()
                 problem.architecture.parent = problem
 
-                #try:
-                print problem_name, architecture_name
-                problem._setup()
-                problem.check_config()
+                try:
+                    print problem_name, architecture_name
+                    problem._setup()
+                    problem.check_config()
 
-                #except:
-                #    import traceback
-                #    traceback.print_exc()
-                #    self.fail('%s architecture could not be configured for %s'%(problem_name, architecture_name))
+                except:
+                    import traceback
+                    traceback.print_exc()
+                    self.fail('%s architecture could not be configured for %s'%(problem_name, architecture_name))
 
 if __name__ == '__main__':
     unittest.main()

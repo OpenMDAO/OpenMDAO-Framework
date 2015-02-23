@@ -139,14 +139,14 @@ class CIDriver(CaseIteratorDriver):
         self.max_iterations = max_iterations
         self.comp_name = comp_name
 
-    def execute(self):
+    def setup_init(self):
+        super(CIDriver, self).setup_init()
         inp = self.comp_name+'.x'
         out = self.comp_name+'.y'
         cases = []
         for i in range(self.max_iterations):
             cases.append(Case(inputs=[(inp, i)], outputs=[out]))
         Case.set_vartree_inputs(self, cases)
-        super(CIDriver, self).execute()
 
 
 class CaseComponent(Component):
@@ -188,7 +188,7 @@ class TestCase(unittest.TestCase):
         self.tempdir = tempfile.mkdtemp(prefix='test_caseiter-')
         os.chdir(self.tempdir)
         SimulationRoot.chroot(self.tempdir)
-        
+
         #os.chdir(self.directory)
         self.model = set_as_top(MyModel())
         self.generate_cases()
