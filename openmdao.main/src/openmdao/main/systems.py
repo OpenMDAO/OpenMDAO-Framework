@@ -1567,6 +1567,11 @@ class CompoundSystem(System):
         # Regular paths, get the compname
         cname = name.split('.')[0]
 
+        # If name is a Variable Tree, then it belongs to our containing
+        # assembly, which must be local.
+        if cname in self.scope.list_vars():
+            return True
+
         system = self.scope._system.find_system(cname, recurse_subassy=False)
 
         if system:
@@ -1575,7 +1580,15 @@ class CompoundSystem(System):
         return False
 
     def find_system(self, name, recurse_subassy=True):
-        """ Return system with given name. """
+        """ Return system with given name.
+
+        name: string (OpenMDAO varpath)
+            Name of system you want to find.
+
+        recurse_subassy: Bool
+            Set to True to search beyond subassembly boundaries. Default
+            is True.
+        """
 
         if self.name == name:
             return self
