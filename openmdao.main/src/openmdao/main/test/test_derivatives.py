@@ -2569,6 +2569,12 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         self.assertTrue('comp4' in comp_list)
         self.assertTrue('comp5' in comp_list)
 
+
+        # Piggyback testing of the is_variable_local function -- make sure it
+        # pokes through opaque systems.
+        system = self.top.driver.workflow._system
+        self.assertTrue(system.is_variable_local('comp2.y1') is True)
+
         # Case 3 - differentiable (comp5)
 
         self.top.replace('comp5', ExecCompWithDerivatives(exp5, deriv5))
