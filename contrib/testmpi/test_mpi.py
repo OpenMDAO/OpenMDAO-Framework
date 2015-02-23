@@ -4,20 +4,19 @@ import time
 
 import numpy as np
 
-from openmdao.test.mpiunittest import MPITestCase, collective_assert_rel_error
-from openmdao.util.testutil import assert_rel_error
-from openmdao.main.test.simpledriver import SimpleDriver
-
-from openmdao.main.api import Assembly, Component, set_as_top, Driver
-from openmdao.main.interfaces import implements, ISolver
-from openmdao.main.datatypes.api import Float, Array
-from openmdao.main.mpiwrap import MPI
 from openmdao.lib.drivers.iterate import FixedPointIterator
 from openmdao.lib.drivers.newton_solver import NewtonSolver
-from openmdao.test.execcomp import ExecComp
-from openmdao.main.test.test_derivatives import SimpleDriver
-
 from openmdao.lib.optproblems import sellar
+
+from openmdao.main.api import Assembly, Component, set_as_top, Driver
+from openmdao.main.datatypes.api import Float, Array
+from openmdao.main.interfaces import implements, ISolver
+from openmdao.main.mpiwrap import MPI
+from openmdao.main.test.simpledriver import SimpleDriver
+from openmdao.test.execcomp import ExecComp
+from openmdao.test.mpiunittest import MPITestCase, collective_assert_rel_error
+from openmdao.util.testutil import assert_rel_error
+
 
 class NoDerivSimpleDriver(SimpleDriver):
     def requires_derivs(self):
@@ -330,8 +329,11 @@ class MPITests1(MPITestCase):
 
         # Piggyback testing of the is_variable_local function.
         system = top.driver.workflow._system
-        system.is_variable_local('C1.c')
-        system.is_variable_local('C2.a')
+        self.assertTrue(system.is_variable_local('C1.c') is True)
+
+        # Exclusive or - you either got C2 or C3.
+        self.assertTrue(system.is_variable_local('C2.a') != system.is_variable_local('C3.a'))
+        self.assertTrue(system.is_variable_local('C2.c') != system.is_variable_local('C3.c'))
 
     def test_fan_out_in_force_serial(self):
         size = 5  # array var size

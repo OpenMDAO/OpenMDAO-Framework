@@ -1556,17 +1556,16 @@ class CompoundSystem(System):
         """
         self.dfd_solver.calculate(arg, result)
 
-    def is_variable_local(name):
+    def is_variable_local(self, name):
         """Returns True if the variable in name is local to this process,
         otherwise it returns False."""
 
         # Regular paths, get the compname
         cname = name.split('.')[0]
 
-        system = self.__getitem__(cname)
+        system = self.scope._system.__getitem__(cname)
 
         if system:
-            print system.name, system.is_active()
             return system.is_active()
 
         return False
