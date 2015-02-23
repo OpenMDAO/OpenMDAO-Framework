@@ -35,7 +35,6 @@ from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import is_instance
 from openmdao.main.printexpr import eliminate_expr_ws
 from openmdao.main.expreval import ExprEvaluator, ConnectedExprEvaluator
-from openmdao.main.exprmapper import ExprMapper
 from openmdao.main.pseudocomp import PseudoComponent, UnitConversionPComp
 from openmdao.main.array_helpers import is_differentiable_var, get_val_and_index, \
                                         get_flattened_index, \
@@ -172,11 +171,6 @@ class Assembly(Component):
         self._depgraph = None
         self._reduced_graph = None
 
-        # for name, trait in self.class_traits().items():
-        #     if trait.iotype:  # input or output
-        #         self._depgraph.add_boundary_var(self, name, iotype=trait.iotype)
-        #
-        #self._exprmapper = ExprMapper(self)
         self.J_input_keys = None
         self.J_output_keys = None
 

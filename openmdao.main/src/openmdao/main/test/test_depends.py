@@ -675,7 +675,7 @@ class ExprDependsTestCase(unittest.TestCase):
         self.assertEqual(list(total), list(top.c2.a[0:2]))
 
     def _all_nested_connections(self, obj):
-        """Return a list of all connections from ExprMappers and DepGraphs all the way down."""
+        """Return a list of all connections all the way down."""
         visited = set()
         connection_set = set()
         objstack = [obj]
@@ -685,12 +685,9 @@ class ExprDependsTestCase(unittest.TestCase):
                 visited.add(obj)
                 if isinstance(obj, Assembly):
                     connection_set.update(obj.list_connections())
-                    #connection_set.update(obj._exprmapper.list_connections())
-                    #connection_set.update(obj._depgraph.list_connections())
                     for name in obj.list_containers():
                         comp = getattr(obj, name)
                         if isinstance(comp, Assembly):
-                            #connection_set.update(comp._depgraph.list_connections())
                             if isinstance(comp, Assembly):
                                 objstack.append(comp)
         return connection_set
@@ -852,5 +849,3 @@ if __name__ == "__main__":
     #p.print_callees()
 
     unittest.main()
-
-
