@@ -169,6 +169,9 @@ class Assembly(Component):
         # constraints/objectives.  This is the starting graph for
         # all later transformations.
         self._depgraph = None
+
+        # this is created from _depgraph. All _depgraph variable connections
+        # are collapsed into single nodes
         self._reduced_graph = None
 
         self.J_input_keys = None
@@ -271,7 +274,6 @@ class Assembly(Component):
                 obj = getattr(self, cname)
                 if obj is not tobj and has_interface(obj, IDriver):
                     refs[cname] = obj.get_references(target_name)
-                    #obj.remove_references(target_name)
 
         if hasattr(newobj, 'mimic'):
             try:
@@ -458,7 +460,6 @@ class Assembly(Component):
             self._unexecuted = list(diff - set(pre))
 
             if pre:
-                ## HACK ALERT!
                 ## If there are upstream comps that are not in any workflow,
                 ## create a hidden top level driver called _pre_driver. That
                 ## driver will be executed once per execution of the Assembly.
@@ -473,6 +474,14 @@ class Assembly(Component):
                 self._pre_driver._iter_set = set(pre)
                 self._pre_driver._full_iter_set = self.driver._full_iter_set.union(pre)
                 self._depgraph.add_node('_pre_driver', comp=True, driver=True)
+
+    @rbac(('owner', 'user'))
+    def collect_metadata(self):
+        # store metadata (size, etc.) for all relevant vars
+        self._get_all_var_metadata(self._reduced_graph)
+        for comp in self.get_comps():
+            if has_interface(comp, IAssembly):
+                comp.collect_metadata()
 
     @rbac(('owner', 'user'))
     def check_config(self, strict=False):
@@ -495,14 +504,6 @@ class Assembly(Component):
             info = sys.exc_info()
             self._new_config = True
             raise info[0], info[1], info[2]
-
-    @rbac(('owner', 'user'))
-    def collect_metadata(self):
-        # store metadata (size, etc.) for all relevant vars
-        self._get_all_var_metadata(self._reduced_graph)
-        for comp in self.get_comps():
-            if has_interface(comp, IAssembly):
-                comp.collect_metadata()
 
     def _check_input_collisions(self, graph):
         dests = set([v for u, v in graph.list_connections() if
@@ -814,7 +815,7 @@ class Assembly(Component):
                     if record_constant:
                         val = getattr(obj, name)
                         if isinstance(val, VariableTree):
-                            for path, val in self._expand_tree(path, val):
+                            for path, val in _expand_tree(path, val):
                                 constants[path] = val
                         else:
                             constants[path] = val
@@ -841,18 +842,6 @@ class Assembly(Component):
     def connected_inputs(self, name):
         """Helper for :meth:`configure_recording`."""
         return self._depgraph.list_inputs(name, connected=True)
-
-    def _expand_tree(self, path, tree):
-        """Return list of ``(path, value)`` with :class:`VariableTree`
-        expanded."""
-        path += '.'
-        result = []
-        for name, val in tree._items(set()):
-            if isinstance(val, VariableTree):
-                result.extend(self._expand_tree(path+name, val))
-            else:
-                result.append((path+name, val))
-        return result
 
     def stop(self):
         """Stop the calculation."""
@@ -1726,3 +1715,15 @@ def _split_varpath(cont, path):
     if t and t.iotype:
         return (None, cont, path)
     return (compname, getattr(cont, compname), varname)
+
+def _expand_tree(path, tree):
+    """Return list of ``(path, value)`` with :class:`VariableTree`
+    expanded."""
+    path += '.'
+    result = []
+    for name, val in tree._items(set()):
+        if isinstance(val, VariableTree):
+            result.extend(_expand_tree(path+name, val))
+        else:
+            result.append((path+name, val))
+    return result

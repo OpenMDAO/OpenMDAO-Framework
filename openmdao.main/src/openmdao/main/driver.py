@@ -1065,20 +1065,11 @@ class Driver(Component):
         if self.workflow._calc_gradient_inputs is not None:
             for param in self.workflow._calc_gradient_inputs:
                 dgraph.add_param(self.name, param)
-        else:  # add connections for our params/constraints/objectives
-            # if hasattr(self, 'list_param_group_targets'):
-            #     params = self.list_param_group_targets()
-
-            # for now do nothing here because params are already
-            # in the depgraph
-            pass
 
         # add connections for calc gradient outputs
         if self.workflow._calc_gradient_outputs is not None:
             for vname in self.workflow._calc_gradient_outputs:
                 dgraph.add_driver_input(self.name, vname)
-        else:
-            pass # for now, do nothing
 
     @rbac(('owner', 'user'))
     def size_variables(self):
