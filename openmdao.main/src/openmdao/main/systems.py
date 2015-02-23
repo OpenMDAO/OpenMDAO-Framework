@@ -1116,7 +1116,7 @@ class SimpleSystem(System):
 
         self.sol_vec.array[:] = self.rhs_vec.array[:]
 
-    def find_system(self, name):
+    def find_system(self, name, recurse_subassy=True):
         """ Return system with given name. """
         if self.name == name:
             return self
@@ -1336,12 +1336,16 @@ class AssemblySystem(SimpleSystem):
         return ISolver.providedBy(self._comp.driver) or \
                driver.__class__.__name__ == 'Driver'
 
-    def find_system(self, name):
+    def find_system(self, name, recurse_subassy=True):
         """ Return system with given name. """
 
         if self.name == name:
             return self
-        return self._comp._system.find_system(name)
+
+        if not recurse_subassy:
+            return None
+
+        return self._comp._system.find_system(name, recurse_subassy=recurse_subassy)
 
 
 class CompoundSystem(System):
@@ -1563,21 +1567,21 @@ class CompoundSystem(System):
         # Regular paths, get the compname
         cname = name.split('.')[0]
 
-        system = self.scope._system.__getitem__(cname)
+        system = self.scope._system.find_system(cname, recurse_subassy=False)
 
         if system:
             return system.is_active()
 
         return False
 
-    def find_system(self, name):
+    def find_system(self, name, recurse_subassy=True):
         """ Return system with given name. """
 
         if self.name == name:
             return self
 
         for sub in self.subsystems():
-            found = sub.find_system(name)
+            found = sub.find_system(name, recurse_subassy=recurse_subassy)
             if found:
                 return found
 
@@ -2025,12 +2029,12 @@ class OpaqueSystem(SimpleSystem):
     def get_req_cpus(self):
         return self._inner_system.get_req_cpus()
 
-    def find_system(self, name):
+    def find_system(self, name, recurse_subassy=True):
         """ Return system with given name. """
 
         if self.name == name:
             return self
-        return self._inner_system.find_system(name)
+        return self._inner_system.find_system(name, recurse_subassy=recurse_subassy)
 
 
 class DriverSystem(SimpleSystem):
@@ -2083,14 +2087,14 @@ class DriverSystem(SimpleSystem):
     def setup_scatters(self):
         self._comp.setup_scatters()
 
-    def find_system(self, name):
+    def find_system(self, name, recurse_subassy=True):
         """ Return system with given name. """
 
         if self.name == name:
             return self
 
         for sub in self.all_subsystems():
-            found = sub.find_system(name)
+            found = sub.find_system(name, recurse_subassy=recurse_subassy)
             if found:
                 return found
 
