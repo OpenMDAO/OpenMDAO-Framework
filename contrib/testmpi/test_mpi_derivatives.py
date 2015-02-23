@@ -1214,6 +1214,19 @@ class MPITests_2Proc(MPITestCase):
         J = top.driver.calc_gradient(mode='forward', return_format='dict')
         print J
 
+        # Check for Bret (Note, need better way to figure out rank that contains an assembly.)
+        if self.comm.rank == 1:
+            asys = top.nest1._system
+        else:
+            asys = top.nest2._system
+
+        # Slice should be there
+        self.assertTrue(('x[0]', ('comp.x[0]', 'x[0]')) in asys.variables.keys())
+
+        # Full vec shoulld not
+        self.assertTrue(('x', ('comp.x', 'x')) not in asys.variables.keys())
+
+
         collective_assert_rel_error(self,
                                     J['_pseudo_0.out0']['nest1.x[0]'][0][0],
                                     8.0, 0.0001)
