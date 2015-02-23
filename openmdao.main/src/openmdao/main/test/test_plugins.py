@@ -6,6 +6,7 @@ import shutil
 import sys
 import tempfile
 import unittest
+import pip
 from subprocess import check_call, STDOUT
 
 from openmdao.main.plugin import _get_plugin_parser, plugin_quickstart, \
@@ -26,6 +27,11 @@ class PluginsTestCase(unittest.TestCase):
         shutil.rmtree(self.tdir, onerror=onerror)
 
     def test_basic(self):
+        #Testing in pythonxy fails due to the pip version
+        pipvers = pip.__version__
+        if sys.platform == 'win32' and pipvers.__contains__("xy"):
+            raise nose.SkipTest()
+
         logging.debug('')
         logging.debug('test_basic')
 
