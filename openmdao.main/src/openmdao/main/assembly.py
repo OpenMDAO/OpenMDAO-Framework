@@ -1614,11 +1614,11 @@ class Assembly(Component):
             self.setup_depgraph()
             self.compute_itersets(None)
             self.compute_ordering(None)
+            self.pre_setup()
             self.setup_reduced_graph(inputs=inputs, outputs=outputs,
                                      drvname=drvname)
             self.setup_systems()
 
-            self.pre_setup()
 
             self.check_config()
 

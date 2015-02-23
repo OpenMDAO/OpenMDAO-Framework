@@ -259,14 +259,19 @@ class Driver(Component):
         """
         self._full_iter_set = set()
 
+        comps = [getattr(self.parent, n) for n in self.workflow._explicit_names]
+        subdrivers = [c for c in comps if has_interface(c, IDriver)]
+        subnames = [s.name for s in subdrivers]
+
+        allcomps = [getattr(self.parent, n) for n in cgraph if not n == self.name]
+        alldrivers = [c.name for c in allcomps if has_interface(c, IDriver)]
+
         # make our own copy of the graph to play with
-        cgraph = cgraph.subgraph(cgraph.nodes_iter())
+        cgraph = cgraph.subgraph([n for n in cgraph
+                                if n not in alldrivers or n in subnames])
 
         myset = set(self.workflow._explicit_names +
                     self.list_pseudocomps())
-
-        comps = [getattr(self.parent, n) for n in self.workflow._explicit_names]
-        subdrivers = [c for c in comps if has_interface(c, IDriver)]
 
         # First, have all of our subdrivers (recursively) determine
         # their iteration sets, because we need those to determine
@@ -275,8 +280,6 @@ class Driver(Component):
         subcomps = set()
         for comp in subdrivers:
             cgcopy = cgraph.subgraph(cgraph.nodes_iter())
-            cgcopy.remove_nodes_from([self.name]+[c.name for c in subdrivers
-                                                    if c is not comp])
             comp.compute_itersets(cgcopy)
             subcomps.update(comp._full_iter_set)
 
@@ -302,39 +305,51 @@ class Driver(Component):
             cgraph.add_edge(self.name, name)
             cgraph.add_edge(name, self.name)
 
+        # collapse our explicit subdrivers
+        self._iter_set = self.workflow._explicit_names
+        self._collapse_subdrivers(cgraph)
+
         comps = []
         for comps in strongly_connected_components(cgraph):
             if self.name in comps:
                 break
 
-        self._full_iter_set.update(comps)
-        self._full_iter_set.update(myset) # don't think I need this
-        self._full_iter_set.remove(self.name)
-
-        subcomps -= myset
-
-        self._iter_set = self._full_iter_set - subcomps
+        self._iter_set = set(comps)
+        self._iter_set.remove(self.name)
 
         # the following fixes a test failure when using DOEdriver with
         # an empty workflow.  This adds any comps that own DOEdriver
         # parameters to the DOEdriver's iteration set.
         conns = self.get_expr_depends()
-        self._iter_set.update([u for u,v in conns if u != self.name])
-        self._iter_set.update([v for u,v in conns if v != self.name])
+        self._iter_set.update([u for u,v in conns if u != self.name and u not in subcomps])
+        self._iter_set.update([v for u,v in conns if v != self.name and v not in subcomps])
+
+        old_iter = self._iter_set.copy()
+
+        # remove any drivers that were not explicity specified in our worklow
+        self._iter_set = set([c for c in self._iter_set if c not in alldrivers
+                                or c in subnames])
+
+        diff = old_iter - self._iter_set
+        if diff:
+            self._logger.warning("Driver '%s' had the following subdrivers removed"
+                                 " from its workflow because they were not explicity"
+                                 " added: %s" % (self.name, list(diff)))
 
         self._full_iter_set.update(self._iter_set)
+        self._full_iter_set.update(subcomps)
 
     def compute_ordering(self, cgraph):
         """Given a component graph, each driver can determine its iteration
         set and the ordering of its workflow.
         """
+        cgraph = cgraph.subgraph(self._full_iter_set)
+
         # call compute_ordering on all subdrivers
         for name in self._iter_set:
             obj = getattr(self.parent, name)
             if has_interface(obj, IDriver):
                 obj.compute_ordering(cgraph)
-
-        cgraph = cgraph.subgraph(self._full_iter_set)
 
         self._collapse_subdrivers(cgraph)
 

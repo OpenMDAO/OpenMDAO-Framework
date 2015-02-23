@@ -1970,3 +1970,18 @@ def merge_metadata(g, nodes):
         elif io == 'residual':
             meta['residual'] = True
     return meta
+
+def neighborhood_graph(g, compnode):
+    """Return a subgraph containing the given component node
+    and all of its immediate neighbor component nodes and the
+    variables connecting them.
+    """
+    nodes = [compnode]
+    for node in g.successors(compnode):
+        nodes.append(node)
+        nodes.extend(g.successors(node))
+    for node in g.predecessors(compnode):
+        nodes.append(node)
+        nodes.extend(g.predecessors(compnode))
+
+    return g.subgraph(nodes)
