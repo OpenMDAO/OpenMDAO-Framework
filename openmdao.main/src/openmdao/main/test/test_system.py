@@ -129,6 +129,17 @@ class TestcaseParaboloid(unittest.TestCase):
         sys = top._system.find_system("('_pseudo_0', 'comp', 'comp.x', 'comp.y')")
         self.assertTrue(sys.name == "('_pseudo_0', 'comp', 'comp.x', 'comp.y')")
 
+        system = top.driver.workflow._system
+        self.assertTrue(system.is_variable_local('comp.x') is True)
+
+        try:
+            system.is_variable_local('junk.stuff')
+        except Exception as err:
+            msg = 'Cannot find a system that contains varpath junk.stuff'
+            self.assertEqual(str(err), msg)
+        else:
+            self.fail("Exception expected")
+
 
 class ABCDArrayComp(Component):
     delay = Float(0.01, iotype='in')
