@@ -80,9 +80,9 @@ class SensitivityDriver(Driver):
         self.dF = J[:nobj, :]
         self.dG = J[nobj:nobj+ncon, :]
 
-    def pre_setup(self):
+    def size_variables(self):
         """ Size up our outputs."""
-        super(SensitivityDriver, self).pre_setup()
+        super(SensitivityDriver, self).size_variables()
         self._check()
 
         n_param = len(self.eval_parameters())
@@ -101,7 +101,6 @@ class SensitivityDriver(Driver):
 
         self.dF = zeros((n_obj, n_param))
         self.dG = zeros((n_con, n_param))
-
 
     def _check(self):
         """Make sure we aren't missing inputs or outputs."""

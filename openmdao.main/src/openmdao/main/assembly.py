@@ -1582,8 +1582,8 @@ class Assembly(Component):
             comp.setup_init()
 
     #FIXME: rename this to init_var_sizes()
-    def pre_setup(self):
-        self._top_driver.pre_setup()
+    def size_variables(self):
+        self._top_driver.size_variables()
 
     def post_setup(self):
         for comp in self.get_comps():
@@ -1611,14 +1611,17 @@ class Assembly(Component):
 
         try:
             self.setup_init()
+
             self.setup_depgraph()
+
             self.compute_itersets(None)
             self.compute_ordering(None)
-            self.pre_setup()
+
+            self.size_variables()
+
             self.setup_reduced_graph(inputs=inputs, outputs=outputs,
                                      drvname=drvname)
             self.setup_systems()
-
 
             self.check_config()
 

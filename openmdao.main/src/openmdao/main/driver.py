@@ -1081,9 +1081,9 @@ class Driver(Component):
             pass # for now, do nothing
 
     @rbac(('owner', 'user'))
-    def pre_setup(self):
+    def size_variables(self):
         for cname in self._ordering:
-            getattr(self.parent, cname).pre_setup()
+            getattr(self.parent, cname).size_variables()
 
 
 def _flattened_names(name, val, names=None):

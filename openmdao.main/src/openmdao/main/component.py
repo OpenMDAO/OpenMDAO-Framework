@@ -1397,7 +1397,7 @@ class Component(Container):
         self._provideJ_bounds = None
 
     @rbac(('owner', 'user'))
-    def pre_setup(self):
+    def size_variables(self):
         pass
 
     @rbac(('owner', 'user'))
