@@ -1050,6 +1050,9 @@ comp.run()
         self.assertEqual(model.Oddball.executions, 3)
 
     def test_main_module(self):
+        if sys.platform == 'win32' or sys.platform == 'win64':
+            raise nose.SkipTest()
+
         if MODULE_NAME == '__main__':
             return
 
@@ -1062,6 +1065,7 @@ comp.run()
         logging.debug('    Using python: %s' % python)
 
         orig_dir = os.getcwd()
+
         os.chdir(PY_DIR)
         try:
             cmdline = [python, os.path.join(TestCase.directory,
