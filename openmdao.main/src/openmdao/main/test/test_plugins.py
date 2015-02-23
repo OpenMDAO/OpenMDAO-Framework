@@ -28,10 +28,10 @@ class PluginsTestCase(unittest.TestCase):
 
     def test_basic(self):
         #Testing in pythonxy fails due to the pip version
-        if sys.platform == 'win32'
+        if sys.platform == 'win32':
           pipvers = pip.__version__
           if pipvers.__contains__("xy"):
-            raise nose.SkipTest()
+             raise nose.SkipTest()
 
         logging.debug('')
         logging.debug('test_basic')
