@@ -1054,7 +1054,7 @@ comp.run()
         #makes this test fail only when the test is run remotely
         #and only on windows.  skipping for now.
         if sys.platform == 'win32' or sys.platform == 'win64':
-            raise nose.SkipTest()
+            raise nose.SkipTest("networkx update required some numpy libraries that make test fail on Windows platforms.")
 
         if MODULE_NAME == '__main__':
             return

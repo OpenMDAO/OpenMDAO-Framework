@@ -31,7 +31,7 @@ class PluginsTestCase(unittest.TestCase):
         if sys.platform == 'win32':
           pipvers = pip.__version__
           if pipvers.__contains__("xy"):
-             raise nose.SkipTest()
+             raise nose.SkipTest("PythonXY's pip name is non-standard 'pip-2.7xy' and causes test failure when 'pip-2.7' is searched for and not found.")
 
         logging.debug('')
         logging.debug('test_basic')
