@@ -329,11 +329,23 @@ class MPITests1(MPITestCase):
 
         # Piggyback testing of the is_variable_local function.
         system = top.driver.workflow._system
-        self.assertTrue(system.is_variable_local('C1.c') is True)
 
-        # Exclusive or - you either got C2 or C3.
-        self.assertTrue(system.is_variable_local('C2.a') != system.is_variable_local('C3.a'))
-        self.assertTrue(system.is_variable_local('C2.c') != system.is_variable_local('C3.c'))
+        # Only lowest rank has vars that are on all proceses
+        if self.comm.rank == 0:
+            self.assertTrue(system.is_variable_local('C1.c') is True)
+            self.assertTrue(system.is_variable_local('C2.a') is True)
+            self.assertTrue(system.is_variable_local('C3.b') is True)
+            self.assertTrue(system.is_variable_local('C1.exec_count') is True)
+        else:
+            self.assertTrue(system.is_variable_local('C1.c') is False)
+            self.assertTrue(system.is_variable_local('C2.a') is False)
+            self.assertTrue(system.is_variable_local('C3.b') is False)
+            self.assertTrue(system.is_variable_local('C1.exec_count') is False)
+
+        # Exclusive or - you either got C2 or C3 on a given process.
+        self.assertTrue(system.is_variable_local('C2.c') != system.is_variable_local('C3.d'))
+        self.assertTrue(system.is_variable_local('C4.a') != system.is_variable_local('C4.b'))
+
 
     def test_fan_out_in_force_serial(self):
         size = 5  # array var size
