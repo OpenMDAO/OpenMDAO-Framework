@@ -1552,6 +1552,27 @@ class CompoundSystem(System):
         """
         self.dfd_solver.calculate(arg, result)
 
+    def is_variable_local(self, name):
+        """Returns True if the variable in name is local to this process,
+        otherwise it returns False. If name can't be found, then an exception
+        is raised."""
+
+        # Regular paths, get the compname
+        cname = name.split('.')[0]
+
+        # If name is a Variable Tree, then it belongs to our containing
+        # assembly, which must be local.
+        if cname in self.scope.list_vars():
+            return True
+
+        system = self.scope._system.find_system(cname, recurse_subassy=False)
+
+        if system:
+            return system.is_active()
+
+        msg = 'Cannot find a system that contains varpath %s' % name
+        raise RuntimeError(msg)
+
     def find_system(self, name):
         """ Return system with given name. """
 

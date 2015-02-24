@@ -528,6 +528,7 @@ class Workflow(object):
         inputs = []
         outputs = []
 
+
         # Parameters
         self._rec_parameters = []
         if hasattr(driver, 'get_parameters'):
@@ -536,9 +537,10 @@ class Workflow(object):
                     name = name[0]
                 path = prefix+name
                 if save_problem_formulation or \
-                   self._check_path(path, includes, excludes):
-                    self._rec_parameters.append(param)
-                    inputs.append(name)
+                    self._check_path(path, includes, excludes):
+                    if self._system.is_variable_local(path):
+                        self._rec_parameters.append(param)
+                        inputs.append(name)
 
         # Objectives
         self._rec_objectives = []
@@ -553,10 +555,11 @@ class Workflow(object):
                 if save_problem_formulation or \
                    self._check_path(path, includes, excludes):
                     self._rec_objectives.append(key)
-		    if key != objective.text:
-			outputs.append(name)
-		    else:
-			outputs.append(name + '.out0')
+                    if self._system.is_variable_local(path):
+                        if key != objective.text:
+                            outputs.append(name)
+                        else:
+                            outputs.append(name + '.out0')
 
         # Responses
         self._rec_responses = []
@@ -566,8 +569,9 @@ class Workflow(object):
                 path = prefix+name
                 if save_problem_formulation or \
                    self._check_path(path, includes, excludes):
-                    self._rec_responses.append(key)
-                    outputs.append(name + '.out0')
+                    if self._system.is_variable_local(path):
+                        self._rec_responses.append(key)
+                        outputs.append(name + '.out0')
 
         # Constraints
         self._rec_constraints = []
@@ -577,16 +581,18 @@ class Workflow(object):
                 path = prefix+name
                 if save_problem_formulation or \
                    self._check_path(path, includes, excludes):
-                    self._rec_constraints.append(con)
-                    outputs.append(name + '.out0')
+                    if self._system.is_variable_local(path):
+                        self._rec_constraints.append(con)
+                        outputs.append(name + '.out0')
         if hasattr(driver, 'get_ineq_constraints'):
             for con in driver.get_ineq_constraints().values():
                 name = con.pcomp_name
                 path = prefix+name
                 if save_problem_formulation or \
                    self._check_path(path, includes, excludes):
-                    self._rec_constraints.append(con)
-                    outputs.append(name + '.out0')
+                    if self._system.is_variable_local(path):
+                        self._rec_constraints.append(con)
+                        outputs.append(name + '.out0')
                     #outputs.append(path+'.out0')
 
         #driver.get_reduced_graph()
@@ -594,6 +600,9 @@ class Workflow(object):
         self._rec_outputs = []
         for comp in driver.workflow: 
             successors = driver._reduced_graph.successors(comp.name)
+
+            print driver._reduced_graph.successors(comp.name)
+
             for output_name, aliases in successors:
 
                 # From Bret: it does make sense to skip subdrivers like you said, except for the 
@@ -612,9 +621,10 @@ class Workflow(object):
                             break
                 #output_name = prefix + output_name
                 if output_name not in outputs and self._check_path(output_name, includes, excludes) :
-                    outputs.append(output_name)
-                    self._rec_outputs.append(output_name)
-                    #self._rec_all_outputs.append(output_name)
+                    if self._system.is_variable_local(output_name):
+                        outputs.append(output_name)
+                        self._rec_outputs.append(output_name)
+                        #self._rec_all_outputs.append(output_name)
                     
         #####
         # also need get any outputs of comps that are not connected vars 
@@ -635,8 +645,9 @@ class Workflow(object):
 
                 #output_name = prefix + output_name
                 if output_name not in outputs and self._check_path(output_name, includes, excludes) :
-                    outputs.append(output_name)
-                    self._rec_outputs.append(output_name)
+                    if self._system.is_variable_local(output_name):
+                        outputs.append(output_name)
+                        self._rec_outputs.append(output_name)
 
         # Other outputs.
         #self._rec_outputs = []
@@ -673,17 +684,22 @@ class Workflow(object):
         name = '%s.workflow.itername' % driver.name
         path = prefix+name
         if self._check_path(path, includes, excludes):
-            self._rec_outputs.append(name)
-            outputs.append(name)
+            if self._system.is_variable_local(output_name):
+                self._rec_outputs.append(name)
+                outputs.append(name)
 
         # If recording required, register names in recorders.
         self._rec_required = bool(inputs or outputs)
         if self._rec_required:
+
+            print inputs + outputs
             top = scope
             while top.parent is not None:
                 top = top.parent
             for recorder in top.recorders:
                 recorder.register(driver, inputs, outputs)
+
+        #import pdb; pdb.set_trace()
 
         return (set(prefix+name for name in inputs), dict())
 
@@ -715,6 +731,13 @@ class Workflow(object):
 
         inputs = []
         outputs = []
+
+        print "recording case"
+        if MPI:
+            print 'workflow', self
+            print 'workflow comm',self._system.mpi.comm
+            print 'workflow rank',self._system.mpi.rank
+
 
         # Parameters.
         for param in self._rec_parameters:
@@ -755,6 +778,9 @@ class Workflow(object):
 
         # Other outputs.
         for name in self._rec_outputs:
+
+            print "other output and rank", name, scope.get(name), self._system.mpi.rank
+
             try:
                 outputs.append(scope.get(name))
             except Exception as exc:
