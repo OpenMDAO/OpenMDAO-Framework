@@ -442,6 +442,7 @@ class System(object):
 
         if not self.is_active():
             self.local_var_sizes = numpy.zeros((0,0), int)
+            self.noflat_var_sizes = numpy.zeros((0,0), int)
             self.input_sizes = numpy.zeros(0, int)
             return
 
@@ -456,9 +457,12 @@ class System(object):
         # create an (nproc x numvars) var size vector containing
         # local sizes across all processes in our comm
         self.local_var_sizes = numpy.zeros((size, len(self.vector_vars)), int)
+        self.noflat_var_sizes = numpy.zeros((size, len(self.noflat_vars)), int)
 
         for i, (name, var) in enumerate(self.vector_vars.items()):
             self.local_var_sizes[rank, i] = var['size']
+        for i, (name, var) in enumerate(self.noflat_vars.items()):
+            self.noflat_var_sizes[rank, i] = 1
 
         # collect local var sizes from all of the processes in our comm
         # these sizes will be the same in all processes except in cases
@@ -468,6 +472,8 @@ class System(object):
         if MPI:
             comm.Allgather(self.local_var_sizes[rank,:],
                            self.local_var_sizes)
+            comm.Allgather(self.noflat_var_sizes[rank,:],
+                           self.noflat_var_sizes)
 
         # create a (1 x nproc) vector for the sizes of all of our
         # local inputs
@@ -1569,7 +1575,7 @@ class CompoundSystem(System):
         # scope, then the relevant component is the source of the connection.
         cname = name.split('.')[0]
         collapsed = self.scope.name2collapsed.get(name)
-        if collapsed:
+        if isinstance(collapsed, tuple):
             src = collapsed[0]
             cname = src.split('.')[0]
         else:
@@ -1579,7 +1585,7 @@ class CompoundSystem(System):
         # assembly, which must be local.
         scope_sys = self.scope._system
         if cname in self.scope.list_vars():
-            system = self.scope
+            system = self.scope._system
         else:
             system = scope_sys.find_system(cname, recurse_subassy=False)
 
@@ -1597,10 +1603,6 @@ class CompoundSystem(System):
         # Check vector_vars to figure out if we are the lowest rank.
         varkeys = scope_sys.vector_vars.keys()
         lowest = None
-        #print name, varkeys
-        #print "self.vector_vars.keys", self.vector_vars.keys(), self.local_var_sizes
-        #print "scope_sys.vector_vars.keys", scope_sys.vector_vars.keys(), scope_sys.local_var_sizes
-        #print "system.vector_vars.keys", system.vector_vars.keys(), system.local_var_sizes
 
         # First, check the flattenable variables.
         if collapsed in varkeys:
@@ -1610,12 +1612,11 @@ class CompoundSystem(System):
 
         # Next, check the unflattenable variables.
 
-        # Finally, it must be an unconnected var. Just print these on the
+        # Finally, it must be an unconnected variable Just print these on the
         # lowest rank for our comp.
         else:
             sizes = system.local_var_sizes
             lowest = numpy.nonzero(sizes)[0][0]
-            print lowest
 
         if lowest == self.mpi.rank:
             return True
