@@ -1571,10 +1571,12 @@ class CompoundSystem(System):
         our rank is the lowest rank that it appears on. Otherwise it returns
         False. If name can't be found, then an exception is raised."""
 
+        print self.name, self.list_subsystems()
         # Regular paths, get the compname. If it is a connection in our
         # scope, then the relevant component is the source of the connection.
         cname = name.split('.')[0]
         collapsed = self.scope.name2collapsed.get(name)
+        print cname, collapsed
         if isinstance(collapsed, tuple):
             src = collapsed[0]
             target = collapsed[1]
@@ -1592,8 +1594,10 @@ class CompoundSystem(System):
         scope_sys = self.scope._system
         if cname in self.scope.list_vars():
             system = self.scope._system
+            print "assembly"
         else:
             system = scope_sys.find_system(cname, recurse_subassy=False)
+            print "comp", system, cname
 
         if not system:
             msg = 'Cannot find a system that contains varpath %s' % name
