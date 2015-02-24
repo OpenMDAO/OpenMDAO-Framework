@@ -9,7 +9,7 @@ import traceback
 import numpy as np
 from scipy.sparse.linalg import gmres, LinearOperator
 
-from openmdao.main.mpiwrap import MPI, PETSc
+from openmdao.main.mpiwrap import MPI, PETSc, get_norm
 from openmdao.util.graph import fix_single_tuple
 from openmdao.util.log import logger
 
@@ -21,18 +21,34 @@ class LinearSolver(object):
         """ Set up any LinearSolver object """
         self._system = system
         self.options = system.options
+        self.custom_jacs = {}
 
-        # Figure out base indentation for printing the residual during convergence.
+        # A few extra checks if we call calc_gradient from a driver.
         level = 0
         if hasattr(system, '_parent_system') and \
            system._parent_system is not None and \
            hasattr(system._parent_system, '_comp'):
             drv = system._parent_system._comp
+
+            # Figure out base indentation for printing the residual during
+            # convergence.
             self.drv_name = drv.name
             if drv.itername == '-driver':
                 level = 0
             else:
                 level = drv.itername.count('.') + 1
+
+            # Figure out if the user defined custom constraint gradients.
+            if hasattr(drv, 'get_constraints'):
+                for constraint in drv.get_constraints().values():
+                    if constraint.jacs is not None:
+                        key = '%s.out0' % constraint.pcomp_name
+                        self.custom_jacs[key] = constraint.jacs
+            if hasattr(drv, 'get_2sided_constraints'):
+                for constraint in drv.get_2sided_constraints().values():
+                    if constraint.jacs is not None:
+                        key = '%s.out0' % constraint.pcomp_name
+                        self.custom_jacs[key] = constraint.jacs
 
         else:
             self.drv_name = system.name
@@ -59,11 +75,27 @@ class LinearSolver(object):
         system.rhs_vec.array[:] *= -1.0
         system.rhs_vec.array[:] += system.rhs_buf[:]
 
-        if MPI:
-            system.rhs_vec.petsc_vec.assemble()
-            return system.rhs_vec.petsc_vec.norm()
-        else:
-            return np.linalg.norm(system.rhs_vec.array)
+        return get_norm(system.rhs_vec)
+
+    def user_defined_jacobian(self, con, params, J):
+        """ Inserts the user-defined Jacobian into the full Jacobian rather
+        than doing any calculation. """
+
+        if not isinstance(J, dict):
+            msg = 'Only PyOptSparse supports custom Jacobians'
+            raise RuntimeError(msg)
+
+        jacs = self.custom_jacs[con]()
+        for param in params:
+            
+            if param in jacs:
+                J[con][param] = jacs[param]
+                
+            # Assume zero if user did not explicitly define.
+            else:
+                psize = self._system.get_size(param)
+                csize = self._system.get_size(con)
+                J[con][param] = np.zeros((csize, psize))
 
 
 class ScipyGMRES(LinearSolver):
@@ -118,8 +150,14 @@ class ScipyGMRES(LinearSolver):
             if isinstance(param, tuple):
                 param = param[0]
 
-            in_indices = system.vec['u'].indices(system.scope, param)
+            in_indices = system.vec['u'].indices(system, param)
             jbase = j
+
+            # Did the user define a custom Jacobian for a constraint?
+            if system.mode == 'adjoint' and param in self.custom_jacs:
+                self.user_defined_jacobian(param, outputs, J)
+                j += len(in_indices)
+                continue
 
             for irhs in in_indices:
 
@@ -136,7 +174,7 @@ class ScipyGMRES(LinearSolver):
                     if isinstance(item, tuple):
                         item = item[0]
 
-                    out_indices = system.vec['u'].indices(system.scope, item)
+                    out_indices = system.vec['u'].indices(system, item)
                     nk = len(out_indices)
 
                     if return_format == 'dict':
@@ -306,6 +344,12 @@ class PETSc_KSP(LinearSolver):
 
             jbase = j
 
+            # Did the user define a custom Jacobian for a constraint?
+            if system.mode == 'adjoint' and param in self.custom_jacs:
+                self.user_defined_jacobian(param, outputs, J)
+                j += param_size
+                continue
+
             for irhs in xrange(param_size):
 
                 # Solve the system with PetSC KSP
@@ -449,9 +493,15 @@ class LinearGS(LinearSolver):
             if isinstance(param, tuple):
                 param = param[0]
 
-            in_indices = system.rhs_vec.indices(system.scope, param)
+            in_indices = system.rhs_vec.indices(system, param)
             nj = len(in_indices)
             jbase = j
+
+            # Did the user define a custom Jacobian for a constraint?
+            if system.mode == 'adjoint' and param in self.custom_jacs:
+                self.user_defined_jacobian(param, outputs, J)
+                j += nj
+                continue
 
             for irhs in in_indices:
 
@@ -471,7 +521,7 @@ class LinearGS(LinearSolver):
                     if isinstance(item, tuple):
                         item = item[0]
 
-                    out_indices = system.sol_vec.indices(system.scope, item)
+                    out_indices = system.sol_vec.indices(system, item)
                     nk = len(out_indices)
 
                     if return_format == 'dict':
@@ -563,7 +613,7 @@ class LinearGS(LinearSolver):
                             #print "Z4", system.vec['du'].array, system.vec['dp'].array, system.vec['df'].array; sys.stdout.flush()
                     system.rhs_vec.array[:] = system.sol_buf[:]
                     #print "Z5", system.vec['du'].array, system.vec['dp'].array, system.vec['df'].array; sys.stdout.flush()
-                    
+
                     subsystem.solve_linear(options)
                     #print "Z6", system.vec['du'].array, system.vec['dp'].array, system.vec['df'].array; sys.stdout.flush()
 

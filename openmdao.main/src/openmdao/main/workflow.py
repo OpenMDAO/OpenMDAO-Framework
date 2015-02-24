@@ -160,7 +160,7 @@ class Workflow(object):
         """ Run the Components in this Workflow. """
         if not self._system.is_active():
             return
-            
+
         self._stop = False
         self._exec_count += 1
 
@@ -326,7 +326,7 @@ class Workflow(object):
         df vector."""
 
         self._system.calc_newton_direction(options=self.parent.gradient_options,
-                                          iterbase=self._iterbase())
+                                           iterbase=self._iterbase())
 
     def check_gradient(self, inputs=None, outputs=None, stream=sys.stdout, mode='auto'):
         """Compare the OpenMDAO-calculated gradient with one calculated
@@ -528,7 +528,6 @@ class Workflow(object):
         inputs = []
         outputs = []
 
-
         # Parameters
         self._rec_parameters = []
         if hasattr(driver, 'get_parameters'):
@@ -598,18 +597,15 @@ class Workflow(object):
         #driver.get_reduced_graph()
         #self._rec_all_outputs = []
         self._rec_outputs = []
-        for comp in driver.workflow: 
+        for comp in driver.workflow:
             successors = driver._reduced_graph.successors(comp.name)
-
-            print driver._reduced_graph.successors(comp.name)
-
             for output_name, aliases in successors:
 
-                # From Bret: it does make sense to skip subdrivers like you said, except for the 
-                #      case where a driver has actual outputs of its own.  So you may have to keep 
+                # From Bret: it does make sense to skip subdrivers like you said, except for the
+                #      case where a driver has actual outputs of its own.  So you may have to keep
                 #  subdriver successors if the edge between the subdriver and the successor
                 #  is an actual data connection.
-                # look at the edge metadata to see if there's maybe a 'conn' in there for real connections. 
+                # look at the edge metadata to see if there's maybe a 'conn' in there for real connections.
                 if has_interface(comp, IDriver):
                     if not is_connection(driver._reduced_graph, comp.name, output_name):
                         continue
@@ -627,16 +623,16 @@ class Workflow(object):
                         #self._rec_all_outputs.append(output_name)
                     
         #####
-        # also need get any outputs of comps that are not connected vars 
+        # also need get any outputs of comps that are not connected vars
         #   and therefore not in the graph
-        # could use 
+        # could use
         #   scope._depgraph
         #      there's 'iotype' metadata in the var nodes
-        #    
+        #
         #   also:
         #         scope._depgraph.list_outputs('comp2')
-        
-        for comp in driver.workflow: 
+
+        for comp in driver.workflow:
             for output_name in scope._depgraph.list_outputs(comp.name):
                 if has_interface(comp, IDriver): # Only record outputs from drivers if they are framework variables
                     metadata = scope.get_metadata(output_name)
@@ -849,7 +845,7 @@ class Workflow(object):
         self._reduced_graph = None
         for comp in self:
             comp.pre_setup()
-    
+
     def setup_systems(self, system_type):
         """Get the subsystem for this workflow. Each
         subsystem contains a subgraph of this workflow's component
@@ -880,7 +876,7 @@ class Workflow(object):
         for node in params:
             param = node[0]
             reduced.node[param]['system'] = \
-                       ParamSystem(scope, reduced, param)
+                ParamSystem(scope, reduced, param)
 
         #outs = []
         #for p in parent_graph.predecessors(drvname):
@@ -898,7 +894,7 @@ class Workflow(object):
         cgraph = reduced.component_graph()
 
         opaque_map = {} # map of all internal comps to collapsed
-                              # name of opaque system
+                                # name of opaque system
         if self.scope._derivs_required:
             # collapse non-differentiable system groups into
             # opaque systems
@@ -919,7 +915,7 @@ class Workflow(object):
                 for c in gtup:
                     opaque_map[c] = gtup
 
-            # get rid of any back edges for opaque boundary nodes that 
+            # get rid of any back edges for opaque boundary nodes that
             # originate inside of the opaque system
             to_remove = []
             for node in systems:
@@ -972,7 +968,7 @@ class Workflow(object):
             self._system = cgraph.node[name].get('system')
         else:
             raise RuntimeError("setup_systems called on %s.workflow but component graph is empty!" %
-                                self.parent.get_pathname())
+                               self.parent.get_pathname())
 
     def get_req_cpus(self):
         """Return requested_cpus"""
@@ -1009,7 +1005,7 @@ def get_cycle_vars(graph, varmeta):
     # examine the graph to see if we have any cycles that we need to
     # deal with
     cycle_vars = []
-        
+
     # make a copy of the graph since we don't want to modify it
     g = graph.subgraph(graph.nodes_iter())
 

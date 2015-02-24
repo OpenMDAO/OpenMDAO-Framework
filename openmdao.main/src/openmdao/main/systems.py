@@ -8,7 +8,7 @@ import networkx as nx
 from zope.interface import implements
 
 # pylint: disable-msg=E0611,F0401
-from openmdao.main.mpiwrap import MPI, MPI_info, PETSc
+from openmdao.main.mpiwrap import MPI, MPI_info, PETSc, get_norm
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.finite_difference import FiniteDifference, DirectionalFD
 from openmdao.main.linearsolver import ScipyGMRES, PETSc_KSP, LinearGS
@@ -76,7 +76,7 @@ class System(object):
                     self._in_nodes.append(n)
 
         self._in_nodes = sorted(self._in_nodes)
-        #print "%s: _in_nodes = %s" % (str(self.name), self._in_nodes)
+        #print "%s (%s): _in_nodes = %s" % (str(self.name), type(self), self._in_nodes)
         self._out_nodes = sorted(self._out_nodes)
 
         self.mpi = MPI_info()
@@ -490,12 +490,12 @@ class System(object):
             #        components...
             if name in self.vector_vars:
                 isrc = self.vector_vars.keys().index(name)
-                idxs = numpy.array(range(varmeta[name]['size']), 'i')
+                #idxs = numpy.array(range(varmeta[name]['size']), 'i')
+                idxs = petsc_linspace(0, varmeta[name]['size'])
             else:
                 base = name[0].split('[', 1)[0]
                 if base == name[0]:
                     continue
-                #isrc = self.vector_vars.keys().index(self.scope.name2collapsed[base])
                 idxs = varmeta[name].get('flat_idx')
 
             self.arg_idx[name] = idxs# + numpy.sum(self.local_var_sizes[:self.mpi.rank, isrc])
@@ -869,7 +869,13 @@ class System(object):
         self.vec['dp'].array[:] = 0.0
 
         varkeys = self.vector_vars.keys()
-        ivar = varkeys.index(vname)
+        if vname in varkeys:
+            ivar = varkeys.index(vname)
+        else:
+            base = vname[0].split('[',1)[0]
+            base = self.scope.name2collapsed[base]
+            ivar = varkeys.index(base)
+            ind = self.scope._var_meta[vname]['flat_idx'][ind]
 
         if self.local_var_sizes[self.mpi.rank, ivar] > 0:
             ind += numpy.sum(self.local_var_sizes[:, :ivar])
@@ -914,6 +920,8 @@ class SimpleSystem(System):
         else:
             if has_interface(comp, IComponent):
                 self._comp = comp
+                if isinstance(comp, PseudoComponent):
+                    comp._system = self
                 nodes = comp.get_full_nodeset()
                 cpus = comp.get_req_cpus()
             else:
@@ -982,9 +990,6 @@ class SimpleSystem(System):
 
         for vname in chain(mystates, mynonstates):
             if vname not in self.variables:
-                base = base_var(self.scope._depgraph, vname[0])
-                if base != vname[0] and base in topsys._reduced_graph:
-                    continue
                 self.variables[vname] = varmeta[vname].copy()
 
         mapped_states = resid_state_map.values()
@@ -1111,7 +1116,7 @@ class SimpleSystem(System):
 
         self.sol_vec.array[:] = self.rhs_vec.array[:]
 
-    def find_system(self, name):
+    def find_system(self, name, recurse_subassy=True):
         """ Return system with given name. """
         if self.name == name:
             return self
@@ -1331,20 +1336,23 @@ class AssemblySystem(SimpleSystem):
         return ISolver.providedBy(self._comp.driver) or \
                driver.__class__.__name__ == 'Driver'
 
-    def find_system(self, name):
+    def find_system(self, name, recurse_subassy=True):
         """ Return system with given name. """
 
         if self.name == name:
             return self
-        return self._comp._system.find_system(name)
+
+        if not recurse_subassy:
+            return None
+
+        return self._comp._system.find_system(name, recurse_subassy=recurse_subassy)
 
 
 class CompoundSystem(System):
     """A System that has subsystems."""
 
     def __init__(self, scope, graph, subg, name=None):
-        super(CompoundSystem, self).__init__(scope, graph,
-                                             simple_node_iter(subg.nodes()), name)
+        super(CompoundSystem, self).__init__(scope, graph, subg.nodes(), name)
         self.driver = None
         self.graph = subg
         self._local_subsystems = []  # subsystems in the same process
@@ -1573,14 +1581,22 @@ class CompoundSystem(System):
         msg = 'Cannot find a system that contains varpath %s' % name
         raise RuntimeError(msg)
 
-    def find_system(self, name):
-        """ Return system with given name. """
+    def find_system(self, name, recurse_subassy=True):
+        """ Return system with given name.
+
+        name: string (OpenMDAO varpath)
+            Name of system you want to find.
+
+        recurse_subassy: Bool
+            Set to True to search beyond subassembly boundaries. Default
+            is True.
+        """
 
         if self.name == name:
             return self
 
         for sub in self.subsystems():
-            found = sub.find_system(name)
+            found = sub.find_system(name, recurse_subassy=recurse_subassy)
             if found:
                 return found
 
@@ -1969,11 +1985,14 @@ class OpaqueSystem(SimpleSystem):
         inner_u = self._inner_system.vec['u']
         inner_du = self._inner_system.vec['du']
 
-        vnames = self._inner_system.list_inputs() + \
-                 self._inner_system.list_states()
-        inner_u.set_from_scope(self.scope, vnames)
+        # Make sure the inner_vector is initialized with values from the
+        # scope. Only need to do the inputs that span the outer and inner
+        # vectors.
+        bnames = self.list_inputs() + \
+                 self.list_states()
+        inner_u.set_from_scope(self.scope, bnames)
         if self.complex_step is True:
-            inner_du.set_from_scope_complex(self.scope, vnames)
+            inner_du.set_from_scope_complex(self.scope, bnames)
 
         self._inner_system.run(iterbase, case_label=case_label, case_uuid=case_uuid)
 
@@ -2025,12 +2044,12 @@ class OpaqueSystem(SimpleSystem):
     def get_req_cpus(self):
         return self._inner_system.get_req_cpus()
 
-    def find_system(self, name):
+    def find_system(self, name, recurse_subassy=True):
         """ Return system with given name. """
 
         if self.name == name:
             return self
-        return self._inner_system.find_system(name)
+        return self._inner_system.find_system(name, recurse_subassy=recurse_subassy)
 
 
 class DriverSystem(SimpleSystem):
@@ -2083,14 +2102,14 @@ class DriverSystem(SimpleSystem):
     def setup_scatters(self):
         self._comp.setup_scatters()
 
-    def find_system(self, name):
+    def find_system(self, name, recurse_subassy=True):
         """ Return system with given name. """
 
         if self.name == name:
             return self
 
         for sub in self.all_subsystems():
-            found = sub.find_system(name)
+            found = sub.find_system(name, recurse_subassy=recurse_subassy)
             if found:
                 return found
 
@@ -2424,18 +2443,3 @@ def get_full_nodeset(scope, group):
         else:
             names.add(name)
     return names
-
-
-def get_norm(vec):
-    """Either do a distributed norm or a local numpy
-    norm depending on whether we're running under MPI.
-
-    vec: VecWrapper
-        The vector to take the norm of
-    """
-
-    if MPI:
-        vec.petsc_vec.assemble()
-        return vec.petsc_vec.norm()
-    else:
-        return numpy.linalg.norm(vec.array)

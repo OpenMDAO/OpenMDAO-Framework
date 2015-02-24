@@ -6,7 +6,7 @@ iterations are used as termination criteria.
 
 # pylint: disable=E0611,F0401
 
-from openmdao.main.mpiwrap import MPI
+from openmdao.main.mpiwrap import MPI, get_norm
 if not MPI:
     from numpy.linalg import norm
 
@@ -49,10 +49,6 @@ class FixedPointIterator(Driver):
         self.normval = 1.e99
         self.norm0 = 1.e99
 
-        # user either the petsc norm or numpy.linalg norm
-        if MPI:
-            self.norm = self._mpi_norm
-
     def execute(self):
         """ Executes an iterative solver """
 
@@ -76,6 +72,7 @@ class FixedPointIterator(Driver):
 
         self.current_iteration = 0
         if MPI:
+            self._norm_order = None # norm order not used in MPI
             if self.workflow._system.mpi.comm == MPI.COMM_NULL:
                 return
         else:
@@ -92,12 +89,13 @@ class FixedPointIterator(Driver):
         self.normval = 1.e99
         self.norm0 = 1.e99
         self.run_iteration()
-        self.normval = self.norm()
+        self.normval = get_norm(self.workflow._system.vec['f'],
+                                self._norm_order)
         self.norm0 = self.normval if self.normval != 0.0 else 1.0
-        
+
         if self.iprint > 0:
             self.print_norm('NLN_GS', 0, self.normval, self.norm0)
-       
+
     def run_iteration(self):
         """Runs an iteration."""
         self.current_iteration += 1
@@ -121,27 +119,17 @@ class FixedPointIterator(Driver):
 
     def post_iteration(self):
         """Runs after each iteration"""
-        self.normval = self.norm()
+        self.normval = get_norm(self.workflow._system.vec['f'],
+                                self._norm_order)
         if self.iprint > 0:
-            self.print_norm('NLN_GS', self.current_iteration-1, self.normval, 
+            self.print_norm('NLN_GS', self.current_iteration-1, self.normval,
                             self.norm0)
 
     def end_iteration(self):
         """Print convergence."""
         if self.iprint > 0:
-            self.print_norm('NLN_GS', self.current_iteration-1, self.normval, 
+            self.print_norm('NLN_GS', self.current_iteration-1, self.normval,
                             self.norm0, msg='Converged')
-        
-    def _mpi_norm(self):
-        """ Compute the norm of the f Vec using petsc. """
-        fvec = self.workflow._system.vec['f']
-        fvec.petsc_vec.assemble()
-        return fvec.petsc_vec.norm()
-
-    def norm(self):
-        """ Compute the norm using numpy.linalg. """
-        return norm(self.workflow._system.vec['f'].array,
-                    self._norm_order)
 
     def check_config(self, strict=False):
         """Make sure the problem is set up right."""

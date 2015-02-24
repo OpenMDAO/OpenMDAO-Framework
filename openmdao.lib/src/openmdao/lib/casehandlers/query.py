@@ -11,6 +11,7 @@ from numpy import ndarray
 from openmdao.main.api import Assembly, VariableTree
 from openmdao.lib.casehandlers.pymongo_bson.json_util import loads, dumps
 from openmdao.lib.casehandlers.pymongo_bson.binary import Binary
+from openmdao.lib.casehandlers.jsoncase import _Encoder
 
 _GLOBAL_DICT = dict(__builtins__=None)
 
@@ -861,39 +862,6 @@ class _JSONWriter(object):
             pass
         elif self._out.mode == 'w':
             self._out.close()
-
-class _Encoder(json.JSONEncoder):
-    """ Special encoder to deal with types not handled by default encoder. """
-
-    def default(self, obj):
-        fixed = _fixup(obj)
-        if fixed is obj:
-            super(_Encoder, self).default(obj)
-        return fixed
-
-
-def _fixup(value):
-    """
-    Fix object for json encoder, also bson. Stock bson doesn't handle a lot
-    of types, just skips them.
-    """
-    if isinstance(value, dict):
-        for key, val in value.items():
-            value[key] = _fixup(val)
-        return value
-    elif isinstance(value, (list, tuple, set, frozenset)):
-        return [_fixup(val) for val in value]
-    elif isinstance(value, ndarray):
-        return value.tolist()
-    elif isinstance(value, VariableTree):
-        return dict([(name, _fixup(getattr(value, name)))
-                     for name in value.list_vars()])
-    elif hasattr(value, 'json_encode') and callable(value.json_encode):
-        return value.json_encode()
-    elif hasattr(value, '__dict__'):
-        return _fixup(value.__dict__)
-    return value
-
 
 
 class _BSONWriter(object):

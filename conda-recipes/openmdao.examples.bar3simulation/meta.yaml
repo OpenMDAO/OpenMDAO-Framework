@@ -22,12 +22,13 @@ requirements:
     - python
     - numpy ==1.7.1
     - setuptools
+    - libpython # [win]
 
   run:
     - python
     - numpy >=1.7.1
     - setuptools
-    - libpython # [win32]
+    - libpython # [win]
 
 about:
   home:  http://openmdao.org
