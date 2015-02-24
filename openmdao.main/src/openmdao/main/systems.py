@@ -1577,7 +1577,13 @@ class CompoundSystem(System):
         collapsed = self.scope.name2collapsed.get(name)
         if isinstance(collapsed, tuple):
             src = collapsed[0]
-            cname = src.split('.')[0]
+            target = collapsed[1]
+
+            # If it's a parameter, we want the parameter system instead of the comp.
+            if src in target:
+                cname = src
+            else:
+                cname = src.split('.')[0]
         else:
             collapsed = name
 
@@ -1602,22 +1608,42 @@ class CompoundSystem(System):
 
         # Check vector_vars to figure out if we are the lowest rank.
         varkeys = scope_sys.vector_vars.keys()
+        noflatkeys = scope_sys.noflat_vars.keys()
         lowest = None
 
         # First, check the flattenable variables.
         if collapsed in varkeys:
             isrc = varkeys.index(collapsed)
+            print isrc, scope_sys.local_var_sizes
             sizes = scope_sys.local_var_sizes[:, isrc]
             lowest = numpy.nonzero(sizes)[0][0]
 
         # Next, check the unflattenable variables.
+        elif collapsed in noflatkeys:
+            isrc = varkeys.index(collapsed)
+            sizes = scope_sys.noflat_var_sizes[:, isrc]
+            lowest = numpy.nonzero(sizes)[0][0]
 
         # Finally, it must be an unconnected variable Just print these on the
         # lowest rank for our comp.
         else:
-            sizes = system.local_var_sizes
-            lowest = numpy.nonzero(sizes)[0][0]
+            flatsizes = system.local_var_sizes
+            noflatsizes = system.noflat_var_sizes
 
+            if len(varkeys) > 0:
+                lowest = numpy.nonzero(flatsizes)[0][0]
+            elif len(noflatkeys) > 0:
+                lowest = numpy.nonzero(noflatsizes)[0][0]
+            else:
+                # I give up. Free-floating comp. Just print it on 0.
+                lowest = 0
+
+            # If we are only on one process, it is this one.
+            # TODO -- make this work for distributed components
+            if flatsizes.shape[0] == 1 or noflatsizes.shape[0] == 1:
+                lowest = self.mpi.rank
+
+        print lowest
         if lowest == self.mpi.rank:
             return True
 

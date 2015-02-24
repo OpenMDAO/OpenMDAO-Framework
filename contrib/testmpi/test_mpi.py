@@ -467,12 +467,14 @@ class MPITests2(MPITestCase):
         if self.comm.rank == 0:
             self.assertTrue(system.is_variable_local('_pseudo_0') is True)
             self.assertTrue(system.is_variable_local('_pseudo_0.out') is True)
+            self.assertTrue(system.is_variable_local('C1.y2') is True)
         else:
             self.assertTrue(system.is_variable_local('_pseudo_0') is False)
             self.assertTrue(system.is_variable_local('_pseudo_0.out') is False)
 
         # Exclusive or - you either got C2 or C3 on a given process.
         self.assertTrue(system.is_variable_local('C1.y1') != system.is_variable_local('C2.y1'))
+        self.assertTrue(system.is_variable_local('C1.exec_count') != system.is_variable_local('C2.exec_count'))
 
     def test_sellar_Newton_parallel(self):
 
