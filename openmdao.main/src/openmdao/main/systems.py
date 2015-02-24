@@ -1561,25 +1561,61 @@ class CompoundSystem(System):
         self.dfd_solver.calculate(arg, result)
 
     def is_variable_local(self, name):
-        """Returns True if the variable in name is local to this process,
-        otherwise it returns False. If name can't be found, then an exception
-        is raised."""
+        """Returns True if the variable in name is local to this process and
+        our rank is the lowest rank that it appears on. Otherwise it returns
+        False. If name can't be found, then an exception is raised."""
 
-        # Regular paths, get the compname
+        # Regular paths, get the compname. If it is a connection in our
+        # scope, then the relevant component is the source of the connection.
         cname = name.split('.')[0]
+        collapsed = self.scope.name2collapsed.get(name)
+        if collapsed:
+            src = collapsed[0]
+            cname = src.split('.')[0]
+        else:
+            collapsed = name
 
         # If name is a Variable Tree, then it belongs to our containing
         # assembly, which must be local.
+        scope_sys = self.scope._system
         if cname in self.scope.list_vars():
+            system = self.scope
+        else:
+            system = scope_sys.find_system(cname, recurse_subassy=False)
+
+        if not system:
+            msg = 'Cannot find a system that contains varpath %s' % name
+            raise RuntimeError(msg)
+
+        if not system.is_active():
+            return False
+
+        # Don't need to figure out ranks if we are not MPI
+        if not MPI:
             return True
 
-        system = self.scope._system.find_system(cname, recurse_subassy=False)
+        # Check vector_vars to figure out if we are the lowest rank.
+        varkeys = scope_sys.vector_vars.keys()
+        #print name, varkeys
+        #print "self.vector_vars.keys", self.vector_vars.keys(), self.local_var_sizes
+        #print "scope_sys.vector_vars.keys", scope_sys.vector_vars.keys(), scope_sys.local_var_sizes
+        #print "system.vector_vars.keys", system.vector_vars.keys(), system.local_var_sizes
 
-        if system:
-            return system.is_active()
+        # First, check the flattenable variables.
+        if collapsed in varkeys:
+            isrc = varkeys.index(collapsed)
+            sizes = scope_sys.local_var_sizes[:, isrc]
+            lowest = numpy.nonzero(sizes)[0][0]
 
-        msg = 'Cannot find a system that contains varpath %s' % name
-        raise RuntimeError(msg)
+        # Next, check the unflattenable variables.
+
+        # Finally, it must be an unconnected var.
+
+        print self.mpi.rank, sizes, lowest
+        if lowest == self.mpi.rank:
+            return True
+
+        return False
 
     def find_system(self, name, recurse_subassy=True):
         """ Return system with given name.
