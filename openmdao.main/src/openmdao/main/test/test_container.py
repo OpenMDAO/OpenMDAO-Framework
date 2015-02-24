@@ -375,7 +375,7 @@ class ContainerTestCase(unittest.TestCase):
     def test_save_bad_filename(self):
 # TODO: get make_protected_dir() to work on Windows.
         if sys.platform == 'win32':
-            raise nose.SkipTest()
+            raise nose.SkipTest("make_protected_dir() doesn't work on Windows.")
 
         c1 = Container()
         directory = make_protected_dir()

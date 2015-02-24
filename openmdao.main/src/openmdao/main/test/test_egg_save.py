@@ -578,7 +578,7 @@ class TestCase(unittest.TestCase):
 
 # TODO: get make_protected_dir() to work on Windows.
         if sys.platform == 'win32':
-            raise nose.SkipTest()
+            raise nose.SkipTest("make_protected_dir() doesn't work on Windows.")
 
         directory = make_protected_dir()
         try:
