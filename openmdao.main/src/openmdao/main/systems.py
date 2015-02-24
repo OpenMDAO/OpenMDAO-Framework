@@ -1596,6 +1596,7 @@ class CompoundSystem(System):
 
         # Check vector_vars to figure out if we are the lowest rank.
         varkeys = scope_sys.vector_vars.keys()
+        lowest = None
         #print name, varkeys
         #print "self.vector_vars.keys", self.vector_vars.keys(), self.local_var_sizes
         #print "scope_sys.vector_vars.keys", scope_sys.vector_vars.keys(), scope_sys.local_var_sizes
@@ -1609,9 +1610,13 @@ class CompoundSystem(System):
 
         # Next, check the unflattenable variables.
 
-        # Finally, it must be an unconnected var.
+        # Finally, it must be an unconnected var. Just print these on the
+        # lowest rank for our comp.
+        else:
+            sizes = system.local_var_sizes
+            lowest = numpy.nonzero(sizes)[0][0]
+            print lowest
 
-        print self.mpi.rank, sizes, lowest
         if lowest == self.mpi.rank:
             return True
 
