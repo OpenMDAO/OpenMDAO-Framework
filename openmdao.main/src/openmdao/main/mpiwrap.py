@@ -50,7 +50,7 @@ def create_petsc_vec(comm, arr):
 
 def _import_petsc():
     import petsc4py
-    petsc4py.init(['-info', 'petsc.info']) # add petsc init args here
+    petsc4py.init(['-log_trace', 'petsc']) # add petsc init args here
     from petsc4py import PETSc
     return PETSc
 
