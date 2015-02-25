@@ -1,5 +1,6 @@
 
 import numpy as np
+import sys
 
 from openmdao.util.testutil import assert_rel_error
 from openmdao.test.mpiunittest import MPITestCase, collective_assert_rel_error, \
@@ -75,8 +76,6 @@ class MPITests_2Proc(MPITestCase):
         J = self.top.driver.calc_gradient(mode='forward',
                                           return_format='dict')
 
-        #J = self.top.driver.workflow._system.get_combined_J(J)
-
         if self.comm.rank == 0:
             assert_rel_error(self, J['_pseudo_0.out0']['comp.x'][0][0],
                                         5.0, 0.0001)
@@ -88,8 +87,6 @@ class MPITests_2Proc(MPITestCase):
 
         J = self.top.driver.calc_gradient(mode='adjoint',
                                           return_format='dict')
-
-        #J = self.top.driver.workflow._system.get_combined_J(J)
 
         if self.comm.rank == 0:
             assert_rel_error(self, J['_pseudo_0.out0']['comp.x'][0][0],

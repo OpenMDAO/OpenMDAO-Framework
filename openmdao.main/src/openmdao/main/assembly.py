@@ -1593,21 +1593,31 @@ class Assembly(Component):
             comm = None
 
         try:
+            #print "setup_init"; sys.stdout.flush()
+
             self.setup_init()
+            #print "setup_depgraph"; sys.stdout.flush()
 
             self.setup_depgraph()
+            #print "compute_itersets"; sys.stdout.flush()
 
             self.compute_itersets(None)
+            #print "compute_ordering"; sys.stdout.flush()
             self.compute_ordering(None)
 
+            #print "size_variables"; sys.stdout.flush()
             self.size_variables()
 
+            #print "setup_reduced_graph"; sys.stdout.flush()
             self.setup_reduced_graph(inputs=inputs, outputs=outputs,
                                      drvname=drvname)
+            #print "setup_systems"; sys.stdout.flush()
             self.setup_systems()
 
+            #print "check_config"; sys.stdout.flush()
             self.check_config()
 
+            #print "collect_metadata"; sys.stdout.flush()
             self.collect_metadata()
 
             #if MPI.COMM_WORLD.rank == 0:
@@ -1615,14 +1625,23 @@ class Assembly(Component):
             #plot_system_tree(self._system,'sys.pdf')
             #plot_graph(self._reduced_graph, 'red.pdf')
 
+            #print "setup_communicators"; sys.stdout.flush()
             self.setup_communicators(comm)
+            #print "setup_variables"; sys.stdout.flush()
             self.setup_variables()
+            #print "setup_sizes"; sys.stdout.flush()
             self.setup_sizes()
+            #print "setup_vectors"; sys.stdout.flush()
             self.setup_vectors()
+            #self._system.dump(); sys.stdout.flush()
+            #print "setup_scatters"; sys.stdout.flush()
             self.setup_scatters()
+            #print "setup done"; sys.stdout.flush()
 
-        except Exception:
+        except Exception as err:
             traceback.print_exc()
+            sys.stdout.flush()
+            sys.stderr.flush()
             raise
 
         self.post_setup()

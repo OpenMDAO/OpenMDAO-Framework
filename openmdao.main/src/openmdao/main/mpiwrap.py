@@ -27,7 +27,7 @@ class PETSc(object):
     def installed(self):
         try:
             if self._PETSc is None:
-                from petsc4py import PETSc
+                PETSc = _import_petsc()
                 del sys.modules['petsc4py']
                 self._PETSc = PETSc
             return True
@@ -41,15 +41,22 @@ class PETSc(object):
         raise AttributeError(name)
 
 def create_petsc_vec(comm, arr):
+    #print "create petsc: %s:  (%s)" % (arr, comm==MPI.COMM_NULL or comm==None);sys.stdout.flush()
     if under_mpirun() or PETSc.needs_ksp:
-        if PETSc.installed:
+        if PETSc.installed and comm != MPI.COMM_NULL:
             return PETSc.Vec().createWithArray(arr, comm=comm)
 
     return None
 
+def _import_petsc():
+    import petsc4py
+    petsc4py.init(['-info', 'petsc.info']) # add petsc init args here
+    from petsc4py import PETSc
+    return PETSc
+
 if under_mpirun():
     from mpi4py import MPI
-    from petsc4py import PETSc
+    PETSc = _import_petsc()
     PETSc.installed = True
 
     COMM_NULL = MPI.COMM_NULL
