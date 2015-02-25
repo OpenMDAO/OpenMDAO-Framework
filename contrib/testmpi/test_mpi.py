@@ -4,35 +4,34 @@ import time
 
 import numpy as np
 
-from openmdao.test.mpiunittest import MPITestCase, collective_assert_rel_error
-from openmdao.util.testutil import assert_rel_error
-from openmdao.main.test.simpledriver import SimpleDriver
-
-from openmdao.main.api import Assembly, Component, set_as_top, Driver
-from openmdao.main.interfaces import implements, ISolver
-from openmdao.main.datatypes.api import Float, Array
-from openmdao.main.mpiwrap import MPI
 from openmdao.lib.drivers.iterate import FixedPointIterator
 from openmdao.lib.drivers.newton_solver import NewtonSolver
-from openmdao.test.execcomp import ExecComp
-from openmdao.main.test.test_derivatives import SimpleDriver
-
 from openmdao.lib.optproblems import sellar
+
+from openmdao.main.api import Assembly, Component, set_as_top, Driver
+from openmdao.main.datatypes.api import Float, Array
+from openmdao.main.interfaces import implements, ISolver
+from openmdao.main.mpiwrap import MPI
+from openmdao.main.test.simpledriver import SimpleDriver
+from openmdao.test.execcomp import ExecComp
+from openmdao.test.mpiunittest import MPITestCase, collective_assert_rel_error
+from openmdao.util.testutil import assert_rel_error
+
 
 class NoDerivSimpleDriver(SimpleDriver):
     def requires_derivs(self):
         return False
-        
+
 class NoDerivSimpleDriverSetter(NoDerivSimpleDriver):
     def __init__(self, *args, **kwargs):
         super(NoDerivSimpleDriverSetter, self).__init__(*args, **kwargs)
         self.vals = []
-        
+
     def execute(self):
         self.set_parameters(self.vals)
         self.workflow.run()
 
-        
+
 class ABCDArrayComp(Component):
     delay = Float(0.01, iotype='in')
 
@@ -47,7 +46,7 @@ class ABCDArrayComp(Component):
         time.sleep(self.delay)
         self.c = self.a + self.b
         self.d = self.a - self.b
-        
+
     def dump(self, comm):
         print "%d: %s.a = %s" % (comm.rank, self.name, self.a)
         print "%d: %s.b = %s" % (comm.rank, self.name, self.b)
@@ -175,7 +174,7 @@ class MPITests1(MPITestCase):
             self.assertTrue(all(top.C2.b==np.ones(size, float)*5.))
             self.assertTrue(all(top.C2.c==np.ones(size, float)*15.))
             self.assertTrue(all(top.C2.d==np.ones(size, float)*5.))
-        
+
     def test_fan_in(self):
         size = 5
 
@@ -206,7 +205,7 @@ class MPITests1(MPITestCase):
         # 2 parallel comps feeding another comp
         top = set_as_top(Assembly())
         top.add('driver', SimpleDriver())
-        
+
         top.add("C1", ABCDArrayComp(size))
         top.add("C2", ABCDArrayComp(size))
         top.add("C3", ABCDArrayComp(size))
@@ -228,7 +227,7 @@ class MPITests1(MPITestCase):
         # if self.comm.rank == 0:
         #     from openmdao.util.dotgraph import plot_system_tree
         #     plot_system_tree(top._system)
-            
+
         # top.C1.dump(self.comm)
         # top.C2.dump(self.comm)
 
@@ -237,14 +236,14 @@ class MPITests1(MPITestCase):
             self.assertTrue(all(top.C3.b==np.ones(size, float)*-1.))
             self.assertTrue(all(top.C3.c==np.ones(size, float)*9.))
             self.assertTrue(all(top.C3.d==np.ones(size, float)*11.))
-    
+
     def test_fan_in_simpledriver_noderiv(self):
         size = 5
 
         # 2 parallel comps feeding another comp
         top = set_as_top(Assembly())
         top.add('driver', NoDerivSimpleDriver())
-        
+
         top.add("C1", ABCDArrayComp(size))
         top.add("C2", ABCDArrayComp(size))
         top.add("C3", ABCDArrayComp(size))
@@ -274,7 +273,7 @@ class MPITests1(MPITestCase):
         # 2 parallel comps feeding another comp
         top = set_as_top(Assembly())
         top.add('driver', NoDerivSimpleDriverSetter())
-        
+
         top.add("C1", ABCDArrayComp(size))
         top.add("C2", ABCDArrayComp(size))
         top.add("C3", ABCDArrayComp(size))
@@ -297,7 +296,7 @@ class MPITests1(MPITestCase):
         #if self.comm.rank == 0:
         #    from openmdao.util.dotgraph import plot_graph, plot_graphs, plot_system_tree
         #    plot_graphs(top, prefix="works")
-                
+
         self.collective_assertTrue(all(top.C3.a==np.ones(size, float)*6.))
         self.collective_assertTrue(all(top.C3.b==np.ones(size, float)*4.))
         self.collective_assertTrue(all(top.C3.c==np.ones(size, float)*10.))
@@ -324,9 +323,17 @@ class MPITests1(MPITestCase):
         top.C1.b = np.ones(size, float) * 7.0
 
         top.run()
-        
+
         self.collective_assertTrue(all(top.C4.a==np.ones(size, float)*11.))
         self.collective_assertTrue(all(top.C4.b==np.ones(size, float)*5.))
+
+        # Piggyback testing of the is_variable_local function.
+        system = top.driver.workflow._system
+        self.assertTrue(system.is_variable_local('C1.c') is True)
+
+        # Exclusive or - you either got C2 or C3.
+        self.assertTrue(system.is_variable_local('C2.a') != system.is_variable_local('C3.a'))
+        self.assertTrue(system.is_variable_local('C2.c') != system.is_variable_local('C3.c'))
 
     def test_fan_out_in_force_serial(self):
         size = 5  # array var size
@@ -352,13 +359,13 @@ class MPITests1(MPITestCase):
         if self.comm.rank == 0:
             self.assertTrue(all(top.C4.a==np.ones(size, float)*11.))
             self.assertTrue(all(top.C4.b==np.ones(size, float)*5.))
-            
+
     def test_serial_under_par(self):
-        
+
         class MyDriver(SimpleDriver):
 
             implements(ISolver)
-            
+
             def execute(self):
                # Direct uvec setting
                 uvec = self._system.vec['u']
@@ -371,12 +378,12 @@ class MPITests1(MPITestCase):
                     if 'comp2.x' in uvec:
                         uvec['comp2.x'] = num
                         #print "SETTING", 'comp2.x', uvec['comp2.x']
-                        
+
                     self.run_iteration()
 
             def requires_derivs(self):
                 return False
-        
+
         top = set_as_top(Assembly())
         top.add('driver', MyDriver())
         top.add('comp1', ExecComp(['y = 2.0*x']))
@@ -386,13 +393,13 @@ class MPITests1(MPITestCase):
         top.driver.add_parameter('comp2.x', low=-100, high=100)
         top.driver.add_constraint('comp1.y = comp2.x')
         top.driver.add_constraint('comp2.y = comp1.x')
-        
+
         top.run()
-        
+
         self.collective_assertTrue(top.comp1.x==3.0)
         self.collective_assertTrue(top.comp2.x==3.0)
-        
-        
+
+
 class MPITests2(MPITestCase):
 
     N_PROCS = 2
@@ -426,9 +433,9 @@ class MPITests2(MPITestCase):
         expected = { 'C1.y1': 3.1598617768014536, 'C2.y2': 3.7551999159927316 }
 
         top.run()
-        
+
         # gather the values back to the rank 0 process and compare to expected
-        dist_answers = top._system.mpi.comm.gather([(k[0],v) for k,v in top._system.vec['u'].items()], 
+        dist_answers = top._system.mpi.comm.gather([(k[0],v) for k,v in top._system.vec['u'].items()],
                                                    root=0)
         if self.comm.rank == 0:
             for answers in dist_answers:
@@ -458,9 +465,9 @@ class MPITests2(MPITestCase):
         top.run()
         # print top.C1.y1, top.C2.y1
         # print top.C1.y2, top.C2.y2
-        
+
         # gather the values back to the rank 0 process and compare to expected
-        dist_answers = top._system.mpi.comm.gather([(k[0],v) for k,v in top._system.vec['u'].items()], 
+        dist_answers = top._system.mpi.comm.gather([(k[0],v) for k,v in top._system.vec['u'].items()],
                                                    root=0)
         if self.comm.rank == 0:
             for answers in dist_answers:
@@ -487,7 +494,7 @@ class TestCaseSerial(TestCase):
         expected = { 'C1.y1': 3.160068, 'C2.y2': 3.755315 }
 
         top.run()
-        
+
         #top._system.dump()
 
         #from openmdao.util.dotgraph import plot_graph, plot_system_tree
@@ -496,14 +503,14 @@ class TestCaseSerial(TestCase):
         for name, expval in expected.items():
             val = top.get(name)
             assert_rel_error(self, val, expval, 0.001)
-    
+
     def test_fan_in_simpledriver(self):
         size = 5
 
         # 2 parallel comps feeding another comp
         top = set_as_top(Assembly())
         top.add('driver', NoDerivSimpleDriver())
-        
+
         top.add("C1", ABCDArrayComp(size))
         top.add("C2", ABCDArrayComp(size))
         top.add("C3", ABCDArrayComp(size))
@@ -526,7 +533,7 @@ class TestCaseSerial(TestCase):
         self.assertTrue(all(top.C3.c==np.ones(size, float)*9.))
         self.assertTrue(all(top.C3.d==np.ones(size, float)*11.))
 
-    
+
 # FIXME: running this file as main currently doesn't work...
 # if __name__ == '__main__':
 #     import unittest

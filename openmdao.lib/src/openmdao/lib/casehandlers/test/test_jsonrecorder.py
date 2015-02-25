@@ -77,7 +77,7 @@ class TestCaseForNestedObjects(unittest.TestCase):
     def test_jsonrecorder_with_nest_object(self):
         # make sure bug 87740468 is fixed
         sout = StringIO()
-        self.top.recorders = [JSONCaseRecorder('junk.json')]
+        self.top.recorders = [JSONCaseRecorder(sout)]
 
         self.top.run()
         self.assertTrue(isinstance(self.top.comp1.cx_nested_in.cx1, ComplexClass)) # should NOT be a dict

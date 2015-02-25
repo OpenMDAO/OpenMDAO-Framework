@@ -76,7 +76,7 @@ class System(object):
                     self._in_nodes.append(n)
 
         self._in_nodes = sorted(self._in_nodes)
-        #print "%s: _in_nodes = %s" % (str(self.name), self._in_nodes)
+        #print "%s (%s): _in_nodes = %s" % (str(self.name), type(self), self._in_nodes)
         self._out_nodes = sorted(self._out_nodes)
 
         self.mpi = MPI_info()
@@ -1116,7 +1116,7 @@ class SimpleSystem(System):
 
         self.sol_vec.array[:] = self.rhs_vec.array[:]
 
-    def find_system(self, name):
+    def find_system(self, name, recurse_subassy=True):
         """ Return system with given name. """
         if self.name == name:
             return self
@@ -1336,20 +1336,23 @@ class AssemblySystem(SimpleSystem):
         return ISolver.providedBy(self._comp.driver) or \
                driver.__class__.__name__ == 'Driver'
 
-    def find_system(self, name):
+    def find_system(self, name, recurse_subassy=True):
         """ Return system with given name. """
 
         if self.name == name:
             return self
-        return self._comp._system.find_system(name)
+
+        if not recurse_subassy:
+            return None
+
+        return self._comp._system.find_system(name, recurse_subassy=recurse_subassy)
 
 
 class CompoundSystem(System):
     """A System that has subsystems."""
 
     def __init__(self, scope, graph, subg, name=None):
-        super(CompoundSystem, self).__init__(scope, graph,
-                                             simple_node_iter(subg.nodes()), name)
+        super(CompoundSystem, self).__init__(scope, graph, subg.nodes(), name)
         self.driver = None
         self.graph = subg
         self._local_subsystems = []  # subsystems in the same process
@@ -1557,14 +1560,43 @@ class CompoundSystem(System):
         """
         self.dfd_solver.calculate(arg, result)
 
-    def find_system(self, name):
-        """ Return system with given name. """
+    def is_variable_local(self, name):
+        """Returns True if the variable in name is local to this process,
+        otherwise it returns False. If name can't be found, then an exception
+        is raised."""
+
+        # Regular paths, get the compname
+        cname = name.split('.')[0]
+
+        # If name is a Variable Tree, then it belongs to our containing
+        # assembly, which must be local.
+        if cname in self.scope.list_vars():
+            return True
+
+        system = self.scope._system.find_system(cname, recurse_subassy=False)
+
+        if system:
+            return system.is_active()
+
+        msg = 'Cannot find a system that contains varpath %s' % name
+        raise RuntimeError(msg)
+
+    def find_system(self, name, recurse_subassy=True):
+        """ Return system with given name.
+
+        name: string (OpenMDAO varpath)
+            Name of system you want to find.
+
+        recurse_subassy: Bool
+            Set to True to search beyond subassembly boundaries. Default
+            is True.
+        """
 
         if self.name == name:
             return self
 
         for sub in self.subsystems():
-            found = sub.find_system(name)
+            found = sub.find_system(name, recurse_subassy=recurse_subassy)
             if found:
                 return found
 
@@ -2012,12 +2044,12 @@ class OpaqueSystem(SimpleSystem):
     def get_req_cpus(self):
         return self._inner_system.get_req_cpus()
 
-    def find_system(self, name):
+    def find_system(self, name, recurse_subassy=True):
         """ Return system with given name. """
 
         if self.name == name:
             return self
-        return self._inner_system.find_system(name)
+        return self._inner_system.find_system(name, recurse_subassy=recurse_subassy)
 
 
 class DriverSystem(SimpleSystem):
@@ -2070,14 +2102,14 @@ class DriverSystem(SimpleSystem):
     def setup_scatters(self):
         self._comp.setup_scatters()
 
-    def find_system(self, name):
+    def find_system(self, name, recurse_subassy=True):
         """ Return system with given name. """
 
         if self.name == name:
             return self
 
         for sub in self.all_subsystems():
-            found = sub.find_system(name)
+            found = sub.find_system(name, recurse_subassy=recurse_subassy)
             if found:
                 return found
 
