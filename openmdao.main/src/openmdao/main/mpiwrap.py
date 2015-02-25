@@ -43,14 +43,14 @@ class PETSc(object):
 def create_petsc_vec(comm, arr):
     #print "create petsc: %s:  (%s)" % (arr, comm==MPI.COMM_NULL or comm==None);sys.stdout.flush()
     if under_mpirun() or PETSc.needs_ksp:
-        if PETSc.installed and comm != MPI.COMM_NULL:
+        if PETSc.installed and (MPI is None or comm != MPI.COMM_NULL):
             return PETSc.Vec().createWithArray(arr, comm=comm)
 
     return None
 
 def _import_petsc():
     import petsc4py
-    petsc4py.init(['-log_trace', 'petsc']) # add petsc init args here
+    #petsc4py.init(['-info']) # add petsc init args here
     from petsc4py import PETSc
     return PETSc
 

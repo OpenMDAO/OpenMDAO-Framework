@@ -393,15 +393,15 @@ class Testcase_PetSc_KSP(unittest.TestCase):
         top.driver.add_constraint('nest.y[0][1] < 0')
         top.run()
 
-        J = top.driver.workflow.calc_gradient(mode='forward')
+        J = top.driver.calc_gradient(mode='forward')
         assert_rel_error(self, J[0, 0], 24.0, .000001)
         assert_rel_error(self, J[1, 0], 4.0, .000001)
 
-        J = top.driver.workflow.calc_gradient(mode='adjoint')
+        J = top.driver.calc_gradient(mode='adjoint')
         assert_rel_error(self, J[0, 0], 24.0, .000001)
         assert_rel_error(self, J[1, 0], 4.0, .000001)
 
-        J = top.driver.workflow.calc_gradient(mode='fd')
+        J = top.driver.calc_gradient(mode='fd')
         assert_rel_error(self, J[0, 0], 24.0, .000001)
         assert_rel_error(self, J[1, 0], 4.0, .000001)
 

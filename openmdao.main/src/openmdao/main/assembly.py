@@ -1043,11 +1043,11 @@ class Assembly(Component):
         except ImportError:
             return ''
 
-    def get_depgraph(self):
-        return self._depgraph
-
+    # FIXME: currently I can't remove this method (even though it's never called)
+    #   without causing some of our MPI tests to hang.
     def get_reduced_graph(self):
-        return self._reduced_graph
+        pass
+        # return self._reduced_graph
 
     def get_comps(self):
         """Returns a list of all of objects contained in this
@@ -1056,6 +1056,7 @@ class Assembly(Component):
         return set([c for _,c in self.items()
                       if has_interface(c, IComponent)])
 
+    # FIXME: can't rmove this method for the same reason as get_reduced_graph above
     def get_system(self):
         return self._system
 

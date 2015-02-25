@@ -906,10 +906,6 @@ class HasParameters(object):
                 self.parent.reraise_exception(info=sys.exc_info())
 
         if IDriver.providedBy(self.parent):
-            # add a graph connection from the driver to the param target
-            #dgraph = self.parent.get_depgraph()
-            #dgraph.add_param(self.parent.name, tuple(target.targets))
-
             self.parent.config_changed()
 
     def _create(self, target, low, high, scaler, adder, start, fd_step,

@@ -57,7 +57,6 @@ class Workflow(object):
         self._comp_count = 0     # Component index in workflow.
         self._system = None
         self._reduced_graph = None
-        self._component_graph = None
 
         self._rec_required = None  # Case recording configuration.
         self._rec_parameters = None
@@ -316,8 +315,6 @@ class Workflow(object):
                     outputs.append(name + '.out0')
                     #outputs.append(path+'.out0')
 
-        #driver.get_reduced_graph()
-        #self._rec_all_outputs = []
         self._rec_outputs = []
         for comp in self:
             successors = driver._reduced_graph.successors(comp.name)
@@ -540,8 +537,7 @@ class Workflow(object):
 
     def setup_init(self):
         self._system = None
-        self._reduced_graph = None
-        self._component_graph = None
+        #self._reduced_graph = None
 
         self._rec_required = None  # Case recording configuration.
         self._rec_parameters = None
@@ -563,7 +559,7 @@ class Workflow(object):
         scope = self.scope
         drvname = self.parent.name
 
-        parent_graph = self.scope.get_reduced_graph()
+        parent_graph = self.scope._reduced_graph
         reduced = parent_graph.subgraph(parent_graph.nodes_iter())
 
         # collapse driver iteration sets into a single node for
@@ -635,7 +631,6 @@ class Workflow(object):
             reduced.remove_edges_from(to_remove)
 
         self._reduced_graph = reduced
-        self._component_graph = cgraph
 
         if system_type == 'auto' and MPI:
             self._auto_setup_systems(scope, reduced, cgraph)

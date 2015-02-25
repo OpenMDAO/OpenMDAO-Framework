@@ -193,12 +193,9 @@ class Driver(Component):
 
         g.remove_nodes_from(to_remove)
 
-    def get_depgraph(self):
-        return self.parent._depgraph  # May change this to use a smaller graph later
-
     def get_reduced_graph(self):
         if self._reduced_graph is None:
-            parent_graph = self.parent.get_reduced_graph()
+            parent_graph = self.parent._reduced_graph
 
             # copy parent graph
             g = parent_graph.subgraph(parent_graph.nodes_iter())
@@ -450,7 +447,7 @@ class Driver(Component):
             full.update(getcomps)
             full.update(self.list_pseudocomps())
 
-            compgraph = self.get_depgraph().component_graph()
+            compgraph = self.parent._depgraph.component_graph()
 
             for end in getcomps:
                 for start in setcomps:
