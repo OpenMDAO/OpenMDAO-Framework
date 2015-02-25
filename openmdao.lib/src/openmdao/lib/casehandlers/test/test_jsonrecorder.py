@@ -52,12 +52,12 @@ class ClassWithNestedObjects:
     def __init__(self, cx1, cx2):
         self.cx1 = cx1
         self.cx2 = cx2
-        
+
 class CompWithNestedPythonObjects(Component):
 
-    cx_nested_in = Instance(ClassWithNestedObjects(ComplexClass(1.0,2.0),ComplexClass(3.0,4.0)), 
+    cx_nested_in = Instance(ClassWithNestedObjects(ComplexClass(1.0,2.0),ComplexClass(3.0,4.0)),
             iotype="in", desc="nested complex number")
-    cx_nested_out = Instance(ClassWithNestedObjects(ComplexClass(5.0,6.0),ComplexClass(7.0,8.0)), 
+    cx_nested_out = Instance(ClassWithNestedObjects(ComplexClass(5.0,6.0),ComplexClass(7.0,8.0)),
             iotype="out", desc="nested complex number")
 
     def execute(self):

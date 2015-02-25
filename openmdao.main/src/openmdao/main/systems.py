@@ -1573,7 +1573,7 @@ class CompoundSystem(System):
 
         # Regular paths, get the compname. If it is a connection in our
         # scope, then the relevant component is the source of the connection.
-        cname = name.split('.')[0]
+        cname, _, vname = name.partition('.')
         collapsed = self.scope.name2collapsed.get(name)
 
         if isinstance(collapsed, tuple):
@@ -1608,6 +1608,11 @@ class CompoundSystem(System):
         if not system.is_active():
             return False
 
+        # Unfortunately, our configure_recording violates the assembly
+        # boundary, so we need to detect this and recurse.
+        #if isinstance(system, AssemblySystem):
+            #return system._comp._system.is_variable_local(vname)
+
         # Don't need to figure out ranks if we are not MPI
         if not MPI:
             return True
@@ -1620,7 +1625,6 @@ class CompoundSystem(System):
         # First, check the flattenable variables.
         if collapsed in varkeys:
             isrc = varkeys.index(collapsed)
-            print isrc, scope_sys.local_var_sizes
             sizes = scope_sys.local_var_sizes[:, isrc]
             lowest = numpy.nonzero(sizes)[0][0]
 
@@ -1649,7 +1653,6 @@ class CompoundSystem(System):
             if flatsizes.shape[0] == 1 or noflatsizes.shape[0] == 1:
                 lowest = self.mpi.rank
 
-        print lowest
         if lowest == self.mpi.rank:
             return True
 
