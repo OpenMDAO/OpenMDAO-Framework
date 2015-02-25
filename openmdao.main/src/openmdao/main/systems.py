@@ -442,6 +442,7 @@ class System(object):
 
         if not self.is_active():
             self.local_var_sizes = numpy.zeros((0,0), int)
+            self.noflat_var_sizes = numpy.zeros((0,0), int)
             self.input_sizes = numpy.zeros(0, int)
             return
 
@@ -456,9 +457,12 @@ class System(object):
         # create an (nproc x numvars) var size vector containing
         # local sizes across all processes in our comm
         self.local_var_sizes = numpy.zeros((size, len(self.vector_vars)), int)
+        self.noflat_var_sizes = numpy.zeros((size, len(self.noflat_vars)), int)
 
         for i, (name, var) in enumerate(self.vector_vars.items()):
             self.local_var_sizes[rank, i] = var['size']
+        for i, (name, var) in enumerate(self.noflat_vars.items()):
+            self.noflat_var_sizes[rank, i] = 1
 
         # collect local var sizes from all of the processes in our comm
         # these sizes will be the same in all processes except in cases
@@ -468,6 +472,8 @@ class System(object):
         if MPI:
             comm.Allgather(self.local_var_sizes[rank,:],
                            self.local_var_sizes)
+            comm.Allgather(self.noflat_var_sizes[rank,:],
+                           self.noflat_var_sizes)
 
         # create a (1 x nproc) vector for the sizes of all of our
         # local inputs
@@ -1561,25 +1567,93 @@ class CompoundSystem(System):
         self.dfd_solver.calculate(arg, result)
 
     def is_variable_local(self, name):
-        """Returns True if the variable in name is local to this process,
-        otherwise it returns False. If name can't be found, then an exception
-        is raised."""
+        """Returns True if the variable in name is local to this process and
+        our rank is the lowest rank that it appears on. Otherwise it returns
+        False. If name can't be found, then an exception is raised."""
 
-        # Regular paths, get the compname
+        # Regular paths, get the compname. If it is a connection in our
+        # scope, then the relevant component is the source of the connection.
         cname = name.split('.')[0]
+        collapsed = self.scope.name2collapsed.get(name)
+
+        if isinstance(collapsed, tuple):
+            src = collapsed[0]
+            target = collapsed[1]
+
+            # If it's a parameter, we want the parameter system instead of the comp.
+            if src in target:
+                cname = src
+            else:
+                cname = src.split('.')[0]
+        else:
+            collapsed = name
 
         # If name is a Variable Tree, then it belongs to our containing
         # assembly, which must be local.
+        scope_sys = self.scope._system
         if cname in self.scope.list_vars():
+            system = self.scope._system
+        else:
+            system = scope_sys.find_system(cname, recurse_subassy=False)
+
+            # Not a parameter, but a response.
+            if system is None:
+                cname = cname.split('.')[0]
+                system = scope_sys.find_system(cname, recurse_subassy=False)
+
+        if not system:
+            msg = 'Cannot find a system that contains varpath %s' % name
+            raise RuntimeError(msg)
+
+        if not system.is_active():
+            return False
+
+        # Don't need to figure out ranks if we are not MPI
+        if not MPI:
             return True
 
-        system = self.scope._system.find_system(cname, recurse_subassy=False)
+        # Check vector_vars to figure out if we are the lowest rank.
+        varkeys = scope_sys.vector_vars.keys()
+        noflatkeys = scope_sys.noflat_vars.keys()
+        lowest = None
 
-        if system:
-            return system.is_active()
+        # First, check the flattenable variables.
+        if collapsed in varkeys:
+            isrc = varkeys.index(collapsed)
+            print isrc, scope_sys.local_var_sizes
+            sizes = scope_sys.local_var_sizes[:, isrc]
+            lowest = numpy.nonzero(sizes)[0][0]
 
-        msg = 'Cannot find a system that contains varpath %s' % name
-        raise RuntimeError(msg)
+        # Next, check the unflattenable variables.
+        elif collapsed in noflatkeys:
+            isrc = varkeys.index(collapsed)
+            sizes = scope_sys.noflat_var_sizes[:, isrc]
+            lowest = numpy.nonzero(sizes)[0][0]
+
+        # Finally, it must be an unconnected variable Just print these on the
+        # lowest rank for our comp.
+        else:
+            flatsizes = system.local_var_sizes
+            noflatsizes = system.noflat_var_sizes
+
+            if len(varkeys) > 0:
+                lowest = numpy.nonzero(flatsizes)[0][0]
+            elif len(noflatkeys) > 0:
+                lowest = numpy.nonzero(noflatsizes)[0][0]
+            else:
+                # I give up. Free-floating comp. Just print it on 0.
+                lowest = 0
+
+            # If we are only on one process, it is this one.
+            # TODO -- make this work for distributed components
+            if flatsizes.shape[0] == 1 or noflatsizes.shape[0] == 1:
+                lowest = self.mpi.rank
+
+        print lowest
+        if lowest == self.mpi.rank:
+            return True
+
+        return False
 
     def find_system(self, name, recurse_subassy=True):
         """ Return system with given name.
