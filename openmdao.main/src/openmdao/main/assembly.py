@@ -1043,12 +1043,12 @@ class Assembly(Component):
         except ImportError:
             return ''
 
-    # # FIXME: currently I can't remove this method (even though it's never called)
-    # #   without causing some of our MPI tests to hang.
-    # def get_reduced_graph(self):
-    #     pass
-    #     # return self._reduced_graph
-    #
+    def list_components(self):
+        ''' List the components in the assembly.
+        '''
+        return [name for name in self.list_containers()
+                     if isinstance(self.get(name), Component)]
+
     def get_comps(self):
         """Returns a list of all of objects contained in this
         Assembly implementing the IComponent interface.
@@ -1056,10 +1056,6 @@ class Assembly(Component):
         return set([c for _,c in self.items()
                       if has_interface(c, IComponent)])
 
-    # # FIXME: can't rmove this method for the same reason as get_reduced_graph above
-    # def get_system(self):
-    #     return self._system
-    #
     @rbac(('owner', 'user'))
     def setup_systems(self):
         rgraph = self._reduced_graph
