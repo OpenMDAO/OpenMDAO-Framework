@@ -756,7 +756,7 @@ class MPITests_2Proc(MPITestCase):
         #from openmdao.util.dotgraph import plot_system_tree
         #plot_system_tree(self.top._system)
 
-        print J
+        #print J
         collective_assert_rel_error(self,
                                     J['comp5.y1']['comp1.x1'][0][0],
                                     3300.5, 0.0001)
@@ -1137,8 +1137,8 @@ class MPITests_2Proc(MPITestCase):
         #from openmdao.util.dotgraph import plot_system_tree
         #plot_system_tree(top._system)
 
-        print top._pseudo_0.out0
-        print top.driver.func_dict
+        #print top._pseudo_0.out0
+        #print top.driver.func_dict
 
         collective_assert_rel_error(self, 9826.25, top._pseudo_0.out0, 0.0001)
         collective_assert_rel_error(self, 9826.25, top.driver.func_dict['_pseudo_0.out0'], 0.0001)
