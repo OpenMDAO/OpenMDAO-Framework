@@ -688,7 +688,13 @@ class Workflow(object):
         self._rec_required = bool(inputs or outputs)
         if self._rec_required:
 
-            print inputs + outputs
+
+            # for io in inputs + outputs :
+            #     print "IO %d: %s" % ( self._system.mpi.rank, io )
+
+
+
+            # print "\n".join(inputs + outputs)
             top = scope
             while top.parent is not None:
                 top = top.parent
@@ -696,6 +702,9 @@ class Workflow(object):
                 recorder.register(driver, inputs, outputs)
 
         #import pdb; pdb.set_trace()
+
+        print 'check', self._system.mpi.rank, self._system.is_variable_local('_pseudo_0.out0')
+        print 'check', self._system.mpi.rank, self._system.is_variable_local('_pseudo_1.out0')
 
         return (set(prefix+name for name in inputs), dict())
 
@@ -728,11 +737,11 @@ class Workflow(object):
         inputs = []
         outputs = []
 
-        print "recording case"
-        if MPI:
-            print 'workflow', self
-            print 'workflow comm',self._system.mpi.comm
-            print 'workflow rank',self._system.mpi.rank
+        # print "recording case"
+        # if MPI:
+        #     print 'workflow', self
+        #     print 'workflow comm',self._system.mpi.comm
+        #     print 'workflow rank',self._system.mpi.rank
 
 
         # Parameters.
@@ -774,9 +783,6 @@ class Workflow(object):
 
         # Other outputs.
         for name in self._rec_outputs:
-
-            print "other output and rank", name, scope.get(name), self._system.mpi.rank
-
             try:
                 outputs.append(scope.get(name))
             except Exception as exc:

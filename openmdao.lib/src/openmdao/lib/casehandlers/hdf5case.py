@@ -23,9 +23,14 @@ from openmdao.util.typegroups import real_types
 import h5py
 import numpy as np
 
+#from openmdao.main.mpiwrap import MPI
+
+from mpi4py import MPI
+
+
 class HDF5CaseRecorder(object):
     """
-    Dumps a run in JSON form to `out`, which may be a string or a file-like
+    Dumps a run in HDF5 form to `out`, which may be a string or a file-like
     object (defaults to ``stdout``). If `out` is ``stdout`` or ``stderr``,
     then that standard stream is used. Otherwise, if `out` is a string, then
     a file with that name will be opened in the current directory.
@@ -34,7 +39,7 @@ class HDF5CaseRecorder(object):
 
     implements(ICaseRecorder)
 
-    def __init__(self, out='cases.json', indent=4, sort_keys=True):
+    def __init__(self, out='cases.hdf5', indent=4, sort_keys=True):
         self._cfg_map = {}
         self._uuid = None
         self._cases = None
@@ -43,7 +48,14 @@ class HDF5CaseRecorder(object):
         #     from subcases
         self._last_child_case_uuids = {} # keyed by driver id
 
-        self.hdf5_file_object = h5py.File(out, "w")
+        self.hdf5_file_object = h5py.File(out, "w", driver='mpio', comm=MPI.COMM_WORLD)
+
+        #self.hdf5_file_object.atomic = True 
+
+        #self.hdf5_file_object = h5py.File(out, "w", driver='mpio' )
+
+        #f = h5py.File('parallel_test.hdf5', 'w', driver='mpio', comm=MPI.COMM_WORLD)
+
 
         self.indent = indent
         self.sort_keys = sort_keys
@@ -213,15 +225,34 @@ class HDF5CaseRecorder(object):
         #if not self.hdf5_file_object:
             #return
 
+
+        # if MPI.COMM_WORLD.rank != 0:
+        #     return
+
         info = self.get_simulation_info(constants)
+
+        # import pickle
+        # pickle.dump( info, open( "case_recording_info.p", "wb" ) )
+
+
 
         simulation_info_grp = self.hdf5_file_object.create_group("simulation_info")
 
+
+
+
+
         self.write_to_hdf5( simulation_info_grp, 'OpenMDAO_Version', info['OpenMDAO_Version'])
+
+
+
+
         self.write_to_hdf5( simulation_info_grp, 'comp_graph', info['comp_graph'])
         self.write_to_hdf5( simulation_info_grp, 'graph', info['graph'])
         self.write_to_hdf5( simulation_info_grp, 'uuid', info['uuid'])
         self.write_to_hdf5( simulation_info_grp, 'name', info['name'])
+
+
 
        
         constants_grp = simulation_info_grp.create_group("constants")
@@ -237,6 +268,10 @@ class HDF5CaseRecorder(object):
             # else:
             #     constants_grp.attrs[k] = v
 
+
+
+
+
         expressions_grp = simulation_info_grp.create_group("expressions")
         for k,v in info['expressions'].items():
            self.write_to_hdf5( expressions_grp, k, v )
@@ -247,9 +282,75 @@ class HDF5CaseRecorder(object):
            #      for name, value in v.items():
            #          dict_grp.attrs[name] = value
             
+
+
+        vm = [
+                # 'C1.derivative_exec_count', #### causes crash
+                'C1.directory',
+                # 'C1.exec_count', #### causes crash
+                'C1.force_fd',
+                # 'C1.itername', ### causes crash
+                'C1.missing_deriv_policy',
+                'C1.x1',
+                'C1.y1',
+                'C1.y2',
+                'C1.z1',
+                'C1.z2',
+                # 'C2.derivative_exec_count', #### causes crash
+                'C2.directory',
+                #'C2.exec_count', ### causes crash
+                'C2.force_fd',
+                # #'C2.itername', ### causes crash
+                'C2.missing_deriv_policy',
+                # 'C2.y1', ##### causes crash
+                # 'C2.y2', #### causes crash
+                'C2.z1',
+                'C2.z2',
+                'directory',
+                'driver.directory',
+                'driver.force_fd',
+                'driver.gradient_options.atol',
+                'driver.gradient_options.derivative_direction',
+                'driver.gradient_options.directional_fd',
+                'driver.gradient_options.fd_blocks',
+                'driver.gradient_options.fd_form',
+                'driver.gradient_options.fd_step',
+                'driver.gradient_options.fd_step_type',
+                'driver.gradient_options.force_fd',
+                'driver.gradient_options.iprint',
+                'driver.gradient_options.lin_solver',
+                'driver.gradient_options.maxiter',
+                'driver.gradient_options.rtol',
+                'driver.iprint',
+                'driver.max_iteration',
+                'driver.tolerance',
+                'force_fd',
+                'missing_deriv_policy',
+                'recording_options.excludes',
+                'recording_options.includes',
+                'recording_options.save_problem_formulation',
+            ]
+
+
+
+
         variable_metadata_grp = simulation_info_grp.create_group("variable_metadata")
+
+        icount = 0
         for k,v in info['variable_metadata'].items():
+
+            
+            if k not in vm:
+                continue
+
+            # print "kkkkk", "'%s'," % k 
             self.write_to_hdf5( variable_metadata_grp, k, v )
+
+
+            # icount+=1
+            # if icount > 14:
+            #     break 
+
             # if not isinstance(v,dict):
             #     variable_metadata_grp.attrs[k] = v
             # else:
@@ -260,6 +361,10 @@ class HDF5CaseRecorder(object):
             #         else:
             #             dict_grp.attrs[name] = np.array([])
 
+        # qqqqqqqqqqqqqq
+        #return
+
+
         for i, info in enumerate(self.get_driver_info()):
             driver_info_name = 'driver_info_%s' % (i+1)
             driver_info_group = self.hdf5_file_object.create_group(driver_info_name)
@@ -269,10 +374,19 @@ class HDF5CaseRecorder(object):
 
     def record(self, driver, inputs, outputs, exc, case_uuid, parent_uuid):
         """ Dump the given run data. """
+
+        # qqqqqqqqqqqqqq
+        return
+
+
         info = self.get_case_info(driver, inputs, outputs, exc,
                                   case_uuid, parent_uuid)
         self._cases += 1
         iteration_case_name = 'iteration_case_%s' % self._cases
+
+        #print "iteration_case_name", iteration_case_name
+
+
         self._count += 1
         iteration_case_group = self.hdf5_file_object.create_group(iteration_case_name)
         for k,v in info.items():
@@ -293,22 +407,41 @@ class HDF5CaseRecorder(object):
 
     def write_to_hdf5(self, group, name, value ):
 
+        #print 'write_to_hdf5', name, value, type(value)
         if isinstance(value,dict):
+            #print 'create dict', name, MPI.COMM_WORLD.rank
             dict_grp = group.create_group(name)
-            dict_grp.attrs['__dict__'] = True # To indicate that this HDF5 group represents an actual Python dict
+            #dict_grp.attrs['__dict__'] = True # To indicate that this HDF5 group represents an actual Python dict
             for k, v in value.items():
                 self.write_to_hdf5( dict_grp, k, v )
         elif isinstance( value, VariableTree):
+            #print 'create VariableTree', name, MPI.COMM_WORLD.rank
             vartree_grp = group.create_group(name)
-            vartree_grp.attrs['__vartree__'] = True
+            #vartree_grp.attrs['__vartree__'] = True
             for k in value.list_vars():
                 self.write_to_hdf5( vartree_grp, k, value.get(k) )
         elif isinstance( value, np.ndarray):
+            #print 'create np.ndarray', name, MPI.COMM_WORLD.rank
             group.create_dataset(name, data=value,compression="gzip")
         elif value == None :
-            group.attrs[name] = np.array([])
+            #print 'create np.array([])', name, type(value), MPI.COMM_WORLD.rank
+            group.create_dataset(name, data=np.array([]))
+            #group.attrs[name] = np.array([])
+            pass
         else:
-            group.attrs[name] = value
+            if isinstance( value, np.float64):
+                #print 'create np.float64', name, MPI.COMM_WORLD.rank
+                group.create_dataset(name, data=np.array([value]))
+                #group.create_dataset(name, (100,), dtype='i8')
+                #print 'type numpy.float64', value
+            else:
+                #print 'create non numpy scalar', type(value), name, MPI.COMM_WORLD.rank
+                #group.create_dataset(name, (100,), dtype='i8')
+                if isinstance(value,float):
+                    group.create_dataset(name, data=np.array([value]))   
+                #group.create_dataset(name, data=value)
+                #group.attrs[name] = value
+            pass
 
     def close(self):
         """
