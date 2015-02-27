@@ -63,17 +63,6 @@ class SequentialWorkflow(Workflow):
         self._initnames = None
         self._ordering = None
 
-    # def check_config(self, strict=False):
-    #     super(SequentialWorkflow, self).check_config(strict=strict)
-    #     self.get_names()
-    #     if self._initnames and self._iternames:
-    #         msg = "The following components will execute EVERY iteration " \
-    #               "of this workflow (unnecessarily): %s" % list(self._initnames)
-    #         if strict_chk_config(strict):
-    #             self.parent.raise_exception(msg, RuntimeError)
-    #         else:
-    #             self.parent._logger.warning(msg)
-
     def get_names(self, full=False):
         """Return a list of component names in this workflow.
         If full is True, include hidden pseudo-components in the list.

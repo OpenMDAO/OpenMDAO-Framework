@@ -25,16 +25,16 @@ class MPIContext(object):
     """
     def __enter__(self):
         pass
-    
+
     def __exit__(self, exc_type, exc_val, exc_tb):
         if exc_val is not None:
             fail = True
             traceback.print_exception(exc_type, exc_val, exc_tb)
         else:
             fail = False
-        
+
         fails = MPI.COMM_WORLD.allgather(fail)
-        
+
         if fail or not any(fails):
             return False  # exception will be re-raised for us
         else:
@@ -44,7 +44,7 @@ class MPIContext(object):
 
 def mpi_fail_if_any(f):
     """In order to keep MPI tests from hanging when
-    a test fails in one process and succeeds in 
+    a test fails in one process and succeeds in
     another, perform an allgather to check for any
     failures in any of the processes running the test,
     and fail if any of them fail.
@@ -68,18 +68,18 @@ def mpi_fail_if_any(f):
         return ret
 
     return wrapper
-    
+
 collective_assert_rel_error = mpi_fail_if_any(assert_rel_error)
 
 def wrapper(f):
     if under_mpirun():
         return f
-        
+
     else:
         def wrap(self, *args, **kwargs):
             if MPI is None:
                 raise SkipTest("mpi4py not installed")
-                
+
             # loop over the results from all of the MPI procs we
             # spawned and keep the first failure/error.
             for i, info in enumerate(self.infos):
@@ -89,11 +89,11 @@ def wrapper(f):
                 elif info['errors']:
                     if "a test failed in another rank" not in info['errors'][0]:
                         self.fail("{process %d} %s" % (i, info['errors'][0]))
-                    
+
         wrap.__name__ = f.__name__ # nose won't find it unless __name__ starts with 'test_'
         return wrap
 
-        
+
 class MPITestCaseMeta(type):
     """A metaclass to wrap all of the test_ methods to act appropriately
     when run serially vs. under mpi.  Also creates collective versions of
@@ -106,7 +106,7 @@ class MPITestCaseMeta(type):
                 newdict[n] = wrapper(obj)
             else:
                 newdict[n] = obj
-                    
+
         return type.__new__(meta, name, bases, newdict)
 
     def __init__(cls, name, bases, dct):
@@ -122,9 +122,9 @@ class MPITestCase(TestCase):
     intended to run under MPI.
     """
     __metaclass__ = MPITestCaseMeta
-    
+
     # A class attribute 'N_PROCS' must be defined
-    # for each MPITestCase class in order to 
+    # for each MPITestCase class in order to
     # know how big to make the MPI communicator.
     # N_PROCS = 4
 
@@ -143,6 +143,7 @@ class MPITestCase(TestCase):
             if startTestRun is not None:
                 startTestRun()
 
+        self.comm = None
         try:
             exc_info = None
             if under_mpirun():
@@ -159,20 +160,20 @@ class MPITestCase(TestCase):
 
                 # send results back to the mothership
                 self.comm.gather(info, root=0)
-                
+
                 self.comm.gather(junk, root=0)
 
                 if exc_info is not None:
                     raise exc_info[0], exc_info[1], exc_info[2]
-                    
+
             else:
-                testpath = '.'.join((self.__class__.__module__, 
+                testpath = '.'.join((self.__class__.__module__,
                                      self.__class__.__name__,
                                      self._testMethodName))
 
-                self.comm = MPI.COMM_SELF.Spawn(sys.executable, 
-                                    args=['-m', 'openmdao.test.mpiunittest', 
-                                          testpath], 
+                self.comm = MPI.COMM_SELF.Spawn(sys.executable,
+                                    args=['-m', 'openmdao.test.mpiunittest',
+                                          testpath],
                                     maxprocs=self.N_PROCS)
 
                 # gather results from spawned MPI processes
@@ -184,14 +185,15 @@ class MPITestCase(TestCase):
                     exc_info = sys.exc_info()
 
                 self.junks = self.comm.gather(junk, root=MPI.ROOT)
-                
+
                 if exc_info is not None:
                     raise exc_info[0], exc_info[1], exc_info[2]
-                
+
         finally:
             sys.stdout.flush()
             sys.stderr.flush()
-            self.comm.Disconnect()
+            if self.comm:
+                self.comm.Disconnect()
 
 
 if __name__ == '__main__':
@@ -218,7 +220,7 @@ if __name__ == '__main__':
             __import__(modname)
             mod = sys.modules[modname]
 
-            # Find the TestCase derived class in the 
+            # Find the TestCase derived class in the
             # specified module and create an instance
             tcase = getattr(mod, testcase_classname)(method)
 

@@ -14,7 +14,7 @@ import networkx as nx
 
 from openmdao.main.mpiwrap import PETSc
 from openmdao.main.component import Component
-from openmdao.main.dataflow import Dataflow
+from openmdao.main.sequentialflow import SequentialWorkflow
 from openmdao.main.datatypes.api import Bool, Enum, Float, Int, Slot, \
                                         List, VarTree
 from openmdao.main.depgraph import find_all_connecting, \
@@ -115,7 +115,7 @@ class Driver(Component):
     # set factory here so we see a default value in the docs, even
     # though we replace it with a new Dataflow in __init__
     workflow = Slot(Workflow, allow_none=True, required=True,
-                    factory=Dataflow, hidden=True)
+                    factory=SequentialWorkflow, hidden=True)
 
     gradient_options = VarTree(GradientOptions(), iotype='in',
                                framework_var=True)
@@ -138,7 +138,7 @@ class Driver(Component):
         self._iter = None
         super(Driver, self).__init__()
 
-        self.workflow = Dataflow(self)
+        self.workflow = SequentialWorkflow(self)
         self._required_compnames = None
         self._reduced_graph = None
         self._iter_set = None

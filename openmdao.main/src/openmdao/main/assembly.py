@@ -1278,8 +1278,6 @@ class Assembly(Component):
                 for res in obj.get_responses().values():
                     res.activate(obj)
 
-        #self._setup_depgraph = self._depgraph.subgraph(self._depgraph.nodes_iter())
-
         for comp in self.get_comps():
             if has_interface(comp, IDriver) or has_interface(comp, IAssembly):
                 comp.setup_depgraph(self._depgraph)
@@ -1338,8 +1336,12 @@ class Assembly(Component):
 
         dgraph = dgraph._explode_vartrees(self)
 
+        skip = False
         # add any variables requested that don't exist in the graph
         for inp in inputs:
+            if not hasattr(self, inp.split('.')[0].split('[')[0]):
+                skip = True
+                break
             if inp not in dgraph:
                 base = base_var(dgraph, inp)
                 for n in chain(dgraph.successors(base), dgraph.predecessors(base)):
@@ -1348,6 +1350,9 @@ class Assembly(Component):
                 dgraph.add_connected_subvar(inp)
 
         for out in outputs:
+            if not hasattr(self, out.split('.',1)[0].split('[')[0]):
+                skip = True
+                break
             if out not in dgraph:
                 base = base_var(dgraph, out)
                 for n in chain(dgraph.successors(base), dgraph.predecessors(base)):
@@ -1355,7 +1360,8 @@ class Assembly(Component):
                         keep.add(base)
                 dgraph.add_connected_subvar(out)
 
-        dgraph = dgraph.relevant_subgraph(inputs, outputs, keep)
+        if not skip:
+            dgraph = dgraph.relevant_subgraph(inputs, outputs, keep)
 
         dgraph._remove_vartrees(self)
 

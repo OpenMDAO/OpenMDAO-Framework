@@ -526,7 +526,7 @@ class MultiDriverTestCase(unittest.TestCase):
 
         top.driver.workflow.add(['D1', 'D2'])
         top.D1.workflow = SequentialWorkflow(top.D1, members=['C1'])
-        top.D2.workflow = SequentialWorkflow(top.D1, members=['C2'])
+        top.D2.workflow = SequentialWorkflow(top.D2, members=['C2'])
 
         top.run()
         self.assertEqual(top.D2.exec_count, 1)

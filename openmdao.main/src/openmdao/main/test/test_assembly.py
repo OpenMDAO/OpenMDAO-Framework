@@ -722,7 +722,7 @@ class AssemblyTestCase(unittest.TestCase):
         sub.driver.workflow.add('comp3')
 
         # Default didn't execute comp1 first.
-        top.driver.workflow = SequentialWorkflow()
+        top.driver.workflow = SequentialWorkflow(top.driver)
         top.driver.workflow.add(('comp1', 'driverA', 'driverB'))
         top.driverA.workflow.add(('comp1', 'comp2'))
         top.driverB.workflow.add(('comp2', 'subassy'))
