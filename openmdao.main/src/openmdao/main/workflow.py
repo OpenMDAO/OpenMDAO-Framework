@@ -522,10 +522,6 @@ class Workflow(object):
         """Remove a component from this Workflow by name."""
         raise NotImplementedError("This Workflow has no 'remove' function")
 
-    def get_names(self, full=False):
-        """Return a list of component names in this workflow."""
-        raise NotImplementedError("This Workflow has no 'get_names' function")
-
     def __iter__(self):
         """Returns an iterator over the components in the workflow in
         some order.

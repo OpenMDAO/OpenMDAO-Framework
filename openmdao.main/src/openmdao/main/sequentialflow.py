@@ -37,14 +37,14 @@ class SequentialWorkflow(Workflow):
         return iter([getattr(self.scope, n) for n in self.parent._ordering])
 
     def __len__(self):
-        return len(self.get_names(full=True))
+        return len(self.parent._iter_set)
 
     def __contains__(self, comp):
         return comp in self.parent._iter_set
 
     def index(self, comp):
         """Return index number for a component in this workflow."""
-        return self.get_names().index(comp)
+        return self.parent._ordering.index(comp)
 
     def __eq__(self, other):
         return type(self) is type(other) and self._names == other._names
@@ -62,42 +62,6 @@ class SequentialWorkflow(Workflow):
         self._iternames = None
         self._initnames = None
         self._ordering = None
-
-    def get_names(self, full=False):
-        """Return a list of component names in this workflow.
-        If full is True, include hidden pseudo-components in the list.
-        """
-        if self._names is None:
-            comps = [getattr(self.scope, n) for n in self._explicit_names]
-            drivers = [c for c in comps if has_interface(c, IDriver)]
-            self._names = self._explicit_names[:]
-            self._iternames = self.parent._get_required_compnames()
-
-            if len(drivers) == len(comps):  # all comps are drivers or explicit set is empty
-                iterset = set()
-                for driver in drivers:
-                    iterset.update([c.name for c in driver.iteration_set()])
-                added = set([n for n in self._iternames if not n.startswith('_pseudo_')
-                                 and n not in iterset]) - set(self._names)
-                self._names.extend(added)
-
-            self._fullnames = self._names[:]
-            fullset = set(self.parent.list_pseudocomps())
-            fullset.update(find_related_pseudos(self.scope._depgraph,
-                                                self._names))
-            self._fullnames.extend(fullset - set(self._names))
-
-            self._initnames = set(self._fullnames) - self._iternames
-
-            # drivers are always manually placed in the workflow, so
-            # assume that they're supposed to be there and don't
-            # warn the user
-            self._initnames -= set([d.name for d in drivers])
-
-        if full:
-            return self._fullnames[:]
-        else:
-            return self._names[:]
 
     @method_accepts(TypeError,
                     compnames=(str, list, tuple),
