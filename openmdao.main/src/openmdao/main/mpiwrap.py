@@ -2,11 +2,47 @@ import os
 import sys
 import numpy
 
+import ctypes
+import io
+
+libc = ctypes.CDLL(None)
+c_stdout = ctypes.c_void_p.in_dll(libc, 'stdout')
+c_stderr = ctypes.c_void_p.in_dll(libc, 'stderr')
+
+def _redirect_streams(to_fd):
+    """Redirect stdout/stderr to the given file descriptor.
+    Based on: http://eli.thegreenplace.net/2015/redirecting-all-kinds-of-stdout-in-python/
+    """
+
+    original_stdout_fd = sys.stdout.fileno()
+    original_stderr_fd = sys.stderr.fileno()
+
+    # Flush the C-level buffers
+    libc.fflush(c_stdout)
+    libc.fflush(c_stderr)
+
+    # Flush and close sys.stdout/err - also closes the file descriptors (fd)
+    sys.stdout.close()
+    sys.stderr.close()
+
+    # Make original_stdout_fd point to the same file as to_fd
+    os.dup2(to_fd, original_stdout_fd)
+    os.dup2(to_fd, original_stderr_fd)
+
+    # Create a new sys.stdout that points to the redirected fd
+    #sys.stdout = io.TextIOWrapper(os.fdopen(original_stdout_fd, 'wb')) # python 3
+    sys.stdout = os.fdopen(original_stdout_fd, 'wb', 0)
+    sys.stderr = os.fdopen(original_stderr_fd, 'wb', 0)
+
+    # # Save a copy of the original stdout fd in saved_stdout_fd
+    # saved_stdout_fd = os.dup(original_stdout_fd)
+
 def use_proc_files():
     if MPI is not None:
         rank = MPI.COMM_WORLD.rank
         sname = "%s.out" % rank
-        sys.stdout = sys.stderr = open(sname, 'w')
+        ofile = open(sname, 'wb')
+        _redirect_streams(ofile.fileno())
 
 def under_mpirun():
     """Return True if we're being executed under mpirun."""
