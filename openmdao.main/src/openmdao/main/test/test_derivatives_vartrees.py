@@ -237,6 +237,12 @@ class TestDerivativeVarTreeSubAssembly(unittest.TestCase):
         assert_rel_error(self, linalg.norm(J_fd - J_forward), 0, .00001)
         assert_rel_error(self, linalg.norm(J_fd - J_reverse), 0, .00001)
 
+        # Piggyback testing of the is_variable_local function -- make sure it
+        # correctly identifies boundary vartrees.
+        system = top.comp.driver.workflow._system
+        self.assertTrue(system.is_variable_local('ins.x1') is True)
+
+
     def test_varTree_in_subassembly(self):
         top = set_as_top(Assembly())
         top.add('comp', AssemblyWithCompVarTree())

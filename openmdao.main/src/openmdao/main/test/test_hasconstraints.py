@@ -574,6 +574,36 @@ class HasConstraintsTestCase(unittest.TestCase):
         diff = np.abs(J - fake_jac()['comp.x'])
         assert_rel_error(self, diff.max(), 0.0, 1e-4)
 
+        # Test behavoir
+
+        def fake_jac2():
+            """ Returns a User-defined Jacobian. The values are
+            totally wrong to facilitate testing. """
+            jacs = {}
+            jacs['Junk'] = np.array([[100.0, 101, 102, 103],
+                                     [104, 105, 106, 107],
+                                     [108, 109, 110, 111],
+                                     [112, 113, 114, 115]])
+    
+            return jacs
+
+        top.driver.clear_constraints()
+        top._pseudo_count = 0
+        top.driver.add_constraint('comp.y = 1', jacs=fake_jac2)
+        top._setup()
+        top.run()
+    
+        J = top.driver.calc_gradient(mode='forward', return_format='dict')
+        J = J['_pseudo_0.out0']['comp.x']
+        diff = np.abs(J - top.comp.J)
+        assert_rel_error(self, diff.max(), 0.0, 1e-4)
+    
+        J = top.driver.calc_gradient(mode='adjoint', return_format='dict')
+        J = J['_pseudo_0.out0']['comp.x']
+        J_abs = np.abs(J)
+        assert_rel_error(self, J_abs.max(), 0.0, 1e-4)
+
+
 
 class Has2SidedConstraintsTestCase(unittest.TestCase):
 

@@ -117,8 +117,6 @@ class MPITests_2Proc(MPITestCase):
 
         J = self.top.driver.workflow._system.get_combined_J(J)
 
-        # TODO: ask Ken why this ever worked before when 'comp.y' was not
-        #       specified as an input.
         if self.comm.rank == 0:
             assert_rel_error(self, J['_pseudo_0.out0']['comp.x'][0][0],
                                         5.0, 0.0001)
