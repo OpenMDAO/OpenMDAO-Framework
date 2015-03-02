@@ -42,10 +42,6 @@ class SequentialWorkflow(Workflow):
     def __contains__(self, comp):
         return comp in self.parent._iter_set
 
-    def index(self, comp):
-        """Return index number for a component in this workflow."""
-        return self.parent._ordering.index(comp)
-
     def __eq__(self, other):
         return type(self) is type(other) and self._names == other._names
 
@@ -115,13 +111,6 @@ class SequentialWorkflow(Workflow):
                     if target == parent:
                         msg = "You cannot add a driver to its own workflow"
                         raise AttributeError(msg)
-
-                    ## Check for circular dependency in driver workflow
-                    #if hasattr(target, 'iteration_set'):
-                        #iterset = target.iteration_set()
-                        #if parent in iterset:
-                            #msg = "Driver recursion loop detected"
-                            #raise AttributeError(msg)
 
                 if index is None:
                     self._explicit_names.append(node)

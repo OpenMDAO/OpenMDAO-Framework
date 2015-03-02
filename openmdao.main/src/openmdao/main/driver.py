@@ -31,6 +31,7 @@ from openmdao.main.mp_support import has_interface
 from openmdao.main.rbac import rbac
 from openmdao.main.vartree import VariableTree
 from openmdao.main.workflow import Workflow, get_cycle_vars
+from openmdao.main.case import Case
 
 from openmdao.util.decorators import add_delegate
 
@@ -625,14 +626,64 @@ class Driver(Component):
         This is where iteration events are set."""
         self.set_events()
 
-    def run_iteration(self):
+    def run_iteration(self, case_uuid=None):
         """Runs workflow."""
         wf = self.workflow
         if len(wf) == 0:
             self._logger.warning("'%s': workflow is empty!"
                                  % self.get_pathname())
 
-        wf.run()
+        if not wf._system.is_active():
+            return
+
+        self._stop = False
+        self.workflow._exec_count += 1
+
+        iterbase = wf._iterbase()
+
+        if not case_uuid:
+            # We record the case and are responsible for unique case ids.
+            record_case = True
+            case_uuid = Case.next_uuid()
+        else:
+            record_case = False
+
+        err = None
+        try:
+            uvec = wf._system.vec['u']
+            fvec = wf._system.vec['f']
+
+            if wf._need_prescatter:
+                wf._system.scatter('u', 'p')
+
+            # save old value of u to compute resids
+            for node in wf._cycle_vars:
+                fvec[node][:] = uvec[node][:]
+
+            wf._system.run(iterbase=iterbase, case_uuid=case_uuid)
+
+            # update resid vector for cyclic vars
+            for node in wf._cycle_vars:
+                fvec[node][:] -= uvec[node][:]
+
+            if self._stop:
+                raise RunStopped('Stop requested')
+        except Exception:
+            err = sys.exc_info()
+
+        if record_case and wf._rec_required:
+            try:
+                wf._record_case(case_uuid, err)
+            except Exception as exc:
+                if err is None:
+                    err = sys.exc_info()
+                self._logger.error("Can't record case: %s", exc)
+
+        # reraise exception with proper traceback if one occurred
+        if err is not None:
+            # NOTE: cannot use 'raise err' here for some reason.  Must separate
+            # the parts of the tuple.
+            raise err[0], err[1], err[2]
 
     def calc_derivatives(self, first=False, second=False):
         """ Calculate derivatives and save baseline states for all components

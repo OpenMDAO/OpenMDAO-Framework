@@ -133,65 +133,11 @@ class Workflow(object):
         count: int
             Initial value for workflow execution count.
         """
-        self._initial_count = count - 1  # run() and step() will increment.
+        self._initial_count = count - 1  # run() will increment.
 
     def reset(self):
         """ Reset execution count. """
         self._exec_count = self._initial_count
-
-    def run(self, case_uuid=None):
-        """ Run the Components in this Workflow. """
-        if not self._system.is_active():
-            return
-
-        self._stop = False
-        self._exec_count += 1
-
-        iterbase = self._iterbase()
-
-        if case_uuid is None:
-            # We record the case and are responsible for unique case ids.
-            record_case = True
-            case_uuid = Case.next_uuid()
-        else:
-            record_case = False
-
-        err = None
-        try:
-            uvec = self._system.vec['u']
-            fvec = self._system.vec['f']
-
-            if self._need_prescatter:
-                self._system.scatter('u', 'p')
-
-            # save old value of u to compute resids
-            for node in self._cycle_vars:
-                fvec[node][:] = uvec[node][:]
-
-            self._system.run(iterbase=iterbase, case_uuid=case_uuid)
-
-            # update resid vector for cyclic vars
-            for node in self._cycle_vars:
-                fvec[node][:] -= uvec[node][:]
-
-            if self._stop:
-                raise RunStopped('Stop requested')
-        except Exception:
-            err = sys.exc_info()
-
-        if record_case and self._rec_required:
-            try:
-                self._record_case(case_uuid, err)
-            except Exception as exc:
-                if err is None:
-                    err = sys.exc_info()
-                self.parent._logger.error("Can't record case: %s", exc)
-
-        # reraise exception with proper traceback if one occurred
-        if err is not None:
-            # NOTE: cannot use 'raise err' here for some reason.  Must separate
-            # the parts of the tuple.
-            raise err[0], err[1], err[2]
 
     def calc_gradient(self, inputs=None, outputs=None, mode='auto',
                       return_format='array', force_regen=False, options=None):

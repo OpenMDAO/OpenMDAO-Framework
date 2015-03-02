@@ -29,7 +29,7 @@ class NoDerivSimpleDriverSetter(NoDerivSimpleDriver):
 
     def execute(self):
         self.set_parameters(self.vals)
-        self.workflow.run()
+        self.run_iteration()
 
 
 class ABCDArrayComp(Component):
