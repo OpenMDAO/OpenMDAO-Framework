@@ -6,8 +6,12 @@ SET OLD_DIR=%CD%
 REM Create an openmdao environment and
 REM install numpy and scipy
 REM TODO: Should move all possible openmdao dependencies up here to simplify script
+SET ENV_NAME=%~1
+
+IF [%ENV_NAME%] == [] SET ENV_NAME=openmdao
+
 SET DEPENDENCIES=pip
-SET DEPENDENCIES=numpy
+SET DEPENDENCIES=%DEPENDENCIES% numpy
 SET DEPENDENCIES=%DEPENDENCIES% scipy
 SET DEPENDENCIES=%DEPENDENCIES% setuptools
 SET DEPENDENCIES=%DEPENDENCIES% pyparsing
@@ -34,13 +38,13 @@ SET DEPENDENCIES=%DEPENDENCIES% pyevolve
 
 @ECHO ON
 
-conda create --yes --name openmdao %DEPENDENCIES%
+conda create --name %ENV_NAME% %DEPENDENCIES%
 
 @ECHO OFF
 SET DEPENDENCIES=
 
 REM Get the root directory of anaconda
-cmd /c "activate openmdao && python -c "import sys; print sys.executable" > %TEMP%\python && deactivate"
+cmd /c "activate %ENV_NAME% && python -c "import sys; print sys.executable" > %TEMP%\python && deactivate"
 SET /p PYTHON=<%TEMP%\python
 DEL %TEMP%\python
 
@@ -60,7 +64,26 @@ cd ..\openmdao.lib
 REM install openmdao examples
 cd ..\examples
 cd openmdao.examples.bar3simulation
+
+REM Manually remove bar3.pyd since
+REM `python setup.py develop` won't update it
+if EXIST openmdao\examples\bar3simulation\bar3.pyd (
+    del openmdao\examples\bar3simulation\bar3.pyd
+)
+
+REM Also remove build directory
+if EXIST build (
+    rmdir /s /q build
+)
+
+REM And remove dist directory
+if EXIST dist (
+    rmdir /s /q dist
+)
+
+REM Then build development version of bar3simulation
 %PYTHON% setup.py develop
+
 cd ..\openmdao.examples.expected_improvement
 %PYTHON% setup.py develop
 cd ..\openmdao.examples.mdao
