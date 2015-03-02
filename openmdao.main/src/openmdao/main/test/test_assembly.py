@@ -6,7 +6,7 @@ import shutil
 import unittest
 import logging
 
-from openmdao.main.api import Assembly, Component, Driver, SequentialWorkflow, \
+from openmdao.main.api import Assembly, Component, Driver, Workflow, \
                               set_as_top, SimulationRoot, VariableTree
 from openmdao.main.datatypes.api import Float, Instance, Int, Str, List, Array, VarTree
 from openmdao.util.log import enable_trace, disable_trace
@@ -722,7 +722,7 @@ class AssemblyTestCase(unittest.TestCase):
         sub.driver.workflow.add('comp3')
 
         # Default didn't execute comp1 first.
-        top.driver.workflow = SequentialWorkflow(top.driver)
+        top.driver.workflow = Workflow(top.driver)
         top.driver.workflow.add(('comp1', 'driverA', 'driverB'))
         top.driverA.workflow.add(('comp1', 'comp2'))
         top.driverB.workflow.add(('comp2', 'subassy'))

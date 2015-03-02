@@ -3,6 +3,7 @@
 from fnmatch import fnmatch
 from math import isnan
 import sys
+from types import NoneType
 
 import weakref
 from StringIO import StringIO
@@ -24,6 +25,7 @@ from openmdao.main.depgraph import _get_inner_connections, get_nondiff_groups, \
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.interfaces import IVariableTree, IDriver
 from openmdao.main.depgraph import is_connection
+from openmdao.util.decorators import method_accepts
 
 
 __all__ = ['Workflow']
@@ -53,6 +55,8 @@ class Workflow(object):
         self._comp_count = 0     # Component index in workflow.
         self._system = None
         self._reduced_graph = None
+
+        self._explicit_names = []  # names the user adds explicitly
 
         self._rec_required = None  # Case recording configuration.
         self._rec_parameters = None
@@ -86,6 +90,9 @@ class Workflow(object):
         self.__dict__.update(state)
         self.parent = state['_parent']
         self.scope = state['_scope']
+
+    def __contains__(self, comp):
+        return comp in self.parent._iter_set
 
     @property
     def parent(self):
@@ -450,25 +457,91 @@ class Workflow(object):
         self._system.stop()
         self._stop = True
 
+    @method_accepts(TypeError,
+                    compnames=(str, list, tuple),
+                    index=(int, NoneType),
+                    check=bool)
     def add(self, compnames, index=None, check=False):
-        """ Add new component(s) to the workflow by name."""
-        raise NotImplementedError("This Workflow has no 'add' function")
+        """
+        add(self, compnames, index=None, check=False)
+        Add new component(s) to the end of the workflow by name.
+        """
+
+        if isinstance(compnames, basestring):
+            nodes = [compnames]
+        else:
+            nodes = compnames
+
+        try:
+            iter(nodes)
+        except TypeError:
+            raise TypeError("Components must be added by name to a workflow.")
+
+        # workflow deriv graph, etc. must be recalculated
+        self.config_changed()
+
+        for node in nodes:
+            if isinstance(node, basestring):
+
+                if check:
+                    # check whether each node is valid and if not then
+                    # construct a useful error message.
+                    parent = self.parent
+                    name = parent.parent.name
+                    if not name:
+                        name = "the top assembly."
+
+                    # Components in subassys are never allowed.
+                    if '.' in node:
+                        msg = "Component '%s' is not" % node + \
+                              " in the scope of %s" % name
+                        raise AttributeError(msg)
+
+                    # Does the component really exist?
+                    try:
+                        target = parent.parent.get(node)
+                    except AttributeError:
+                        msg = "Component '%s'" % node + \
+                              " does not exist in %s" % name
+                        raise AttributeError(msg)
+
+                    # Don't add yourself to your own workflow
+                    if target == parent:
+                        msg = "You cannot add a driver to its own workflow"
+                        raise AttributeError(msg)
+
+                if index is None:
+                    self._explicit_names.append(node)
+                else:
+                    self._explicit_names.insert(index, node)
+                    index += 1
+            else:
+                msg = "Components must be added by name to a workflow."
+                raise TypeError(msg)
 
     def config_changed(self):
         """Notifies the Workflow that workflow configuration
         (dependencies, etc.) has changed.
         """
         self._system = None
+        self._ordering = None
 
-    def remove(self, comp):
-        """Remove a component from this Workflow by name."""
-        raise NotImplementedError("This Workflow has no 'remove' function")
+    def remove(self, compname):
+        """Remove a component from the workflow by name. Do not report an
+        error if the specified component is not found.
+        """
+        if not isinstance(compname, basestring):
+            msg = "Components must be removed by name from a workflow."
+            raise TypeError(msg)
+        try:
+            self._explicit_names.remove(compname)
+        except ValueError:
+            pass
+        self.config_changed()
 
     def __iter__(self):
-        """Returns an iterator over the components in the workflow in
-        some order.
-        """
-        raise NotImplementedError("This Workflow has no '__iter__' function")
+        """Returns an iterator over the components in the workflow."""
+        return iter([getattr(self.scope, n) for n in self.parent._ordering])
 
     def __len__(self):
         raise NotImplementedError("This Workflow has no '__len__' function")
@@ -638,6 +711,21 @@ class Workflow(object):
     def subdrivers(self):
         """Return a list of direct subdrivers in this workflow."""
         return [c for c in self if has_interface(c, IDriver)]
+
+    def clear(self):
+        """Remove all components from this workflow."""
+        self._explicit_names = []
+        self.config_changed()
+
+    def mimic(self, src):
+        '''Mimic capability'''
+        self.clear()
+        par = self.parent.parent
+        if par is not None:
+            self._explicit_names = [n for n in src._explicit_names
+                                            if hasattr(par, n)]
+        else:
+            self._explicit_names = src._explicit_names[:]
 
 def get_cycle_vars(graph, varmeta):
     # examine the graph to see if we have any cycles that we need to

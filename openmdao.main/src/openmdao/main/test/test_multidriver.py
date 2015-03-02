@@ -8,9 +8,8 @@ from StringIO import StringIO
 
 from openmdao.lib.drivers.conmindriver import CONMINdriver
 from openmdao.lib.drivers.slsqpdriver import SLSQPdriver
-from openmdao.main.api import Assembly, Component, Driver, \
-                              SequentialWorkflow, set_as_top, \
-                              dump_iteration_tree
+from openmdao.main.api import Assembly, Component, Driver, Workflow, \
+                              set_as_top, dump_iteration_tree
 from openmdao.main.datatypes.api import Float, Int, Str
 from openmdao.main.hasobjective import HasObjective
 from openmdao.main.hasparameters import HasParameters
@@ -525,8 +524,8 @@ class MultiDriverTestCase(unittest.TestCase):
         top.D2.max_iterations = 3
 
         top.driver.workflow.add(['D1', 'D2'])
-        top.D1.workflow = SequentialWorkflow(top.D1, members=['C1'])
-        top.D2.workflow = SequentialWorkflow(top.D2, members=['C2'])
+        top.D1.workflow = Workflow(top.D1, members=['C1'])
+        top.D2.workflow = Workflow(top.D2, members=['C2'])
 
         top.run()
         self.assertEqual(top.D2.exec_count, 1)
@@ -611,5 +610,3 @@ if __name__ == "__main__":
     #p.print_callees()
 
     unittest.main()
-
-

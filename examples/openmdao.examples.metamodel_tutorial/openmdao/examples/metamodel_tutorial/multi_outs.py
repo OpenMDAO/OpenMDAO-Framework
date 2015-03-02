@@ -1,4 +1,4 @@
-from openmdao.main.api import Assembly, Component, SequentialWorkflow, set_as_top
+from openmdao.main.api import Assembly, Component, set_as_top
 from math import sin, cos
 
 from openmdao.main.datatypes.api import Float
