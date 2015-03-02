@@ -190,6 +190,11 @@ class FiniteDifference(object):
             else:
                 i1, i2 = self.in_bounds[src[0]]
 
+            if j in self.step_type_custom:
+                step_type = self.step_type_custom[j]
+            else:
+                step_type = self.step_type
+
             for i in range(i1, i2):
 
                 # Users can customize the FD per variable
@@ -197,10 +202,6 @@ class FiniteDifference(object):
                     form = self.form_custom[j]
                 else:
                     form = self.form
-                if j in self.step_type_custom:
-                    step_type = self.step_type_custom[j]
-                else:
-                    step_type = self.step_type
 
                 # Relative stepsizing
                 fd_step = self.fd_step[j]
