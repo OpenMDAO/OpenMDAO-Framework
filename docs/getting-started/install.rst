@@ -1,7 +1,14 @@
-
 .. _Installing-OpenMDAO:
 
 .. _Installation:
+
+.. note::
+
+   Please read the preceding section on :ref:`System Requirements <System-Requirements>`  before attempting any
+   of the below installation methods. If you don't have the proper prerequisites, or are attempting an installation on
+   an unsupported system, (e.g. 64-bit Python on Windows) you will encounter difficulties that could be avoided
+   with a little preparation.
+
 
 .. _VirtualEnv Installation:
 
@@ -15,19 +22,23 @@ VirtualEnv Installation
   installation. Please follow this link for detailed instructions on solving this error:
   http://techrena.net/fix-requested-operation-requires-elevation-error/.
 
-OpenMDAO is installed using a bootstrap script that installs OpenMDAO in a *virtual* Python environment. This script is called
-``go-openmdao.py``.
+The most common way that OpenMDAO is installed is by using a bootstrap script that installs OpenMDAO in a *virtual*
+Python environment. This script is called
+
+``go-openmdao-X.Y.Z.py``.
+
+(where X.Y.Z represents a version number, e.g. ``go-openmdao-0.12.0.py``)
 
 **Acquire and run the script**
 
 1. Download the installation script.
 
    Go to the OpenMDAO `downloads <http://openmdao.org/downloads/recent/>`_ page and then click on the latest
-   ``go-openmdao.py`` script (listed first). You will see that earlier versions may also
+   ``go-openmdao-X.Y.Z.py`` script (listed first). You will see that earlier versions may also
    be downloaded.
 
-   If you are using Internet Explorer, right-click on ``go-openmdao.py`` script; then select **Save
-   Target as.** Be sure to save the ``go-openmdao.py`` script to the folder where you want to install
+   If you are using Internet Explorer, right-click on ``go-openmdao-X.Y.Z.py`` script; then select **Save
+   Target As.** Be sure to save the ``go-openmdao-X.Y.Z.py`` script to the folder where you want to install
    OpenMDAO. Other browsers may automatically download the file to a specific folder (e.g., a
    Downloads folder), and you will have to move it to the location where you want to install
    OpenMDAO. We highly recommend you pick a folder without any spaces in your path name! For
@@ -37,21 +48,21 @@ OpenMDAO is installed using a bootstrap script that installs OpenMDAO in a *virt
    variable will not be configured to point to the Python installation directory. You will have to
    put the correct Python version in the path. For help doing this, please see the following `video
    <http://showmedo.com/videotutorials/video?name=960000&fromSeriesID=96>`_. Please note that this
-   video is for Python 2.5, and you want to use **Python 2.7.x**.
+   video is for Python 2.5, and you want to use **Python 2.7.5+**.
 
 2. Run the script.
 
    If you specify a directory name, the virtual environment will be installed there. If you don't
-   supply a directory name, it will default to a name based on the version, for example,
-   ``openmdao-0.1``.
+   supply a directory name, the install directory will default to a name based on the X.Y.Z version, for example,
+   ``openmdao-0.12.0``.
 
    ::
 
-      python go-openmdao.py
+      python go-openmdao-0.12.0.py
 
 
    This script will check the version of Python you are running. Currently you
-   must be running at least version 2.7. After the script completes successfully, you
+   must be running at least version 2.7.5. After the script completes successfully, you
    will have installed OpenMDAO. There are just a couple more steps to follow
    before you can start using it.
 
@@ -76,7 +87,7 @@ the front of your system path in the current shell so that when you type
 environment, giving you access to everything in OpenMDAO.
 
 Navigate into the folder that was just created by your install script. It will have a name
-of the form ``openmdao-X.X.X``.
+of the form ``openmdao-X.Y.Z``.
 
 If you are on **Linux,** you must be running bash to activate the virtual environment. If you are
 not running bash, start it up by typing:
@@ -129,22 +140,23 @@ Site-Wide VirtualEnv Installation
 At some sites it can be convenient to have a standard OpenMDAO configuration
 available to all users.  This would include the base OpenMDAO installation,
 possibly a collection of pre-installed plugins, site-specific configuration
-files, etc.  Using the ``go-openmdao.py`` script of an activated environment,
+files, etc.  Using the ``go-openmdao-X.Y.Z.py`` script of an activated environment,
 you can create a zip file containing everything needed to install an OpenMDAO
 configuration on a user's system.
 
 To create the zip file, type the following from within an activated environment
-(in this case version 0.12.0 on a Linux machine):
+(in this case, version 0.12.0):
 
 ::
 
-    python go-openmdao.py --relocatable
+    python go-openmdao-0.12.0.py --relocatable
 
-This will create ``openmdao-0.12.0-linux-x86_64.zip``.
+This will create ``openmdao-0.12.0-linux-x86_64.zip`` on linux machines and
+``openmdao-0.12.0-win32.zip`` on Windows machines.
 
-Now, to install at some other location, you need to extract all the files from
-the created zip file and execute ``script-fixup.py``, which is part of the
-generated zip file:
+Move the file to the desired machine.  To install at some other location, you need to
+simply extract all the files from the created zip file and execute ``script-fixup.py``,
+which is a file that is inserted into of the generated zip file at the time of its creation.
 
 ::
 
