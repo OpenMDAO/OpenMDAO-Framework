@@ -185,6 +185,8 @@ class FiniteDifference(object):
         uvec.set_to_array(self.y_base, outputs)
 
         for j, src, in enumerate(self.inputs):
+
+            # Users can customize relative/absolute step type per variable.
             if j in self.step_type_custom:
                 step_type = self.step_type_custom[j]
             else:
@@ -197,7 +199,9 @@ class FiniteDifference(object):
 
             for i in range(i1, i2):
 
-                # Users can customize the FD per variable
+                # Users can customize the FD form per variable. Need to reset
+                # it for each array element so that we can do bounds
+                # detection.
                 if j in self.form_custom:
                     form = self.form_custom[j]
                 else:
