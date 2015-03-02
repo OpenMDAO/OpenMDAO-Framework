@@ -2,12 +2,12 @@ import os
 import sys
 import numpy
 
-import ctypes
-import io
+# import ctypes
+# import io
 
-libc = ctypes.CDLL(None)
-c_stdout = ctypes.c_void_p.in_dll(libc, 'stdout')
-c_stderr = ctypes.c_void_p.in_dll(libc, 'stderr')
+# libc = ctypes.CDLL(None)
+# c_stdout = ctypes.c_void_p.in_dll(libc, 'stdout')
+# c_stderr = ctypes.c_void_p.in_dll(libc, 'stderr')
 
 def _redirect_streams(to_fd):
     """Redirect stdout/stderr to the given file descriptor.
@@ -17,9 +17,9 @@ def _redirect_streams(to_fd):
     original_stdout_fd = sys.stdout.fileno()
     original_stderr_fd = sys.stderr.fileno()
 
-    # Flush the C-level buffers
-    libc.fflush(c_stdout)
-    libc.fflush(c_stderr)
+    # # Flush the C-level buffers
+    # libc.fflush(c_stdout)
+    # libc.fflush(c_stderr)
 
     # Flush and close sys.stdout/err - also closes the file descriptors (fd)
     sys.stdout.close()
@@ -31,7 +31,7 @@ def _redirect_streams(to_fd):
 
     # Create a new sys.stdout that points to the redirected fd
     #sys.stdout = io.TextIOWrapper(os.fdopen(original_stdout_fd, 'wb')) # python 3
-    sys.stdout = os.fdopen(original_stdout_fd, 'wb', 0)
+    sys.stdout = os.fdopen(original_stdout_fd, 'wb', 0) # 0 makes them unbuffered
     sys.stderr = os.fdopen(original_stderr_fd, 'wb', 0)
 
     # # Save a copy of the original stdout fd in saved_stdout_fd
