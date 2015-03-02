@@ -26,6 +26,9 @@ OpenMDAO requires that the following software be installed at the system level o
     installation in the PATH and/or not having the OpenMDAO-approved Python version in the PATH will only
     lead to problems.
 
+  - OpenMDAO does not yet support any 64-bit distributions of Python on Windows.  You can install a 32-bit distribution
+    on Windows and have success.
+
 
 - NumPy (version 1.6 or higher)
 
@@ -145,7 +148,7 @@ public/private key pairs to be stored securely.
 
 .. note::
 
-   We provide pre-compiled binaries for all Intel OS X Macs, for Snow Leopard or higher.  However,
+   We provide pre-compiled binaries for all Intel OS X Macs, for Lion or higher.  However,
    if you you're running an older version of OS X or a PowerPC architecture, then  you'll need to
    set up some compilers on your system to get OpenMDAO to install. This should  be a rare
    situation, but if you happen to run into it, go to our developer docs for the details about

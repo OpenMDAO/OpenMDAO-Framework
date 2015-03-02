@@ -474,6 +474,8 @@ class MPITests2(MPITestCase):
         else:
             self.assertTrue(system.is_variable_local('_pseudo_0') is False)
             self.assertTrue(system.is_variable_local('_pseudo_0.out0') is False)
+            self.assertTrue(system.is_variable_local('C1.y2') is False)
+            self.assertTrue(system.is_variable_local('C2.y1') is False)
 
         # Exclusive or - you either got C2 or C3 on a given process.
         self.assertTrue(system.is_variable_local('C1.y1') != system.is_variable_local('C2.y2'))
