@@ -629,7 +629,7 @@ class Driver(Component):
     def run_iteration(self, case_uuid=None):
         """Runs workflow."""
         wf = self.workflow
-        if len(wf) == 0:
+        if not wf._ordering:
             self._logger.warning("'%s': workflow is empty!"
                                  % self.get_pathname())
 

@@ -24,29 +24,14 @@ class SequentialWorkflow(Workflow):
     def __init__(self, parent=None, members=None):
         """ Create an empty flow. """
         self._explicit_names = []  # names the user adds
-        self._names = None   # names the user adds plus names required
-                             # for params, objectives, and constraints
         super(SequentialWorkflow, self).__init__(parent, members)
-
-        # Bookkeeping
-        self._iternames = None
-        self._initnames = None
 
     def __iter__(self):
         """Returns an iterator over the components in the workflow."""
         return iter([getattr(self.scope, n) for n in self.parent._ordering])
 
-    def __len__(self):
-        return len(self.parent._iter_set)
-
     def __contains__(self, comp):
         return comp in self.parent._iter_set
-
-    def __eq__(self, other):
-        return type(self) is type(other) and self._names == other._names
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
 
     def config_changed(self):
         """Notifies the Workflow that its configuration (dependencies, etc.)
@@ -54,9 +39,6 @@ class SequentialWorkflow(Workflow):
         """
         super(SequentialWorkflow, self).config_changed()
 
-        self._names = None
-        self._iternames = None
-        self._initnames = None
         self._ordering = None
 
     @method_accepts(TypeError,

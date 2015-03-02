@@ -39,11 +39,7 @@ class Workflow(object):
         """Create a Workflow.
 
         parent: Driver
-            The Driver that contains this Workflow.  This option is normally
-            passed instead of scope because scope usually isn't known at
-            initialization time.  If scope is not provided, it will be
-            set to parent.parent, which should be the Assembly that contains
-            the parent Driver.
+            The Driver that contains this Workflow.
 
         members: list of str (optional)
             A list of names of Components to add to this workflow.
