@@ -185,15 +185,15 @@ class FiniteDifference(object):
         uvec.set_to_array(self.y_base, outputs)
 
         for j, src, in enumerate(self.inputs):
-            if isinstance(src, basestring):
-                i1, i2 = self.in_bounds[src]
-            else:
-                i1, i2 = self.in_bounds[src[0]]
-
             if j in self.step_type_custom:
                 step_type = self.step_type_custom[j]
             else:
                 step_type = self.step_type
+
+            if isinstance(src, basestring):
+                i1, i2 = self.in_bounds[src]
+            else:
+                i1, i2 = self.in_bounds[src[0]]
 
             for i in range(i1, i2):
 
