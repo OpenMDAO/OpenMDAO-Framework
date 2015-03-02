@@ -528,6 +528,9 @@ class Workflow(object):
         inputs = []
         outputs = []
 
+        inputs_all_processes = []
+        outputs_all_processes = []
+
         # Parameters
         self._rec_parameters = []
         if hasattr(driver, 'get_parameters'):
@@ -537,7 +540,8 @@ class Workflow(object):
                 path = prefix+name
                 if save_problem_formulation or \
                     self._check_path(path, includes, excludes):
-                    if self._system.is_variable_local(path):
+                    inputs_all_processes.append(name)
+                    if 1 or self._system.is_variable_local(path):
                         self._rec_parameters.append(param)
                         inputs.append(name)
 
@@ -554,7 +558,11 @@ class Workflow(object):
                 if save_problem_formulation or \
                    self._check_path(path, includes, excludes):
                     self._rec_objectives.append(key)
-                    if self._system.is_variable_local(path):
+                    if key != objective.text:
+                        outputs_all_processes.append(name)
+                    else:
+                        outputs_all_processes.append(name + '.out0')
+                    if 1 or self._system.is_variable_local(path):
                         if key != objective.text:
                             outputs.append(name)
                         else:
@@ -568,7 +576,8 @@ class Workflow(object):
                 path = prefix+name
                 if save_problem_formulation or \
                    self._check_path(path, includes, excludes):
-                    if self._system.is_variable_local(path):
+                    outputs_all_processes.append(name + '.out0')
+                    if 1 or self._system.is_variable_local(path):
                         self._rec_responses.append(key)
                         outputs.append(name + '.out0')
 
@@ -580,7 +589,8 @@ class Workflow(object):
                 path = prefix+name
                 if save_problem_formulation or \
                    self._check_path(path, includes, excludes):
-                    if self._system.is_variable_local(path):
+                    outputs_all_processes.append(name + '.out0')
+                    if 1 or self._system.is_variable_local(path):
                         self._rec_constraints.append(con)
                         outputs.append(name + '.out0')
         if hasattr(driver, 'get_ineq_constraints'):
@@ -589,7 +599,8 @@ class Workflow(object):
                 path = prefix+name
                 if save_problem_formulation or \
                    self._check_path(path, includes, excludes):
-                    if self._system.is_variable_local(path):
+                    outputs_all_processes.append(name + '.out0')
+                    if 1 or self._system.is_variable_local(path):
                         self._rec_constraints.append(con)
                         outputs.append(name + '.out0')
                     #outputs.append(path+'.out0')
@@ -616,8 +627,9 @@ class Workflow(object):
                             output_name = n
                             break
                 #output_name = prefix + output_name
-                if output_name not in outputs and self._check_path(output_name, includes, excludes) :
-                    if self._system.is_variable_local(output_name):
+                if output_name not in outputs and self._check_path(prefix + output_name, includes, excludes) :
+                    outputs_all_processes.append(output_name)
+                    if 1 or self._system.is_variable_local(output_name):
                         outputs.append(output_name)
                         self._rec_outputs.append(output_name)
                         #self._rec_all_outputs.append(output_name)
@@ -640,8 +652,9 @@ class Workflow(object):
                         continue
 
                 #output_name = prefix + output_name
-                if output_name not in outputs and self._check_path(output_name, includes, excludes) :
-                    if self._system.is_variable_local(output_name):
+                if output_name not in outputs and self._check_path(prefix + output_name, includes, excludes) :
+                    outputs_all_processes.append(output_name)
+                    if 1 or self._system.is_variable_local(output_name):
                         outputs.append(output_name)
                         self._rec_outputs.append(output_name)
 
@@ -680,7 +693,8 @@ class Workflow(object):
         name = '%s.workflow.itername' % driver.name
         path = prefix+name
         if self._check_path(path, includes, excludes):
-            if self._system.is_variable_local(output_name):
+            outputs_all_processes.append(name)
+            if 1 or self._system.is_variable_local(output_name):
                 self._rec_outputs.append(name)
                 outputs.append(name)
 
@@ -699,6 +713,7 @@ class Workflow(object):
             while top.parent is not None:
                 top = top.parent
             for recorder in top.recorders:
+                #recorder.register(driver, inputs, outputs,inputs_all_processes=inputs_all_processes,outputs_all_processes=outputs_all_processes)
                 recorder.register(driver, inputs, outputs)
 
         #import pdb; pdb.set_trace()
@@ -718,9 +733,14 @@ class Workflow(object):
             if fnmatch(path, pattern):
                 record = True
 
+        print "_check_path path", path
+
         # if it passes include filter, check exclude filter
         if record:
             for pattern in excludes:
+                # if path == 'SysTripanCDSurrogate.CD':
+                # #if path == 'SysCLTar.exec_count':
+                #     import pdb; pdb.set_trace()
                 if fnmatch(path, pattern):
                     record = False
 

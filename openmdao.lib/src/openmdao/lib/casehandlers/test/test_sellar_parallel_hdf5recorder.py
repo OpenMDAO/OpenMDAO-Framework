@@ -46,13 +46,15 @@ class SellarMDF(Assembly):
 
         # Solver settings
         self.driver.max_iteration = 5
+        self.driver.max_iteration = 10
         self.driver.tolerance = 1.e-15
+        #self.driver.tolerance = 1.e-1
         self.driver.print_convergence = False
 
 
 top = set_as_top(SellarMDF())
 
-top.driver.max_iteration = 25
+top.driver.max_iteration = 30
 top.driver.add_parameter('C2.y1', low=-1e99, high=1e99)
 top.driver.add_constraint('C1.y1 = C2.y1')
 top.driver.add_parameter('C1.y2', low=-1.e99, high=1.e99)
@@ -60,8 +62,11 @@ top.driver.add_constraint('C2.y2 = C1.y2')
 
 expected = { 'C1.y1': 3.1598617768014536, 'C2.y2': 3.7551999159927316 }
 
-top.recorders = [HDF5CaseRecorder('SellarMDF_parallel.hdf5')]
-#top.recorders = [HDF5CaseRecorder('SellarMDF_serial.hdf5')]
+if MPI:
+	top.recorders = [HDF5CaseRecorder('SellarMDF_parallel.hdf5')]
+else:
+	top.recorders = [HDF5CaseRecorder('SellarMDF_serial.hdf5')]
+
 top.run()
 
 

@@ -28,6 +28,263 @@ import numpy as np
 from mpi4py import MPI
 
 
+def write_to_hdf5( group, name, value ):
+
+    if isinstance(value,dict):
+        print 'create dict', name, MPI.COMM_WORLD.rank
+        #dict_grp = group.create_group(name)
+        dict_grp = group[name]
+        #QQQQQQdict_grp.attrs['__dict__'] = True # To indicate that this HDF5 group represents an actual Python dict
+        for k, v in value.items():
+            write_to_hdf5( dict_grp, k, v )
+    # elif isinstance( value, VariableTree):
+    #     print 'create VariableTree', name, MPI.COMM_WORLD.rank
+    #     vartree_grp = group.create_group(name)
+    #     #QQQQQvartree_grp.attrs['__vartree__'] = True
+    #     for k in value.list_vars():
+    #         write_to_hdf5( vartree_grp, k, value.get(k) )
+    elif isinstance( value, np.ndarray):
+        print 'create np.ndarray', name, MPI.COMM_WORLD.rank
+        dset = group[name] 
+        dset[:] = value[:]
+        #group.create_dataset(name, data=value)
+    elif isinstance( value, list):
+        if len( value ) > 0:
+            if isinstance( value[0], str):
+                if name == 'parameters' :
+                    #import pdb; pdb.set_trace()
+                    pass
+                dset = group[name] 
+                for i,v in enumerate(value):
+                    dset[i] = value[i]
+    elif value == None :
+        print 'create np.array([])', name, MPI.COMM_WORLD.rank
+        ################group.create_dataset(name, data=np.array([]))
+        #QQQQgroup.attrs[name] = np.array([])
+        pass
+    else:
+        if isinstance( value, np.float64):
+            print 'create np.float64', name, MPI.COMM_WORLD.rank
+            dset = group[name] 
+            dset[0,] = value
+            #group.create_dataset(name, data=np.array([1.2345]))
+            #group.create_dataset(name, (100,), dtype='i8')
+            #print 'type numpy.float64', value
+        else:
+            print 'create non numpy scalar', type(value), name, MPI.COMM_WORLD.rank
+            #group.create_dataset(name, (100,), dtype='i8')
+            if isinstance(value,float):
+                #group.create_dataset(name, data=np.array([value]))   
+                dset = group[name] 
+                dset[0,] = value
+            elif isinstance(value,int):
+                #group.create_dataset(name, data=np.array([value]))   
+                dset = group[name] 
+                #dset.attrs[name] = value
+                dset[0,] = value
+            elif isinstance(value,str):
+                dset = group[name] 
+                #dset = np.array([value])
+                dset[0,] = value
+                #dset.attrs[name] = value
+                # dt = h5py.special_dtype(vlen=bytes)
+                # dset = group.create_dataset(name, (1,), dtype=dt)
+
+                # dset = f.create_dataset('test', (4,), dtype='i')
+
+                # group.create_dataset(name, (1,), dtype='i')   
+                # group.create_dataset(name, data=[value,])   
+                #group[name] = [value,]
+
+                # dset = group[name] 
+                # dset = value
+
+
+                #group.create_dataset(name, data=value)
+                #QQQQgroup.attrs[name] = value
+                pass
+
+
+def write_groups_to_hdf5( group, name, value ):
+
+
+    print 'write_groups_to_hdf5 group, name', group, name
+    if name.startswith('/driver_info_'):
+        import pdb; pdb.set_trace()
+
+    data = {
+    # '_pseudo_0.out0': 3.1086244689504383e-15, 
+    # 'C1.exec_count': 0, 
+    # 'C2.itername': '25-C2', 
+    # 'driver.workflow.itername': '25', 
+    # 'C2.derivative_exec_count': 0, 
+    # 'C1.derivative_exec_count': 0, 
+    # 'C1.y1': 0.0, 
+    # 'C1.y2': 3.7551999999999977, 
+    # '_pseudo_1.out0': 1.7763568394002505e-15, 
+    # 'C2.y1': 3.1598617599999974, 
+    # 'C2.y2': 3.7551999999999994, 
+    # 'C1.itername': '', 
+    # 'C2.exec_count': 25,
+    }
+
+
+    if name in data.keys() and group.name.startswith('/iteration_case_'):
+        return
+
+    if isinstance(value,dict):
+        print 'create group for dict', name, MPI.COMM_WORLD.rank
+        dict_grp = group.create_group(name)
+        #QQQQQQdict_grp.attrs['__dict__'] = True # To indicate that this HDF5 group represents an actual Python dict
+        for k, v in value.items():
+            write_groups_to_hdf5( dict_grp, k, v )
+    # elif isinstance( value, VariableTree):
+    #     print 'create VariableTree', name, MPI.COMM_WORLD.rank
+    #     vartree_grp = group.create_group(name)
+    #     #QQQQQvartree_grp.attrs['__vartree__'] = True
+    #     for k in value.list_vars():
+    #         write_to_hdf5( vartree_grp, k, value.get(k) )
+    elif isinstance( value, np.ndarray):
+        print 'create np.ndarray', name, MPI.COMM_WORLD.rank
+        pass
+        group.create_dataset(name, data=value)
+    elif isinstance( value, list):
+        if name == 'parameters':
+            #import pdb; pdb.set_trace()
+            pass
+        if len( value ) > 0:
+            if isinstance( value[0], str):
+                print "creating dataset for list", name
+                group.create_dataset(name, (len(value),1),'S50' ) # TODO use variable length strings
+        else:
+            group.create_dataset(name,(0,)) # TODO How do we handle empty lists? Do not know type
+    elif value == None :
+        print 'create np.array([])', name, MPI.COMM_WORLD.rank
+        group.create_dataset(name,(0,))
+        #QQQQgroup.attrs[name] = np.array([])
+        pass
+    else:
+        if isinstance( value, np.float64):
+            print 'create np.float64', name, MPI.COMM_WORLD.rank
+            group.create_dataset(name, (1,), dtype='f')
+            #group.create_dataset(name, data=np.array([1.2345]))
+            #group.create_dataset(name, (100,), dtype='i8')
+            #print 'type numpy.float64', value
+        else:
+            print 'create non numpy scalar', type(value), name, MPI.COMM_WORLD.rank
+            #group.create_dataset(name, (100,), dtype='i8')
+            if isinstance(value,float):
+                #group.create_dataset(name, data=np.array([value]))  
+                group.create_dataset(name, (1,), dtype='f')
+            elif isinstance(value,int):
+                #group.create_dataset(name, data=np.array([value]))  
+                group.create_dataset(name, (1,), dtype='i')
+            elif isinstance(value,str):
+                dt = h5py.special_dtype(vlen=bytes)
+                #dset = group.create_dataset(name, (1,), dtype=dt)
+                dset = group.create_dataset(name, (1,), dtype="S50")
+            elif isinstance(value,bool):
+                dset = group.create_dataset(name, (1,), dtype=np.bool)
+        pass
+
+
+def write_case_groups_to_hdf5( group, name, value ):
+
+
+    data = {
+    # '_pseudo_0.out0': 3.1086244689504383e-15,  # bad
+    # 'C1.exec_count': 0, #bad
+    # 'C2.itername': '25-C2', 
+    # 'driver.workflow.itername': '25', 
+    # 'C2.derivative_exec_count': 0, 
+    # 'C1.derivative_exec_count': 0, 
+    # 'C1.y1': 0.0, 
+    # 'C1.y2': 3.7551999999999977, 
+    # '_pseudo_1.out0': 1.7763568394002505e-15, 
+    # 'C2.y1': 3.1598617599999974, 
+    # 'C2.y2': 3.7551999999999994, 
+    # 'C1.itername': '', 
+    # 'C2.exec_count': 25,
+    }
+
+
+    #return
+
+    # if group.name.startswith('/iteration_case_5') :
+    #     return
+    # if not ( group.name.startswith('/iteration_case_1') or group.name.startswith('/iteration_case_2') or group.name.startswith('/iteration_case_3') or group.name.startswith('/iteration_case_4') ):
+    #     return
+    #print 'write_case_groups_to_hdf5', MPI.COMM_WORLD.rank, name
+
+    if name in data.keys() and group.name.startswith('/iteration_case_'):
+        return
+
+    if isinstance(value,dict):
+        #print 'create group for dict', name, MPI.COMM_WORLD.rank
+        print 'write_case_groups_to_hdf5 dict', MPI.COMM_WORLD.rank, name
+        dict_grp = group.create_group(name)
+        #QQQQQQdict_grp.attrs['__dict__'] = True # To indicate that this HDF5 group represents an actual Python dict
+        for k, v in value.items():
+            write_case_groups_to_hdf5( dict_grp, k, v )
+    # elif isinstance( value, VariableTree):
+    #     print 'create VariableTree', name, MPI.COMM_WORLD.rank
+    #     vartree_grp = group.create_group(name)
+    #     #QQQQQvartree_grp.attrs['__vartree__'] = True
+    #     for k in value.list_vars():
+    #         write_to_hdf5( vartree_grp, k, value.get(k) )
+    elif isinstance( value, np.ndarray):
+        print 'write_case_groups_to_hdf5 np.ndarray', MPI.COMM_WORLD.rank, name
+        print 'create np.ndarray', name, MPI.COMM_WORLD.rank
+        pass
+        group.create_dataset(name, data=value)
+    elif isinstance( value, list):
+        print 'write_case_groups_to_hdf5 list', MPI.COMM_WORLD.rank, name
+        if len( value ) > 0:
+            if isinstance( value[0], str):
+                group.create_dataset(name, (len(value),1),'S50' ) # TODO use variable length strings
+                pass
+        else:
+            group.create_dataset(name,(0,)) # TODO How do we handle empty lists? Do not know type
+            pass
+    elif value == None :
+        print 'write_case_groups_to_hdf5 None', MPI.COMM_WORLD.rank, name
+        print 'create np.array([])', name, MPI.COMM_WORLD.rank
+        group.create_dataset(name,(0,))
+        #QQQQgroup.attrs[name] = np.array([])
+        pass
+    else:
+        if isinstance( value, np.float64):
+            print 'write_case_groups_to_hdf5 np.float64', MPI.COMM_WORLD.rank, name
+            group.create_dataset(name, (1,), dtype='f')
+            print 'create np.float64', name, MPI.COMM_WORLD.rank
+            #group.create_dataset(name, data=np.array([1.2345]))
+            #group.create_dataset(name, (100,), dtype='i8')
+            #print 'type numpy.float64', value
+        else:
+            print 'create non numpy scalar', type(value), name, MPI.COMM_WORLD.rank
+            #group.create_dataset(name, (100,), dtype='i8')
+            if isinstance(value,float):
+                #group.create_dataset(name, data=np.array([value]))  
+                print 'write_case_groups_to_hdf5 float', MPI.COMM_WORLD.rank, name
+                group.create_dataset(name, (1,), dtype='f')
+                pass
+            elif isinstance(value,int):
+                #group.create_dataset(name, data=np.array([value]))  
+                print 'write_case_groups_to_hdf5 int', MPI.COMM_WORLD.rank, name
+                group.create_dataset(name, (1,), dtype='i')
+                pass
+            elif isinstance(value,str):
+                print 'write_case_groups_to_hdf5 str', MPI.COMM_WORLD.rank, name
+                dt = h5py.special_dtype(vlen=bytes)
+                #dset = group.create_dataset(name, (1,), dtype=dt)
+                dset = group.create_dataset(name, (1,), dtype="S50") ### this is causing 'Symbol table node entry:Name out of order at'
+            elif isinstance(value,bool):
+                print 'write_case_groups_to_hdf5 bool', MPI.COMM_WORLD.rank, name
+                dset = group.create_dataset(name, (1,), dtype=np.bool)
+                pass
+        pass
+
+
 class HDF5CaseRecorder(object):
     """
     Dumps a run in HDF5 form to `out`, which may be a string or a file-like
@@ -50,7 +307,7 @@ class HDF5CaseRecorder(object):
 
         self.hdf5_file_object = h5py.File(out, "w", driver='mpio', comm=MPI.COMM_WORLD)
 
-        #self.hdf5_file_object.atomic = True 
+        self.hdf5_file_object.atomic = True 
 
         #self.hdf5_file_object = h5py.File(out, "w", driver='mpio' )
 
@@ -65,9 +322,16 @@ class HDF5CaseRecorder(object):
         """ Prepare for new run. """
         pass
 
+    #def register(self, driver, inputs, outputs,inputs_all_processes, outputs_all_processes):
     def register(self, driver, inputs, outputs):
         """ Register names for later record call from `driver`. """
+
+
         self._cfg_map[driver] = (inputs, outputs)
+        #self._cfg_map[driver] = (inputs_all_processes, outputs_all_processes)
+
+        #self.inputs_all_processes = inputs_all_processes
+        #self.outputs_all_processes = outputs_all_processes
 
     def get_simulation_info(self, constants):
         """ Return simulation info dictionary. """
@@ -222,162 +486,78 @@ class HDF5CaseRecorder(object):
 
     def record_constants(self, constants):
         """ Record constant data. """
-        #if not self.hdf5_file_object:
-            #return
-
-
-        # if MPI.COMM_WORLD.rank != 0:
-        #     return
 
         info = self.get_simulation_info(constants)
 
-        # import pickle
-        # pickle.dump( info, open( "case_recording_info.p", "wb" ) )
-
-
-
         simulation_info_grp = self.hdf5_file_object.create_group("simulation_info")
+        
+        ##### Just create group structure on all processes using the merged JSON info ######
 
-
-
-
-
-        self.write_to_hdf5( simulation_info_grp, 'OpenMDAO_Version', info['OpenMDAO_Version'])
-
-
-
-
-        self.write_to_hdf5( simulation_info_grp, 'comp_graph', info['comp_graph'])
-        self.write_to_hdf5( simulation_info_grp, 'graph', info['graph'])
-        self.write_to_hdf5( simulation_info_grp, 'uuid', info['uuid'])
-        self.write_to_hdf5( simulation_info_grp, 'name', info['name'])
-
-
-
+        write_groups_to_hdf5( simulation_info_grp, 'OpenMDAO_Version', info['OpenMDAO_Version'])
+        write_groups_to_hdf5( simulation_info_grp, 'comp_graph', info['comp_graph'])
+        write_groups_to_hdf5( simulation_info_grp, 'graph', info['graph'])
+        write_groups_to_hdf5( simulation_info_grp, 'uuid', info['uuid'])
+        write_groups_to_hdf5( simulation_info_grp, 'name', info['name'])
        
         constants_grp = simulation_info_grp.create_group("constants")
         for k,v in info['constants'].items():
-            self.write_to_hdf5( constants_grp, k, v )
-
-            # if v == None :
-            #     constants_grp.attrs[k] = np.array([])
-            # elif isinstance(v,dict):
-            #     dict_grp = constants_grp.create_group(k)
-            #     for name, value in v.items():
-            #         dict_grp.attrs[name] = value
-            # else:
-            #     constants_grp.attrs[k] = v
-
-
-
-
+            write_groups_to_hdf5( constants_grp, k, v )
 
         expressions_grp = simulation_info_grp.create_group("expressions")
         for k,v in info['expressions'].items():
-           self.write_to_hdf5( expressions_grp, k, v )
-           # if not isinstance(v,dict):
-           #      expressions_grp.attrs[k] = v
-           #  else:
-           #      dict_grp = expressions_grp.create_group(k)
-           #      for name, value in v.items():
-           #          dict_grp.attrs[name] = value
+           write_groups_to_hdf5( expressions_grp, k, v )
             
-
-
-        vm = [
-                # 'C1.derivative_exec_count', #### causes crash
-                'C1.directory',
-                # 'C1.exec_count', #### causes crash
-                'C1.force_fd',
-                # 'C1.itername', ### causes crash
-                'C1.missing_deriv_policy',
-                'C1.x1',
-                'C1.y1',
-                'C1.y2',
-                'C1.z1',
-                'C1.z2',
-                # 'C2.derivative_exec_count', #### causes crash
-                'C2.directory',
-                #'C2.exec_count', ### causes crash
-                'C2.force_fd',
-                # #'C2.itername', ### causes crash
-                'C2.missing_deriv_policy',
-                # 'C2.y1', ##### causes crash
-                # 'C2.y2', #### causes crash
-                'C2.z1',
-                'C2.z2',
-                'directory',
-                'driver.directory',
-                'driver.force_fd',
-                'driver.gradient_options.atol',
-                'driver.gradient_options.derivative_direction',
-                'driver.gradient_options.directional_fd',
-                'driver.gradient_options.fd_blocks',
-                'driver.gradient_options.fd_form',
-                'driver.gradient_options.fd_step',
-                'driver.gradient_options.fd_step_type',
-                'driver.gradient_options.force_fd',
-                'driver.gradient_options.iprint',
-                'driver.gradient_options.lin_solver',
-                'driver.gradient_options.maxiter',
-                'driver.gradient_options.rtol',
-                'driver.iprint',
-                'driver.max_iteration',
-                'driver.tolerance',
-                'force_fd',
-                'missing_deriv_policy',
-                'recording_options.excludes',
-                'recording_options.includes',
-                'recording_options.save_problem_formulation',
-            ]
-
-
-
-
         variable_metadata_grp = simulation_info_grp.create_group("variable_metadata")
-
-        icount = 0
         for k,v in info['variable_metadata'].items():
+            write_groups_to_hdf5( variable_metadata_grp, k, v )
 
+        ##### Write the datasets using only the data available to this process ######
+
+        write_to_hdf5( simulation_info_grp, 'OpenMDAO_Version', info['OpenMDAO_Version'])
+        write_to_hdf5( simulation_info_grp, 'comp_graph', info['comp_graph'])
+        write_to_hdf5( simulation_info_grp, 'graph', info['graph'])
+        write_to_hdf5( simulation_info_grp, 'uuid', info['uuid'])
+        write_to_hdf5( simulation_info_grp, 'name', info['name'])
+       
+        for k,v in info['constants'].items():
+            write_to_hdf5( constants_grp, k, v )
+
+        for k,v in info['expressions'].items():
+           write_to_hdf5( expressions_grp, k, v )
             
-            if k not in vm:
-                continue
-
-            # print "kkkkk", "'%s'," % k 
-            self.write_to_hdf5( variable_metadata_grp, k, v )
+        for k,v in info['variable_metadata'].items():
+            write_to_hdf5( variable_metadata_grp, k, v )
 
 
-            # icount+=1
-            # if icount > 14:
-            #     break 
-
-            # if not isinstance(v,dict):
-            #     variable_metadata_grp.attrs[k] = v
-            # else:
-            #     dict_grp = variable_metadata_grp.create_group(k)
-            #     for name, value in v.items():
-            #         if value != None :
-            #             dict_grp.attrs[name] = value
-            #         else:
-            #             dict_grp.attrs[name] = np.array([])
-
-        # qqqqqqqqqqqqqq
-        #return
-
-
+        ##### Just create group structure on all processes using the merged JSON info ######
         for i, info in enumerate(self.get_driver_info()):
             driver_info_name = 'driver_info_%s' % (i+1)
+            #import pdb; pdb.set_trace()
             driver_info_group = self.hdf5_file_object.create_group(driver_info_name)
             for k,v in info.items():
-                self.write_to_hdf5( driver_info_group, k, v )
+                print 'driver key', k, v
+                #import pdb; pdb.set_trace()
+                write_groups_to_hdf5( driver_info_group, k, v )
+                write_to_hdf5( driver_info_group, k, v ) # TODO really only rank 0 should do this
                 # driver_info_group.attrs[k] = v
+
+        ##### Write the datasets using only the data available to this process ######
+        # for i, info in enumerate(self.get_driver_info()):
+        #     # import pprint 
+        #     # pprint.pprint( info )
+        #     driver_info_name = 'driver_info_%s' % (i+1)
+        #     for k,v in info.items():
+        #         write_to_hdf5( driver_info_group, k, v )
+
+
 
     def record(self, driver, inputs, outputs, exc, case_uuid, parent_uuid):
         """ Dump the given run data. """
 
         # qqqqqqqqqqqqqq
-        return
+        #return
 
+        # import pdb; pdb.set_trace()
 
         info = self.get_case_info(driver, inputs, outputs, exc,
                                   case_uuid, parent_uuid)
@@ -386,62 +566,72 @@ class HDF5CaseRecorder(object):
 
         #print "iteration_case_name", iteration_case_name
 
-
+        ##### Just create group structure on all processes using the merged JSON info ######
         self._count += 1
         iteration_case_group = self.hdf5_file_object.create_group(iteration_case_name)
         for k,v in info.items():
-            self.write_to_hdf5( iteration_case_group, k, v )
-            # if isinstance(v,dict):
-            #     dict_grp = iteration_case_group.create_group(k)
-            #     for name, value in v.items():
-            #         if isinstance( value, np.ndarray):
-            #             dict_grp.create_dataset(name, data=value,compression="gzip")
-            #         else:
-            #             dict_grp.attrs[name] = value
-            # elif isinstance( v, np.ndarray):
-            #     iteration_case_group.create_dataset(k, data=v,compression="gzip")
-            # elif v == None :
-            #     iteration_case_group.attrs[k] = np.array([])
-            # else:
-            #     iteration_case_group.attrs[k] = v
+            print 'record case make group', MPI.COMM_WORLD.rank, k, v
+            if k != 'dataqq':
+                print 'writing iteration', iteration_case_group.name, k
+                write_case_groups_to_hdf5( iteration_case_group, k, v ) ########################## even this causes problems
 
-    def write_to_hdf5(self, group, name, value ):
+        #qqq
+        #return
 
-        #print 'write_to_hdf5', name, value, type(value)
-        if isinstance(value,dict):
-            #print 'create dict', name, MPI.COMM_WORLD.rank
-            dict_grp = group.create_group(name)
-            #dict_grp.attrs['__dict__'] = True # To indicate that this HDF5 group represents an actual Python dict
-            for k, v in value.items():
-                self.write_to_hdf5( dict_grp, k, v )
-        elif isinstance( value, VariableTree):
-            #print 'create VariableTree', name, MPI.COMM_WORLD.rank
-            vartree_grp = group.create_group(name)
-            #vartree_grp.attrs['__vartree__'] = True
-            for k in value.list_vars():
-                self.write_to_hdf5( vartree_grp, k, value.get(k) )
-        elif isinstance( value, np.ndarray):
-            #print 'create np.ndarray', name, MPI.COMM_WORLD.rank
-            group.create_dataset(name, data=value,compression="gzip")
-        elif value == None :
-            #print 'create np.array([])', name, type(value), MPI.COMM_WORLD.rank
-            group.create_dataset(name, data=np.array([]))
-            #group.attrs[name] = np.array([])
-            pass
-        else:
-            if isinstance( value, np.float64):
-                #print 'create np.float64', name, MPI.COMM_WORLD.rank
-                group.create_dataset(name, data=np.array([value]))
-                #group.create_dataset(name, (100,), dtype='i8')
-                #print 'type numpy.float64', value
+        ##### Write the datasets using only the data available to this process ######
+        for k,v in info.items():
+            print 'record case set values', MPI.COMM_WORLD.rank, k 
+            if k != 'data':
+                write_to_hdf5( iteration_case_group, k, v )
             else:
-                #print 'create non numpy scalar', type(value), name, MPI.COMM_WORLD.rank
-                #group.create_dataset(name, (100,), dtype='i8')
-                if isinstance(value,float):
-                    group.create_dataset(name, data=np.array([value]))   
-                #group.create_dataset(name, data=value)
-                #group.attrs[name] = value
-            pass
+                print 'writing data'
+                data_grp = iteration_case_group[k]
+                for name,value in v.items():
+                    if driver.workflow._system.is_variable_local( name ):
+                        print "islocal true", MPI.COMM_WORLD.rank, name
+                        write_to_hdf5( data_grp, name, value )
+                    else:
+                        print "islocal false", MPI.COMM_WORLD.rank, name
+
+
+
+    # def write_to_hdf5_method(self, group, name, value ):
+
+    #     #print 'write_to_hdf5', name, value, type(value)
+    #     if isinstance(value,dict):
+    #         #print 'create dict', name, MPI.COMM_WORLD.rank
+    #         dict_grp = group.create_group(name)
+    #         #dict_grp.attrs['__dict__'] = True # To indicate that this HDF5 group represents an actual Python dict
+    #         for k, v in value.items():
+    #             self.write_to_hdf5( dict_grp, k, v )
+    #     elif isinstance( value, VariableTree):
+    #         #print 'create VariableTree', name, MPI.COMM_WORLD.rank
+    #         vartree_grp = group.create_group(name)
+    #         #vartree_grp.attrs['__vartree__'] = True
+    #         for k in value.list_vars():
+    #             self.write_to_hdf5( vartree_grp, k, value.get(k) )
+    #     elif isinstance( value, np.ndarray):
+    #         #print 'create np.ndarray', name, MPI.COMM_WORLD.rank
+    #         group.create_dataset(name, data=value,compression="gzip")
+    #     elif value == None :
+    #         #print 'create np.array([])', name, type(value), MPI.COMM_WORLD.rank
+    #         group.create_dataset(name, data=np.array([]))
+    #         #group.attrs[name] = np.array([])
+    #         pass
+    #     else:
+    #         if isinstance( value, np.float64):
+    #             #print 'create np.float64', name, MPI.COMM_WORLD.rank
+    #             group.create_dataset(name, data=np.array([value]))
+    #             #group.create_dataset(name, (100,), dtype='i8')
+    #             #print 'type numpy.float64', value
+    #         else:
+    #             #print 'create non numpy scalar', type(value), name, MPI.COMM_WORLD.rank
+    #             #group.create_dataset(name, (100,), dtype='i8')
+    #             if isinstance(value,float):
+    #                 group.create_dataset(name, data=np.array([value]))   
+    #             #group.create_dataset(name, data=value)
+    #             #group.attrs[name] = value
+    #         pass
 
     def close(self):
         """
