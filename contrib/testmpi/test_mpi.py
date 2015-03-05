@@ -534,7 +534,6 @@ class TestCaseSerial(TestCase):
         self.assertTrue(all(top.C3.d==np.ones(size, float)*11.))
 
 
-# FIXME: running this file as main currently doesn't work...
-# if __name__ == '__main__':
-#     import unittest
-#     unittest.main()
+if __name__ == '__main__':
+    from testflo.main import run_tests
+    run_tests(['--isolated'])

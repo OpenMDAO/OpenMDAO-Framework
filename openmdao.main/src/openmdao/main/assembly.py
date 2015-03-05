@@ -1596,50 +1596,32 @@ class Assembly(Component):
             comm = None
 
         try:
-            print "setup_init"
-
             self.setup_init()
-            print "setup_depgraph"
 
             self.setup_depgraph()
-            print "compute_itersets"
-
             self.compute_itersets(None)
-            print "compute_ordering"
             self.compute_ordering(None)
 
-            print "size_variables"
             self.size_variables()
 
-            print "setup_reduced_graph"
             self.setup_reduced_graph(inputs=inputs, outputs=outputs,
                                      drvname=drvname)
-            print "setup_systems"
             self.setup_systems()
 
-            print "check_config"
             self.check_config()
 
-            print "collect_metadata"
             self.collect_metadata()
 
-            #if MPI.COMM_WORLD.rank == 0:
-            #from openmdao.util.dotgraph import plot_system_tree, plot_graph
-            #plot_system_tree(self._system,'sys.pdf')
-            #plot_graph(self._reduced_graph, 'red.pdf')
+            # if MPI.COMM_WORLD.rank == 0:
+            #     from openmdao.util.dotgraph import plot_system_tree, plot_graph
+            #     plot_system_tree(self._system,'sys.pdf')
+            #     plot_graph(self._reduced_graph, 'red.pdf')
 
-            print "setup_communicators"
             self.setup_communicators(comm)
-            print "setup_variables";
             self.setup_variables()
-            print "setup_sizes"
             self.setup_sizes()
-            print "setup_vectors"
             self.setup_vectors()
-            #self._system.dump();
-            print "setup_scatters"
             self.setup_scatters()
-            print "setup done"
 
         except Exception as err:
             traceback.print_exc()

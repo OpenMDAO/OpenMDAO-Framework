@@ -169,7 +169,7 @@ class Workflow(object):
         """
 
         return self._system.calc_gradient(inputs, outputs, mode=mode,
-                                       options=options,
+                                       options=options if options else self.parent.gradient_options,
                                        iterbase=self._iterbase(),
                                        return_format=return_format)
 

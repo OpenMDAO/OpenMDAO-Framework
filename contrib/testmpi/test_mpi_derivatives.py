@@ -3,8 +3,7 @@ import numpy as np
 import sys
 
 from openmdao.util.testutil import assert_rel_error
-from openmdao.test.mpiunittest import MPITestCase, collective_assert_rel_error, \
-                                      MPIContext
+from openmdao.test.mpiunittest import MPITestCase, collective_assert_rel_error
 from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.main.datatypes.api import Float
 from openmdao.main.test.simpledriver import SimpleDriver
@@ -1135,14 +1134,11 @@ class MPITests_2Proc(MPITestCase):
         #from openmdao.util.dotgraph import plot_system_tree
         #plot_system_tree(top._system)
 
-        #print top._pseudo_0.out0
-        #print top.driver.func_dict
-
         collective_assert_rel_error(self, 9826.25, top._pseudo_0.out0, 0.0001)
         collective_assert_rel_error(self, 9826.25, top.driver.func_dict['_pseudo_0.out0'], 0.0001)
 
 
-# FIXME: running this file as main currently doesn't work...
-# if __name__ == '__main__':
-#     import unittest
-#     unittest.main()
+
+if __name__ == '__main__':
+    from testflo.main import run_tests
+    run_tests(['--isolated'])
