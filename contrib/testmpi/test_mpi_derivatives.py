@@ -5,7 +5,7 @@ from openmdao.util.testutil import assert_rel_error
 from openmdao.test.mpiunittest import MPITestCase, collective_assert_rel_error, \
                                       MPIContext
 from openmdao.main.api import Assembly, Component, set_as_top
-from openmdao.main.datatypes.api import Float
+from openmdao.main.datatypes.api import Float, Array
 from openmdao.main.test.simpledriver import SimpleDriver
 from openmdao.test.execcomp import ExecCompWithDerivatives, ExecComp
 
@@ -1149,6 +1149,91 @@ class MPITests_2Proc(MPITestCase):
 
         # Exclusive or - you either got sub1 or sub2 on a given process.
         self.assertTrue(system.is_variable_local('sub1.comp3.y1') != system.is_variable_local('sub2.comp3.y1'))
+
+    def test_CADRE_bug1(self):
+
+        class AComp(Component):
+
+            x = Array(np.array([7.0]), iotype='in')
+            v = Array(np.array([5.0, 3.0]), iotype='in')
+
+            y = Float(1.0, iotype='out')
+
+            def execute(self):
+
+                self.y = self.x[0] * (self.v[0] + self.v[1])
+
+            def list_deriv_vars(self):
+
+                return ('x', 'v'), ('y', )
+
+            def provideJ(self):
+
+                self.J = np.array([self.v[0] + self.v[1], self.x[0], self.x[0]])
+                return None
+
+            def apply_deriv(self, arg, result):
+
+                if 'x' in arg:
+                    result['y'] += self.J[0] * arg['x']
+
+                if 'v' in arg:
+                    result['y'] += self.J[1:].dot(arg['v'])
+
+            def apply_derivT(self, arg, result):
+
+                if 'x' in result:
+                    result['x'] += self.J[0] * arg['y']
+
+                if 'v' in result:
+                    result['v'] += self.J[1:] * arg['y']
+
+
+        top = set_as_top(Assembly())
+        top.add('nest1', Assembly())
+        top.add('nest2', Assembly())
+        top.add('driver', SimpleDriver())
+        top.nest1.add('comp', AComp())
+
+        top.nest2.add('comp', AComp())
+
+        top.nest1.create_passthrough('comp.x')
+        top.nest1.create_passthrough('comp.v')
+        top.nest1.create_passthrough('comp.y')
+        top.nest2.create_passthrough('comp.x')
+        top.nest2.create_passthrough('comp.v')
+        top.nest2.create_passthrough('comp.y')
+
+        top.nest1.driver.workflow.add('comp')
+        top.nest2.driver.workflow.add('comp')
+        top.driver.workflow.add(['nest1', 'nest2'])
+        top.driver.add_parameter('nest1.x[0]', low=-10, high=10)
+        top.driver.add_parameter('nest1.v', low=-10, high=10)
+        top.driver.add_parameter('nest2.x[0]', low=-10, high=10)
+        top.driver.add_parameter('nest2.v', low=-10, high=10)
+        top.driver.add_objective('nest1.y + nest2.y')
+
+        # Answers: 8, 7, 7
+        top.run()
+        J = top.driver.calc_gradient(mode='forward', return_format='dict')
+        print J
+
+        # Check for Bret (Note, need better way to figure out rank that contains an assembly.)
+        if self.comm.rank == 1:
+            asys = top.nest1._system
+        else:
+            asys = top.nest2._system
+
+        # Slice should be there
+        self.assertTrue(('x[0]', ('comp.x[0]', 'x[0]')) in asys.variables.keys())
+
+        # Full vec shoulld not
+        self.assertTrue(('x', ('comp.x', 'x')) not in asys.variables.keys())
+
+
+        collective_assert_rel_error(self,
+                                    J['_pseudo_0.out0']['nest1.x[0]'][0][0],
+                                    8.0, 0.0001)
 
 
 # FIXME: running this file as main currently doesn't work...

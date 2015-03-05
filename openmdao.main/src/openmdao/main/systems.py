@@ -972,8 +972,6 @@ class SimpleSystem(System):
         yield self
 
     def setup_communicators(self, comm):
-
-        print 'setup_communicators', comm
         self.mpi.comm = comm
 
     def _create_var_dicts(self, resid_state_map):
@@ -1273,8 +1271,6 @@ class AssemblySystem(SimpleSystem):
 
     def setup_communicators(self, comm):
         super(AssemblySystem, self).setup_communicators(comm)
-
-        print 'setup_communicators', comm
         self._comp.setup_communicators(comm)
 
     def setup_variables(self, resid_state_map=None):
@@ -1618,8 +1614,8 @@ class CompoundSystem(System):
             #return system._comp._system.is_variable_local(vname)
 
         # Don't need to figure out ranks if we are not MPI
-        # if not MPI:
-        #     return True
+        if not MPI:
+            return True
 
         # Check vector_vars to figure out if we are the lowest rank.
         varkeys = scope_sys.vector_vars.keys()
@@ -1641,24 +1637,12 @@ class CompoundSystem(System):
         # Finally, it must be an unconnected variable Just print these on the
         # lowest rank for our comp.
         else:
-            flatsizes = system.local_var_sizes
-            noflatsizes = system.noflat_var_sizes
+            flatsizes = system.local_var_sizes[0]
+            noflatsizes = system.noflat_var_sizes[0]
 
-            print 'name, flatsizes.shape, flatsizes, noflatsizes',name, flatsizes.shape, flatsizes, noflatsizes
-            print 'numpy.nonzero(flatsizes)', numpy.nonzero(flatsizes)
-            print 'type(numpy.nonzero(flatsizes)[0])', type(numpy.nonzero(flatsizes)[0])
-            print 'numpy.nonzero(flatsizes)[0].shape', numpy.nonzero(flatsizes)[0].shape
-            print 'numpy.nonzero(flatsizes)[0]', numpy.nonzero(flatsizes)[0]
-            # print 'numpy.nonzero(flatsizes)[0][-1]', numpy.nonzero(flatsizes)[0][-1]
-            b = numpy.nonzero(flatsizes)
-            c = b[0]
-            print 'c.shape, type(c), c', c.shape,type(c), c
-            sys.stdout.flush()
-
-
-            if len(varkeys) > 0:
+            if len(flatsizes) > 0:
                 lowest = numpy.nonzero(flatsizes)[0][0]
-            elif len(noflatkeys) > 0:
+            elif len(noflatsizes) > 0:
                 lowest = numpy.nonzero(noflatsizes)[0][0]
             else:
                 # I give up. Free-floating comp. Just print it on 0.
@@ -1799,8 +1783,6 @@ class SerialSystem(CompoundSystem):
     def setup_communicators(self, comm):
         self._local_subsystems = []
 
-
-        print 'setup_communicators', comm
         self.mpi.comm = get_comm_if_active(self, comm)
         if not self.is_active():
             return
@@ -1856,8 +1838,6 @@ class ParallelSystem(CompoundSystem):
         size = comm.size
         rank = comm.rank
 
-
-        print 'setup_communicators', comm
         subsystems = []
         requested_procs = []
         for system in self.all_subsystems():
@@ -1901,9 +1881,6 @@ class ParallelSystem(CompoundSystem):
 
         rank_color = color[rank]
         sub_comm = comm.Split(rank_color)
-
-
-        print 'rank_color, color', rank_color, color
 
         if sub_comm == MPI.COMM_NULL:
             return
