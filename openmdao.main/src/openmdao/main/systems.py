@@ -1637,12 +1637,12 @@ class CompoundSystem(System):
         # Finally, it must be an unconnected variable Just print these on the
         # lowest rank for our comp.
         else:
-            flatsizes = system.local_var_sizes
-            noflatsizes = system.noflat_var_sizes
+            flatsizes = system.local_var_sizes[0]
+            noflatsizes = system.noflat_var_sizes[0]
 
-            if len(varkeys) > 0:
+            if len(flatsizes) > 0:
                 lowest = numpy.nonzero(flatsizes)[0][0]
-            elif len(noflatkeys) > 0:
+            elif len(noflatsizes) > 0:
                 lowest = numpy.nonzero(noflatsizes)[0][0]
             else:
                 # I give up. Free-floating comp. Just print it on 0.
