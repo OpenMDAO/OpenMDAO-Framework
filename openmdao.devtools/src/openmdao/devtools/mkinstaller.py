@@ -61,6 +61,8 @@ def _get_adjust_options(options, version, setuptools_url, setuptools_version):
     """Return a string containing the definition of the adjust_options function
     that will be included in the generated virtualenv bootstrapping script.
     """
+    anaconda_error = None
+    
     if options.dev:
         code = """
     for arg in args:
@@ -69,6 +71,11 @@ def _get_adjust_options(options, version, setuptools_url, setuptools_version):
             sys.exit(-1)
     args.append(join(os.path.dirname(__file__), 'devenv'))  # force the virtualenv to be in <top>/devenv
 """
+        cmd = 'cmd /c' if sys.platform == 'win32' else 'bash'
+        ext = 'bat' if sys.platform == 'win32' else 'sh'
+        
+        anaconda_error = "ERROR: OpenMDAO go scripts cannot be used with Anaconda distributions.\\nUse the command below to install the dev version of OpenMDAO:\\n\\n\\t{0} conda-openmdao-dev.{1}".format(cmd, ext)
+        
     else:
         code = """
     # name of virtualenv defaults to openmdao-<version>
@@ -76,8 +83,16 @@ def _get_adjust_options(options, version, setuptools_url, setuptools_version):
         args.append('openmdao-%%s' %% '%s')
 """ % version
 
+        anaconda_error = "ERROR: OpenMDAO go scripts cannot be used with Anaconda distributions.\\nUse the command below to install the latest version of OpenMDAO:\\n\\n\\tconda create --name <environment name> openmdao"
+    
     adjuster = """
 def adjust_options(options, args):
+    version = sys.version
+    
+    if "Analytics" in version or "Anaconda" in version:
+        print "%s"
+        sys.exit(-1)
+        
     major_version = sys.version_info[:2]
     if major_version != (2,7):
         print 'ERROR: python major version must be 2.7, yours is %%s' %% str(major_version)
@@ -130,7 +145,7 @@ def adjust_options(options, args):
     except Exception as err:
         logger.warn(str(err))
 
-""" % (code, setuptools_url, setuptools_version)
+""" % (anaconda_error, code, setuptools_url, setuptools_version)
 
     fixer = '''
 _SCRIPT_FIXER = """\\
