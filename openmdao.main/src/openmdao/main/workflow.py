@@ -544,6 +544,7 @@ class Workflow(object):
                     if 1 or self._system.is_variable_local(path):
                         self._rec_parameters.append(param)
                         inputs.append(name)
+                        #inputs.append(path)
 
         # Objectives
         self._rec_objectives = []
@@ -565,8 +566,10 @@ class Workflow(object):
                     if 1 or self._system.is_variable_local(path):
                         if key != objective.text:
                             outputs.append(name)
+                            #outputs.append(path)
                         else:
                             outputs.append(name + '.out0')
+                            #outputs.append(path + '.out0')
 
         # Responses
         self._rec_responses = []
@@ -580,6 +583,7 @@ class Workflow(object):
                     if 1 or self._system.is_variable_local(path):
                         self._rec_responses.append(key)
                         outputs.append(name + '.out0')
+                        #outputs.append(path + '.out0')
 
         # Constraints
         self._rec_constraints = []
@@ -593,6 +597,7 @@ class Workflow(object):
                     if 1 or self._system.is_variable_local(path):
                         self._rec_constraints.append(con)
                         outputs.append(name + '.out0')
+                        #outputs.append(path + '.out0')
         if hasattr(driver, 'get_ineq_constraints'):
             for con in driver.get_ineq_constraints().values():
                 name = con.pcomp_name
@@ -603,13 +608,20 @@ class Workflow(object):
                     if 1 or self._system.is_variable_local(path):
                         self._rec_constraints.append(con)
                         outputs.append(name + '.out0')
+                        #outputs.append(path + '.out0')
                     #outputs.append(path+'.out0')
 
         #driver.get_reduced_graph()
         #self._rec_all_outputs = []
         self._rec_outputs = []
         for comp in driver.workflow:
-            successors = driver._reduced_graph.successors(comp.name)
+
+            if not driver._reduced_graph:
+                print 'no _reduced_graph', driver.name, driver.parent.name
+            else:
+                print '_reduced_graph', driver.name, driver.parent.name
+            #successors = driver._reduced_graph.successors(comp.name)
+            successors = driver.get_reduced_graph().successors(comp.name)
             for output_name, aliases in successors:
 
                 # From Bret: it does make sense to skip subdrivers like you said, except for the
@@ -630,8 +642,9 @@ class Workflow(object):
                 if output_name not in outputs and self._check_path(prefix + output_name, includes, excludes) :
                     outputs_all_processes.append(output_name)
                     if 1 or self._system.is_variable_local(output_name):
-                        outputs.append(output_name)
                         self._rec_outputs.append(output_name)
+                        outputs.append(output_name)
+                        #outputs.append(prefix + output_name)
                         #self._rec_all_outputs.append(output_name)
                     
         #####
@@ -656,6 +669,7 @@ class Workflow(object):
                     outputs_all_processes.append(output_name)
                     if 1 or self._system.is_variable_local(output_name):
                         outputs.append(output_name)
+                        #outputs.append(prefix + output_name)
                         self._rec_outputs.append(output_name)
 
         # Other outputs.
@@ -697,29 +711,30 @@ class Workflow(object):
             if 1 or self._system.is_variable_local(output_name):
                 self._rec_outputs.append(name)
                 outputs.append(name)
+                #outputs.append(path)
 
         # If recording required, register names in recorders.
         self._rec_required = bool(inputs or outputs)
         if self._rec_required:
 
 
-            # for io in inputs + outputs :
-            #     print "IO %d: %s" % ( self._system.mpi.rank, io )
-
-
-
-            # print "\n".join(inputs + outputs)
             top = scope
             while top.parent is not None:
                 top = top.parent
             for recorder in top.recorders:
                 #recorder.register(driver, inputs, outputs,inputs_all_processes=inputs_all_processes,outputs_all_processes=outputs_all_processes)
+                from pprint import pprint
+                # with open('insouts%d' % MPI.COMM_WORLD.rank, 'wt') as out:
+                #     pprint(inputs+outputs, stream=out)
+                print 'drivername and prefix', driver.name, prefix
+                with open('insouts%s' % driver.name, 'wt') as out:
+                    pprint(inputs+outputs, stream=out)
                 recorder.register(driver, inputs, outputs)
 
         #import pdb; pdb.set_trace()
 
-        print 'check', self._system.mpi.rank, self._system.is_variable_local('_pseudo_0.out0')
-        print 'check', self._system.mpi.rank, self._system.is_variable_local('_pseudo_1.out0')
+        # print 'check', self._system.mpi.rank, self._system.is_variable_local('_pseudo_0.out0')
+        # print 'check', self._system.mpi.rank, self._system.is_variable_local('_pseudo_1.out0')
 
         return (set(prefix+name for name in inputs), dict())
 
