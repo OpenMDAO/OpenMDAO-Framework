@@ -174,9 +174,6 @@ class Assembly(Component):
         # are collapsed into single nodes
         self._reduced_graph = None
 
-        self.J_input_keys = None
-        self.J_output_keys = None
-
         # default Driver executes its workflow once
         self.add('driver', Driver())
 
@@ -448,7 +445,7 @@ class Assembly(Component):
 
     def _find_unexecuted_comps(self):
         self._unexecuted = []
-        self._pre_drive = None
+        self._pre_driver = None
         cgraph = self._depgraph.component_graph()
         wfcomps = set([c.name for c in self.driver.iteration_set()])
         wfcomps.add('driver')
@@ -726,7 +723,6 @@ class Assembly(Component):
                 cont.config_changed(update_parent=False)
 
         self._pre_driver = None
-        self.J_input_keys = self.J_output_keys = None
         self._system = None
 
     def _set_failed(self, path, value):
@@ -1552,7 +1548,7 @@ class Assembly(Component):
         self._var_meta = {}
         self._pre_driver = None
         self._unexecuted = []
-        self.J_input_keys = self.J_output_keys = None
+
         self._provideJ_bounds = None
         self._system = None
         self._derivs_required = False

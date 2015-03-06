@@ -86,7 +86,6 @@ def get_closest_proxy(obj, pathname):
 
     return (obj, '.'.join(names[i:]))
 
-proxy_get = get_closest_proxy
 
 def proxy_parent(obj, pathname):
     """Returns a tuple of the form (par, restofpath), where par
@@ -1024,10 +1023,6 @@ class Container(SafeHasTraits):
             self.raise_exception(str(err), err.__class__)
         else:
             self._setcache[path] = expr
-
-    def _add_path(self, msg):
-        """Adds our pathname to the beginning of the given message."""
-        return "%s: %s" % (self.get_pathname(), msg)
 
     def save_to_egg(self, name, version, py_dir=None, src_dir=None,
                     src_files=None, child_objs=None, dst_dir=None,

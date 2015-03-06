@@ -446,6 +446,13 @@ class AssemblyTestCase(unittest.TestCase):
         else:
             self.fail("Exception expected")
 
+    def test_list_components(self):
+        asm = Assembly()
+        asm.add('a', Simple())
+        asm.add('b', Simple())
+        self.assertEqual(set(asm.list_components()),
+                         set(['a', 'b', 'driver']))
+
     def test_circular_dependency(self):
 
         self.asm.connect('comp1.rout', 'comp2.r')
