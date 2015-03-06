@@ -333,6 +333,7 @@ def applyJT(system, variables):
             break
 
     if nonzero is False:
+        #print 'applyJT', obj.name, arg, result
         return
 
     # If storage of the local Jacobian is a problem, the user can

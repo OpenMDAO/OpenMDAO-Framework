@@ -1956,7 +1956,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
 
     def test_nested_2Darray(self):
 
-        top = Assembly()
+        top = set_as_top(Assembly())
         top.add('nest', Assembly())
         top.nest.add('comp', ArrayComp2D())
 
