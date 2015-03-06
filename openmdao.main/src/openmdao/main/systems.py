@@ -457,8 +457,9 @@ class System(object):
         # local sizes across all processes in our comm
         self.local_var_sizes = numpy.zeros((size, len(self.vector_vars)), int)
 
+        ours = numpy.zeros((1, len(self.vector_vars)), int)
         for i, (name, var) in enumerate(self.vector_vars.items()):
-            self.local_var_sizes[rank, i] = var['size']
+            ours[0, i] = var['size']
 
         # collect local var sizes from all of the processes in our comm
         # these sizes will be the same in all processes except in cases
@@ -466,18 +467,22 @@ class System(object):
         # case, the part of the component that runs in a given process will
         # only have a slice of each of the component's variables.
         if MPI:
-            comm.Allgather(self.local_var_sizes[rank,:],
-                           self.local_var_sizes)
+            comm.Allgather(ours[0,:], self.local_var_sizes)
+
+        self.local_var_sizes[rank, :] = ours[0, :]
 
         # create a (1 x nproc) vector for the sizes of all of our
         # local inputs
         self.input_sizes = numpy.zeros(size, int)
 
+        insize = numpy.zeros(1, int)
         for arg in _filter_flat(self.scope, self._owned_args):
-            self.input_sizes[rank] += varmeta[arg]['size']
+            insize[0] += varmeta[arg]['size']
 
         if MPI:
-            comm.Allgather(self.input_sizes[rank], self.input_sizes)
+            comm.Allgather(insize[0], self.input_sizes)
+
+        self.input_sizes[rank] = insize[0]
 
         # create an arg_idx dict to keep track of indices of
         # inputs

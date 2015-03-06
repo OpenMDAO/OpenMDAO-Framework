@@ -3,7 +3,7 @@ import numpy as np
 import sys
 
 from openmdao.util.testutil import assert_rel_error
-from openmdao.test.mpiunittest import MPITestCase, collective_assert_rel_error
+from openmdao.test.mpiunittest import MPITestCase, MPIContext
 from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.main.datatypes.api import Float
 from openmdao.main.test.simpledriver import SimpleDriver
@@ -148,14 +148,12 @@ class MPITests_2Proc(MPITestCase):
         top.run()
 
         J = top.driver.calc_gradient(mode='forward',
-                                              return_format='dict')
+                                     return_format='dict')
 
         J = top.driver.workflow._system.get_combined_J(J)
-        collective_assert_rel_error(self,
-                                    J['_pseudo_0.out0']['comp1.x'][0][0],
+        assert_rel_error(self, J['_pseudo_0.out0']['comp1.x'][0][0],
                                     15.0, 0.0001)
-        collective_assert_rel_error(self,
-                                    J['_pseudo_0.out0']['comp2.x'][0][0],
+        assert_rel_error(self, J['_pseudo_0.out0']['comp2.x'][0][0],
                                     -8.0, 0.0001)
 
     def test_two_to_one_adjoint(self):
@@ -187,11 +185,9 @@ class MPITests_2Proc(MPITestCase):
                                               return_format='dict')
 
         J = top.driver.workflow._system.get_combined_J(J)
-        collective_assert_rel_error(self,
-                                    J['_pseudo_0.out0']['comp1.x'][0][0],
+        assert_rel_error(self, J['_pseudo_0.out0']['comp1.x'][0][0],
                                     15.0, 0.0001)
-        collective_assert_rel_error(self,
-                                    J['_pseudo_0.out0']['comp2.x'][0][0],
+        assert_rel_error(self, J['_pseudo_0.out0']['comp2.x'][0][0],
                                     -8.0, 0.0001)
 
     def test_two_to_one_fd(self):
@@ -223,11 +219,9 @@ class MPITests_2Proc(MPITestCase):
                                               return_format='dict')
 
         J = top.driver.workflow._system.get_combined_J(J)
-        collective_assert_rel_error(self,
-                                    J['_pseudo_0.out0']['comp1.x'][0][0],
+        assert_rel_error(self, J['_pseudo_0.out0']['comp1.x'][0][0],
                                     15.0, 0.0001)
-        collective_assert_rel_error(self,
-                                    J['_pseudo_0.out0']['comp2.x'][0][0],
+        assert_rel_error(self, J['_pseudo_0.out0']['comp2.x'][0][0],
                                     -8.0, 0.0001)
 
     def test_two_to_one_forward_bcast(self):
@@ -260,8 +254,7 @@ class MPITests_2Proc(MPITestCase):
 
         J = top.driver.workflow._system.get_combined_J(J)
         #print J
-        collective_assert_rel_error(self,
-                                    J['_pseudo_0.out0']['comp1.x'][0][0],
+        assert_rel_error(self, J['_pseudo_0.out0']['comp1.x'][0][0],
                                     7.0, 0.0001)
 
     def test_two_to_one_adjoint_bcast(self):
@@ -297,8 +290,7 @@ class MPITests_2Proc(MPITestCase):
         #from openmdao.util.dotgraph import plot_system_tree
         #plot_system_tree(top._system)
 
-        collective_assert_rel_error(self,
-                                    J['_pseudo_0.out0']['comp1.x'][0][0],
+        assert_rel_error(self, J['_pseudo_0.out0']['comp1.x'][0][0],
                                     7.0, 0.0001)
 
     def test_one_to_two_forward(self):
@@ -330,11 +322,9 @@ class MPITests_2Proc(MPITestCase):
                                               return_format='dict')
         J = top.driver.workflow._system.get_combined_J(J)
 
-        collective_assert_rel_error(self,
-                                    J['_pseudo_0.out0']['comp1.x'][0][0],
+        assert_rel_error(self, J['_pseudo_0.out0']['comp1.x'][0][0],
                                     -6.0, 0.0001)
-        collective_assert_rel_error(self,
-                                    J['_pseudo_1.out0']['comp1.x'][0][0],
+        assert_rel_error(self, J['_pseudo_1.out0']['comp1.x'][0][0],
                                     20.0, 0.0001)
 
     def test_one_to_two_adjoint(self):
@@ -366,11 +356,9 @@ class MPITests_2Proc(MPITestCase):
                                               return_format='dict')
         J = top.driver.workflow._system.get_combined_J(J)
 
-        collective_assert_rel_error(self,
-                                    J['_pseudo_0.out0']['comp1.x'][0][0],
+        assert_rel_error(self, J['_pseudo_0.out0']['comp1.x'][0][0],
                                     -6.0, 0.0001)
-        collective_assert_rel_error(self,
-                                    J['_pseudo_1.out0']['comp1.x'][0][0],
+        assert_rel_error(self, J['_pseudo_1.out0']['comp1.x'][0][0],
                                     20.0, 0.0001)
 
     def test_one_to_two_fd(self):
@@ -402,11 +390,9 @@ class MPITests_2Proc(MPITestCase):
                                               return_format='dict')
         J = top.driver.workflow._system.get_combined_J(J)
 
-        collective_assert_rel_error(self,
-                                    J['_pseudo_0.out0']['comp1.x'][0][0],
+        assert_rel_error(self, J['_pseudo_0.out0']['comp1.x'][0][0],
                                     -6.0, 0.0001)
-        collective_assert_rel_error(self,
-                                    J['_pseudo_1.out0']['comp1.x'][0][0],
+        assert_rel_error(self, J['_pseudo_1.out0']['comp1.x'][0][0],
                                     20.0, 0.0001)
 
     def test_three_comp_diamond_forward(self):
@@ -503,8 +489,7 @@ class MPITests_2Proc(MPITestCase):
                                           mode='forward',
                                           return_format='dict')
 
-        collective_assert_rel_error(self,
-                                    J['comp5.y1']['comp1.x1'][0][0],
+        assert_rel_error(self, J['comp5.y1']['comp1.x1'][0][0],
                                     313.0, 0.0001)
 
     def test_diverge_converge_LinGS_forward(self):
@@ -566,8 +551,7 @@ class MPITests_2Proc(MPITestCase):
                                           mode='forward',
                                           return_format='dict')
 
-        collective_assert_rel_error(self,
-                                    J['comp5.y1']['comp1.x1'][0][0],
+        assert_rel_error(self, J['comp5.y1']['comp1.x1'][0][0],
                                     313.0, 0.0001)
 
     def test_diverge_converge_LinGS_adjoint(self):
@@ -626,8 +610,7 @@ class MPITests_2Proc(MPITestCase):
                                           mode='adjoint',
                                           return_format='dict')
 
-        collective_assert_rel_error(self,
-                                    J['comp5.y1']['comp1.x1'][0][0],
+        assert_rel_error(self, J['comp5.y1']['comp1.x1'][0][0],
                                     313.0, 0.0001)
 
     def test_diverge_converge_adjoint(self):
@@ -686,8 +669,7 @@ class MPITests_2Proc(MPITestCase):
         #from openmdao.util.dotgraph import plot_system_tree
         #plot_system_tree(self.top._system)
         #print J
-        collective_assert_rel_error(self,
-                                    J['comp5.y1']['comp1.x1'][0][0],
+        assert_rel_error(self, J['comp5.y1']['comp1.x1'][0][0],
                                     313.0, 0.0001)
 
     def test_diverge_converge_extended_adjoint(self):
@@ -754,8 +736,7 @@ class MPITests_2Proc(MPITestCase):
         #plot_system_tree(self.top._system)
 
         #print J
-        collective_assert_rel_error(self,
-                                    J['comp5.y1']['comp1.x1'][0][0],
+        assert_rel_error(self, J['comp5.y1']['comp1.x1'][0][0],
                                     3300.5, 0.0001)
 
     def test_diverge_converge_nondiff_comp3_forward(self):
@@ -816,8 +797,7 @@ class MPITests_2Proc(MPITestCase):
                                           mode='forward',
                                           return_format='dict')
 
-        collective_assert_rel_error(self,
-                                    J['comp5.y1']['comp1.x1'][0][0],
+        assert_rel_error(self, J['comp5.y1']['comp1.x1'][0][0],
                                     313.0, 0.0001)
 
     def test_one_two_one_two_one_forward(self):
@@ -879,8 +859,7 @@ class MPITests_2Proc(MPITestCase):
                                           mode='forward',
                                           return_format='dict')
 
-        collective_assert_rel_error(self,
-                                    J['comp7.y1']['comp1.x1'][0][0],
+        assert_rel_error(self, J['comp7.y1']['comp1.x1'][0][0],
                                     -40.75, 0.0001)
 
     def test_one_two_one_two_one_adjoint(self):
@@ -942,8 +921,7 @@ class MPITests_2Proc(MPITestCase):
                                           mode='adjoint',
                                           return_format='dict')
 
-        collective_assert_rel_error(self,
-                                    J['comp7.y1']['comp1.x1'][0][0],
+        assert_rel_error(self, J['comp7.y1']['comp1.x1'][0][0],
                                     -40.75, 0.0001)
 
     def test_lin_GS_subassy(self):
@@ -1034,14 +1012,11 @@ class MPITests_2Proc(MPITestCase):
         J = top.driver.calc_gradient(mode='adjoint',
                                      return_format='dict')
 
-        collective_assert_rel_error(self,
-                                    J['_pseudo_0.out0']['sub1.x1'][0][0],
+        assert_rel_error(self, J['_pseudo_0.out0']['sub1.x1'][0][0],
                                     3300.5, 0.0001)
-        collective_assert_rel_error(self,
-                                    J['_pseudo_0.out0']['sub2.x1'][0][0],
+        assert_rel_error(self, J['_pseudo_0.out0']['sub2.x1'][0][0],
                                     7229.25, 0.0001)
-        collective_assert_rel_error(self,
-                                    J['_pseudo_1.out0']['sub1.x1'][0][0],
+        assert_rel_error(self, J['_pseudo_1.out0']['sub1.x1'][0][0],
                                     3.0, 0.0001)
 
     def test_parallel_gather_for_objective(self):
@@ -1134,11 +1109,11 @@ class MPITests_2Proc(MPITestCase):
         #from openmdao.util.dotgraph import plot_system_tree
         #plot_system_tree(top._system)
 
-        collective_assert_rel_error(self, 9826.25, top._pseudo_0.out0, 0.0001)
-        collective_assert_rel_error(self, 9826.25, top.driver.func_dict['_pseudo_0.out0'], 0.0001)
+        assert_rel_error(self, 9826.25, top._pseudo_0.out0, 0.0001)
+        assert_rel_error(self, 9826.25, top.driver.func_dict['_pseudo_0.out0'], 0.0001)
 
 
 
 if __name__ == '__main__':
     from testflo.main import run_tests
-    run_tests(['--isolated'])
+    run_tests(['--isolated', '--nocapture'])
