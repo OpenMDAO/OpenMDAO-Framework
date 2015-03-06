@@ -55,6 +55,7 @@ class SellarMDF(Assembly):
 top = set_as_top(SellarMDF())
 
 top.driver.max_iteration = 30
+top.driver.max_iteration = 1
 top.driver.add_parameter('C2.y1', low=-1e99, high=1e99)
 top.driver.add_constraint('C1.y1 = C2.y1')
 top.driver.add_parameter('C1.y2', low=-1.e99, high=1.e99)
