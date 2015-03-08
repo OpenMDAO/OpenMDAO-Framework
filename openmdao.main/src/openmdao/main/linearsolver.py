@@ -221,7 +221,7 @@ class ScipyGMRES(LinearSolver):
             msg = "ERROR in calc_gradient in '%s': gmres failed"
             logger.error(msg, system.name)
 
-        #print system.name, 'Linear solution vec', -dx
+        print system.name, 'Linear solution vec', -dx
         return dx
 
 
