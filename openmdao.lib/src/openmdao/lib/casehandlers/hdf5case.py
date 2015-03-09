@@ -108,7 +108,10 @@ def write_groups_to_hdf5( group, name, value ):
     #         write_to_hdf5( vartree_grp, k, value.get(k) )
     elif isinstance( value, np.ndarray):
         print 'write_groups_to_hdf5 np.ndarray', rank, name, value
-        group.create_dataset(name, data=value)
+        if group.file.driver == 'mpio': # cannot do compression when writing in parallel
+            group.create_dataset(name, data=value)
+        else:
+            group.create_dataset(name, data=value, compression='gzip', chunks=True)
     elif isinstance( value, list):
         if len( value ) > 0:
             if isinstance( value[0], str):
@@ -117,7 +120,7 @@ def write_groups_to_hdf5( group, name, value ):
         else:
             print 'write_groups_to_hdf5 unknown list', rank, name, value
             group.create_dataset(name,(0,)) # TODO How do we handle empty lists? Do not know type
-    elif value == None :
+    elif value == None : # TODO Need a better way to do this. When using h5diff, we get 'Not comparable' with these values
         print 'write_groups_to_hdf5 None', rank, name, value
         group.create_dataset(name,(0,))
     elif isinstance( value, np.float64):
@@ -151,7 +154,13 @@ def write_groups_to_hdf5( group, name, value ):
 
 
 
+def get_rank():
+    if MPI is None:
+        world_rank = 0
+    else:
+        world_rank = MPI.COMM_WORLD.rank
 
+    return world_rank
 
 
 
@@ -187,12 +196,11 @@ class HDF5CaseRecorder(object):
         if MPI:
             print 'type(MPI.COMM_WORLD)', type(MPI.COMM_WORLD)
 
-        # if not MPI or MPI.COMM_WORLD.rank == 0 : # TODO only rank 0 process needs to write the primary case recording file
-        #     print "create hdf5_main_file_object"
-        #     self.hdf5_main_file_object = h5py.File(out, "w")
-        #     print "done creating hdf5_main_file_object"
 
-        self.hdf5_main_file_object = h5py.File(out, "w", driver='mpio', comm=MPI.COMM_WORLD)
+        if MPI:
+            self.hdf5_main_file_object = h5py.File(out, "w", driver='mpio', comm=MPI.COMM_WORLD) # Has to be since all drivers will create links to their files
+        else:
+            self.hdf5_main_file_object = h5py.File(out, "w")
 
 
         self.hdf5_case_record_file_objects = {}
@@ -215,10 +223,6 @@ class HDF5CaseRecorder(object):
     #def register(self, driver, inputs, outputs,inputs_all_processes, outputs_all_processes):
     def register(self, driver, inputs, outputs):
         """ Register names for later record call from `driver`. """
-
-        # If this driver is not running on this process, do not bother registering
-        # if not driver._system.is_active():    ########### TODO 
-        #     return
 
         #import pdb; pdb.set_trace()
         self._cfg_map[driver] = (inputs, outputs)
@@ -258,7 +262,9 @@ class HDF5CaseRecorder(object):
         case_recording_filename = 'cases_%s_%s.hdf5' % (prefix, driver.name)
         print 'opening HDF5 file', case_recording_filename
 
-        if not driver._system.is_active():    ########### TODO 
+        self.case_recording_filenames[driver.get_pathname()] = case_recording_filename
+
+        if not driver._system.is_active():   
             return
 
         ##########   restore   
@@ -270,20 +276,14 @@ class HDF5CaseRecorder(object):
             print 'driver is not parallel', driver.get_pathname()
             self.hdf5_case_record_file_objects[driver] = h5py.File(case_recording_filename, "w")
 
-        self.case_recording_filenames[driver.get_pathname()] = case_recording_filename
 
 
 
     def record_constants(self, constants):
         """ Record constant data. """
 
-        print 'in record_constants before if', MPI.COMM_WORLD.rank
+        print 'in record_constants', get_rank()
 
-        # # TODO only rank 0 needs to do this
-        # if MPI and not MPI.COMM_WORLD.rank == 0 :
-        #     return 
-
-        print 'in record_constants after if', MPI.COMM_WORLD.rank
 
         info = self.get_simulation_info(constants)
 
@@ -335,7 +335,7 @@ class HDF5CaseRecorder(object):
             for k,v in info.items():
                 print 'driver key', k, v
                 write_groups_to_hdf5( driver_info_group, k, v )
-                write_to_hdf5( driver_info_group, k, v ) # TODO really only rank 0 should do this
+                write_to_hdf5( driver_info_group, k, v ) 
 
         ##### Write the datasets using only the data available to this process ######
         # for i, info in enumerate(self.get_driver_info()):
@@ -345,41 +345,33 @@ class HDF5CaseRecorder(object):
         #     for k,v in info.items():
         #         write_to_hdf5( driver_info_group, k, v )
 
-        print 'in record_constants at end', MPI.COMM_WORLD.rank
+        print 'in record_constants at end', get_rank()
 
 
     def record(self, driver, inputs, outputs, exc, case_uuid, parent_uuid):
         """ Dump the given run data. """
 
+        hdf5_file_object = self.hdf5_case_record_file_objects[driver]
 
 
-
-
-
-        print 'start of record', MPI.COMM_WORLD.rank
-
-        if MPI:
-            rank = MPI.COMM_WORLD.rank
-        else:  
-            rank = 0
+        print 'start of record', get_rank()
 
         info = self.get_case_info(driver, inputs, outputs, exc,
                                   case_uuid, parent_uuid)
         self._cases += 1
         iteration_case_name = 'iteration_case_%s' % self._cases
 
-        #print "iteration_case_name", iteration_case_name
+        print "iteration_case_name", iteration_case_name, hdf5_file_object.filename, get_rank()
 
 
-        hdf5_file_object = self.hdf5_case_record_file_objects[driver]
 
-        print 'writing records to file from rank', driver.get_pathname(), hdf5_file_object.filename, iteration_case_name, rank
+        print 'writing records to file from rank', driver.get_pathname(), hdf5_file_object.filename, iteration_case_name, get_rank()
 
         ##### Just create group structure on all processes using the merged JSON info ######
         self._count += 1
         iteration_case_group = hdf5_file_object.create_group(iteration_case_name)
         for k,v in info.items():
-            print 'record case make group', rank, iteration_case_group.name, k, v
+            print 'record case make group', get_rank(), iteration_case_group.name, k, v
             write_groups_to_hdf5( iteration_case_group, k, v ) 
 
         #return
@@ -391,12 +383,12 @@ class HDF5CaseRecorder(object):
 
         ##### Write the datasets using only the data available to this process ######
         for k,v in info.items():
-            print 'record case set values', rank, k 
+            print 'record case set values', get_rank(), k 
             if k != 'data':
                 write_to_hdf5( iteration_case_group, k, v )
             else:
                 print 'writing data'
-                print 'write_to_hdf5 dict', rank, k
+                print 'write_to_hdf5 dict', get_rank(), k
                 data_grp = iteration_case_group[k]
                 for name,value in v.items():
 
@@ -410,18 +402,16 @@ class HDF5CaseRecorder(object):
                     # if name_for_local_check == 'pseudo_3':
                     #     import pdb; pdb.set_trace()
                     print 'is_variable_local', name, name_for_local_check
-                    #if driver.workflow._system.is_variable_local( name_for_local_check ):
-                    #if driver.workflow._system.is_variable_local( name_for_local_check ): # TODO should cache these. No need to call for each record
                     if driver.workflow._system.is_variable_local( name_for_local_check ): # TODO should cache these. No need to call for each record
-                        print "islocal true", name_for_local_check, rank, name
-                        print 'actual write to hdf5 file', name, hdf5_file_object.filename, rank
+                        print "islocal true", name_for_local_check, get_rank(), name
+                        print 'actual write to hdf5 file', name, hdf5_file_object.filename, get_rank()
                         write_to_hdf5( data_grp, name, value )
                         hdf5_file_object.flush()
                         print 'whatisin', hdf5_file_object.filename, hdf5_file_object.keys()
                     else:
-                        print "islocal false", rank, hdf5_file_object.filename, name
+                        print "islocal false", get_rank(), hdf5_file_object.filename, name
 
-        print 'end of record', MPI.COMM_WORLD.rank
+        print 'end of record', get_rank()
 
 
 
@@ -431,12 +421,21 @@ class HDF5CaseRecorder(object):
         Note that a closed recorder will do nothing in :meth:`record`.
         """
 
-        print "in close", MPI.COMM_WORLD.rank
+        if MPI:
+            print "in close", MPI.COMM_WORLD.rank
+
+        if MPI:
+            MPI.COMM_WORLD.Barrier()
 
 
-        MPI.COMM_WORLD.Barrier()
+        for hdf5_case_record_file in self.hdf5_case_record_file_objects.values() :
+            print 'whatisin at close', hdf5_case_record_file.filename, hdf5_case_record_file.keys(), get_rank()
+            hdf5_case_record_file.close()            
 
-        if 1 or not MPI or MPI.COMM_WORLD.rank == 0 : # only rank 0 process needs to write the primary case recording file
+        if MPI:
+            MPI.COMM_WORLD.Barrier()
+
+        if 1 or not MPI or get_rank() == 0 : # only rank 0 process needs to write the primary case recording file
 
             print "closing hdf5_main_file_object"
             sys.stdout.flush()
@@ -444,22 +443,20 @@ class HDF5CaseRecorder(object):
 
             ################# restore
             # # add the individual case recording files to the main hdf5 file
-            # iteration_case_grp = self.hdf5_main_file_object.create_group("iteration_cases")
+            iteration_case_grp = self.hdf5_main_file_object.create_group("iteration_cases")
 
-            # for driver_path, filename in self.case_recording_filenames.items():
-            #     # Create an external link to the root group "/" in the driver specific iteration cases 
-            #     # B['External'] = h5py.ExternalLink("dset.h5", "/dset")
-            #     iteration_case_grp[driver_path] = h5py.ExternalLink(filename, "/")
-
+            for driver_path, filename in self.case_recording_filenames.items():
+                # Create an external link to the root group "/" in the driver specific iteration cases 
+                # B['External'] = h5py.ExternalLink("dset.h5", "/dset")
+                print 'making links to', filename, driver_path, get_rank()
+                sys.stdout.flush()
+                # if filename != 'cases__driver.hdf5':
+                #     continue
+                iteration_case_grp[driver_path] = h5py.ExternalLink(filename, "/") # root should work
             print "close hdf5_case_recorder"
             self.hdf5_main_file_object.close()
 
 
-        ###################### restore
-        # TODO should really only close the ones that belong to this process
-        for hdf5_case_record_file in self.hdf5_case_record_file_objects.values() :
-            print 'whatisin at close', hdf5_case_record_file.filename, hdf5_case_record_file.keys(), MPI.COMM_WORLD.rank
-            hdf5_case_record_file.close()            
 
         # if self.out is not None and self._cases is not None:
         #     self.out.write('}\n')
@@ -579,7 +576,7 @@ class HDF5CaseRecorder(object):
                 expressions[prefix+str(con)] = info
 
         self._uuid = str(uuid1())
-        self._cases = 0
+        self._cases = 0 # TODO this has to be coordinated across processes???
 
         dep_graph = top.get_graph(format='json')
         comp_graph = top.get_graph(components_only=True, format='json')
