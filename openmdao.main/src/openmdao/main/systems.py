@@ -2192,6 +2192,9 @@ class DriverSystem(SimpleSystem):
 
         return None
 
+    def get_req_cpus(self):
+        return self._comp.workflow._system.get_req_cpus()
+
 
 class FiniteDiffDriverSystem(DriverSystem):
     """A System for a Driver component that is not a Solver."""
