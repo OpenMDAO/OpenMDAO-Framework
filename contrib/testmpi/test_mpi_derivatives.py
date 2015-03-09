@@ -1198,7 +1198,6 @@ class MPITests_2Proc(MPITestCase):
                                     J['_pseudo_0.out0']['nest1.x[0]'][0][0],
                                     8.0, 0.0001)
 
-
 if __name__ == '__main__':
-    from testflo.main import run_tests
-    run_tests(['--isolated', '--nocapture'])
+    from testflo.main import mpirun_tests
+    mpirun_tests()

@@ -224,10 +224,6 @@ class MPITests1(MPITestCase):
 
         top.run()
 
-        # if self.comm.rank == 0:
-        #     from openmdao.util.dotgraph import plot_system_tree
-        #     plot_system_tree(top._system)
-
         # top.C1.dump(self.comm)
         # top.C2.dump(self.comm)
 
@@ -536,5 +532,5 @@ class TestCaseSerial(TestCase):
 
 
 if __name__ == '__main__':
-    from testflo.main import run_tests
-    run_tests(['--isolated'])
+    from testflo.main import mpirun_tests
+    mpirun_tests()
