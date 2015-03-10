@@ -532,5 +532,5 @@ class TestCaseSerial(TestCase):
 
 
 if __name__ == '__main__':
-    from testflo.main import mpirun_tests
+    from openmdao.test.mpiunittest import mpirun_tests
     mpirun_tests()

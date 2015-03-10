@@ -1199,5 +1199,5 @@ class MPITests_2Proc(MPITestCase):
                                     8.0, 0.0001)
 
 if __name__ == '__main__':
-    from testflo.main import mpirun_tests
+    from openmdao.test.mpiunittest import mpirun_tests
     mpirun_tests()
