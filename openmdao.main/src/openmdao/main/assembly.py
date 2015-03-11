@@ -1620,10 +1620,10 @@ class Assembly(Component):
             self.setup_scatters()
 
         except Exception as err:
-            traceback.print_exc()
+            exc = sys.exc_info()
             sys.stdout.flush()
             sys.stderr.flush()
-            raise
+            raise exc[0], exc[1], exc[2]
 
         self.post_setup()
 
