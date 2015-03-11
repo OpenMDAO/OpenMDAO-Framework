@@ -132,16 +132,16 @@ class ScalerAdderExampleTestCase(unittest.TestCase):
         Jdict = opt_problem.driver.calc_gradient(return_format='dict')
 
         # Make sure untransforming works for dicts too
-        self.assertTrue(J[0][0] == Jdict['_pseudo_1.out0']['paraboloid.x'])
-        self.assertTrue(J[0][1] == Jdict['_pseudo_1.out0']['paraboloid.y'])
+        self.assertTrue(J[0][0] == Jdict['_pseudo_0.out0']['paraboloid.x'])
+        self.assertTrue(J[0][1] == Jdict['_pseudo_0.out0']['paraboloid.y'])
 
         Jfddict = opt_problem.driver.calc_gradient(mode='fd', return_format='dict')
         opt_problem.driver.run_iteration()
         Jfd = opt_problem.driver.calc_gradient(mode='fd')
 
         # Make sure untransforming works for dicts too
-        self.assertTrue(Jfd[0][0] == Jfddict['_pseudo_1.out0']['paraboloid.x'])
-        self.assertTrue(Jfd[0][1] == Jfddict['_pseudo_1.out0']['paraboloid.y'])
+        self.assertTrue(Jfd[0][0] == Jfddict['_pseudo_0.out0']['paraboloid.x'])
+        self.assertTrue(Jfd[0][1] == Jfddict['_pseudo_0.out0']['paraboloid.y'])
 
     def test_scale_adder(self):
 
