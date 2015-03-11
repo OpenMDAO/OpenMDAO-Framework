@@ -1194,9 +1194,10 @@ class MPITests_2Proc(MPITestCase):
         self.assertTrue(('x', ('comp.x', 'x')) not in asys.variables.keys())
 
 
-        collective_assert_rel_error(self,
-                                    J['_pseudo_0.out0']['nest1.x[0]'][0][0],
-                                    8.0, 0.0001)
+        with MPIContext():
+            assert_rel_error(self,
+                             J['_pseudo_0.out0']['nest1.x[0]'][0][0],
+                             8.0, 0.0001)
 
 if __name__ == '__main__':
     from openmdao.test.mpiunittest import mpirun_tests
