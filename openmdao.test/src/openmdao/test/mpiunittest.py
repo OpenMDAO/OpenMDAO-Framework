@@ -5,9 +5,10 @@ Some classes to make it a little more convenient to do MPI testing.
 
 import sys
 import time
+import traceback
 from cStringIO import StringIO
 from contextlib import contextmanager
-from unittest import TestCase
+from unittest import TestCase, SkipTest
 
 from mpi4py import MPI
 
@@ -78,19 +79,19 @@ def try_call(method):
     try:
         method()
     except Exception as e:
-        #msg = traceback.format_exc()
+        msg = traceback.format_exc()
         if isinstance(e, SkipTest):
             status = 'SKIP'
-            #sys.stderr.write(str(e))
+            sys.stderr.write(str(e))
         else:
             status = 'FAIL'
-            #sys.stderr.write(msg)
+            sys.stderr.write(msg)
     except:
-        #msg = traceback.format_exc()
+        msg = traceback.format_exc()
         status = 'FAIL'
-        #sys.stderr.write(msg)
+        sys.stderr.write(msg)
 
-    #sys.stderr.flush()
+    sys.stderr.flush()
 
     return status
 
@@ -98,7 +99,7 @@ def run_test(testspec, parent, method):
     start_time = time.time()
 
     errstream = StringIO()
-    #outstream = StringIO()
+    outstream = StringIO()
 
     setup = getattr(parent, 'setUp', None)
     teardown = getattr(parent, 'tearDown', None)
@@ -106,37 +107,33 @@ def run_test(testspec, parent, method):
     run_method = True
     run_td = True
 
-    print "running:", testspec; sys.stdout.flush()
-    #try:
-    #old_err = sys.stderr
-    #old_out = sys.stdout
-    #sys.stdout = outstream
-    #sys.stderr = errstream
+    try:
+        old_err = sys.stderr
+        old_out = sys.stdout
+        sys.stdout = outstream
+        sys.stderr = errstream
 
-    # if there's a setUp method, run it
-    if setup:
-        print "running:", 'setUp'; sys.stdout.flush()
-        status = try_call(setup)
-        if status != 'OK':
-            run_method = False
-            run_td = False
+        # if there's a setUp method, run it
+        if setup:
+            status = try_call(setup)
+            if status != 'OK':
+                run_method = False
+                run_td = False
 
-    if run_method:
-        print "running:", method; sys.stdout.flush()
-        status = try_call(getattr(parent, method))
-        print "done"; sys.stdout.flush()
+        if run_method:
+            status = try_call(getattr(parent, method))
 
-    # if teardown and run_td:
-    #     tdstatus = try_call(teardown)
-    #     if status == 'OK':
-    #         status = tdstatus
+        if teardown and run_td:
+            tdstatus = try_call(teardown)
+            if status == 'OK':
+                status = tdstatus
 
-    result = TestResult(testspec, start_time, time.time(), status,
-                        errstream.getvalue())
+        result = TestResult(testspec, start_time, time.time(), status,
+                            errstream.getvalue())
 
-    #finally:
-        #sys.stderr = old_err
-        #sys.stdout = old_out
+    finally:
+        sys.stderr = old_err
+        sys.stdout = old_out
 
     return result
 
@@ -161,7 +158,6 @@ def mpirun_tests(args=None):
     #options = _get_parser().parse_args(args)
 
     tests = [n for n in args if not n.startswith('-')]
-    print "tests:",tests
     if tests:
         for test in tests:
             tcase, _, method = test.partition('.')
@@ -178,7 +174,6 @@ def mpirun_tests(args=None):
                               parent, method)
 
             if under_mpirun():
-                print "gathering";sys.stdout.flush()
                 results = MPI.COMM_WORLD.gather(result, root=0)
 
                 if MPI.COMM_WORLD.rank == 0:
@@ -199,13 +194,11 @@ def mpirun_tests(args=None):
                     if n.startswith('test_'):
                         testspec = k+'.'+n
                         if not hasattr(v, 'N_PROCS'):
-                            print "running ",testspec;sys.stdout.flush()
                             print run_test(testspec, v(methodName=n), n)
                         else:
-                            tfile = mod.__file__
                             cmd = "mpirun -n %d %s %s %s" % \
-                                       (v.N_PROCS, sys.executable, tfile, testspec)
-                            print "running ",cmd;sys.stdout.flush()
+                                       (v.N_PROCS, sys.executable,
+                                        mod.__file__, testspec)
                             retcode = subprocess.call(cmd, shell=True)
     #         # TODO:
     #         # elif k.startswith('test_') and it's a method:
