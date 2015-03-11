@@ -148,7 +148,7 @@ class NamespaceTestCase(unittest.TestCase):
         self.tempdir = tempfile.mkdtemp(prefix='omdao-')
         os.chdir(self.tempdir)
         SimulationRoot.chroot(self.tempdir)
-        
+
         self.asm = set_as_top(Assembly())
         obj = self.asm.add('scomp1', SimpleComp())
         self.asm.add('scomp2', SimpleComp())
@@ -227,11 +227,12 @@ class NamespaceTestCase(unittest.TestCase):
                           self.asm.scomp2.get_files('out'))
 
         # Now connect
+        self.asm.connect('scomp1.cont_out.v1', 'scomp2.cont_in.v2')
         try:
-            self.asm.connect('scomp1.cont_out.v1', 'scomp2.cont_in.v2')
+            self.asm._setup()
         except Exception as err:
             self.assertEqual(str(err),
-                ": Can't connect 'scomp1.cont_out.v1' to 'scomp2.cont_in.v2':"
+                ": Can't connect 'scomp1.cont_out.v1' to 'scomp2.cont_in.v2': :"
                 " 'scomp2.cont_in' is already connected to 'scomp1.cont_out'")
         else:
             self.fail("exception expected")
@@ -272,23 +273,27 @@ class NamespaceTestCase(unittest.TestCase):
         self.asm.run()
         self.assertAlmostEqual(12.0 * self.asm.scomp1.cont_out.vt2.vt3.a,
                                self.asm.scomp2.cont_in.vt2.vt3.b)
+        self.asm.connect('scomp1.cont_out.vt2', 'scomp2.cont_in.vt2')
         try:
-            self.asm.connect('scomp1.cont_out.vt2', 'scomp2.cont_in.vt2')
+            self.asm._setup()
         except Exception as err:
             self.assertEqual(str(err),
-                ": Can't connect 'scomp1.cont_out.vt2' to 'scomp2.cont_in.vt2':"
+                ": Can't connect 'scomp1.cont_out.vt2' to 'scomp2.cont_in.vt2': :"
                 " 'scomp2.cont_in.vt2.vt3.b' is already connected to"
-                " '_pseudo_0.out0'")
+                " '_pseudo_1.out0'")
         else:
             self.fail("exception expected")
 
+        self.asm.disconnect('scomp1.cont_out.vt2', 'scomp2.cont_in.vt2')
+
+        self.asm.connect('scomp1.cont_out', 'scomp2.cont_in')
         try:
-            self.asm.connect('scomp1.cont_out', 'scomp2.cont_in')
+            self.asm._setup()
         except Exception as err:
             self.assertEqual(str(err),
-                ": Can't connect 'scomp1.cont_out' to 'scomp2.cont_in':"
+                ": Can't connect 'scomp1.cont_out' to 'scomp2.cont_in': :"
                 " 'scomp2.cont_in.vt2.vt3.b' is already connected to"
-                " '_pseudo_0.out0'")
+                " '_pseudo_2.out0'")
         else:
             self.fail("exception expected")
 

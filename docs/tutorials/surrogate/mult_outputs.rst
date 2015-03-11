@@ -13,7 +13,7 @@ outputs, both of which will be mimicked by the MetaModel.
 
 .. testcode:: Mult_out_parts
 
-    from openmdao.main.api import Assembly, Component, SequentialWorkflow, set_as_top
+    from openmdao.main.api import Assembly, Component, set_as_top
     from math import sin, cos
 
     from openmdao.lib.datatypes.api import Float

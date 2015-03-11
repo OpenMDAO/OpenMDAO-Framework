@@ -78,7 +78,7 @@ class TestBrentDriver(unittest.TestCase):
 
             def execute(self):
                 self.set_parameters([1.0])
-                self.workflow.run()
+                self.run_iteration()
 
         top = set_as_top(Assembly())
         top.add('comp', MyComp())

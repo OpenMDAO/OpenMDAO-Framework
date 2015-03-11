@@ -86,7 +86,6 @@ def get_closest_proxy(obj, pathname):
 
     return (obj, '.'.join(names[i:]))
 
-proxy_get = get_closest_proxy
 
 def proxy_parent(obj, pathname):
     """Returns a tuple of the form (par, restofpath), where par
@@ -1025,10 +1024,6 @@ class Container(SafeHasTraits):
         else:
             self._setcache[path] = expr
 
-    def _add_path(self, msg):
-        """Adds our pathname to the beginning of the given message."""
-        return "%s: %s" % (self.get_pathname(), msg)
-
     def save_to_egg(self, name, version, py_dir=None, src_dir=None,
                     src_files=None, child_objs=None, dst_dir=None,
                     observer=None, need_requirements=True):
@@ -1274,7 +1269,7 @@ class Container(SafeHasTraits):
                         t_iotype = self.get_iotype(cname)
                     if (iotype == 'in' and t_iotype not in ('in', 'state')) or \
                        (iotype == 'out' and t_iotype not in ('out', 'in', 'state', 'residual')):
-                        self.raise_exception('%s must be an %s variable' %
+                        self.raise_exception("'%s' must be an %s variable" %
                                              (pathname, _iodict[iotype]),
                                              RuntimeError)
                 return trait

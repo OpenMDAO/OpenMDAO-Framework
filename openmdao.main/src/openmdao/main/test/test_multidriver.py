@@ -8,9 +8,8 @@ from StringIO import StringIO
 
 from openmdao.lib.drivers.conmindriver import CONMINdriver
 from openmdao.lib.drivers.slsqpdriver import SLSQPdriver
-from openmdao.main.api import Assembly, Component, Driver, \
-                              SequentialWorkflow, set_as_top, \
-                              dump_iteration_tree
+from openmdao.main.api import Assembly, Component, Driver, Workflow, \
+                              set_as_top, dump_iteration_tree
 from openmdao.main.datatypes.api import Float, Int, Str
 from openmdao.main.hasobjective import HasObjective
 from openmdao.main.hasparameters import HasParameters
@@ -158,6 +157,7 @@ class MultiDriverTestCase(unittest.TestCase):
     def test_var_depends(self):
         print "*** test_var_depends ***"
         self.rosen_setUp()
+        self.top._setup()
         srcs, dests = self.top.driver.get_expr_var_depends(recurse=True)
         self.assertEqual(set(['comp1.x', 'comp2.x', 'comp3.x', 'comp4.x']), dests)
         self.assertEqual(set(['_pseudo_0.out0','_pseudo_1.out0','_pseudo_2.out0','_pseudo_3.out0']),
@@ -166,6 +166,7 @@ class MultiDriverTestCase(unittest.TestCase):
         self.assertEqual(set(), srcs)
         self.assertEqual(set(), dests)
         self.top.driver1.remove_parameter('comp2.x')
+        self.top._setup()
         srcs, dests = self.top.driver.get_expr_var_depends(recurse=True)
         self.assertEqual(set(['comp1.x', 'comp3.x', 'comp4.x']), dests)
         self.assertEqual(set(['_pseudo_0.out0','_pseudo_1.out0','_pseudo_2.out0','_pseudo_3.out0']), srcs)
@@ -210,7 +211,7 @@ class MultiDriverTestCase(unittest.TestCase):
 
         self.top.run()
 
-        assert_rel_error(self, self.top.driver1.eval_objective(), 
+        assert_rel_error(self, self.top.driver1.eval_objective(),
                          self.opt_objective, 0.01)
         self.assertAlmostEqual(self.opt_design_vars[0],
                                self.top.comp1.x, places=1)
@@ -523,8 +524,8 @@ class MultiDriverTestCase(unittest.TestCase):
         top.D2.max_iterations = 3
 
         top.driver.workflow.add(['D1', 'D2'])
-        top.D1.workflow = SequentialWorkflow(top.D1, members=['C1'])
-        top.D2.workflow = SequentialWorkflow(top.D1, members=['C2'])
+        top.D1.workflow = Workflow(top.D1, members=['C1'])
+        top.D2.workflow = Workflow(top.D2, members=['C2'])
 
         top.run()
         self.assertEqual(top.D2.exec_count, 1)
@@ -609,5 +610,3 @@ if __name__ == "__main__":
     #p.print_callees()
 
     unittest.main()
-
-

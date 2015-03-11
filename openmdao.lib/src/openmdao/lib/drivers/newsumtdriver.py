@@ -172,13 +172,14 @@ def user_function(info, x, obj, dobj, ddobj, g, dg, n2, n3, n4, imode, driver):
             if driver.newsumt_diff:
                 return obj, dobj, ddobj, g, dg
 
-            driver.differentiator.calc_gradient()
+            raise RuntimeError("newsumt ifd value of %d is not handled" % info)
+            #driver.differentiator.calc_gradient()
 
-        i_current = 0
-        for param_name in driver.get_parameters():
-            for con_name in driver.get_ineq_constraints():
-                dg[i_current] = -driver.differentiator.get_derivative(con_name, wrt=param_name)
-                i_current += 1
+        #i_current = 0
+        #for param_name in driver.get_parameters():
+            #for con_name in driver.get_ineq_constraints():
+                #dg[i_current] = -driver.differentiator.get_derivative(con_name, wrt=param_name)
+                #i_current += 1
 
     return obj, dobj, ddobj, g, dg
 # pylint: enable=W0613

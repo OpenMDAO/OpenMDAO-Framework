@@ -27,27 +27,27 @@ Plugins must be *registered* with the framework before the framework can locate
 and activate them. In this framework, they will be registered by putting them in
 a directory or an *egg* file that is in the search path of the
 :term:`FactoryManager` or in the search path of one of the ObjServerFactories
-that is itself registered with the FactoryManager.   
+that is itself registered with the FactoryManager.
 
 
-The primary types of plugin base classes available to extend 
+The primary types of plugin base classes available to extend
 the framework are listed below:
 
 
-.. index:: pair: Component; plugin base class 
+.. index:: pair: Component; plugin base class
 .. index:: pair: Driver; plugin base class
 .. index:: pair: Variable; plugin base class
 
 
-:ref:`Component<openmdao.main.component.py>` - base class of an engineering tool or some 
+:ref:`Component<openmdao.main.component.py>` - base class of an engineering tool or some
 sort of calculation. It inherits from :ref:`Container<openmdao.main.container.py>`.
 
-:ref:`Driver<openmdao.main.driver.py>` - base class for optimizers, solvers, 
-parameter studies, and other objects that iterate over a set of components. 
+:ref:`Driver<openmdao.main.driver.py>` - base class for optimizers, solvers,
+parameter studies, and other objects that iterate over a set of components.
 It inherits from :ref:`Component<openmdao.main.component.py>`.
 
 Variable - base class used to validate and possibly convert data objects that are
-passed between linked components. 
+passed between linked components.
 
 
 .. _TraitType: http://code.enthought.com/projects/files/ETS32_API/enthought.traits.trait_handlers.TraitType.html
@@ -125,12 +125,12 @@ mesh generators, for example, to create meshes based on the geometry.
 Finally, we wish to be able to parametrically manipulate the geometry. Many
 commercial CAD packages support this, although in incompatible ways, meaning
 that you cannot save a parametric geometry from one CAD package and use it
-in another. CAPRI provides a common interface to allow parametric 
+in another. CAPRI provides a common interface to allow parametric
 manipulation in the commercial CAD programs that provide it.
 
 If we don't have a commercial CAD package that can handle parametric geometry
 manipulation, the only available option seems to be to issue a sequence of
-commands to a geometry creation API at runtime based on parameter values.  This 
+commands to a geometry creation API at runtime based on parameter values.  This
 would recreate the geometry whenever the sequence of commands is executed.
 
 Regardless of how the parametric manipulation of geometry happens *within* an
@@ -199,7 +199,7 @@ Component Publishing
 
 Because increasing the number of available framework components will make the
 framework more useful, one of our goals is to make the process of publishing a
-component for use by others as easy as possible. 
+component for use by others as easy as possible.
 
 Python has a popular distribution tool called *setuptools* which packages
 modules and any associated data files and metadata into a single file
@@ -209,7 +209,7 @@ other information.
 
 Eggs can be downloaded from an egg server using a simple HTML-based protocol. A
 developer can control the distribution of a component by choosing to  publish it
-in a particular egg server. For world-wide distribution, it can be placed on a 
+in a particular egg server. For world-wide distribution, it can be placed on a
 public server like the `Python Package Index`_. For more restricted
 distribution, it can be placed on  a secure egg server that requires a login id
 and password.
@@ -218,7 +218,7 @@ and password.
 
 The component developer will also be able to specify units and valid ranges on
 inputs to the component, which increases the likelihood that users
-of the component will generate valid results. 
+of the component will generate valid results.
 
 .. seealso:: :ref:`Publishing-Components`
 
@@ -232,8 +232,8 @@ Multi-version Environment
 =========================
 
 Over time, both the Python language and the components used in this framework
-will evolve, and multiple versions of both will exist at the same time. This 
-framework must allow users to leverage new software without losing the ability 
+will evolve, and multiple versions of both will exist at the same time. This
+framework must allow users to leverage new software without losing the ability
 to work with established software. Therefore, it must provide a  mechanism to
 allow different versions of the same component or even components that work
 with different versions of Python to exist in the same model.
@@ -259,8 +259,8 @@ the new version configured as identically as possible to the old one. The
 degree to which this automatic replacement will work depends upon the nature of
 the differences between the two versions. If the differences are internal to
 the Component and do not affect its public interface, then the replacement
-should just work. If the two components have dependency version conflicts, 
-the newer one will have to be a proxy to a component that is out of the process, 
+should just work. If the two components have dependency version conflicts,
+the newer one will have to be a proxy to a component that is out of the process,
 as described above, because two versions of the same package cannot exist in
 the same process at the same time.
 
@@ -289,7 +289,7 @@ distribution is difficult due to dependence on underlying libraries like, for
 example, *GTK* on Linux.  The current version of the Qt library has a license
 that is not compatible with OpenMDAO, although the next version will have an
 LGPL license, which is compatible. It is assumed that PyQt, the Python wrapper
-for Qt will have a similar license to Qt, but this is not certain. 
+for Qt will have a similar license to Qt, but this is not certain.
 
 If a web-based interface is used, questions arise about the richness of the
 interface relative to a traditional GUI. A number of javascript
@@ -297,7 +297,7 @@ libraries, like jquery_ and dojo_, for example, are still relatively immature,
 but they offer the promise of a browser-based application with interactivity
 that approaches that of a desktop application. Projects like Dojo are being
 actively developed, so they may reach the necessary level of maturity in the
-near future.  
+near future.
 
 
 .. _dojo: http://dojotoolkit.org
@@ -326,7 +326,7 @@ describes the different views that will be available to a user of the GUI.
 _______________
 
 This view will show the components that make up the process model and the data
-connections between those components. Users will be able to drag & drop a 
+connections between those components. Users will be able to drag & drop a
 :term:`Component` onto the dataflow view and connect two components by dragging
 a line between them. Dropping a line on a component will display a connection
 dialog allowing individual variables to be connected between the two components.
@@ -344,7 +344,7 @@ as shown below.
 
 ----------
 
-| 
+|
 
 .. _`free form`:
 
@@ -368,14 +368,8 @@ An Assembly contains at least one Driver, called *driver*, that manages
 execution of the other Components and Drivers within the Assembly. Each Driver
 references a workflow that it iterates over until some condition is met.
 Nested iterations can be constructed by placing a Driver within the workflow
-of another Driver. If a Driver doesn't define its own workflow object, it will
-use the default workflow object that lives in the Assembly. There are two existing
-Workflow classes currently, SequentialWorkflow and Dataflow.  Dataflow infers
-execution order based on data connections between Components, and SequentialWorkflow
-supports a simple sequence of Components that run in the order that they are added
-to the workflow. A new type of Workflow that allows both data flow and control flow is
-planned. This new Workflow will support concurrent execution and conditional
-branching.
+of another Driver. A workflow infers execution order based on data connections
+between Components.
 
 .. _`control flow`:
 
@@ -396,11 +390,11 @@ The problem formulation_ view (shown in the next figure) allows a number of desi
 outputs to be specified and connected to a particular component. Based on that
 connection, additional variables that are the inputs to the connected component
 must then have their values filled either by outputs from other components or by
-constants.  When no more unfilled  variables exist, the process model is complete. 
+constants.  When no more unfilled  variables exist, the process model is complete.
 When an attempt is made to connect an output to an input, the connection will be
 validated to ensure that variable type, units, etc., are compatible. Using that
 same type and unit  information, it would also be possible to display only those
-outputs that are compatible with a selected input. 
+outputs that are compatible with a selected input.
 
 When an attempted connection would create a circular dependency, the user is
 notified. Potentially the user  could then be shown a dialog displaying the
@@ -461,10 +455,10 @@ runtime simply by dragging and dropping objects onto the Component.
    Plugin View of a Component
 
 
-Slots for optional plugin objects will be visually distinct from Slots for 
+Slots for optional plugin objects will be visually distinct from Slots for
 mandatory plugins. For example, optional plugins could be displayed as boxes
 drawn with dotted lines, and  Slots for mandatory plugins as dashed boxes.
-There are  also sockets allowing lists of plugins that share a common 
+There are  also sockets allowing lists of plugins that share a common
 interface.
 
 
@@ -478,11 +472,11 @@ Security
    The entire section on security will most likely have to be revisited based on
    discussions with potential users in industry.  They want the ability to control
    access to certain data within a component based on the identity of the person
-   attempting to access it.  This differs from the *all or nothing* approach 
+   attempting to access it.  This differs from the *all or nothing* approach
    described below.
 
 For any system, the security mechanisms employed are determined by the types of
-threats to be protected against.  
+threats to be protected against.
 
 
 .. index:: threat definition
@@ -607,11 +601,11 @@ Execution of an MDAO model is often a complex process. When that process
 fails, it can be difficult to determine the source of the problem and to correct
 it unless information related to the error is readily available, relevant, and
 sufficiently detailed. The component and the framework are both responsible
-for error handling. 
+for error handling.
 
 The component must provide intelligent error messages when it fails to execute
 normally or is misconfigured in some way. If possible, it should suggest
-ways to correct the problem.  
+ways to correct the problem.
 
 The framework must ensure that error messages, including any information written
 to standard output and error streams, are available to the user, even when those

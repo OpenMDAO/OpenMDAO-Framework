@@ -63,7 +63,7 @@ class SimpleCaseIterDriver(Driver):
                 self.set_parameter_by_name(path, value)
 
             # Run workflow.
-            self.workflow.run()
+            self.run_iteration()
 
             # Get outputs.
             for path in self.get_responses():
@@ -74,4 +74,3 @@ class SimpleCaseIterDriver(Driver):
                     value = self.parent.get(path)
                 path = case_paths[path]
                 self.set('case_outputs.%s[%d]'%(path,i), value)
-

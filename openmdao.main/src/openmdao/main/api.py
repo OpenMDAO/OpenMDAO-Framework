@@ -20,8 +20,6 @@ from openmdao.main.driver_uses_derivatives import DriverUsesDerivatives
 from openmdao.main.assembly import Assembly, set_as_top, dump_iteration_tree
 from openmdao.main.driver import Driver
 from openmdao.main.workflow import Workflow
-from openmdao.main.dataflow import Dataflow
-from openmdao.main.sequentialflow import SequentialWorkflow
 from openmdao.main.variable import Variable
 
 from openmdao.main.exceptions import ConstraintError

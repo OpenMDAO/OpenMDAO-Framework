@@ -6,7 +6,7 @@ from numpy import array, eye, arange, roll, tile
 from openmdao.main.datatypes.array import Array
 from openmdao.main.expreval import ExprEvaluator, ConnectedExprEvaluator, \
                                    ExprExaminer
-from openmdao.main.printexpr import ExprPrinter, print_node
+from openmdao.main.printexpr import ExprPrinter, print_node, transform_expression
 from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.main.datatypes.api import Float, List, Slot, Dict
 from openmdao.util.testutil import assert_rel_error
@@ -33,7 +33,7 @@ class A(Component):
 
     def execute(self):
         pass
-    
+
     def some_funct(self, a, b, op='add'):
         if op == 'add':
             return a+b
@@ -546,30 +546,12 @@ class ExprEvalTestCase(unittest.TestCase):
         top.connect('comp6.c', 'comp7.b')
         top.connect('comp8.c', 'comp9.b')
 
-
-        # exp = ExprEvaluator('comp9.c+comp5.d', top.driver)
-        # self.assertEqual(exp.get_required_compnames(top),
-        #                  set(['comp1','comp2','comp3','comp5','comp8','comp9']))
-        # exp = ExprEvaluator('comp7.a', top.driver)
-        # self.assertEqual(exp.get_required_compnames(top),
-        #                  set(['comp1','comp2','comp3','comp4','comp6','comp7']))
-        # exp = ExprEvaluator('comp8.a', top.driver)
-        # self.assertEqual(exp.get_required_compnames(top),
-        #                  set(['comp8']))
-        # exp = ExprEvaluator('comp9.c+comp7.d', top.driver)
-        # self.assertEqual(exp.get_required_compnames(top),
-        #                  set(['comp1','comp2','comp3','comp4','comp6',
-        #                       'comp7','comp8','comp9']))
-        # exp = ExprEvaluator('sin(0.3)', top.driver)
-        # self.assertEqual(exp.get_required_compnames(top),
-        #                  set())
-
     def test_eval_gradient(self):
         top = set_as_top(Assembly())
         top.add('comp1', Simple())
         top.comp1.a = 5.2
         top.comp1.b = 1.8
-        
+
         top.run()
 
         exp = ExprEvaluator('3.0*comp1.c', top.driver)
@@ -761,6 +743,21 @@ class ExprExaminerTestCase(unittest.TestCase):
         self._examine("x()", simplevar=False, assignable=False, refs=set(['x']))
         self._examine("x(7)", simplevar=False, assignable=False, refs=set(['x']))
         self._examine("x==6", simplevar=False, assignable=False, refs=set(['x']))
+
+
+class TransformTestCase(unittest.TestCase):
+
+    def test_xforms(self):
+        tests = [
+            ('abc.de.g.abc', {'abc':'ABC'}, 'ABC.de.g.abc'),
+        ]
+
+        for orig, mapping, expected in tests:
+            xformed = transform_expression(orig, mapping)
+            self.assertEqual(expected, xformed)
+
+
+
 
 if __name__ == "__main__":
     unittest.main()

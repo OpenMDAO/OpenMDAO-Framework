@@ -78,7 +78,7 @@ class VariableTestCase(unittest.TestCase):
             self.top.connect('oneout.fake', 'oneinp.ratio1')
         except AttributeError as err:
             expected = ": "\
-                       "Can't connect 'oneout.fake' to 'oneinp.ratio1': "\
+                       "Can't connect 'oneout.fake' to 'oneinp.ratio1': : "\
                        "'oneout' has no variable 'fake'"
 
             self.assertEqual(str(err), expected)
@@ -89,7 +89,7 @@ class VariableTestCase(unittest.TestCase):
             self.top.a.connect('fake', 'oneinp.ratio1')
         except AttributeError as err:
             expected = "a: "\
-                       "Can't connect 'fake' to 'oneinp.ratio1': "\
+                       "Can't connect 'fake' to 'oneinp.ratio1': : "\
                        "'a' has no variable 'fake'"
 
             self.assertEqual(str(err), expected)
@@ -98,7 +98,7 @@ class VariableTestCase(unittest.TestCase):
             self.top.connect('fake', 'oneinp.ratio1')
         except AttributeError as err:
             expected = ": "\
-                       "Can't connect 'fake' to 'oneinp.ratio1': "\
+                       "Can't connect 'fake' to 'oneinp.ratio1': : "\
                        "top level assembly has no variable 'fake'"
 
             self.assertEqual(str(err), expected)
@@ -110,7 +110,7 @@ class VariableTestCase(unittest.TestCase):
             self.top.connect('oneout.ratio1', 'oneinp.fake')
         except AttributeError as err:
             expected = ": "\
-                       "Can't connect 'oneout.ratio1' to 'oneinp.fake': "\
+                       "Can't connect 'oneout.ratio1' to 'oneinp.fake': : "\
                        "'oneinp' has no variable 'fake'"
 
             self.assertEqual(str(err), expected)
@@ -119,7 +119,7 @@ class VariableTestCase(unittest.TestCase):
             self.top.connect('oneout.ratio1', 'fake')
         except AttributeError as err:
             expected = ": "\
-                       "Can't connect 'oneout.ratio1' to 'fake': "\
+                       "Can't connect 'oneout.ratio1' to 'fake': : "\
                        "top level assembly has no variable 'fake'"
 
             self.assertEqual(str(err), expected)
@@ -130,7 +130,7 @@ class VariableTestCase(unittest.TestCase):
             self.top.a.connect('oneout.ratio1', 'fake')
         except AttributeError as err:
             expected = "a: "\
-                       "Can't connect 'oneout.ratio1' to 'fake': "\
+                       "Can't connect 'oneout.ratio1' to 'fake': : "\
                        "'a' has no variable 'fake'"
 
             self.assertEqual(str(err), expected)
@@ -158,8 +158,6 @@ class VariableTestCase(unittest.TestCase):
         self.top.connect('oneout.ratio3','oneinp.ratio2')      # Bool to  int
         self.top.connect('oneout.ratio2','oneinp.ratio6')      # Int  to  Enum (int valued)
         self.top.run()
-        #from openmdao.util.dotgraph import plot_graph
-        #plot_graph(self.top.get_depgraph())
         self.assertEqual(11.0,self.top.oneinp.ratio1)
         self.assertEqual(True,self.top.oneinp.ratio2)
         self.assertEqual(11,self.top.oneinp.ratio6)
@@ -181,6 +179,7 @@ class VariableTestCase(unittest.TestCase):
         self.top.oneout.ratio1 = 12.0
         try:
             self.top.connect('oneout.ratio1','oneinp.ratio2')  # float to int
+            self.top._setup()
         except Exception, err:
             msg = "but a value of 12.0 <type 'float'> was specified"
             self.assertTrue( msg in str(err))
@@ -192,7 +191,7 @@ class VariableTestCase(unittest.TestCase):
         try:
             self.top.connect('oneout.ratio1','oneinp.ratio3')  # float to Bool
         except Exception, err:
-            msg = ": Can't connect 'oneout.ratio1' to 'oneinp.ratio3': " +\
+            msg = ": Can't connect 'oneout.ratio1' to 'oneinp.ratio3': : " +\
                   "The 'ratio3' trait of an Oneinp instance must be a"\
                   " boolean, but a value of 12.0 <type 'float'> was specified."
             self.assertEqual(str(err), msg)
@@ -204,7 +203,7 @@ class VariableTestCase(unittest.TestCase):
         try:
             self.top.connect('oneout.ratio1','oneinp.ratio5')  # float to Str
         except Exception, err:
-            msg = ": Can't connect 'oneout.ratio1' to 'oneinp.ratio5': " +\
+            msg = ": Can't connect 'oneout.ratio1' to 'oneinp.ratio5': : " +\
                   "The 'ratio5' trait of an Oneinp instance must be a"\
                   " string, but a value of 12.0 <type 'float'> was specified."
             self.assertEqual(str(err), msg)
@@ -216,7 +215,7 @@ class VariableTestCase(unittest.TestCase):
         try:
             self.top.connect('oneout.ratio2','oneinp.ratio3')  # int to Bool
         except Exception, err:
-            msg = ": Can't connect 'oneout.ratio2' to 'oneinp.ratio3': " +\
+            msg = ": Can't connect 'oneout.ratio2' to 'oneinp.ratio3': : " +\
                   "The 'ratio3' trait of an Oneinp instance must be a"\
                   " boolean, but a value of 20 <type 'int'> was specified."
             self.assertEqual(str(err), msg)
@@ -228,7 +227,7 @@ class VariableTestCase(unittest.TestCase):
         try:
             self.top.connect('oneout.ratio2','oneinp.ratio5')  # int to Str
         except Exception, err:
-            msg = ": Can't connect 'oneout.ratio2' to 'oneinp.ratio5': " +\
+            msg = ": Can't connect 'oneout.ratio2' to 'oneinp.ratio5': : " +\
                   "The 'ratio5' trait of an Oneinp instance must be a"\
                   " string, but a value of 20 <type 'int'> was specified."
             self.assertEqual(str(err), msg)
@@ -240,7 +239,7 @@ class VariableTestCase(unittest.TestCase):
         try:
             self.top.connect('oneout.ratio3','oneinp.ratio5')  # Bool to Str
         except Exception, err:
-            msg = ": Can't connect 'oneout.ratio3' to 'oneinp.ratio5': " +\
+            msg = ": Can't connect 'oneout.ratio3' to 'oneinp.ratio5': : " +\
                   "The 'ratio5' trait of an Oneinp instance must be a"\
                   " string, but a value of True <type 'bool'> was specified."
             self.assertEqual(str(err), msg)
@@ -262,7 +261,7 @@ class VariableTestCase(unittest.TestCase):
         try:
             self.top.connect('oneout.ratio5','oneinp.ratio1')  # Str to Float
         except Exception, err:
-            msg = ": Can't connect 'oneout.ratio5' to 'oneinp.ratio1': oneinp: " + \
+            msg = ": Can't connect 'oneout.ratio5' to 'oneinp.ratio1': : oneinp: " + \
                   "Variable 'ratio1' must be a float, but a value of 55555" + \
                       " <type 'str'> was specified."
             self.assertEqual(str(err), msg)
@@ -274,7 +273,7 @@ class VariableTestCase(unittest.TestCase):
         try:
             self.top.connect('oneout.ratio5','oneinp.ratio3')  # Str to Bool
         except Exception, err:
-            msg = ": Can't connect 'oneout.ratio5' to 'oneinp.ratio3': " +\
+            msg = ": Can't connect 'oneout.ratio5' to 'oneinp.ratio3': : " +\
                   "The 'ratio3' trait of an Oneinp instance must be a boolean, but a"\
                   " value of '55555' <type 'str'> was specified."
             self.assertEqual(str(err), msg)

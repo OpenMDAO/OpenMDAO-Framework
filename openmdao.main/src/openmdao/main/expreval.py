@@ -12,6 +12,7 @@ from openmdao.main.printexpr import _get_attr_node, _get_long_name, \
                                     transform_expression, ExprPrinter, \
                                     print_node
 from openmdao.main.array_helpers import flattened_value
+from openmdao.main.printexpr import transform_expression
 
 def _import_functs(mod, dct, names=None):
     if names is None:
@@ -702,7 +703,7 @@ class ExprEvaluator(object):
             raise ValueError("expression '%s' can't be set to a value"
                              % self.text)
 
-        self._get_updated_scope(scope).set(self.text, val)  
+        self._get_updated_scope(scope).set(self.text, val)
 
     def get_metadata(self, metaname=None, scope=None):
         """Return the specified piece of metadata if metaname is provided.
@@ -734,9 +735,9 @@ class ExprEvaluator(object):
         return metadata
 
     def get_referenced_varpaths(self, copy=True, refs=False):
-        """Return a set of pathnames relative to *scope.parent* and 
-        based on the names of Variables referenced in our expression 
-        string.  If refs is True, return full references that may 
+        """Return a set of pathnames relative to *scope* and
+        based on the names of Variables referenced in our expression
+        string.  If refs is True, return full references that may
         include not only the var name but also an array index, e.g.,
         'x[3]' instead of just 'x'.
         """
@@ -780,6 +781,19 @@ class ExprEvaluator(object):
                 return [n for n in self.var_names if not scope.contains(n)]
             return self.var_names.copy()
         return []
+
+    def name_changed(self, old, new):
+        """Given an old component name and a new one, change the names of
+        any variables in this expression that refer to variables belonging
+        to the old component.  Return a transformed expression string.
+        """
+        mapping = { old: new }
+
+        text = transform_expression(self.text, mapping)
+        if self.text != text:
+            self.text = text
+
+        return text
 
     def __eq__(self, other):
         if isinstance(other, self.__class__):

@@ -14,7 +14,7 @@ from openmdao.main.interfaces import implements, ISolver
 from openmdao.main.mpiwrap import MPI
 from openmdao.main.test.simpledriver import SimpleDriver
 from openmdao.test.execcomp import ExecComp
-from openmdao.test.mpiunittest import MPITestCase, collective_assert_rel_error
+from openmdao.test.mpiunittest import MPITestCase, MPIContext
 from openmdao.util.testutil import assert_rel_error
 
 
@@ -29,7 +29,7 @@ class NoDerivSimpleDriverSetter(NoDerivSimpleDriver):
 
     def execute(self):
         self.set_parameters(self.vals)
-        self.workflow.run()
+        self.run_iteration()
 
 
 class ABCDArrayComp(Component):
@@ -194,10 +194,10 @@ class MPITests1(MPITestCase):
 
         top.run()
 
-        self.collective_assertTrue(all(top.C3.a==np.ones(size, float)*10.))
-        self.collective_assertTrue(all(top.C3.b==np.ones(size, float)*-1.))
-        self.collective_assertTrue(all(top.C3.c==np.ones(size, float)*9.))
-        self.collective_assertTrue(all(top.C3.d==np.ones(size, float)*11.))
+        self.assertTrue(all(top.C3.a==np.ones(size, float)*10.))
+        self.assertTrue(all(top.C3.b==np.ones(size, float)*-1.))
+        self.assertTrue(all(top.C3.c==np.ones(size, float)*9.))
+        self.assertTrue(all(top.C3.d==np.ones(size, float)*11.))
 
     def test_fan_in_simpledriver(self):
         size = 5
@@ -223,10 +223,6 @@ class MPITests1(MPITestCase):
         top.driver.add_objective('C3.d')
 
         top.run()
-
-        # if self.comm.rank == 0:
-        #     from openmdao.util.dotgraph import plot_system_tree
-        #     plot_system_tree(top._system)
 
         # top.C1.dump(self.comm)
         # top.C2.dump(self.comm)
@@ -262,10 +258,10 @@ class MPITests1(MPITestCase):
 
         top.run()
 
-        self.collective_assertTrue(all(top.C3.a==np.ones(size, float)*10.))
-        self.collective_assertTrue(all(top.C3.b==np.ones(size, float)*-1.))
-        self.collective_assertTrue(all(top.C3.c==np.ones(size, float)*9.))
-        self.collective_assertTrue(all(top.C3.d==np.ones(size, float)*11.))
+        self.assertTrue(all(top.C3.a==np.ones(size, float)*10.))
+        self.assertTrue(all(top.C3.b==np.ones(size, float)*-1.))
+        self.assertTrue(all(top.C3.c==np.ones(size, float)*9.))
+        self.assertTrue(all(top.C3.d==np.ones(size, float)*11.))
 
     def test_fan_in_simpledriver_setting_params(self):
         size = 5
@@ -297,10 +293,10 @@ class MPITests1(MPITestCase):
         #    from openmdao.util.dotgraph import plot_graph, plot_graphs, plot_system_tree
         #    plot_graphs(top, prefix="works")
 
-        self.collective_assertTrue(all(top.C3.a==np.ones(size, float)*6.))
-        self.collective_assertTrue(all(top.C3.b==np.ones(size, float)*4.))
-        self.collective_assertTrue(all(top.C3.c==np.ones(size, float)*10.))
-        self.collective_assertTrue(all(top.C3.d==np.ones(size, float)*2.))
+        self.assertTrue(all(top.C3.a==np.ones(size, float)*6.))
+        self.assertTrue(all(top.C3.b==np.ones(size, float)*4.))
+        self.assertTrue(all(top.C3.c==np.ones(size, float)*10.))
+        self.assertTrue(all(top.C3.d==np.ones(size, float)*2.))
 
 
     def test_fan_out_in(self):
@@ -324,8 +320,9 @@ class MPITests1(MPITestCase):
 
         top.run()
 
-        self.collective_assertTrue(all(top.C4.a==np.ones(size, float)*11.))
-        self.collective_assertTrue(all(top.C4.b==np.ones(size, float)*5.))
+        with MPIContext():
+            self.assertTrue(all(top.C4.a==np.ones(size, float)*11.))
+            self.assertTrue(all(top.C4.b==np.ones(size, float)*5.))
 
         # Piggyback testing of the is_variable_local function.
         system = top.driver.workflow._system
@@ -396,8 +393,8 @@ class MPITests1(MPITestCase):
 
         top.run()
 
-        self.collective_assertTrue(top.comp1.x==3.0)
-        self.collective_assertTrue(top.comp2.x==3.0)
+        self.assertTrue(top.comp1.x==3.0)
+        self.assertTrue(top.comp2.x==3.0)
 
 
 class MPITests2(MPITestCase):
@@ -534,7 +531,6 @@ class TestCaseSerial(TestCase):
         self.assertTrue(all(top.C3.d==np.ones(size, float)*11.))
 
 
-# FIXME: running this file as main currently doesn't work...
-# if __name__ == '__main__':
-#     import unittest
-#     unittest.main()
+if __name__ == '__main__':
+    from openmdao.test.mpiunittest import mpirun_tests
+    mpirun_tests()

@@ -89,7 +89,7 @@ class FixedPointIterator(Driver):
             if name not in cycle_vars:
                 uvec[name] -= fvec[name]
 
-        self.workflow.run()
+        super(FixedPointIterator, self).run_iteration()
 
     def continue_iteration(self):
         """Convergence check."""

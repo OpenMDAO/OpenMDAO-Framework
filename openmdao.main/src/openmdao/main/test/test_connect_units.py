@@ -173,28 +173,33 @@ class VariableTestCase(unittest.TestCase):
         self.top.oneout.ratio1 = 20
         try:
             self.top.connect('oneout.ratio1','oneinp.ratio1')      # Pa  to mm
+            self.top._setup()
         except Exception, err:
-            msg = ": Can't connect 'oneout.ratio1' to 'oneinp.ratio1': Incompatible units "\
+            msg = ": Can't connect 'oneout.ratio1' to 'oneinp.ratio1': : Incompatible units "\
                   "for 'oneout.ratio1' and 'oneinp.ratio1': units 'Pa' are incompatible with "\
                   "assigning units of 'mm'"
             self.assertEqual(str(err), msg)
+            self.top.disconnect('oneout.ratio1','oneinp.ratio1')
         else:
             self.fail('Exception Expected')
 
         try:
             self.top.connect('oneout.arr_out', 'oneinp.arr_in')
+            self.top._setup()
         except Exception as err:
-            msg = ": Can't connect 'oneout.arr_out' to 'oneinp.arr_in': Incompatible units "\
+            msg = ": Can't connect 'oneout.arr_out' to 'oneinp.arr_in': : Incompatible units "\
                   "for 'oneout.arr_out' and 'oneinp.arr_in': units 'kg' are incompatible with "\
                   "assigning units of 'ft'"
             self.assertEqual(str(err), msg)
+            self.top.disconnect('oneout.arr_out', 'oneinp.arr_in')
         else:
             self.fail("Exception expected")
 
         try:
             self.top.connect('oneout.arr_out[1]', 'oneinp.arr_in[0]')
+            self.top._setup()
         except Exception as err:
-            msg = ": Can't connect 'oneout.arr_out[1]' to 'oneinp.arr_in[0]': Incompatible units "\
+            msg = ": Can't connect 'oneout.arr_out[1]' to 'oneinp.arr_in[0]': : Incompatible units "\
                   "for 'oneout.arr_out[1]' and 'oneinp.arr_in[0]': units 'kg' are incompatible with "\
                   "assigning units of 'ft'"
             self.assertEqual(str(err), msg)

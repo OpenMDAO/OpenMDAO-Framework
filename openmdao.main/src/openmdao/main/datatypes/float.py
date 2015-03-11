@@ -13,7 +13,6 @@ from traits.api import Range
 from traits.api import Complex as TraitComplex
 from traits.api import Float as TraitFloat
 
-from openmdao.main.attrwrapper import AttrWrapper, UnitsAttrWrapper
 from openmdao.main.uncertain_distributions import UncertainDistribution
 from openmdao.main.variable import Variable
 from openmdao.units import PhysicalQuantity
@@ -124,17 +123,6 @@ class Float(Variable):
         # pylint: disable=E1101
         if isinstance(value, UncertainDistribution):
             value = value.getvalue()
-        elif isinstance(value, AttrWrapper):
-            value = value.value
-
-            # If both source and target have units, we need to proces the unit
-            # conversion to find the new value.
-            if self.units:
-                valunits = value.metadata.get('units')
-                if valunits and isinstance(valunits, basestring) and \
-                   self.units != valunits:
-                    value = self._validate_with_metadata(obj, name, value,
-                                                         valunits)
 
         # Support for complex step method. We can step this trait in the
         # complex direction while keeping the Range validator.
@@ -186,17 +174,6 @@ class Float(Variable):
             obj.raise_exception(msg, ValueError)
         except AttributeError:
             raise ValueError(msg)
-
-    def get_val_wrapper(self, value, index=None):
-        """Return a UnitsAttrWrapper object.  Its value attribute
-        will be filled in by the caller.
-        """
-        if index is not None:
-            raise ValueError("Float does not support indexing")
-        # pylint: disable=E1101
-        if self.units is None:
-            return value
-        return UnitsAttrWrapper(value, units=self.units)
 
     def _validate_with_metadata(self, obj, name, value, src_units):
         """Perform validation and unit conversion using metadata from
