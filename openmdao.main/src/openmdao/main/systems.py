@@ -1325,6 +1325,74 @@ class AssemblySystem(SimpleSystem):
         self.J = inner_system.calc_gradient(inputs=inputs, outputs=outputs,
                                             options=options)
 
+    def applyJ(self, variables):
+        """ df = du - dGdp * dp or du = df and dp = -dGdp^T * df """
+
+        inner = self._comp._system
+        fvec = self.vec['df']
+
+        # Copy arg to inner scope
+        for name in self.list_inputs():
+
+            key = name
+            parent = self
+
+            while True:
+                parent = parent._parent_system
+                if name in parent.vec['dp']:
+                    _, _, inner_name = name.partition('.')
+                    inner.vec['dp'][inner_name] = parent.vec['dp'][name]
+                    parent.vec['du'][name][:] += parent.vec['dp'][name]
+                    break
+
+        # Solve inner linear system
+        inner.solve_linear()
+
+        # Copy result to outer scope
+        for name in self.list_outputs():
+            _, _, inner_name = name.partition('.')
+            fvec[name] = inner.vec['df'][inner_name]
+            fvec[name][:] += self.vec['du'][name][:]
+
+        #vec = self.vec
+
+        ## Forward Mode
+        #if self.mode == 'forward':
+
+            #if self._comp is None:
+                #applyJ(self, variables)
+            #else:
+                #self._comp.applyJ(self, variables)
+
+            #vec['df'].array[:] *= -1.0
+
+            #for var in self.list_outputs():
+                #vec['df'][var][:] += vec['du'][var][:]
+
+        ## Adjoint Mode
+        #elif self.mode == 'adjoint':
+
+            ## Sign on the local Jacobian needs to be -1 before
+            ## we add in the fake residual. Since we can't modify
+            ## the 'du' vector at this point without stomping on the
+            ## previous component's contributions, we can multiply
+            ## our local 'arg' by -1, and then revert it afterwards.
+            #vec['df'].array[:] *= -1.0
+            #if self._comp is None:
+                #applyJT(self, variables)
+            #else:
+                #self._comp.applyJT(self, variables)
+            #vec['df'].array[:] *= -1.0
+
+            #for var in self.list_outputs():
+
+                ##collapsed = self.scope.name2collapsed.get(var)
+                ##if collapsed not in variables:
+                ##    continue
+
+                #vec['du'][var][:] += vec['df'][var][:]
+
+
     def set_complex_step(self, complex_step=False):
         """ Toggles complex_step plumbing for this system and all
         subsystems. Assemblies must prepare their inner system."""
