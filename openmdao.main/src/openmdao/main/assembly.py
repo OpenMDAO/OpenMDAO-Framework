@@ -1602,7 +1602,6 @@ class Assembly(Component):
 
             self.setup_reduced_graph(inputs=inputs, outputs=outputs,
                                      drvname=drvname)
-            print "setup_systems"; sys.stdout.flush()
             self.setup_systems()
 
             self.check_config()
@@ -1614,15 +1613,10 @@ class Assembly(Component):
             #     plot_system_tree(self._system,'sys.pdf')
             #     plot_graph(self._reduced_graph, 'red.pdf')
 
-            print "setup_communicators"; sys.stdout.flush()
             self.setup_communicators(comm)
-            print "setup_variables"; sys.stdout.flush()
             self.setup_variables()
-            print "setup_sizes"; sys.stdout.flush()
             self.setup_sizes()
-            print "setup_vectors"; sys.stdout.flush()
             self.setup_vectors()
-            print "setup_scatters"; sys.stdout.flush()
             self.setup_scatters()
 
         except Exception as err:
