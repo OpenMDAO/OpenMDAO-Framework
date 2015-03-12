@@ -46,7 +46,7 @@ class System(object):
         self._residuals = None
 
         self._reduced_graph = graph.full_subgraph(nodes)
-        self._reduced_graph.fix_dangling_vars()
+        self._reduced_graph.fix_dangling_vars(scope)
 
         self._mapped_resids = {}
 
@@ -442,7 +442,6 @@ class System(object):
 
         if not self.is_active():
             self.local_var_sizes = numpy.zeros((0,0), int)
-            self.noflat_var_sizes = numpy.zeros((0,0), int)
             self.input_sizes = numpy.zeros(0, int)
             return
 
@@ -457,12 +456,10 @@ class System(object):
         # create an (nproc x numvars) var size vector containing
         # local sizes across all processes in our comm
         self.local_var_sizes = numpy.zeros((size, len(self.vector_vars)), int)
-        self.noflat_var_sizes = numpy.zeros((size, len(self.noflat_vars)), int)
 
+        ours = numpy.zeros((1, len(self.vector_vars)), int)
         for i, (name, var) in enumerate(self.vector_vars.items()):
-            self.local_var_sizes[rank, i] = var['size']
-        for i, (name, var) in enumerate(self.noflat_vars.items()):
-            self.noflat_var_sizes[rank, i] = 1
+            ours[0, i] = var['size']
 
         # collect local var sizes from all of the processes in our comm
         # these sizes will be the same in all processes except in cases
@@ -470,20 +467,22 @@ class System(object):
         # case, the part of the component that runs in a given process will
         # only have a slice of each of the component's variables.
         if MPI:
-            comm.Allgather(self.local_var_sizes[rank,:],
-                           self.local_var_sizes)
-            comm.Allgather(self.noflat_var_sizes[rank,:],
-                           self.noflat_var_sizes)
+            comm.Allgather(ours[0,:], self.local_var_sizes)
+
+        self.local_var_sizes[rank, :] = ours[0, :]
 
         # create a (1 x nproc) vector for the sizes of all of our
         # local inputs
         self.input_sizes = numpy.zeros(size, int)
 
+        insize = numpy.zeros(1, int)
         for arg in _filter_flat(self.scope, self._owned_args):
-            self.input_sizes[rank] += varmeta[arg]['size']
+            insize[0] += varmeta[arg]['size']
 
         if MPI:
-            comm.Allgather(self.input_sizes[rank], self.input_sizes)
+            comm.Allgather(insize[0], self.input_sizes)
+
+        self.input_sizes[rank] = insize[0]
 
         # create an arg_idx dict to keep track of indices of
         # inputs
@@ -496,7 +495,6 @@ class System(object):
             #        components...
             if name in self.vector_vars:
                 isrc = self.vector_vars.keys().index(name)
-                #idxs = numpy.array(range(varmeta[name]['size']), 'i')
                 idxs = petsc_linspace(0, varmeta[name]['size'])
             else:
                 base = name[0].split('[', 1)[0]
@@ -1721,22 +1719,8 @@ class SerialSystem(CompoundSystem):
             g = self.graph.subgraph(self.graph.nodes())
             break_cycles(g)
 
-        for node in self.graph.nodes_iter():
-            if node not in self._ordering:
-                edges = list(nx.dfs_edges(g, node))
-                succ = [v for u,v in edges]
-                pred = [u for u,v in edges]
-                i = 0
-                for i,n in enumerate(self._ordering):
-                    if n in succ:
-                        break
-                    elif n in pred:
-                        i += 1
-                        break
-                if i < len(self._ordering):
-                    self._ordering.insert(i, node)
-                else:
-                    self._ordering.append(node)
+        self._ordering.extend([n for n in self.graph.nodes_iter()
+                                 if n not in self._ordering])
 
         self._ordering = gsort(g, self._ordering)
 

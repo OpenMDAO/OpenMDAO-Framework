@@ -240,7 +240,7 @@ class VariableTree(Container):
             if obj is self.parent:
                 continue
             if is_instance(obj, VariableTree):
-                req.extend(['.'.join((self.name, n)) 
+                req.extend(['.'.join((self.name, n))
                                  for n in obj.get_req_default(vt_required)])
             elif trait.required in req_test:
                 try:
@@ -275,7 +275,7 @@ class VariableTree(Container):
         """Return the size of a flattened float array containing
         all values in the vartree that are flattenable to float
         arrays.  Any values not flattenable to float arrays will
-        raise a NoFlatError. 
+        raise a NoFlatError.
         """
         size = 0
         for key in self.list_vars():
@@ -283,12 +283,12 @@ class VariableTree(Container):
         return size
 
     def get_flattened_index(self, name):
-        """Return the slice within the flattened array of the 
-        current vartree that is occupied by the named 
+        """Return the slice within the flattened array of the
+        current vartree that is occupied by the named
         subvar.
         """
         raise NotImplementedError('get_flattened_index not implemented for VarTrees yet')  # FIXME
-            
+
 
 # register a flattener for Cases
 from openmdao.main.case import flatteners, flatten_obj
@@ -301,4 +301,3 @@ def _flatten_vartree(name, vt):
     return ret
 
 flatteners[VariableTree] = _flatten_vartree
-

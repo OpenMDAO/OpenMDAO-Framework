@@ -66,6 +66,8 @@ class Constraint(object):
 
     def __init__(self, lhs, comparator, rhs, scope, jacs=None):
         self.lhs = ExprEvaluator(lhs, scope=scope)
+        self._pseudo = None
+        self.pcomp_name = None
         unresolved_vars = self.lhs.get_unresolved()
 
         if unresolved_vars:
@@ -86,14 +88,15 @@ class Constraint(object):
                                                           expr=expression,
                                                           msg=msg)
         self.comparator = comparator
-        self.pcomp_name = None
         self._size = None
 
         # Linear flag: constraints are nonlinear by default
         self.linear = False
-        
+
         # User-defined jacobian function
         self.jacs = jacs
+
+        self._create_pseudo()
 
     @property
     def size(self):
@@ -102,69 +105,83 @@ class Constraint(object):
             self._size = len(self.evaluate(self.lhs.scope))
         return self._size
 
+    def _create_pseudo(self):
+        """Create our pseudo component."""
+        if self.comparator == '=':
+            subtype = 'equality'
+        else:
+            subtype = 'inequality'
+
+        # check for simple structure of equality constraint,
+        # either
+        #     var1 = var2
+        #  OR
+        #     var1 - var2 = 0
+        #  OR
+        #     var1 = 0
+        lrefs = list(self.lhs.ordered_refs())
+        rrefs = list(self.rhs.ordered_refs())
+
+        try:
+            leftval = float(self.lhs.text)
+        except ValueError:
+            leftval = None
+
+        try:
+            rightval = float(self.rhs.text)
+        except ValueError:
+            rightval = None
+
+        pseudo_class = PseudoComponent
+
+        if self.comparator == '=':
+            # look for var1-var2=0
+            if len(lrefs) == 2 and len(rrefs) == 0:
+                if rightval == 0. and \
+                        _remove_spaces(self.lhs.text) == \
+                            lrefs[0]+'-'+lrefs[1]:
+                    pseudo_class = SimpleEQConPComp
+            # look for 0=var1-var2
+            elif len(lrefs) == 0 and len(rrefs) == 2:
+                if leftval==0. and \
+                       _remove_spaces(self.rhs.text) == \
+                            rrefs[0]+'-'+rrefs[1]:
+                    pseudo_class = SimpleEQConPComp
+            # look for var1=var2
+            elif len(lrefs) == 1 and len(rrefs) == 1:
+                if lrefs[0] == self.lhs.text and \
+                           rrefs[0] == self.rhs.text:
+                    pseudo_class = SimpleEQConPComp
+            # look for var1=0
+            elif len(lrefs) == 1 and len(rrefs) == 0 and rightval is not None:
+                pseudo_class = SimpleEQ0PComp
+
+        self._pseudo = pseudo_class(self.lhs.scope,
+                                    self._combined_expr(),
+                                    pseudo_type='constraint',
+                                    subtype=subtype,
+                                    exprobject=self)
+
+        self.pcomp_name = self._pseudo.name
+
     def activate(self, driver):
         """Make this constraint active by creating the appropriate
         connections in the dependency graph.
         """
-        if self.pcomp_name is None:
-            if self.comparator == '=':
-                subtype = 'equality'
+        self._pseudo.activate(self.lhs.scope, driver)
+
+    def deactivate(self):
+        """Remove this constraint from the dependency graph and remove
+        its pseudocomp from the scoping object.
+        """
+        if self._pseudo is not None:
+            scope = self.lhs.scope
+            try:
+                pcomp = getattr(scope, self._pseudo.name)
+            except AttributeError:
+                pass
             else:
-                subtype = 'inequality'
-
-            # check for simple structure of equality constraint,
-            # either
-            #     var1 = var2
-            #  OR
-            #     var1 - var2 = 0
-            #  OR
-            #     var1 = 0
-            lrefs = list(self.lhs.ordered_refs())
-            rrefs = list(self.rhs.ordered_refs())
-
-            try:
-                leftval = float(self.lhs.text)
-            except ValueError:
-                leftval = None
-
-            try:
-                rightval = float(self.rhs.text)
-            except ValueError:
-                rightval = None
-
-            pseudo_class = PseudoComponent
-
-            if self.comparator == '=':
-                # look for var1-var2=0
-                if len(lrefs) == 2 and len(rrefs) == 0:
-                    if rightval == 0. and \
-                            _remove_spaces(self.lhs.text) == \
-                                lrefs[0]+'-'+lrefs[1]:
-                        pseudo_class = SimpleEQConPComp
-                # look for 0=var1-var2
-                elif len(lrefs) == 0 and len(rrefs) == 2:
-                    if leftval==0. and \
-                           _remove_spaces(self.rhs.text) == \
-                                rrefs[0]+'-'+rrefs[1]:
-                        pseudo_class = SimpleEQConPComp
-                # look for var1=var2
-                elif len(lrefs) == 1 and len(rrefs) == 1:
-                    if lrefs[0] == self.lhs.text and \
-                               rrefs[0] == self.rhs.text:
-                        pseudo_class = SimpleEQConPComp
-                # look for var1=0
-                elif len(lrefs) == 1 and len(rrefs) == 0 and rightval is not None:
-                    pseudo_class = SimpleEQ0PComp
-
-            pseudo = pseudo_class(self.lhs.scope,
-                                  self._combined_expr(),
-                                  pseudo_type='constraint',
-                                  subtype=subtype,
-                                  exprobject=self)
-
-            self.pcomp_name = pseudo.name
-            self.lhs.scope.add(pseudo.name, pseudo)
-            getattr(self.lhs.scope, pseudo.name).make_connections(self.lhs.scope, driver)
+                scope.remove(self._pseudo.name)
 
     def _combined_expr(self):
         """Given a constraint object, take the lhs, operator, and
@@ -211,21 +228,6 @@ class Constraint(object):
             newexpr = '%s-(%s)' % (first, second)
 
         return ExprEvaluator(newexpr, scope)
-
-    def deactivate(self):
-        """Remove this constraint from the dependency graph and remove
-        its pseudocomp from the scoping object.
-        """
-        if self.pcomp_name:
-            scope = self.lhs.scope
-            try:
-                pcomp = getattr(scope, self.pcomp_name)
-            except AttributeError:
-                pass
-            else:
-                scope.remove(pcomp.name)
-            finally:
-                self.pcomp_name = None
 
     def copy(self):
         """ Returns a copy of our self. """
@@ -276,6 +278,18 @@ class Constraint(object):
             return self.lhs.get_referenced_varpaths(copy=copy, refs=refs).union(
                     self.rhs.get_referenced_varpaths(copy=copy, refs=refs))
 
+    def check_resolve(self):
+        """Returns True if this constraint has no unresolved references."""
+        return self.lhs.check_resolve() and self.rhs.check_resolve()
+
+    def get_unresolved(self):
+        return list(set(self.lhs.get_unresolved()).union(self.rhs.get_unresolved()))
+
+    def name_changed(self, old, new):
+        """Update expressions if necessary when an object is renamed."""
+        self.rhs.name_changed(old, new)
+        self.lhs.name_changed(old, new)
+
     def __str__(self):
         return ' '.join((str(self.lhs), self.comparator, str(self.rhs)))
 
@@ -292,6 +306,9 @@ class Constraint2Sided(Constraint):
     def __init__(self, lhs, center, rhs, comparator, scope, jacs=None):
         self.lhs = ExprEvaluator(lhs, scope=scope)
         unresolved_vars = self.lhs.get_unresolved()
+
+        self._pseudo = None
+        self.pcomp_name = None
 
         if unresolved_vars:
             msg = "Left hand side of constraint '{0}' has invalid variables {1}"
@@ -324,7 +341,6 @@ class Constraint2Sided(Constraint):
                                                           expr=expression,
                                                           msg=msg)
         self.comparator = comparator
-        self.pcomp_name = None
         self._size = None
 
         # Linear flag: constraints are nonlinear by default
@@ -332,33 +348,29 @@ class Constraint2Sided(Constraint):
 
         self.low = self.lhs.evaluate()
         self.high = self.rhs.evaluate()
-        
+
         # User-defined jacobian function
         self.jacs = jacs
 
-    def activate(self, driver):
-        """Make this constraint active by creating the appropriate
-        connections in the dependency graph.
-        """
-        if self.pcomp_name is None:
+        self._create_pseudo()
 
-            scope = self.lhs.scope
-            refs = list(self.center.ordered_refs())
-            pseudo_class = PseudoComponent
+    def _create_pseudo(self):
+        """Create our pseudo component."""
+        scope = self.lhs.scope
+        refs = list(self.center.ordered_refs())
+        pseudo_class = PseudoComponent
 
-            # look for a<var1<b
-            if len(refs) == 1 and self.center.text == refs[0]:
-                pseudo_class = SimpleEQ0PComp
+        # look for a<var1<b
+        if len(refs) == 1 and self.center.text == refs[0]:
+            pseudo_class = SimpleEQ0PComp
 
-            pseudo = pseudo_class(scope,
-                                  self.center,
-                                  pseudo_type='constraint',
-                                  subtype='inequality',
-                                  exprobject=self)
+        self._pseudo = pseudo_class(scope,
+                                    self.center,
+                                    pseudo_type='constraint',
+                                    subtype='inequality',
+                                    exprobject=self)
 
-            self.pcomp_name = pseudo.name
-            scope.add(pseudo.name, pseudo)
-            getattr(scope, pseudo.name).make_connections(scope, driver)
+        self.pcomp_name = self._pseudo.name
 
     def _combined_expr(self):
         """Only need the center expression
@@ -368,7 +380,7 @@ class Constraint2Sided(Constraint):
     def copy(self):
         """ Returns a copy of our self. """
         return Constraint2Sided(str(self.lhs), str(self.center), str(self.rhs),
-                          self.comparator, scope=self.lhs.scope, 
+                          self.comparator, scope=self.lhs.scope,
                           jacs=self.jacs)
 
     def get_referenced_compnames(self):
@@ -382,6 +394,12 @@ class Constraint2Sided(Constraint):
         constraint.
         """
         return self.center.get_referenced_varpaths(copy=copy, refs=refs)
+
+    def name_changed(self, old, new):
+        """Update expressions if necessary when an object is renamed."""
+        self.rhs.name_changed(old, new)
+        self.lhs.name_changed(old, new)
+        self.center.name_changed(old, new)
 
     def __str__(self):
         return ' '.join((str(self.lhs), str(self.center), str(self.rhs), self.comparator))
@@ -430,6 +448,24 @@ class _HasConstraintsBase(object):
             self.parent.raise_exception(msg, AttributeError)
         self.parent.config_changed()
 
+    def name_changed(self, old, new):
+        """Change any constraints that reference the old
+        name of an object that has now been changed to a new name.
+
+        old: string
+            Original name of the object
+
+        new: string
+            New name of the object
+        """
+        for name, obj in self._constraints.items():
+            orig = str(obj)
+            obj.name_changed(old, new)
+            trans = str(obj)
+            if orig != trans and name == orig:
+                self._constraints[trans] = obj
+                del self._constraints[name]
+
     def get_references(self, name):
         """Return references to component `name` in
         preparation for subsequent :meth:`restore_references`
@@ -473,12 +509,17 @@ class _HasConstraintsBase(object):
         for name, constraint in refs.items():
             if name in self._constraints:
                 self.remove_constraint(name)
-            try:
-                self.add_constraint(str(constraint), name,
-                                    constraint.lhs.scope)
-            except Exception as err:
-                self.parent._logger.warning("Couldn't restore constraint '%s': %s"
-                                            % (name, str(err)))
+
+            if not constraint.check_resolve():
+                self.parent._logger.warning("Couldn't restore constraint '%s': %s are unresolved." %
+                                             (name, constraint.get_unresolved()))
+            else:
+                try:
+                    self.add_constraint(str(constraint), name,
+                                        constraint.lhs.scope)
+                except Exception as err:
+                    self.parent._logger.warning("Couldn't restore constraint '%s': %s"
+                                                % (name, str(err)))
 
     def clear_constraints(self):
         """Removes all constraints."""
@@ -562,7 +603,7 @@ class HasEqConstraints(_HasConstraintsBase):
     constraints but does not support inequality constraints.
     """
 
-    def add_constraint(self, expr_string, name=None, scope=None, linear=False, 
+    def add_constraint(self, expr_string, name=None, scope=None, linear=False,
                        jacs=None):
         """Adds a constraint in the form of a boolean expression string
         to the driver.
@@ -581,7 +622,7 @@ class HasEqConstraints(_HasConstraintsBase):
             Set this to True to define this constraint is linear. Behavior
             depends on whether and how your optimizer supports it. Deault is
             False or nonlinear constraint.
-            
+
         jacs: dict
             Dictionary of user-defined functions that return the flattened
             Jacobian of this constraint with repsect to the parameters of
@@ -620,12 +661,12 @@ class HasEqConstraints(_HasConstraintsBase):
                                         ' in the driver. Add failed.'
                                         % name, ValueError)
 
-        constraint = Constraint(lhs, '=', rhs, scope=_get_scope(self, scope), 
+        constraint = Constraint(lhs, '=', rhs, scope=_get_scope(self, scope),
                                 jacs=jacs)
         constraint.linear = linear
 
         if IDriver.providedBy(self.parent):
-            constraint.activate(self.parent)
+            #constraint.activate(self.parent)
             self.parent.config_changed()
 
         name = ident if name is None else name
@@ -646,7 +687,7 @@ class HasEqConstraints(_HasConstraintsBase):
         """
         if constraint.comparator == '=':
             if IDriver.providedBy(self.parent):
-                constraint.activate(self.parent)
+                #constraint.activate(self.parent)
                 self.parent.config_changed()
             self._constraints[name] = constraint
         else:
@@ -763,12 +804,12 @@ class HasIneqConstraints(_HasConstraintsBase):
                                         ' in the driver. Add failed.'
                                         % name, ValueError)
 
-        constraint = Constraint(lhs, rel, rhs, scope=_get_scope(self, scope), 
+        constraint = Constraint(lhs, rel, rhs, scope=_get_scope(self, scope),
                                 jacs=jacs)
         constraint.linear = linear
-        
+
         if IDriver.providedBy(self.parent):
-            constraint.activate(self.parent)
+            #constraint.activate(self.parent)
             self.parent.config_changed()
 
         if name is None:
@@ -792,7 +833,7 @@ class HasIneqConstraints(_HasConstraintsBase):
         if constraint.comparator != '=':
             self._constraints[name] = constraint
             if IDriver.providedBy(self.parent):
-                constraint.activate(self.parent)
+                #constraint.activate(self.parent)
                 self.parent.config_changed()
         else:
             self.parent.raise_exception("Equality constraint '%s' is not"
@@ -903,7 +944,7 @@ class HasConstraints(object):
             Set this to True to define this constraint is linear. Behavior
             depends on whether and how your optimizer supports it. Deault is
             False or nonlinear constraint.
-            
+
         jacs: dict
             Dictionary of user-defined functions that return the flattened
             Jacobian of this constraint with repsect to the parameters of
@@ -922,8 +963,8 @@ class HasConstraints(object):
                 msg = 'Double-sided constraints are not supported on ' + \
                       'this driver.'
                 self.parent.raise_exception(msg, AttributeError)
-            self.parent.add_2sided_constraint(rhs[0], lhs, rhs[1], rel, 
-                                              name=name, scope=scope, 
+            self.parent.add_2sided_constraint(rhs[0], lhs, rhs[1], rel,
+                                              name=name, scope=scope,
                                               linear=linear, jacs=jacs)
         else:
             self._ineq._add_ineq_constraint(lhs, rel, rhs, name=name, scope=scope,
@@ -1180,7 +1221,7 @@ class Has2SidedConstraints(_HasConstraintsBase):
         constraint.linear = linear
 
         if IDriver.providedBy(self.parent):
-            constraint.activate(self.parent)
+            #constraint.activate(self.parent)
             self.parent.config_changed()
 
         if name is None:
@@ -1229,7 +1270,7 @@ class Has2SidedConstraints(_HasConstraintsBase):
         """
         self._constraints[name] = constraint
         if IDriver.providedBy(self.parent):
-            constraint.activate(self.parent)
+            #constraint.activate(self.parent)
             self.parent.config_changed()
 
     def mimic(self, target):

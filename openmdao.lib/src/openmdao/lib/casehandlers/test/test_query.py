@@ -223,7 +223,7 @@ class TestCase(unittest.TestCase):
     def test_parent(self):
         # Full dataset names by specifying a top-level case.
         parent = 'a00d3f9e-86ba-11e4-8001-20c9d0478eff'  # iteration_case_6
-        
+
         vnames = self.cds.data.parent_case(parent).var_names().fetch()
         expected = [u'half.z2a', u'half.z2b', u'sub.dis1.y1',
                     u'sub.itername', u'_pseudo_1', u'sub.dis1.itername',
@@ -241,7 +241,7 @@ class TestCase(unittest.TestCase):
 
         #####self.assertEqual(vnames, expected)
 
-        
+
         cases = self.cds.data.parent_case(parent).fetch()
         self.assertEqual(len(cases), 6)
         self.assertEqual(len(cases[0]), len(expected))
@@ -310,19 +310,19 @@ class TestCase(unittest.TestCase):
                 self.verify(value.keys(), case[name], expected[name])
             elif isinstance(value, np.ndarray) or isinstance(value, list):
                 for i, val in enumerate(value):
-                    assert_rel_error(self, case[name][i], value[i], 0.001)                    
+                    assert_rel_error(self, case[name][i], value[i], 0.001)
             else:
                 self.assertEqual(case[i], value)
 
     def test_driver(self):
         # Dataset of a driver.
         vnames = self.cds.data.driver('sub.driver').var_names().fetch()
-        expected = ['_driver_id', '_id', '_parent_id', 'error_message', 
-				'error_status', u'sub._pseudo_0', u'sub._pseudo_0.out0', 
-				'sub.dis1.derivative_exec_count', u'sub.dis1.exec_count', 
-				u'sub.dis1.itername', u'sub.dis1.y1', u'sub.dis1.y2', 
-				'sub.dis2.derivative_exec_count', u'sub.dis2.exec_count', 
-				u'sub.dis2.itername', u'sub.dis2.y2', 
+        expected = ['_driver_id', '_id', '_parent_id', 'error_message',
+				'error_status', u'sub._pseudo_0', u'sub._pseudo_0.out0',
+				'sub.dis1.derivative_exec_count', u'sub.dis1.exec_count',
+				u'sub.dis1.itername', u'sub.dis1.y1', u'sub.dis1.y2',
+				'sub.dis2.derivative_exec_count', u'sub.dis2.exec_count',
+				u'sub.dis2.itername', u'sub.dis2.y2',
 				u'sub.driver.workflow.itername', 'timestamp']
         self.assertEqual(vnames, expected)
 
@@ -375,6 +375,7 @@ class TestCase(unittest.TestCase):
         n_orig = len(cases)  # Typically 142
 
         top = set_as_top(SellarMDF())
+        top._setup()
         cds.restore(top, cases[-1]['_id'])
         top.recorders = [JSONCaseRecorder('cases.restored')]
         top.run()

@@ -7,6 +7,7 @@ import unittest
 from openmdao.lib.datatypes.api import Float
 from openmdao.lib.drivers.api import SLSQPdriver
 from openmdao.main.api import Assembly,Component
+from openmdao.main.test.simpledriver import SimpleDriver
 from openmdao.util.testutil import assert_rel_error
 
 class Paraboloid_scale(Component):
@@ -29,7 +30,7 @@ class Paraboloid_scale(Component):
         y = self.y
 
         self.f_xy = (1000.*x-3.)**2 + (1000.*x)*(0.01*y) + (0.01*y+4.)**2 - 3.
-        #print x, y, self.f_xy
+        #print "Executing, %.33f, %.33f, %.33f" % (x, y, self.f_xy)
 
 
 class OptimizationUnconstrainedScale(Assembly):
@@ -121,12 +122,22 @@ class ScalerAdderExampleTestCase(unittest.TestCase):
         J = opt_problem.driver.calc_gradient()
         Jdict = opt_problem.driver.calc_gradient(return_format='dict')
 
+    def test_scale_gradients(self):
+
+        opt_problem = OptimizationUnconstrainedScale()
+        opt_problem.replace('driver', SimpleDriver())
+        opt_problem.run()
+
+        J = opt_problem.driver.calc_gradient()
+        Jdict = opt_problem.driver.calc_gradient(return_format='dict')
+
         # Make sure untransforming works for dicts too
         self.assertTrue(J[0][0] == Jdict['_pseudo_0.out0']['paraboloid.x'])
         self.assertTrue(J[0][1] == Jdict['_pseudo_0.out0']['paraboloid.y'])
 
-        Jfd = opt_problem.driver.calc_gradient(mode='fd')
         Jfddict = opt_problem.driver.calc_gradient(mode='fd', return_format='dict')
+        opt_problem.driver.run_iteration()
+        Jfd = opt_problem.driver.calc_gradient(mode='fd')
 
         # Make sure untransforming works for dicts too
         self.assertTrue(Jfd[0][0] == Jfddict['_pseudo_0.out0']['paraboloid.x'])

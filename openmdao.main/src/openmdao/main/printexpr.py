@@ -317,8 +317,10 @@ class ExprNameTransformer(ast.NodeTransformer):
 
 def transform_expression(expr, mapping):
     """Returns a new expression string with the names transformed based on
-    the value of the mapping dict.  Note that this transforms only "complete"
-    names (dotted or not), not sub-names within a larger dotted name.
+    the value of the mapping dict.  Note that this transforms only from
+    the beginning of a name, so for example, if you have abc.xyz.abc and
+    a mapping of { 'abc': 'XXX' }, you'll get 'XXX.xyz.abc', not
+    'XXX.xyz.XXX'.
     """
     if expr in mapping:
         return mapping[expr]
@@ -329,7 +331,6 @@ def transform_expression(expr, mapping):
     ep = ExprPrinter()
     ep.visit(new_ast)
     return ep.get_text()
-
 
 def eliminate_expr_ws(expr):
     """Return the expression string with whitespace removed, except for
@@ -348,5 +349,5 @@ def print_node(node):
 
 if __name__ == '__main__':
     import sys
-    mapping = { 'foo.bar': 'a.b.c.def', 'blah': 'hohum' }
+    mapping = { 'foo.bar': 'a.b.c.de', 'blah': 'hohum' }
     print transform_expression(sys.argv[1], mapping)

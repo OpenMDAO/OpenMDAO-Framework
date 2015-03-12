@@ -7,7 +7,7 @@ import unittest
 
 import numpy as np
 
-from openmdao.main.api import Component, Assembly, set_as_top
+from openmdao.main.api import Component, Assembly, set_as_top, Workflow
 from openmdao.main.datatypes.api import Float, Str, Int
 from openmdao.main.depgraph import simple_node_iter
 from openmdao.main.test.simpledriver import SimpleDriver

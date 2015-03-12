@@ -79,14 +79,14 @@ class Testcase_PetSc_KSP(unittest.TestCase):
         self.assertEqual(top.comp.f_xy, 93.)
         self.assertEqual(top._pseudo_0.out0, 93.)
 
-        J = top.driver.workflow.calc_gradient(inputs=['comp.x', 'comp.y'],
+        J = top.driver.calc_gradient(inputs=['comp.x', 'comp.y'],
                                               outputs=['comp.f_xy'],
                                               mode='forward')
 
         assert_rel_error(self, J[0, 0], 5.0, 0.0001)
         assert_rel_error(self, J[0, 1], 21.0, 0.0001)
 
-        J = top.driver.workflow.calc_gradient(inputs=['comp.x', 'comp.y'],
+        J = top.driver.calc_gradient(inputs=['comp.x', 'comp.y'],
                                               mode='adjoint')
 
         assert_rel_error(self, J[0, 0], 5.0, 0.0001)
@@ -95,7 +95,7 @@ class Testcase_PetSc_KSP(unittest.TestCase):
         # Make sure we aren't add-scattering out p vector
 
         top.run()
-        J = top.driver.workflow.calc_gradient(inputs=['comp.x', 'comp.y'],
+        J = top.driver.calc_gradient(inputs=['comp.x', 'comp.y'],
                                               mode='forward')
         assert_rel_error(self, J[0, 0], 5.0, 0.0001)
         assert_rel_error(self, J[0, 1], 21.0, 0.0001)
@@ -119,14 +119,14 @@ class Testcase_PetSc_KSP(unittest.TestCase):
         self.assertEqual(top.comp.f_xy, 93.)
         self.assertEqual(top._pseudo_0.out0, 93.)
 
-        J = top.driver.workflow.calc_gradient(inputs=['comp.x', 'comp.y'],
+        J = top.driver.calc_gradient(inputs=['comp.x', 'comp.y'],
                                               outputs=['comp.f_xy'],
                                               mode='forward', return_format='dict')
 
         assert_rel_error(self, J['comp.f_xy']['comp.x'][0][0], 5.0, 0.0001)
         assert_rel_error(self, J['comp.f_xy']['comp.y'][0][0], 21.0, 0.0001)
 
-        J = top.driver.workflow.calc_gradient(inputs=['comp.x', 'comp.y'],
+        J = top.driver.calc_gradient(inputs=['comp.x', 'comp.y'],
                                               mode='adjoint', return_format='dict')
 
         assert_rel_error(self, J['_pseudo_0.out0']['comp.x'][0][0], 5.0, 0.0001)
@@ -135,7 +135,7 @@ class Testcase_PetSc_KSP(unittest.TestCase):
         # Make sure we aren't add-scattering out p vector
 
         top.run()
-        J = top.driver.workflow.calc_gradient(inputs=['comp.x', 'comp.y'],
+        J = top.driver.calc_gradient(inputs=['comp.x', 'comp.y'],
                                               mode='forward', return_format='dict')
         assert_rel_error(self, J['_pseudo_0.out0']['comp.x'][0][0], 5.0, 0.0001)
         assert_rel_error(self, J['_pseudo_0.out0']['comp.y'][0][0], 21.0, 0.0001)
@@ -147,12 +147,12 @@ class Testcase_PetSc_KSP(unittest.TestCase):
         top.subdriver.gradient_options.lin_solver = 'petsc_ksp'
         top.run()
 
-        J = top.driver.workflow.calc_gradient(mode='forward')
+        J = top.driver.calc_gradient(mode='forward')
 
         assert_rel_error(self, J[0, 0], 0.9806145, 0.0001)
         assert_rel_error(self, J[1, 0], 0.0969276, 0.0001)
 
-        J = top.driver.workflow.calc_gradient(mode='adjoint')
+        J = top.driver.calc_gradient(mode='adjoint')
 
         assert_rel_error(self, J[0, 0], 0.9806145, 0.0001)
         assert_rel_error(self, J[1, 0], 0.0969276, 0.0001)
@@ -164,12 +164,12 @@ class Testcase_PetSc_KSP(unittest.TestCase):
         top.subdriver.gradient_options.lin_solver = 'petsc_ksp'
         top.run()
 
-        J = top.driver.workflow.calc_gradient(mode='forward')
+        J = top.driver.calc_gradient(mode='forward')
 
         assert_rel_error(self, J[0, 0], 0.9806145, 0.0001)
         assert_rel_error(self, J[1, 0], 0.0969276, 0.0001)
 
-        J = top.driver.workflow.calc_gradient(mode='adjoint')
+        J = top.driver.calc_gradient(mode='adjoint')
 
         assert_rel_error(self, J[0, 0], 0.9806145, 0.0001)
         assert_rel_error(self, J[1, 0], 0.0969276, 0.0001)
@@ -393,15 +393,15 @@ class Testcase_PetSc_KSP(unittest.TestCase):
         top.driver.add_constraint('nest.y[0][1] < 0')
         top.run()
 
-        J = top.driver.workflow.calc_gradient(mode='forward')
+        J = top.driver.calc_gradient(mode='forward')
         assert_rel_error(self, J[0, 0], 24.0, .000001)
         assert_rel_error(self, J[1, 0], 4.0, .000001)
 
-        J = top.driver.workflow.calc_gradient(mode='adjoint')
+        J = top.driver.calc_gradient(mode='adjoint')
         assert_rel_error(self, J[0, 0], 24.0, .000001)
         assert_rel_error(self, J[1, 0], 4.0, .000001)
 
-        J = top.driver.workflow.calc_gradient(mode='fd')
+        J = top.driver.calc_gradient(mode='fd')
         assert_rel_error(self, J[0, 0], 24.0, .000001)
         assert_rel_error(self, J[1, 0], 4.0, .000001)
 

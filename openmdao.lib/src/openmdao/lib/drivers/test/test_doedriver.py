@@ -468,7 +468,7 @@ class VTInputAsSrcInvalidationTest(unittest.TestCase):
 
     def test_invalidation_with_vtinput_as_src(self):
         self.model.run()
-        self.assertEqual(self.model.doe.exec_count, 2)
+        self.assertEqual(self.model.doe.exec_count, 3)
 
 
 

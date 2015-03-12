@@ -15,16 +15,17 @@ class TestArchTestSuite(unittest.TestCase):
         ]
 
         architectures = [
+            #BLISS,  # keep this commented out until BLISS is updated
             MDF,
             IDF,
-            BLISS,
             CO,
         ]
 
+        optproblem = optproblems[0]
+        architecture = architectures[2]
+
         for optproblem in optproblems:
             for architecture in architectures:
-
-
                 problem_name = optproblem.__name__
                 architecture_name = architecture.__name__
 
@@ -35,6 +36,7 @@ class TestArchTestSuite(unittest.TestCase):
 
                 try:
                     print problem_name, architecture_name
+                    problem._setup()
                     problem.check_config()
 
                 except:

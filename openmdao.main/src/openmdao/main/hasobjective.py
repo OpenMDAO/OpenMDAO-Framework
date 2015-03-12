@@ -10,32 +10,33 @@ from openmdao.main.interfaces import IDriver
 class Objective(ConnectedExprEvaluator):
     def __init__(self, *args, **kwargs):
         super(Objective, self).__init__(*args, **kwargs)
-        self.pcomp_name = None
+        self._pseudo = None
+        unresolved_vars = self.get_unresolved()
+        if unresolved_vars:
+            msg = "Can't add objective '{0}' because of invalid variables {1}"
+            raise ConnectedExprEvaluator._invalid_expression_error(unresolved_vars, self.text, msg)
+
+        self._pseudo = PseudoComponent(self.scope, self, pseudo_type='objective')
+        self.pcomp_name = self._pseudo.name
 
     def activate(self, driver):
         """Make this constraint active by creating the appropriate
         connections in the dependency graph.
         """
-        if self.pcomp_name is None:
-            pseudo = PseudoComponent(self.scope, self, pseudo_type='objective')
-            self.pcomp_name = pseudo.name
-            self.scope.add(pseudo.name, pseudo)
-        getattr(self.scope, self.pcomp_name).make_connections(self.scope, driver)
+        self._pseudo.activate(self.scope, driver)
 
     def deactivate(self):
         """Remove this objective from the dependency graph and remove
         its pseudocomp from the scoping object.
         """
-        if self.pcomp_name:
+        if self._pseudo is not None:
             scope = self.scope
             try:
-                getattr(scope, self.pcomp_name)
+                getattr(scope, self._pseudo.name)
             except AttributeError:
                 pass
             else:
-                scope.remove(self.pcomp_name)
-
-            self.pcomp_name = None
+                scope.remove(self._pseudo.name)
 
     def evaluate(self, scope=None):
         """Use the value in the u vector if it exists instead of pulling
@@ -43,9 +44,9 @@ class Objective(ConnectedExprEvaluator):
         """
         if self.pcomp_name:
             scope = self._get_updated_scope(scope)
-            system = getattr(scope, self.pcomp_name)._system
-            vname = self.pcomp_name + '.out0'
             try:
+                system = getattr(scope, self.pcomp_name)._system
+                vname = self.pcomp_name + '.out0'
                 if scope._var_meta[vname].get('scalar'):
                     return system.vec['u'][scope.name2collapsed[vname]][0]
                 else:
@@ -133,21 +134,18 @@ class HasObjectives(object):
                                         AttributeError)
 
         scope = self._get_scope(scope)
-        expreval = Objective(expr, scope)
-        unresolved_vars = expreval.get_unresolved()
-        if unresolved_vars:
-            msg = "Can't add objective '{0}' because of invalid variables {1}"
-            error = ConnectedExprEvaluator._invalid_expression_error(unresolved_vars, expreval.text, msg)
-            self.parent.raise_exception(str(error), type(error))
+        try:
+            expreval = Objective(expr, scope)
+        except Exception as err:
+            self.parent.raise_exception(str(err), type(err))
 
         name = expr if name is None else name
 
         if IDriver.providedBy(self.parent):
-            expreval.activate(self.parent)
+            #expreval.activate(self.parent)
             self.parent.config_changed()
 
         self._objectives[name] = expreval
-
 
     def remove_objective(self, expr):
         """Removes the specified objective expression. Spaces within
@@ -163,6 +161,23 @@ class HasObjectives(object):
                                         "that is not in this driver." % expr,
                                         AttributeError)
         self.parent.config_changed()
+
+    def name_changed(self, old, new):
+        """Change any objectives that reference the old
+        name of an object that has now been changed to a new name.
+
+        old: string
+            Original name of the object
+
+        new: string
+            New name of the object
+        """
+        for name, obj in self._objectives.items():
+            orig = obj.text
+            trans = obj.name_changed(old, new)
+            if orig != trans and name == orig:  # expr changed and no alias
+                del self._objectives[name]
+                self._objectives[trans] = obj
 
     def get_references(self, name):
         """Return references to component `name` in preparation for subsequent
@@ -201,11 +216,16 @@ class HasObjectives(object):
         # Old objective seems to get removed automatically so no need to
         # clear objectives and recreate them.
         for name, obj in refs.items():
-            try:
-                self.add_objective(str(obj), name, obj.scope)
-            except Exception as err:
+            if not obj.check_resolve():
                 self.parent._logger.warning("Couldn't restore objective"
-                                            " '%s': %s" % (name, str(err)))
+                                            " '%s': %s were unresolved" %
+                                            (name, obj.get_unresolved()))
+            else:
+                try:
+                    self.add_objective(str(obj), name, obj.scope)
+                except Exception as err:
+                    self.parent._logger.warning("Couldn't restore objective"
+                                                " '%s': %s" % (name, str(err)))
 
     def get_objectives(self):
         """Returns an OrderedDict of objective expressions."""

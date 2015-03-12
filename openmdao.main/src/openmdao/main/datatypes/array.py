@@ -8,7 +8,6 @@ __all__ = ["Array"]
 # pylint: disable=E0611,F0401
 from openmdao.units import PhysicalQuantity
 
-from openmdao.main.attrwrapper import AttrWrapper, UnitsAttrWrapper
 from openmdao.main.interfaces import implements, IVariable
 from openmdao.main.variable import gui_excludes
 
@@ -112,16 +111,6 @@ class Array(TraitArray):
         Units are converted as needed.
         """
 
-        # pylint: disable=E1101
-        # If both source and target have units, we need to process differently
-        if isinstance(value, AttrWrapper):
-            value = value.value
-            if self.units:
-                valunits = value.metadata.get('units')
-                if valunits and isinstance(valunits, basestring) and \
-                   self.units != valunits:
-                    value = self._validate_with_metadata(obj, name,
-                                                         value.value, valunits)
         try:
             new_val = super(Array, self).validate(obj, name, value)
         except Exception:
@@ -150,18 +139,6 @@ class Array(TraitArray):
             obj.raise_exception(msg, ValueError)
         except AttributeError:
             raise ValueError(msg)
-
-    def get_val_wrapper(self, value, index=None):
-        """Return a UnitsAttrWrapper object.  Its value attribute
-        will be filled in by the caller.
-        """
-        # pylint: disable=E1101
-        if index is not None:
-            value = get_indexed_value(value, None, index)
-        if self.units:
-            return UnitsAttrWrapper(value, units=self.units)
-        else:
-            return value
 
     def _validate_with_metadata(self, obj, name, value, src_units):
         """Perform validation and unit conversion using metadata from
