@@ -1965,7 +1965,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         top.nest.create_passthrough('comp.x')
         top.nest.create_passthrough('comp.y')
         top.run()
-        #top.driver.gradient_options.lin_solver = 'petsc_ksp'
+        top.driver.gradient_options.lin_solver = 'petsc_ksp'
 
         J = top.driver.calc_gradient(inputs=['nest.x',],
                                      outputs=['nest.y'],

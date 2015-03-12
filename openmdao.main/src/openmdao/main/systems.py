@@ -1266,6 +1266,7 @@ class AssemblySystem(SimpleSystem):
     def __init__(self, scope, graph, name):
         super(AssemblySystem, self).__init__(scope, graph, name)
         self._provideJ_bounds = None
+        self._nest_lin_solve = False
 
     def setup_communicators(self, comm):
         super(AssemblySystem, self).setup_communicators(comm)
@@ -1319,6 +1320,14 @@ class AssemblySystem(SimpleSystem):
         inner_system = self._comp._system
         options = self._comp.driver.gradient_options
 
+        # If we can, use the new Jacobian-free method
+        if self.options.lin_solver != 'scipy_gmres':
+            self._nest_lin_solve = True
+            inner_system.set_options(self.mode, options)
+            inner_system.initialize_gradient_solver()
+            inner_system.linearize()
+            return
+
         # Calculate and save Jacobian for this assy
         inputs = [item.partition('.')[-1] for item in self.list_inputs()]
         outputs = [item.partition('.')[-1] for item in self.list_outputs()]
@@ -1328,70 +1337,72 @@ class AssemblySystem(SimpleSystem):
     def applyJ(self, variables):
         """ df = du - dGdp * dp or du = df and dp = -dGdp^T * df """
 
+        if self._nest_lin_solve is False:
+            super(AssemblySystem, self).applyJ(variables)
+            return
+
         inner = self._comp._system
         fvec = self.vec['df']
+        mode = self.mode
+        inner.set_options(self.mode, self._comp.driver.gradient_options)
 
         # Copy arg to inner scope
-        for name in self.list_inputs():
+        inner.rhs_vec.array[:] = 0.0
 
-            key = name
-            parent = self
+        if mode == 'forward':
 
-            while True:
-                parent = parent._parent_system
-                if name in parent.vec['dp']:
-                    _, _, inner_name = name.partition('.')
-                    inner.vec['dp'][inner_name] = parent.vec['dp'][name]
-                    parent.vec['du'][name][:] += parent.vec['dp'][name]
-                    break
+            # Copy arg to inner scope
+            for name in self.list_inputs():
 
-        # Solve inner linear system
-        inner.solve_linear()
+                key = name
+                parent = self
 
-        # Copy result to outer scope
-        for name in self.list_outputs():
-            _, _, inner_name = name.partition('.')
-            fvec[name] = inner.vec['df'][inner_name]
-            fvec[name][:] += self.vec['du'][name][:]
+                while True:
+                    parent = parent._parent_system
+                    if name in parent.vec['dp']:
+                        val = parent.vec['dp'][name]
+                        break
 
-        #vec = self.vec
+                _, _, inner_name = name.partition('.')
+                inner.rhs_vec[inner_name] = val
+                parent.vec['du'][name][:] += val
 
-        ## Forward Mode
-        #if self.mode == 'forward':
+            # Solve inner linear system
+            inner.solve_linear()
 
-            #if self._comp is None:
-                #applyJ(self, variables)
-            #else:
-                #self._comp.applyJ(self, variables)
+            # Copy result to outer scope
+            for name in self.list_outputs():
+                _, _, inner_name = name.partition('.')
+                fvec[name] = inner.sol_vec[inner_name]
+                fvec[name][:] -= self.vec['du'][name][:]
 
-            #vec['df'].array[:] *= -1.0
+        else:
 
-            #for var in self.list_outputs():
-                #vec['df'][var][:] += vec['du'][var][:]
+            for name in self.list_outputs():
+                val = self.sol_vec
+                _, _, inner_name = name.partition('.')
+                inner.rhs_vec[inner_name] = -val.array
 
-        ## Adjoint Mode
-        #elif self.mode == 'adjoint':
+            # Solve inner linear system
+            inner.solve_linear()
 
-            ## Sign on the local Jacobian needs to be -1 before
-            ## we add in the fake residual. Since we can't modify
-            ## the 'du' vector at this point without stomping on the
-            ## previous component's contributions, we can multiply
-            ## our local 'arg' by -1, and then revert it afterwards.
-            #vec['df'].array[:] *= -1.0
-            #if self._comp is None:
-                #applyJT(self, variables)
-            #else:
-                #self._comp.applyJT(self, variables)
-            #vec['df'].array[:] *= -1.0
+            # Copy result to outer scope
+            for name in self.list_inputs():
 
-            #for var in self.list_outputs():
+                key = name
+                parent = self
 
-                ##collapsed = self.scope.name2collapsed.get(var)
-                ##if collapsed not in variables:
-                ##    continue
+                while True:
+                    parent = parent._parent_system
+                    if name in parent.vec['dp']:
+                        var = parent.vec['dp']
+                        break
 
-                #vec['du'][var][:] += vec['df'][var][:]
+                _, _, inner_name = name.partition('.')
+                var[name] = inner.sol_vec[inner_name]
 
+            for var in self.list_outputs():
+                self.vec['du'][var][:] += self.vec['df'][var][:]
 
     def set_complex_step(self, complex_step=False):
         """ Toggles complex_step plumbing for this system and all
