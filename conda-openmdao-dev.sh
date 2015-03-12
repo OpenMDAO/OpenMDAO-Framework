@@ -28,7 +28,7 @@ conda create --name $ENV_NAME \
   mock \
   networkx \
   zope.interface \
-  "pytz>=2011" \
+  "pytz>=2014.4" \
   pycrypto==2.3 \
   cobyla==1.0.2 \
   conmin==1.0.2 \
