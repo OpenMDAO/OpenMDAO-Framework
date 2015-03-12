@@ -976,11 +976,22 @@ class SimpleSystem(System):
         if self._comp is None or not hasattr(self._comp, 'get_arg_indices'):
             return super(SimpleSystem, self).get_arg_indices(comm, name)
         else:
+            # find the name of the input var corresponding to our comp
+            for n in name[1]:
+                if n.startswith(self._comp.name+'.'):
+                    break
+            else:
+                raise RuntimeError("Couldn't find a variable belonging to %s in %s" %
+                                    (self._comp.name, name[1]))
+
+            # get input indices for full variable
             idxs = petsc_idxs(self._comp.get_arg_indices(comm,
-                                 name[0].split('[')[0].split('.',1)[1]))
-            if '[' in name[0]:
-                return numpy.array([i for i in
-                                  self.scope._var_meta[n].get('flat_idx')
+                                 n.split('[', 1)[0].split('.',1)[1]))
+            # if input is a subvar, we have to take a subset of the
+            # input indices
+            if '[' in n:
+                info = self.scope._get_var_info(n)
+                return numpy.array([i for i in info['flat_idx']
                                   if i in idxs], dtype=idx_arr_type)
             return idxs
 
