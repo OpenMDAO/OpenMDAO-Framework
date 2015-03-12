@@ -13,6 +13,10 @@ from openmdao.util.graph import base_var
 
 ViewInfo = namedtuple('ViewInfo', 'view, start, idxs, size, hide')
 
+# dtype needed for index arrays
+idx_arr_type = PETSc.IntType if MPI else 'i'
+
+
 class VecWrapperBase(object):
     """A wrapper object for a local vector, a distributed PETSc vector,
     and info about what var maps to what range within the distributed
@@ -623,17 +627,11 @@ def idx_merge(idxs):
 
 def petsc_linspace(start, end):
     """ Return a linspace vector of the right int type for PETSc """
-    if MPI:
-        return numpy.arange(start, end, dtype=PETSc.IntType)
-    else:
-        return numpy.arange(start, end, dtype='i')
+    return numpy.arange(start, end, dtype=idx_arr_type)
 
 def petsc_idxs(idxs):
     """ Return an index vector of the right int type for PETSc """
-    if MPI:
-        return numpy.array(idxs, dtype=PETSc.IntType)
-
-    return idxs
+    return numpy.array(idxs, dtype=idx_arr_type)
 
 def _filter(scope, lst):
     filtered = _filter_subs(lst)

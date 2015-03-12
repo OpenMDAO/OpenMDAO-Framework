@@ -143,13 +143,6 @@ def get_norm(vec, order=None):
     else:
         return numpy.linalg.norm(vec.array, ord=order)
 
-# npnorm = numpy.linalg.norm
-# def norm(a, order=None):
-#     '''This little funct for norm replaces a dependency on scipy
-#     '''
-#     return npnorm(numpy.asarray_chkfinite(a), ord=order)
-
-
 
 if os.environ.get('USE_PROC_FILES'):
     use_proc_files()

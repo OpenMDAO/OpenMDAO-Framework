@@ -17,7 +17,7 @@ from openmdao.main.interfaces import IDriver, IAssembly, IImplicitComponent, \
                                      ISolver, IPseudoComp, IComponent, ISystem
 from openmdao.main.vecwrapper import VecWrapper, InputVecWrapper, DataTransfer, \
                                      idx_merge, petsc_linspace, _filter, _filter_subs, \
-                                     _filter_flat, _filter_ignored
+                                     _filter_flat, _filter_ignored, idx_arr_type
 from openmdao.main.depgraph import break_cycles, get_node_boundary, gsort, \
                                    collapse_nodes, simple_node_iter
 from openmdao.main.derivatives import applyJ, applyJT
@@ -433,6 +433,14 @@ class System(object):
             if name not in self.flat_vars:
                 self.noflat_vars[name] = info
 
+    def get_arg_indices(self, comm, name):
+        if name in self.vector_vars:
+            return petsc_linspace(0, self.scope._var_meta[name]['size'])
+        else:
+            base = name[0].split('[', 1)[0]
+            if base != name[0]:
+                return self.scope._var_meta[name].get('flat_idx')
+
     def setup_sizes(self):
         """Given a dict of variables, set the sizes for
         those that are local.
@@ -486,23 +494,12 @@ class System(object):
 
         # create an arg_idx dict to keep track of indices of
         # inputs
-        # TODO: determine how we want the user to specify indices
-        #       for distributed inputs...
         self.arg_idx = OrderedDict()
         for name in _filter_flat(self.scope, self._owned_args):
-            # FIXME: this needs to use the actual indices for this
-            #        process' version of the arg once we have distributed
-            #        components...
-            if name in self.vector_vars:
-                isrc = self.vector_vars.keys().index(name)
-                idxs = petsc_linspace(0, varmeta[name]['size'])
-            else:
-                base = name[0].split('[', 1)[0]
-                if base == name[0]:
-                    continue
-                idxs = varmeta[name].get('flat_idx')
-
-            self.arg_idx[name] = idxs# + numpy.sum(self.local_var_sizes[:self.mpi.rank, isrc])
+            idxs = self.get_arg_indices(comm, name)
+            if idxs is None:
+                continue
+            self.arg_idx[name] = idxs
 
     def setup_vectors(self, arrays=None, state_resid_map=None):
         """Creates vector wrapper objects to manage local and
@@ -971,6 +968,21 @@ class SimpleSystem(System):
 
     def setup_communicators(self, comm):
         self.mpi.comm = comm
+
+    def get_arg_indices(self, comm, name):
+        """These indices are actually the indices in the *source*
+        vector that get scattered to a particular input.
+        """
+        if self._comp is None or not hasattr(self._comp, 'get_arg_indices'):
+            return super(SimpleSystem, self).get_arg_indices(comm, name)
+        else:
+            idxs = petsc_idxs(self._comp.get_arg_indices(comm,
+                                 name[0].split('[')[0].split('.',1)[1]))
+            if '[' in name[0]:
+                return numpy.array([i for i in
+                                  self.scope._var_meta[n].get('flat_idx')
+                                  if i in idxs], dtype=idx_arr_type)
+            return idxs
 
     def _create_var_dicts(self, resid_state_map):
         varmeta = self.scope._var_meta
