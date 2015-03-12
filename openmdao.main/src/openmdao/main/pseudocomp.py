@@ -98,7 +98,6 @@ class PseudoComponent(object):
         self._inmap = {}  # mapping of component vars to our inputs
         self._meta = {}
         self._inputs = []
-        self._initialized = False
 
         # Flags and caching used by the derivatives calculation
         self.force_fd = False
@@ -281,12 +280,18 @@ class PseudoComponent(object):
     def contains(self, name):
         return name == 'out0' or name in self._inputs
 
+    def activate(self, scope, driver=None):
+        scope.add(self.name, self)
+        scope._depgraph.add_component(self.name, self)
+        getattr(scope, self.name).make_connections(scope, driver)
+
     def make_connections(self, scope, driver=None):
         """Connect all of the inputs and outputs of this comp to
         the appropriate nodes in the dependency graph.
         """
         for src, dest in self.list_connections():
-            scope.connect(src, dest)
+            #scope.connect(src, dest)
+            scope._depgraph.connect(scope, src, dest)
 
         if driver is not None:
             scope._depgraph.add_driver_input(driver.name,
@@ -365,19 +370,17 @@ class PseudoComponent(object):
         """Make sure our inputs and outputs have been
         initialized.
         """
-        if not self._initialized:
-            # set the current value of the connected variable
-            # into our input
-            for ref, in_name in self._inmap.items():
-                setattr(self, in_name,
-                        ExprEvaluator(ref).evaluate(self.parent))
-                if has_interface(getattr(self, in_name), IContainer):
-                    getattr(self, in_name).name = in_name
+        # set the current value of the connected variable
+        # into our input
+        for ref, in_name in self._inmap.items():
+            setattr(self, in_name,
+                    ExprEvaluator(ref).evaluate(self.parent))
+            if has_interface(getattr(self, in_name), IContainer):
+                getattr(self, in_name).name = in_name
 
-            # set the initial value of the output
-            setattr(self, 'out0', self._srcexpr.evaluate())
-
-            self._initialized = True
+        # set the initial value of the output
+        outval = self._srcexpr.evaluate()
+        setattr(self, 'out0', outval)
 
     def list_deriv_vars(self):
         return tuple(self._inputs), ('out0',)
@@ -385,7 +388,11 @@ class PseudoComponent(object):
     def get_req_cpus(self):
         return 1
 
-    def pre_setup(self):
+    def setup_init(self):
+        self.Jsize = None
+        self._provideJ_bounds = None
+
+    def size_variables(self):
         self.ensure_init()
 
     def setup_depgraph(self, dgraph):
@@ -415,12 +422,10 @@ class PseudoComponent(object):
         the value is not flattenable into an array of floats,
         raise a TypeError.
         """
-        self.ensure_init()
         val, idx = get_val_and_index(self, path)
         return flattened_value(path, val)
 
     def set_flattened_value(self, path, value):
-        self.ensure_init()
         val,rop = deep_getattr(self, path.split('[',1)[0])
         idx = get_index(path)
         if isinstance(val, int_types):
@@ -562,10 +567,11 @@ class UnitConversionPComp(PseudoComponent):
     derivatives, especially for vector inputs.
     """
 
-    def config_changed(self, update_parent=True):
-        """ Calculate and save our unit conversion factor.
+    def ensure_init(self):
+        """Make sure our inputs and outputs have been
+        initialized.
         """
-        super(UnitConversionPComp, self).config_changed(update_parent)
+        super(UnitConversionPComp, self).ensure_init()
 
         src    = PhysicalQuantity(1.0, self._srcunits)
         target = self._meta['out0'].get('units')

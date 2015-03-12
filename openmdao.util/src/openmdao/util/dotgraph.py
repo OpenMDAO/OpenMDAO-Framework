@@ -83,8 +83,9 @@ def write_node(f, meta, node, indent):
     f.write('%s"%s" [%s];\n' % (' '*indent, node, ','.join(assigns)))
 
 def _get_comp_counts(drv, counts):
-    for comp in drv.workflow:
-        counts[comp.name] += 1
+    for cname in drv._ordering:
+        comp = getattr(drv.parent, cname)
+        counts[cname] += 1
         if IDriver.providedBy(comp):
             _get_comp_counts(comp, counts)
 

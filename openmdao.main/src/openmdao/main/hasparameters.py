@@ -906,10 +906,6 @@ class HasParameters(object):
                 self.parent.reraise_exception(info=sys.exc_info())
 
         if IDriver.providedBy(self.parent):
-            # add a graph connection from the driver to the param target
-            dgraph = self.parent.get_depgraph()
-            dgraph.add_param(self.parent.name, tuple(target.targets))
-
             self.parent.config_changed()
 
     def _create(self, target, low, high, scaler, adder, start, fd_step,
@@ -956,11 +952,6 @@ class HasParameters(object):
                                          % (name,), AttributeError)
 
         if IDriver.providedBy(self.parent):
-            # remove param connections from dep graph
-            dgraph = self.parent.get_depgraph()
-            dgraph.remove_param(self.parent.name,
-                                tuple(param.targets))
-
             self.parent.config_changed()
 
     def config_parameters(self):
@@ -1003,7 +994,10 @@ class HasParameters(object):
         """
         for pname, param in refs.items():
             try:
-                self.add_parameter(param)
+                if param._expreval.check_resolve():
+                    self.add_parameter(param)
+                else:
+                    raise AttributeError("'%s' doesn't exist." % pname)
             except Exception as err:
                 self.parent._logger.warning("Couldn't restore parameter '%s': %s"
                                             % (pname, str(err)))

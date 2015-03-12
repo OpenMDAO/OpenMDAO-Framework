@@ -107,7 +107,7 @@ class _Case(object):
                 scope.set(name, value)
 
         parent._system.vec.get('u').set_from_scope(scope)
-            
+
 
     def fetch_outputs(self, scope, extra=False, itername=''):
         """
@@ -303,7 +303,7 @@ class CaseIteratorDriver(Driver):
             while obj.parent is not None:
                 obj = obj.parent
             obj._setup()
-            
+
         if not self.sequential:
             # Save model to egg.
             # Must do this before creating any locks or queues.
@@ -860,8 +860,7 @@ class CaseIteratorDriver(Driver):
         server.exception = None
         if server.queue is None:
             try:
-#                self.workflow.parent.update_parameters()
-                self.workflow.run(case_uuid=server.case.uuid)
+                self.run_iteration(server.case.uuid)
             except Exception as exc:
                 server.exception = sys.exc_info()
                 self._logger.critical('Caught exception: %r' % exc)

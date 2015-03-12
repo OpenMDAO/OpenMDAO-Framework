@@ -12,33 +12,28 @@ class Response(ConnectedExprEvaluator):
 
     def __init__(self, *args, **kwargs):
         super(Response, self).__init__(*args, **kwargs)
-        self.pcomp_name = None
+        self._pseudo = None
+        self._pseudo = PseudoComponent(self.scope, self, pseudo_type='objective')
+        self.pcomp_name = self._pseudo.name
 
     def activate(self, driver):
         """Make this response active by creating the appropriate
         connections in the dependency graph.
         """
-        if self.pcomp_name is None:
-            pseudo = PseudoComponent(self.scope, self, pseudo_type='objective')
-            self.pcomp_name = pseudo.name
-            self.scope.add(pseudo.name, pseudo)
-        getattr(self.scope, self.pcomp_name).make_connections(self.scope,
-                                                              driver)
+        self._pseudo.activate(self.scope, driver)
 
     def deactivate(self):
         """Remove this response from the dependency graph and remove
         its pseudocomp from the scoping object.
         """
-        if self.pcomp_name:
+        if self._pseudo is not None:
             scope = self.scope
             try:
-                getattr(scope, self.pcomp_name)
+                getattr(scope, self._pseudo.name)
             except AttributeError:
                 pass
             else:
-                scope.remove(self.pcomp_name)
-
-            self.pcomp_name = None
+                scope.remove(self._pseudo.name)
 
 
 class HasResponses(object):
@@ -109,17 +104,20 @@ class HasResponses(object):
                                         AttributeError)
 
         scope = self._get_scope(scope)
-        expreval = Response(expr, scope)
-        unresolved_vars = expreval.get_unresolved()
+        try:
+            expreval = Response(expr, scope)
+            unresolved_vars = expreval.get_unresolved()
+        except AttributeError:
+            unresolved_vars = [expr]
         if unresolved_vars:
             msg = "Can't add response '{0}' because of invalid variables {1}"
             error = ConnectedExprEvaluator._invalid_expression_error(unresolved_vars,
-                                                                     expreval.text, msg)
+                                                                     expr, msg)
             self.parent.raise_exception(str(error), type(error))
 
         name = expr if name is None else name
 
-        expreval.activate(self.parent)
+        #expreval.activate(self.parent)
 
         self._responses[name] = expreval
         self.parent.config_changed()
@@ -173,11 +171,13 @@ class HasResponses(object):
             Value returned by :meth:`get_references`.
         """
 
-        # Old response seems to get removed automatically so no need to
-        # clear responses and recreate them.
         for name, response in refs.items():
             try:
-                self.add_response(str(response), name, response.scope)
+                if response.check_resolve():
+                    self.add_response(str(response), name, response.scope)
+                else:
+                    raise AttributeError("'%s' are unresolved." %
+                                               response.get_unresolved())
             except Exception as err:
                 self.parent._logger.warning("Couldn't restore response '%s':"
                                             " %s" % (name, err))

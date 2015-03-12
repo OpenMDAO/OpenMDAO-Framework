@@ -144,14 +144,14 @@ class Testcase_Scipy_Gmres(unittest.TestCase):
         self.assertEqual(top.comp.f_xy, 93.)
         self.assertEqual(top._pseudo_0.out0, 93.)
 
-        J = top.driver.workflow.calc_gradient(inputs=['comp.x', 'comp.y'],
+        J = top.driver.calc_gradient(inputs=['comp.x', 'comp.y'],
                                               outputs=['comp.f_xy'],
                                               mode='forward')
 
         assert_rel_error(self, J[0, 0], 5.0, 0.0001)
         assert_rel_error(self, J[0, 1], 21.0, 0.0001)
 
-        J = top.driver.workflow.calc_gradient(inputs=['comp.x', 'comp.y'],
+        J = top.driver.calc_gradient(inputs=['comp.x', 'comp.y'],
                                               mode='adjoint')
 
         assert_rel_error(self, J[0, 0], 5.0, 0.0001)
@@ -160,7 +160,7 @@ class Testcase_Scipy_Gmres(unittest.TestCase):
         # Make sure we aren't add-scattering out p vector
 
         top.run()
-        J = top.driver.workflow.calc_gradient(inputs=['comp.x', 'comp.y'],
+        J = top.driver.calc_gradient(inputs=['comp.x', 'comp.y'],
                                               mode='forward')
         assert_rel_error(self, J[0, 0], 5.0, 0.0001)
         assert_rel_error(self, J[0, 1], 21.0, 0.0001)
@@ -189,14 +189,14 @@ class Testcase_Linear_GS(unittest.TestCase):
         self.assertEqual(top.comp.f_xy, 93.)
         self.assertEqual(top._pseudo_0.out0, 93.)
 
-        J = top.driver.workflow.calc_gradient(inputs=['comp.x', 'comp.y'],
+        J = top.driver.calc_gradient(inputs=['comp.x', 'comp.y'],
                                               outputs=['comp.f_xy'],
                                               mode='forward')
 
         assert_rel_error(self, J[0, 0], 5.0, 0.0001)
         assert_rel_error(self, J[0, 1], 21.0, 0.0001)
 
-        J = top.driver.workflow.calc_gradient(inputs=['comp.x', 'comp.y'],
+        J = top.driver.calc_gradient(inputs=['comp.x', 'comp.y'],
                                               mode='adjoint')
 
         assert_rel_error(self, J[0, 0], 5.0, 0.0001)
@@ -213,12 +213,12 @@ class Testcase_Linear_GS(unittest.TestCase):
         top.driver.gradient_options.lin_solver = 'linear_gs'
         top.driver.gradient_options.maxiter = 1
         top.run()
-        J = top.driver.workflow.calc_gradient(mode='forward')
+        J = top.driver.calc_gradient(mode='forward')
 
         assert_rel_error(self, J[0, 0], 0.9806145, 0.0001)
         assert_rel_error(self, J[1, 0], 0.0969276, 0.0001)
 
-        J = top.driver.workflow.calc_gradient(mode='adjoint')
+        J = top.driver.calc_gradient(mode='adjoint')
 
         assert_rel_error(self, J[0, 0], 0.9806145, 0.0001)
         assert_rel_error(self, J[1, 0], 0.0969276, 0.0001)
@@ -231,10 +231,10 @@ class Testcase_Linear_GS(unittest.TestCase):
         top.driver.gradient_options.lin_solver = 'linear_gs'
         top.driver.gradient_options.maxiter = 1
         top.run()
-        J = top.driver.workflow.calc_gradient(mode='forward')
+        J = top.driver.calc_gradient(mode='forward')
         assert_rel_error(self, J[0, 0], -628.543, 0.01)
 
-        J = top.driver.workflow.calc_gradient(mode='adjoint')
+        J = top.driver.calc_gradient(mode='adjoint')
         assert_rel_error(self, J[0, 0], -628.543, 0.01)
 
     def test_linearGS_simul_element_and_full_connection(self):

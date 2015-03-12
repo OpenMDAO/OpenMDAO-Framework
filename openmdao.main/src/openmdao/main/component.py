@@ -301,8 +301,7 @@ class Component(Container):
             if not hasattr(self, 'apply_derivT'):
                 self.raise_exception("method 'apply_derivT' must be also specified "
                                      " if 'apply_deriv' is specified")
-
-        if hasattr(self, 'provideJ'):
+        elif hasattr(self, 'provideJ'):
             self._check_deriv_vars()
 
         visited = set([id(self), id(self.parent)])
@@ -325,11 +324,13 @@ class Component(Container):
                 self.raise_exception("required variables %s were"
                                      " not set" % reqs, RuntimeError)
 
+        self._new_config = False
+
     def _check_deriv_var(self, var_name):
         try:
             val = self.get(var_name)
         except AttributeError:
-            msg = "'{var_name}' was given in 'list_deriv_vars'"\
+            msg = "'{var_name}' was given in 'list_deriv_vars' "\
                   "but '{var_name}' is undefined"
 
             msg = msg.format(var_name=var_name, comp_name=self.__class__.__name__)
@@ -431,8 +432,13 @@ class Component(Container):
             self.cpath_updated()
 
         if self._new_config:
-            self.check_config()
-            self._new_config = False
+            self._setup()
+
+        if self.parent is None and has_interface(self, IAssembly):
+            self.configure_recording(self.recording_options)
+
+    def _setup(self, inputs=None, outputs=None):
+        self.check_config()
 
     def execute(self):
         """Perform calculations or other actions, assuming that inputs
@@ -477,6 +483,9 @@ class Component(Container):
         Adjoint Mode.
         """
         applyJT(system, variables)
+
+    def name_changed(self, old, new):
+        pass
 
     def _post_execute(self):
         """Update output variables and anything else needed after execution.
@@ -530,12 +539,6 @@ class Component(Container):
                 self._run_terminated()
             if self.directory:
                 self.pop_dir()
-
-    @rbac(('owner', 'user'))
-    def _run_begins(self):
-        """ Executed at start of top-level run. """
-        if hasattr(self, 'recorders'):
-            self.configure_recording()
 
     @rbac(('owner', 'user'))
     def _run_terminated(self):
@@ -1390,7 +1393,11 @@ class Component(Container):
         pass
 
     @rbac(('owner', 'user'))
-    def pre_setup(self):
+    def setup_init(self):
+        self._provideJ_bounds = None
+
+    @rbac(('owner', 'user'))
+    def size_variables(self):
         pass
 
     @rbac(('owner', 'user'))

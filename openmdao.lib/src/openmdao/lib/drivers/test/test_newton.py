@@ -365,17 +365,17 @@ class Newton_SolverTestCase(unittest.TestCase):
 
         top.run()
 
-        J = top.driver.workflow.calc_gradient(mode='forward')
+        J = top.driver.calc_gradient(mode='forward')
         print J
         assert_rel_error(self, J[0][0], 10.77542099, 1e-5)
 
-        J = top.driver.workflow.calc_gradient(mode='adjoint')
+        J = top.driver.calc_gradient(mode='adjoint')
         print J
         assert_rel_error(self, J[0][0], 10.77542099, 1e-5)
 
         top.driver.gradient_options.fd_step = 1e-7
         top.driver.gradient_options.fd_form = 'central'
-        J = top.driver.workflow.calc_gradient(mode='fd')
+        J = top.driver.calc_gradient(mode='fd')
         print J
         assert_rel_error(self, J[0][0], 10.77542099, 1e-5)
 
@@ -563,15 +563,15 @@ class Newton_SolverTestCase_with_Cycles(unittest.TestCase):
 
         top.run()
 
-        J = top.driver.workflow.calc_gradient(mode='forward')
+        J = top.driver.calc_gradient(mode='forward')
         assert_rel_error(self, J[0][0], 10.77542099, 1e-5)
 
-        J = top.driver.workflow.calc_gradient(mode='adjoint')
+        J = top.driver.calc_gradient(mode='adjoint')
         assert_rel_error(self, J[0][0], 10.77542099, 1e-5)
 
         top.driver.gradient_options.fd_step = 1e-7
         top.driver.gradient_options.fd_form = 'central'
-        J = top.driver.workflow.calc_gradient(mode='fd')
+        J = top.driver.calc_gradient(mode='fd')
         assert_rel_error(self, J[0][0], 10.77542099, 1e-5)
 
     def test_for_push_scatters(self):
