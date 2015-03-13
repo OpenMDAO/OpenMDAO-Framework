@@ -1348,6 +1348,7 @@ class AssemblySystem(SimpleSystem):
 
         # Copy arg to inner scope
         inner.rhs_vec.array[:] = 0.0
+        inner.sol_vec.array[:] = 0.0
 
         if mode == 'forward':
 
