@@ -442,6 +442,7 @@ class System(object):
 
         if not self.is_active():
             self.local_var_sizes = numpy.zeros((0,0), int)
+            self.noflat_var_sizes = numpy.zeros((0,0), int)
             self.input_sizes = numpy.zeros(0, int)
             return
 
@@ -456,10 +457,13 @@ class System(object):
         # create an (nproc x numvars) var size vector containing
         # local sizes across all processes in our comm
         self.local_var_sizes = numpy.zeros((size, len(self.vector_vars)), int)
+        self.noflat_var_sizes = numpy.zeros((size, len(self.noflat_vars)), int)
 
         ours = numpy.zeros((1, len(self.vector_vars)), int)
         for i, (name, var) in enumerate(self.vector_vars.items()):
             ours[0, i] = var['size']
+        for i, (name, var) in enumerate(self.noflat_vars.items()):
+            self.noflat_var_sizes[rank, i] = 1
 
         # collect local var sizes from all of the processes in our comm
         # these sizes will be the same in all processes except in cases
@@ -468,6 +472,8 @@ class System(object):
         # only have a slice of each of the component's variables.
         if MPI:
             comm.Allgather(ours[0,:], self.local_var_sizes)
+            comm.Allgather(self.noflat_var_sizes[rank,:],
+                           self.noflat_var_sizes)
 
         self.local_var_sizes[rank, :] = ours[0, :]
 
@@ -1635,6 +1641,12 @@ class CompoundSystem(System):
         # Finally, it must be an unconnected variable Just print these on the
         # lowest rank for our comp.
         else:
+
+            if not hasattr(system, 'noflat_var_sizes'):
+                print 'KEN KEN KEN'
+                print system.name, system.is_active()
+                print hasattr(system, 'vec'), system.vec['u'].keys()
+
             flatsizes = system.local_var_sizes[0]
             noflatsizes = system.noflat_var_sizes[0]
 
