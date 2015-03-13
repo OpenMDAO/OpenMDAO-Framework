@@ -1379,9 +1379,9 @@ class AssemblySystem(SimpleSystem):
         else:
 
             for name in self.list_outputs():
-                val = self.sol_vec
+                val = self.sol_vec[name]
                 _, _, inner_name = name.partition('.')
-                inner.rhs_vec[inner_name] = -val.array
+                inner.rhs_vec[inner_name] = -val
 
             # Solve inner linear system
             inner.solve_linear()
