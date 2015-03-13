@@ -282,14 +282,28 @@ class Workflow(object):
                     outputs_all_processes.append(name + '.out0')
                     if 1 or self._system.is_variable_local(path):
                         self._rec_constraints.append(con)
+                        print "in configure_recording Constraints", driver.parent.get_pathname(), name + '.out0', rank
                         outputs.append(name + '.out0')
                         #outputs.append(path + '.out0')
                     #outputs.append(path+'.out0')
 
+        print "in configure_recording _reduced_graph.successors", driver.parent.get_pathname(), rank
         self._rec_outputs = []
         for comp in self:
-            successors = driver._reduced_graph.successors(comp.name)
+            print "in configure_recording _reduced_graph.successors comp.name", driver.parent.get_pathname(), comp.name, rank
+            try:
+                successors = driver.get_reduced_graph().successors(comp.name)
+            except:
+                print "Unexpected error:", sys.exc_info()[0]
+                import traceback
+                tb = traceback.format_exc()
+                print tb
+                raise
+
+            print "in configure_recording after _reduced_graph.successors comp.name", driver.parent.get_pathname(), comp.name, rank
             for output_name, aliases in successors:
+
+                print "in configure_recording _reduced_graph.successors get_pathname", driver.parent.get_pathname(), output_name, rank
 
                 # From Bret: it does make sense to skip subdrivers like you said, except for the
                 #      case where a driver has actual outputs of its own.  So you may have to keep
@@ -416,14 +430,11 @@ class Workflow(object):
             if fnmatch(path, pattern):
                 record = True
 
-        print "_check_path path", path
+        # print "_check_path path", path
 
         # if it passes include filter, check exclude filter
         if record:
             for pattern in excludes:
-                # if path == 'SysTripanCDSurrogate.CD':
-                # #if path == 'SysCLTar.exec_count':
-                #     import pdb; pdb.set_trace()
                 if fnmatch(path, pattern):
                     record = False
 
