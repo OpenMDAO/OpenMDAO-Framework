@@ -83,7 +83,7 @@ class DistribComp(Component):
 
     def get_arg_indices(self, name):
         comm = self.mpi.comm
-        if name in ('in'):
+        if name in ('in',):
             num = self.a.size / comm.size
             start = comm.rank * num
             end = start + num
