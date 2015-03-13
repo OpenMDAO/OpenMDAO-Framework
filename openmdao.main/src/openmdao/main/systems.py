@@ -1337,6 +1337,8 @@ class AssemblySystem(SimpleSystem):
     def applyJ(self, variables):
         """ df = du - dGdp * dp or du = df and dp = -dGdp^T * df """
 
+        # If we are using scipy-gmres, we are stuck with the old method that
+        # calculates a full Jacobian for this assembly.
         if self._nest_lin_solve is False:
             super(AssemblySystem, self).applyJ(variables)
             return
@@ -1344,9 +1346,9 @@ class AssemblySystem(SimpleSystem):
         inner = self._comp._system
         fvec = self.vec['df']
         mode = self.mode
-        inner.set_options(self.mode, self._comp.driver.gradient_options)
+        inner.set_options(mode, self._comp.driver.gradient_options)
 
-        # Copy arg to inner scope
+        # Clean up any old solves
         inner.rhs_vec.array[:] = 0.0
         inner.sol_vec.array[:] = 0.0
 
@@ -1366,7 +1368,6 @@ class AssemblySystem(SimpleSystem):
 
                 _, _, inner_name = name.partition('.')
                 inner.rhs_vec[inner_name] = val
-                parent.vec['du'][name][:] += val
 
             # Solve inner linear system
             inner.solve_linear()
@@ -1403,7 +1404,7 @@ class AssemblySystem(SimpleSystem):
                 var[name] = inner.sol_vec[inner_name]
 
             for var in self.list_outputs():
-                self.vec['du'][var][:] += self.vec['df'][var][:]
+                self.vec['du'][var][:] += fvec[var][:]
 
     def set_complex_step(self, complex_step=False):
         """ Toggles complex_step plumbing for this system and all
