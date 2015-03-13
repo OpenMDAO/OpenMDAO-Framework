@@ -70,25 +70,25 @@ class DistribCompSimple(Component):
 class DistribInputComp(Component):
     """Uses 2 procs and takes input var slices"""
     def __init__(self, arr_size=11):
-        super(DistribComp, self).__init__()
+        super(DistribInputComp, self).__init__()
         self.add_trait('invec', Array(np.ones(arr_size, float), iotype='in'))
         self.add_trait('outvec', Array(np.ones(arr_size, float), iotype='out'))
 
     def execute(self):
 
-        for i,val in self.invec:
+        for i,val in enumerate(self.invec):
             self.local_outvec[i] = 2*val
 
         comm.Allgatherv([self.local_output, MPI.DOUBLE],[self.outvec, MPI.DOUBLE])
 
-    def set_local_vars(self, name):
+    def get_arg_indices(self, name):
         """ component declares the local sizes and sets initial values
         for all distributed inputs and outputs"""
 
         comm = self.mpi.comm
 
         rank = comm.rank
-
+        print "foo"
         if name == 'invec':
             base = self.invec.size//mpi_size
             leftover = self.invec.size % comm.size
@@ -132,9 +132,11 @@ class MPITests1(MPITestCase):
     def test_distrib_idx_in_full_out(self):
         size = 10
 
+        print "foobarbar"
+
         top = set_as_top(Assembly())
         top.add("C1", ABCDArrayComp(size))
-        top.add("C2", DistribComp(size))
+        top.add("C2",DistribInputComp(size))
         top.driver.workflow.add(['C1', 'C2'])
         top.connect('C1.c', 'C2.invec')
 
