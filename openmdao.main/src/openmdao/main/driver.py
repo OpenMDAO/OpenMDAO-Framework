@@ -1128,6 +1128,7 @@ def _flattened_names(name, val, names=None):
     """ Return list of names for values in `val`.
     Note that this expands arrays into an entry for each index!.
     """
+    from numpy import ndarray
     if names is None:
         names = []
     if isinstance(val, float):
