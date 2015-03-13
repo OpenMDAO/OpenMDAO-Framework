@@ -67,29 +67,44 @@ class DistribCompSimple(Component):
         return 2
 
 
-class DistribComp(Component):
+class DistribInputComp(Component):
     """Uses 2 procs and takes input var slices"""
-    def __init__(self, arr_size=10):
+    def __init__(self, arr_size=11):
         super(DistribComp, self).__init__()
         self.add_trait('invec', Array(np.ones(arr_size, float), iotype='in'))
         self.add_trait('outvec', Array(np.ones(arr_size, float), iotype='out'))
 
     def execute(self):
-        if self.mpi.comm != MPI.COMM_NULL:
-            if self.mpi.comm.rank == 0:
-                self.outvec = self.invec * 0.25
-            elif self.mpi.comm.rank == 1:
-                self.outvec = self.invec * 0.5
 
-    def get_arg_indices(self, name):
+        for i,val in self.invec:
+            self.local_outvec[i] = 2*val
+
+        comm.Allgatherv([self.local_output, MPI.DOUBLE],[self.outvec, MPI.DOUBLE])
+
+    def set_local_vars(self, name):
+        """ component declares the local sizes and sets initial values
+        for all distributed inputs and outputs"""
+
         comm = self.mpi.comm
-        if name in ('invec',):
-            num = self.a.size / comm.size
-            start = comm.rank * num
-            end = start + num
-            if comm.rank == comm.size - 1:
-                end += self.a.size % comm.size
-            return list(xrange(start, end))
+
+        rank = comm.rank
+
+        if name == 'invec':
+            base = self.invec.size//mpi_size
+            leftover = self.invec.size % comm.size
+            sizes = np.ones(comm.size, dtype="int") * base
+            sizes[:leftover]+=1 # evenly distribute the remainder across size-leftover procs, instead of giving the whole remainder to one proc
+
+            offsets = np.zeros(comm.size, dtype="int")
+            offsets[1:] = np.cumsum(sizes)[:-1]
+
+            start = offsets[rank]
+            end = start + sizes[rank]
+
+            #need to re-initialize the variable to have the correct local size
+            self.invec = np.ones(sizes[rank], dtype=float)
+            self.local_outvec = np.empty(sizes[rank], dtype=float)
+            return np.arange(start, end, dtype=np.int)
 
     def get_req_cpus(self):
         return 2
@@ -99,7 +114,7 @@ class MPITests1(MPITestCase):
     N_PROCS = 2
 
     def test_distrib_full_in_out(self):
-        size = 10
+        size = 11
 
         top = set_as_top(Assembly())
         top.add("C1", ABCDArrayComp(size))
@@ -128,7 +143,7 @@ class MPITests1(MPITestCase):
 
         top.run()
 
-        self.assertTrue(all(top.C2.outvec==np.ones(size, float)*7.5))
+        self.assertTrue(all(top.C2.outvec==np.ones(size, float)*20))
 
 
 
