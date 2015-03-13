@@ -1382,6 +1382,19 @@ class Component(Container):
         return ()
 
     @rbac(('owner', 'user'))
+    def setup_communicators(self, comm):
+        cpus = self.get_req_cpus()
+        if cpus == 1 or IAssembly.providedBy(self) or IDriver.providedBy(self):
+            self.mpi.comm = comm
+        else:
+            color = [1] * cpus
+
+            if comm.size > cpus:
+                color.extend([MPI.UNDEFINED]*(comm.size-cpus))
+
+            self.mpi.comm = comm.Split(1)
+
+    @rbac(('owner', 'user'))
     def get_full_nodeset(self):
         """Return the node in the depgraph
         belonging to this component.

@@ -433,7 +433,7 @@ class System(object):
             if name not in self.flat_vars:
                 self.noflat_vars[name] = info
 
-    def get_arg_indices(self, comm, name):
+    def get_arg_indices(self, name):
         if name in self.vector_vars:
             return petsc_linspace(0, self.scope._var_meta[name]['size'])
         else:
@@ -496,7 +496,7 @@ class System(object):
         # inputs
         self.arg_idx = OrderedDict()
         for name in _filter_flat(self.scope, self._owned_args):
-            idxs = self.get_arg_indices(comm, name)
+            idxs = self.get_arg_indices(name)
             if idxs is None:
                 continue
             self.arg_idx[name] = idxs
@@ -968,13 +968,15 @@ class SimpleSystem(System):
 
     def setup_communicators(self, comm):
         self.mpi.comm = comm
+        if self._comp:
+            self._comp.setup_communicators(comm)
 
-    def get_arg_indices(self, comm, name):
+    def get_arg_indices(self, name):
         """These indices are actually the indices in the *source*
         vector that get scattered to a particular input.
         """
         if self._comp is None or not hasattr(self._comp, 'get_arg_indices'):
-            return super(SimpleSystem, self).get_arg_indices(comm, name)
+            return super(SimpleSystem, self).get_arg_indices(name)
         else:
             # find the name of the input var corresponding to our comp
             for n in name[1]:
@@ -985,7 +987,7 @@ class SimpleSystem(System):
                                     (self._comp.name, name[1]))
 
             # get input indices for full variable
-            idxs = petsc_idxs(self._comp.get_arg_indices(comm,
+            idxs = petsc_idxs(self._comp.get_arg_indices(
                                  n.split('[', 1)[0].split('.',1)[1]))
             # if input is a subvar, we have to take a subset of the
             # input indices
