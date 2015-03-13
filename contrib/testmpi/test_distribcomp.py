@@ -83,7 +83,7 @@ class DistribComp(Component):
 
     def get_arg_indices(self, name):
         comm = self.mpi.comm
-        if name in ('in',):
+        if name in ('invec',):
             num = self.a.size / comm.size
             start = comm.rank * num
             end = start + num
@@ -98,7 +98,7 @@ class MPITests1(MPITestCase):
 
     N_PROCS = 2
 
-    def test_distrib_simple(self):
+    def test_distrib_full_in_out(self):
         size = 10
 
         top = set_as_top(Assembly())
@@ -113,6 +113,23 @@ class MPITests1(MPITestCase):
         top.run()
 
         self.assertTrue(all(top.C2.outvec==np.ones(size, float)*7.5))
+
+    def test_distrib_idx_in_full_out(self):
+        size = 10
+
+        top = set_as_top(Assembly())
+        top.add("C1", ABCDArrayComp(size))
+        top.add("C2", DistribComp(size))
+        top.driver.workflow.add(['C1', 'C2'])
+        top.connect('C1.c', 'C2.invec')
+
+        top.C1.a = np.ones(size, float) * 3.0
+        top.C1.b = np.ones(size, float) * 7.0
+
+        top.run()
+
+        self.assertTrue(all(top.C2.outvec==np.ones(size, float)*7.5))
+
 
 
 if __name__ == '__main__':
