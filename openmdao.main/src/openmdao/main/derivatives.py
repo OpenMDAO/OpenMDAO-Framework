@@ -150,7 +150,6 @@ def applyJ(system, variables):
     if nonzero is False:
         #print 'applyJ', obj.name, arg, result
         return
-    #print "ApplyJ", system.name
 
     # If storage of the local Jacobian is a problem, the user can specify the
     # 'apply_deriv' function instead of provideJ.
