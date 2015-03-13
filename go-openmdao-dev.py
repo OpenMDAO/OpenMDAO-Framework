@@ -1162,7 +1162,7 @@ def change_prefix(filename, dst_prefix):
             os.path.join("/Library/Python", sys.version[:3], "site-packages"),
             os.path.join(sys.prefix, "Extras", "lib", "python"),
             os.path.join("~", "Library", "Python", sys.version[:3], "site-packages"),
-            # Python 2.7 no-frameworks
+            # Python 2.6 no-frameworks
             os.path.join("~", ".local", "lib","python", sys.version[:3], "site-packages"),
             # System Python 2.7 on OSX Mountain Lion
             os.path.join("~", "Library", "Python", sys.version[:3], "lib", "python", "site-packages")))
@@ -2183,7 +2183,7 @@ def after_install(options, home_dir, activated=False):
     if(os.path.exists(setuptools_egg)):
         os.remove(setuptools_egg)
 
-    reqs = ['Fabric==0.9.3', 'Jinja2==2.4', 'Pyevolve==0.6', 'Pygments==1.3.1', 'SetupDocs==1.0.5', 'Sphinx==1.2.2', 'boto==2.0rc1', 'bson==0.3.3', 'cobyla==1.0.2', 'conmin==1.0.2', 'decorator==3.4.0', 'docutils==0.10', 'mock==1.0.1', 'networkx==1.9.1', 'newsumt==1.1.1', 'nose==1.3.3', 'paramiko==1.7.7.1', 'pycrypto==2.3', 'pyparsing==1.5.7', 'requests==2.2.1', 'slsqp==1.0.2', 'traits==4.3.0', 'virtualenv==1.9.1', 'zope.interface==3.6.1']
+    reqs = ['Fabric==0.9.3', 'Jinja2==2.4', 'Pyevolve==0.6', 'Pygments==1.3.1', 'SetupDocs==1.0.5', 'Sphinx==1.2.2', 'boto==2.0rc1', 'bson==0.3.3', 'cobyla==1.0.2', 'conmin==1.0.2', 'decorator==3.4.0', 'docutils==0.10', 'mock==1.0.1', 'networkx==1.9.1', 'newsumt==1.1.1', 'nose==1.3.3', 'paramiko==1.7.7.1', 'pycrypto==2.3', 'pyparsing==1.5.7', 'pytz==2014.4', 'requests==2.2.1', 'slsqp==1.0.2', 'traits==4.3.0', 'virtualenv==1.9.1', 'zope.interface==3.6.1']
 
     if options.findlinks is None:
         url = 'http://openmdao.org/dists'
@@ -2308,7 +2308,7 @@ def after_install(options, home_dir, activated=False):
                     failures.append(pkg)
         finally:
             os.chdir(startdir)
-
+        
 
         # add any additional packages specified on the command line
         for req in options.reqs:
@@ -2332,7 +2332,7 @@ def after_install(options, home_dir, activated=False):
                 print "Failed to build the docs."
         else:
             print "\nSkipping build of OpenMDAO docs.\n"
-
+        
         if is_win: # retrieve MinGW DLLs from server
             try:
                 _get_mingw_dlls(bin_dir)
@@ -2394,7 +2394,7 @@ def after_install(options, home_dir, activated=False):
             print '\nto activate your environment and start using OpenMDAO.'
 
     sys.exit(1 if failures else 0)
-
+    
 
 def convert(s):
     b = base64.b64decode(s.encode('ascii'))
@@ -3066,3 +3066,4 @@ if __name__ == '__main__':
 ## TODO:
 ## Copy python.exe.manifest
 ## Monkeypatch distutils.sysconfig
+
