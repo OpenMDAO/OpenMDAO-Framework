@@ -28,8 +28,9 @@ from openmdao.main.mpiwrap import MPI
 #from mpi4py import MPI
 
 
-def write_to_hdf5( group, name, value ):
+print_metadata_log = False
 
+def write_to_hdf5( group, name, value ):
 
     filename = group.file.filename
 
@@ -67,15 +68,9 @@ def write_to_hdf5( group, name, value ):
         print 'write_to_hdf5 None', rank, filename,  name
         #group.attrs[name] = np.array([]) # TODO really need to write None here
         pass
-    elif isinstance( value, np.float64):
-        print 'write_to_hdf5 np.float64', rank, filename, name, value
+    elif isinstance( value, (np.float64,float)):
+        print 'write_to_hdf5 np.float64 or float', rank, filename, name, value
         dset = group[name] 
-        #dset[0,] = value
-        dset[()] = value
-    elif isinstance(value,float):
-        print 'write_to_hdf5 float', rank, filename, name, value
-        dset = group[name] 
-        #dset[0,] = value
         dset[()] = value
     elif isinstance(value,int):
         print 'write_to_hdf5 int', rank, filename, name, value
@@ -97,12 +92,17 @@ def write_to_hdf5( group, name, value ):
 
 def write_groups_to_hdf5( group, name, value ):
 
+
     filename = group.file.filename
 
     if MPI:
         rank = MPI.COMM_WORLD.rank
     else:  
         rank = 0
+
+
+    if print_metadata_log:
+        print 'write_groups_to_hdf5_metadata', group.name, name, rank
 
     if isinstance(value,dict):
         print 'write_groups_to_hdf5 group dict', filename, rank,  group.name, name
@@ -135,14 +135,10 @@ def write_groups_to_hdf5( group, name, value ):
     elif value == None : # TODO Need a better way to do this. When using h5diff, we get 'Not comparable' with these values
         print 'write_groups_to_hdf5 dataset None', filename, rank,  group.name, name
         group.create_dataset(name,(0,))
-    elif isinstance( value, np.float64):
-        print 'write_groups_to_hdf5 dataset np.float64', filename, rank,  group.name, name
-        #group.create_dataset(name, (1,), dtype='f')
-        group.create_dataset(name, (), dtype='f')
-    elif isinstance(value,float):
-        print 'write_groups_to_hdf5 dataset float', filename, rank,  group.name, name
-        #group.create_dataset(name, (1,), dtype='f')
-        group.create_dataset(name, (), dtype='f')
+    elif isinstance( value, (np.float64,float)):
+        print 'write_groups_to_hdf5 dataset np.float64 or float', filename, rank,  group.name, name
+        #group.create_dataset(name, (1,), dtype=np.float64)
+        group.create_dataset(name, (), dtype=np.float64)
     elif isinstance(value,int):
         print 'write_groups_to_hdf5 dataset int', filename, rank,  group.name, name
         #group.create_dataset(name, (1,), dtype='i')
@@ -226,6 +222,9 @@ class HDF5CaseRecorder(object):
         self.hdf5_case_record_file_objects = {}
 
         self.case_recording_filenames = {}
+
+
+        print_metadata_log = False
 
         if MPI:
             pass #print 'COMM_WORLD', MPI.COMM_WORLD
@@ -315,6 +314,7 @@ class HDF5CaseRecorder(object):
 
         simulation_info_grp = self.hdf5_main_file_object.create_group("simulation_info")
         
+
         ##### Just create group structure on all processes using the merged JSON info ######
 
         write_groups_to_hdf5( simulation_info_grp, 'OpenMDAO_Version', info['OpenMDAO_Version'])
@@ -323,17 +323,24 @@ class HDF5CaseRecorder(object):
         write_groups_to_hdf5( simulation_info_grp, 'uuid', info['uuid'])
         write_groups_to_hdf5( simulation_info_grp, 'name', info['name'])
        
+
+
         constants_grp = simulation_info_grp.create_group("constants")
         for k,v in info['constants'].items():
             write_groups_to_hdf5( constants_grp, k, v )
+
 
         expressions_grp = simulation_info_grp.create_group("expressions")
         for k,v in info['expressions'].items():
            write_groups_to_hdf5( expressions_grp, k, v )
             
+
+        print_metadata_log = True
         variable_metadata_grp = simulation_info_grp.create_group("variable_metadata")
         for k,v in info['variable_metadata'].items():
             write_groups_to_hdf5( variable_metadata_grp, k, v )
+        print_metadata_log = False
+
 
         ##### Write the datasets using only the data available to this process ######
 
@@ -349,17 +356,17 @@ class HDF5CaseRecorder(object):
         for k,v in info['expressions'].items():
            write_to_hdf5( expressions_grp, k, v )
             
+        print_metadata_log = True
         for k,v in info['variable_metadata'].items():
             write_to_hdf5( variable_metadata_grp, k, v )
+        print_metadata_log = False
 
 
         ##### Just create group structure on all processes using the merged JSON info ######
         for i, info in enumerate(self.get_driver_info()):
             driver_info_name = 'driver_info_%s' % (i+1)
-            #import pdb; pdb.set_trace()
             driver_info_group = self.hdf5_main_file_object.create_group(driver_info_name)
             for k,v in info.items():
-                pass #print 'driver key', k, v
                 write_groups_to_hdf5( driver_info_group, k, v )
                 write_to_hdf5( driver_info_group, k, v ) 
 
@@ -386,103 +393,64 @@ class HDF5CaseRecorder(object):
     def record(self, driver, inputs, outputs, exc, case_uuid, parent_uuid):
         """ Dump the given run data. """
 
-        print 'In HDF5CaseRecorder.record', get_rank()
-
         hdf5_file_object = self.hdf5_case_record_file_objects[driver]
-
-
 
         info = self.get_case_info(driver, inputs, outputs, exc,
                                   case_uuid, parent_uuid)
 
-        print 'in record for driver', driver.get_pathname()
-        import pprint
-        print pprint.pprint(info)
-
-
         self._cases += 1
         iteration_case_name = 'iteration_case_%s' % self._cases
 
-        pass #print "iteration_case_name", iteration_case_name, hdf5_file_object.filename, get_rank()
-
-        integer_names = []
-
-
-        pass #print 'writing records to file from rank', driver.get_pathname(), hdf5_file_object.filename, iteration_case_name, get_rank()
+        int_names = []
+        float_names = []
 
         ##### Just create group structure on all processes using the merged JSON info ######
         self._count += 1
         iteration_case_group = hdf5_file_object.create_group(iteration_case_name)
+        data_grp = iteration_case_group.create_group( 'data' )
         for k,v in info.items():
             if k != 'data':
                 write_groups_to_hdf5( iteration_case_group, k, v ) 
             else:
-                data_grp = iteration_case_group.create_group( k )
                 for name,value in v.items():
                     if isinstance(value,int):
-                        integer_names.append(name)
+                        int_names.append(name)
+                    elif isinstance(value,( np.float64, float )):
+                        float_names.append(name)
                     else: 
-                        print 'recordmethod', name, get_rank()
                         write_groups_to_hdf5(data_grp, name, value )
-                pass #print 'record case make group', get_rank(), iteration_case_group.name, k, v
 
-        #return
+        # only add this info once per record file
+        if not "/float_names" in hdf5_file_object: 
+            hdf5_file_object.create_dataset('float_names', data=np.array( float_names ) ) 
+        if not "/int_names" in hdf5_file_object: # only add this info once per record file
+            hdf5_file_object.create_dataset('int_names', data=np.array( int_names ) ) 
 
-        if not "/integer_names" in hdf5_file_object:
-            hdf5_file_object.create_dataset('integer_names', data=np.array( integer_names ) ) 
-
-
-        print 'names_ints_to_write', driver.name, integer_names
-
-        int_arrays_dset = iteration_case_group.create_dataset('int_arrays', (len(integer_names),))
-
+        # Create the datasets for the int and float arrays
+        int_arrays_dset = data_grp.create_dataset('array_of_ints', (len(int_names),))
+        float_arrays_dset = data_grp.create_dataset('array_of_floats', (len(float_names),),dtype=np.float64)
 
         scope = driver.parent
         prefix = scope.get_pathname()
-        pass #print 'prefix', prefix, len(prefix)
 
         ##### Write the datasets using only the data available to this process ######
         for k,v in info.items():
-            pass #print 'record case set values', get_rank(), k 
             if k != 'data':
                 write_to_hdf5( iteration_case_group, k, v )
             else:
-                pass #print 'writing data'
-                pass #print 'write_to_hdf5 dict', get_rank(), k
                 data_grp = iteration_case_group[k]
                 for name,value in v.items():
 
-                    # if name.endswith( '.out0'):
-                    #     name_for_local_check = name[:-len('.out0')]
-                    # else:
-                    #     name_for_local_check = name
-                    # if prefix:
-                    #     name_for_local_check = name_for_local_check[ len(prefix) + 1 : ] 
-
-                    # if name_for_local_check == 'pseudo_3':
-                    #     import pdb; pdb.set_trace()
-                    pass #print 'is_variable_local', name, name_for_local_check
                     if self.is_variable_local( driver, prefix, name ): # TODO should cache these. 
-                    # if driver.workflow._system.is_variable_local( name_for_local_check ): # TODO should cache these. 
-                        pass #print "islocal true", name_for_local_check, get_rank(), name
-                        pass #print 'actual write to hdf5 file', name, hdf5_file_object.filename, get_rank()
                         if isinstance(value,int):
-                            idx = integer_names.index(name) # where in the index is this value?
-                            print 'writingindex', name, value, MPI.COMM_WORLD.rank
+                            idx = int_names.index(name) # where in the index is this value?
                             int_arrays_dset[idx] = value
-                            # ints_to_write[name] = value # TODO this is not completely correct when we write since processes will overwrite each other
+                        elif isinstance(value,(np.float64,float)):
+                            idx = float_names.index(name) # where in the index is this value?
+                            float_arrays_dset[idx] = value
                         else:
                             write_to_hdf5( data_grp, name, value )
-                            #hdf5_file_object.flush()
-                        pass #print 'whatisin', hdf5_file_object.filename, hdf5_file_object.keys()
-                    else:
-                        pass #print "islocal false", get_rank(), hdf5_file_object.filename, name
 
-        pass #print 'end of record', get_rank()
-
-
-        # print 'ints_to_write', ints_to_write
-        # int_arrays_dset[:] = np.array( ints_to_write.values()[:] )
 
 
     def close(self):
