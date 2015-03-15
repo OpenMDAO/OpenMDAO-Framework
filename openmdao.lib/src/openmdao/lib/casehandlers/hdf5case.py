@@ -420,11 +420,10 @@ class HDF5CaseRecorder(object):
         #return
 
         iteration_case_group.create_dataset('int_arrays_keys', data=np.array( ints_to_write.keys() ) )
-
+        # int_arrays_dset = iteration_case_group.create_dataset('int_arrays', data=np.array( ints_to_write.values()))
+        int_arrays_dset = iteration_case_group.create_dataset('int_arrays', (len(ints_to_write)))
         print 'ints_to_write.keys()', ints_to_write.keys()
         print 'ints_to_write.values()', ints_to_write.values()
-
-        int_arrays_dset = iteration_case_group.create_dataset('int_arrays', data=np.array( ints_to_write.values()))
 
 
         scope = driver.parent
@@ -478,22 +477,22 @@ class HDF5CaseRecorder(object):
         """
 
         if MPI:
-            pass #print "in close", MPI.COMM_WORLD.rank
+            print "in close", MPI.COMM_WORLD.rank
 
-        if MPI:
-            MPI.COMM_WORLD.Barrier()
+        #if MPI:
+            #MPI.COMM_WORLD.Barrier()
 
 
         for hdf5_case_record_file in self.hdf5_case_record_file_objects.values() :
-            pass #print 'whatisin at close', hdf5_case_record_file.filename, hdf5_case_record_file.keys(), get_rank()
+            print 'whatisin at close', hdf5_case_record_file.filename, hdf5_case_record_file.keys(), get_rank()
             hdf5_case_record_file.close()            
 
-        if MPI:
-            MPI.COMM_WORLD.Barrier()
+        #if MPI:
+            #MPI.COMM_WORLD.Barrier()
 
         if 1 or not MPI or get_rank() == 0 : # only rank 0 process needs to write the primary case recording file
 
-            pass #print "closing hdf5_main_file_object"
+            print "closing hdf5_main_file_object"
             sys.stdout.flush()
 
 
@@ -504,12 +503,12 @@ class HDF5CaseRecorder(object):
             for driver_path, filename in self.case_recording_filenames.items():
                 # Create an external link to the root group "/" in the driver specific iteration cases 
                 # B['External'] = h5py.ExternalLink("dset.h5", "/dset")
-                pass #print 'making links to', filename, driver_path, get_rank()
+                print 'making links to', filename, driver_path, get_rank()
                 sys.stdout.flush()
                 # if filename != 'cases__driver.hdf5':
                 #     continue
                 iteration_case_grp[driver_path] = h5py.ExternalLink(filename, "/") # root should work
-            pass #print "close hdf5_case_recorder"
+            print "close hdf5_case_recorder"
             self.hdf5_main_file_object.close()
 
 
