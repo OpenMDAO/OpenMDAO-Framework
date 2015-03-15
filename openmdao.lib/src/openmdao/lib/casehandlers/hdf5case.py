@@ -205,7 +205,7 @@ class HDF5CaseRecorder(object):
         self._uuid = None
         self._cases = None
 
-        print 'in HDF5CaseRecorder.__int__', get_rank()
+        print 'in HDF5CaseRecorder.__init__', get_rank()
 
         # not used yet but for getting values of variables
         #     from subcases

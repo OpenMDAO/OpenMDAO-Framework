@@ -3,7 +3,7 @@ import time
 
 import numpy as np
 
-from openmdao.test.mpiunittest import MPITestCase, collective_assert_rel_error
+from openmdao.test.mpiunittest import MPITestCase
 from openmdao.util.testutil import assert_rel_error
 from openmdao.main.test.simpledriver import SimpleDriver
 
@@ -64,9 +64,9 @@ top.driver.add_constraint('C2.y2 = C1.y2')
 expected = { 'C1.y1': 3.1598617768014536, 'C2.y2': 3.7551999159927316 }
 
 if MPI:
-	top.recorders = [HDF5CaseRecorder('SellarMDF_parallel.hdf5')]
+    top.recorders = [HDF5CaseRecorder('SellarMDF_parallel.hdf5')]
 else:
-	top.recorders = [HDF5CaseRecorder('SellarMDF_serial.hdf5')]
+    top.recorders = [HDF5CaseRecorder('SellarMDF_serial.hdf5')]
 
 top.run()
 

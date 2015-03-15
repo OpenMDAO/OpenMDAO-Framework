@@ -526,11 +526,22 @@ class Component(Container):
                 tracing.TRACER.debug(self.get_itername())
                 #tracing.TRACER.debug(self.get_itername() + '  ' + self.name)
 
+            from openmdao.main.mpiwrap import MPI
+
+            if MPI:
+                rank = MPI.COMM_WORLD.rank
+            else:  
+                rank = 0
+            print 'before execute',self.get_itername() , rank
             self.execute()
+            print 'before _post_execute',self.get_itername() , rank
             self._post_execute()
+            print 'before _post_run',self.get_itername() , rank
             self._post_run()
+            print 'after _post_run',self.get_itername(), rank
         except Exception:
             info = sys.exc_info()
+            print 'Exception', info
             self._set_exec_state('INVALID')
             raise info[0], info[1], info[2]
         finally:
