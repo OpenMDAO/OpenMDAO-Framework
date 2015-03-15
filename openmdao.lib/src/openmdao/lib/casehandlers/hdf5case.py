@@ -373,6 +373,15 @@ class HDF5CaseRecorder(object):
 
         pass #print 'in record_constants at end', get_rank()
 
+    def is_variable_local( self, driver, prefix, name ):
+        if name.endswith( '.out0'):
+            name_for_local_check = name[:-len('.out0')]
+        else:
+            name_for_local_check = name
+        if prefix:
+            name_for_local_check = name_for_local_check[ len(prefix) + 1 : ] 
+
+        return driver.workflow._system.is_variable_local( name_for_local_check )
 
     def record(self, driver, inputs, outputs, exc, case_uuid, parent_uuid):
         """ Dump the given run data. """
@@ -396,7 +405,7 @@ class HDF5CaseRecorder(object):
 
         pass #print "iteration_case_name", iteration_case_name, hdf5_file_object.filename, get_rank()
 
-        ints_to_write = {}
+        integer_names = []
 
 
         pass #print 'writing records to file from rank', driver.get_pathname(), hdf5_file_object.filename, iteration_case_name, get_rank()
@@ -411,7 +420,7 @@ class HDF5CaseRecorder(object):
                 data_grp = iteration_case_group.create_group( k )
                 for name,value in v.items():
                     if isinstance(value,int):
-                        ints_to_write[name] = 0
+                        integer_names.append(name)
                     else: 
                         print 'recordmethod', name, get_rank()
                         write_groups_to_hdf5(data_grp, name, value )
@@ -419,11 +428,13 @@ class HDF5CaseRecorder(object):
 
         #return
 
-        iteration_case_group.create_dataset('int_arrays_keys', data=np.array( ints_to_write.keys() ) )
-        # int_arrays_dset = iteration_case_group.create_dataset('int_arrays', data=np.array( ints_to_write.values()))
-        int_arrays_dset = iteration_case_group.create_dataset('int_arrays', (len(ints_to_write)))
-        print 'ints_to_write.keys()', ints_to_write.keys()
-        print 'ints_to_write.values()', ints_to_write.values()
+        if not "/integer_names" in hdf5_file_object:
+            hdf5_file_object.create_dataset('integer_names', data=np.array( integer_names ) ) 
+
+
+        print 'names_ints_to_write', driver.name, integer_names
+
+        int_arrays_dset = iteration_case_group.create_dataset('int_arrays', (len(integer_names),))
 
 
         scope = driver.parent
@@ -441,21 +452,25 @@ class HDF5CaseRecorder(object):
                 data_grp = iteration_case_group[k]
                 for name,value in v.items():
 
-                    if name.endswith( '.out0'):
-                        name_for_local_check = name[:-len('.out0')]
-                    else:
-                        name_for_local_check = name
-                    if prefix:
-                        name_for_local_check = name_for_local_check[ len(prefix) + 1 : ] 
+                    # if name.endswith( '.out0'):
+                    #     name_for_local_check = name[:-len('.out0')]
+                    # else:
+                    #     name_for_local_check = name
+                    # if prefix:
+                    #     name_for_local_check = name_for_local_check[ len(prefix) + 1 : ] 
 
                     # if name_for_local_check == 'pseudo_3':
                     #     import pdb; pdb.set_trace()
                     pass #print 'is_variable_local', name, name_for_local_check
-                    if driver.workflow._system.is_variable_local( name_for_local_check ): # TODO should cache these. No need to call for each record
+                    if self.is_variable_local( driver, prefix, name ): # TODO should cache these. 
+                    # if driver.workflow._system.is_variable_local( name_for_local_check ): # TODO should cache these. 
                         pass #print "islocal true", name_for_local_check, get_rank(), name
                         pass #print 'actual write to hdf5 file', name, hdf5_file_object.filename, get_rank()
                         if isinstance(value,int):
-                            ints_to_write[name] = value # TODO this is not completely correct when we write since processes will overwrite each other
+                            idx = integer_names.index(name) # where in the index is this value?
+                            print 'writingindex', name, value, MPI.COMM_WORLD.rank
+                            int_arrays_dset[idx] = value
+                            # ints_to_write[name] = value # TODO this is not completely correct when we write since processes will overwrite each other
                         else:
                             write_to_hdf5( data_grp, name, value )
                             #hdf5_file_object.flush()
@@ -466,8 +481,8 @@ class HDF5CaseRecorder(object):
         pass #print 'end of record', get_rank()
 
 
-        print 'ints_to_write', ints_to_write
-        int_arrays_dset[:] = np.array( ints_to_write.values()[:] )
+        # print 'ints_to_write', ints_to_write
+        # int_arrays_dset[:] = np.array( ints_to_write.values()[:] )
 
 
     def close(self):
@@ -477,22 +492,22 @@ class HDF5CaseRecorder(object):
         """
 
         if MPI:
-            print "in close", MPI.COMM_WORLD.rank
+            pass #print "in close", MPI.COMM_WORLD.rank
 
-        #if MPI:
-            #MPI.COMM_WORLD.Barrier()
+        if MPI:
+            MPI.COMM_WORLD.Barrier()
 
 
         for hdf5_case_record_file in self.hdf5_case_record_file_objects.values() :
-            print 'whatisin at close', hdf5_case_record_file.filename, hdf5_case_record_file.keys(), get_rank()
+            pass #print 'whatisin at close', hdf5_case_record_file.filename, hdf5_case_record_file.keys(), get_rank()
             hdf5_case_record_file.close()            
 
-        #if MPI:
-            #MPI.COMM_WORLD.Barrier()
+        if MPI:
+            MPI.COMM_WORLD.Barrier()
 
         if 1 or not MPI or get_rank() == 0 : # only rank 0 process needs to write the primary case recording file
 
-            print "closing hdf5_main_file_object"
+            pass #print "closing hdf5_main_file_object"
             sys.stdout.flush()
 
 
@@ -503,12 +518,12 @@ class HDF5CaseRecorder(object):
             for driver_path, filename in self.case_recording_filenames.items():
                 # Create an external link to the root group "/" in the driver specific iteration cases 
                 # B['External'] = h5py.ExternalLink("dset.h5", "/dset")
-                print 'making links to', filename, driver_path, get_rank()
+                pass #print 'making links to', filename, driver_path, get_rank()
                 sys.stdout.flush()
                 # if filename != 'cases__driver.hdf5':
                 #     continue
                 iteration_case_grp[driver_path] = h5py.ExternalLink(filename, "/") # root should work
-            print "close hdf5_case_recorder"
+            pass #print "close hdf5_case_recorder"
             self.hdf5_main_file_object.close()
 
 
