@@ -348,14 +348,26 @@ class InputVecWrapper(VecWrapperBase):
         name2collapsed = scope.name2collapsed
         flat_ins = _filter_flat(scope, system._owned_args)
         start, end = 0, 0
-        arg_idx = system.arg_idx
 
         #print "%s: %s: %s" % (system.name, type(system), flat_ins)
+        dests = set()
         for sub in system.simple_subsystems():
             #print "SUB %s: %s  _in_nodes = %s" % (sub.name, type(sub),sub._in_nodes)
             for name in [n for n in system.vector_vars if n in sub._in_nodes]:
                 if name in flat_ins and name not in self._info:
-                    sz = len(arg_idx[name])
+                    skip = False
+                    for v in name[1]:
+                        if v in dests or v.split('[')[0] in dests:
+                            skip = True
+                            break
+                    #if skip:
+                    #    continue
+                    #dests.update(v.split('[')[0] for v in name[1])
+                    #dests.update(name[1])
+                    arg_idx = sub.get_arg_indices(name)
+                    if arg_idx is None:
+                        continue
+                    sz = len(arg_idx) #arg_idx[name])
                     end += sz
                     self._info[name] = ViewInfo(self.array[start:end], start,
                                                 slice(None), end-start, False)
@@ -672,3 +684,8 @@ def _filter_ignored(scope, lst):
 
 def _filter_flat(scope, lst):
     return [n for n in lst if not scope._var_meta[n].get('noflat')]
+
+def dedup(lst):
+    """Remove duplicates from the list while maintaining original order"""
+    seen = set()
+    return [x for x in lst if x not in seen and not seen.add(x)]

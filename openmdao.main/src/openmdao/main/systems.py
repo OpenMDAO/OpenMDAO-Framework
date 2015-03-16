@@ -17,7 +17,8 @@ from openmdao.main.interfaces import IDriver, IAssembly, IImplicitComponent, \
                                      ISolver, IPseudoComp, IComponent, ISystem
 from openmdao.main.vecwrapper import VecWrapper, InputVecWrapper, DataTransfer, \
                                      idx_merge, petsc_linspace, _filter, _filter_subs, \
-                                     _filter_flat, _filter_ignored, idx_arr_type
+                                     _filter_flat, _filter_ignored, idx_arr_type, \
+                                     petsc_idxs, dedup
 from openmdao.main.depgraph import break_cycles, get_node_boundary, gsort, \
                                    collapse_nodes, simple_node_iter
 from openmdao.main.derivatives import applyJ, applyJT
@@ -433,13 +434,15 @@ class System(object):
             if name not in self.flat_vars:
                 self.noflat_vars[name] = info
 
-    def get_arg_indices(self, name):
+    def get_src_indices(self, name):
+        """Return the index array corresponding to the given source name."""
         if name in self.vector_vars:
             return petsc_linspace(0, self.scope._var_meta[name]['size'])
-        else:
-            base = name[0].split('[', 1)[0]
-            if base != name[0]:
-                return self.scope._var_meta[name].get('flat_idx')
+        elif '[' in name[0]:
+            return self.scope._var_meta[name].get('flat_idx')
+
+    def get_arg_indices(self, name):
+        return self.get_src_indices(name)
 
     def setup_sizes(self):
         """Given a dict of variables, set the sizes for
@@ -485,21 +488,22 @@ class System(object):
 
         insize = numpy.zeros(1, int)
         for arg in _filter_flat(self.scope, self._owned_args):
-            insize[0] += varmeta[arg]['size']
+            #insize[0] += varmeta[arg]['size']
+            idx = self.get_arg_indices(arg)
+            assert(idx is not None)
+            insize[0] += len(idx)
 
         if MPI:
             comm.Allgather(insize[0], self.input_sizes)
 
         self.input_sizes[rank] = insize[0]
 
-        # create an arg_idx dict to keep track of indices of
-        # inputs
-        self.arg_idx = OrderedDict()
-        for name in _filter_flat(self.scope, self._owned_args):
-            idxs = self.get_arg_indices(name)
-            if idxs is None:
-                continue
-            self.arg_idx[name] = idxs
+        # # create an arg_idx dict to keep track of indices of
+        # # inputs
+        # self.arg_idx = OrderedDict()
+        # for name in self.flat_vars.keys(): #_filter_flat(self.scope, self._owned_args):
+        #     for n in name[1]:
+        #         self.arg_idx[n] = self.get_arg_indices(n)
 
     def setup_vectors(self, arrays=None, state_resid_map=None):
         """Creates vector wrapper objects to manage local and
@@ -975,27 +979,40 @@ class SimpleSystem(System):
         """These indices are actually the indices in the *source*
         vector that get scattered to a particular input.
         """
-        if self._comp is None or not hasattr(self._comp, 'get_arg_indices'):
+        me = self.name.strip('@')
+        for n in name[1]:
+            destbase = n.split('[')[0]
+            if n.startswith(me+'.') or destbase == me:
+                break
+        else:
+            return None
+            # raise RuntimeError("Component %s doesn't contain any of %s" %
+            #                       (self._comp.name, name[1]))
+
+        if self._comp is None:
+            if n == me:
+                return petsc_linspace(0, self.scope._var_meta[name]['size'])
             return super(SimpleSystem, self).get_arg_indices(name)
         else:
             # find the name of the input var corresponding to our comp
-            for n in name[1]:
-                if n.startswith(self._comp.name+'.'):
-                    break
-            else:
-                raise RuntimeError("Couldn't find a variable belonging to %s in %s" %
-                                    (self._comp.name, name[1]))
 
-            # get input indices for full variable
-            idxs = petsc_idxs(self._comp.get_arg_indices(
-                                 n.split('[', 1)[0].split('.',1)[1]))
-            # if input is a subvar, we have to take a subset of the
-            # input indices
-            if '[' in n:
-                info = self.scope._get_var_info(n)
-                return numpy.array([i for i in info['flat_idx']
-                                  if i in idxs], dtype=idx_arr_type)
-            return idxs
+            if hasattr(self._comp, 'get_arg_indices'):
+                # get input indices for full variable
+                full_idxs = petsc_idxs(self._comp.get_arg_indices(
+                                     n.split('[', 1)[0].split('.',1)[1]))
+                # if input is a subvar, we have to take a subset of the
+                # input indices
+                if '[' in n:
+                    src_idxs = self.get_src_indices(name)
+                    info = self.scope._get_var_info(n)
+                    sub_idxs = info['flat_idx']
+                    assert(len(src_idxs) == len(sub_idxs))
+                    idxs = numpy.array([i for i,j in zip(src_idxs, sub_idxs)
+                                           if j in full_idxs], dtype=idx_arr_type)
+                return idxs
+            else:
+                return petsc_linspace(0, self.scope._var_meta[name]['size'])
+                #return super(SimpleSystem, self).get_arg_indices(name)
 
     def _create_var_dicts(self, resid_state_map):
         varmeta = self.scope._var_meta
@@ -1408,7 +1425,15 @@ class CompoundSystem(System):
         for s in self.local_subsystems():
             s.pre_run()
 
-    def _get_node_scatter_idxs(self, node, noflats, dest_start, destsys):
+    def get_arg_indices(self, name):
+        all_idxs = []
+        for s in self.simple_subsystems():
+            idxs = s.get_arg_indices(name)
+            if idxs is not None:
+                all_idxs.extend(idxs)
+        return petsc_idxs(dedup(all_idxs))
+
+    def _get_scatter_idxs(self, node, noflats, arg_idxs, dest_start, destsys):
         varkeys = self.vector_vars.keys()
 
         if node in noflats:
@@ -1421,10 +1446,10 @@ class CompoundSystem(System):
             sizes = self.local_var_sizes
             isrc = varkeys.index(node)
             offset = numpy.sum(sizes[:, :isrc])
-            src_idxs = offset + self.arg_idx[node]
+            src_idxs = offset + arg_idxs
 
             dest_idxs = dest_start + self.vec['p']._info[node].start + \
-                        petsc_linspace(0, len(self.arg_idx[node]))
+                        petsc_linspace(0, len(arg_idxs))
 
             if sizes[self.mpi.rank, isrc]:
                 src_idxs += numpy.sum(sizes[:self.mpi.rank, isrc])
@@ -1438,7 +1463,8 @@ class CompoundSystem(System):
                         # src is duplicated in rank i, so add it
                         # to the reverse scatter
                         if sizes[i, isrc]:
-                            sidxs.append(offset + numpy.sum(sizes[:i, isrc]) + self.arg_idx[node])
+                            sidxs.append(offset + numpy.sum(sizes[:i, isrc]) +
+                                         arg_idxs)
                             didxs.append(dest_idxs)
 
                 src_idxs = numpy.concatenate(sidxs)
@@ -1505,7 +1531,10 @@ class CompoundSystem(System):
                 for node in self.variables:
                     if node not in sub._in_nodes or node in scatter_conns:
                         continue
-                    src_idxs, dest_idxs, nflat = self._get_node_scatter_idxs(node, noflats, dest_start, destsys=subsystem)
+                    arg_idxs = sub.get_arg_indices(node)
+                    src_idxs, dest_idxs, nflat = self._get_scatter_idxs(node, noflats,
+                                                                        arg_idxs, dest_start,
+                                                                        destsys=subsystem)
                     if (src_idxs is None) and (dest_idxs is None) and (nflat is None):
                         continue
 
@@ -1977,6 +2006,12 @@ class OpaqueSystem(SimpleSystem):
             inner_u = self._inner_system.vec['u']
             inner_u.set_from_scope(self.scope)
 
+    def get_arg_indices(self, name):
+        """These indices are actually the indices in the *source*
+        vector that get scattered to a particular input.
+        """
+        return self._inner_system.get_arg_indices(name)
+
     def setup_scatters(self):
         self._inner_system.setup_scatters()
 
@@ -2113,6 +2148,15 @@ class DriverSystem(SimpleSystem):
             # TODO: make this check smarter to avoid doing the prescatter
             #       unless we really have to.
             self._comp.workflow._need_prescatter = True
+
+    def get_arg_indices(self, name):
+        """These indices are actually the indices in the *source*
+        vector that get scattered to a particular input.
+        """
+        idx = super(DriverSystem, self).get_arg_indices(name)
+        if idx is None:
+            idx = self._comp.workflow._system.get_arg_indices(name)
+        return idx
 
     def setup_scatters(self):
         self._comp.setup_scatters()

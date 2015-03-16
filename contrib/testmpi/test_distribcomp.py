@@ -90,7 +90,7 @@ class DistribInputComp(Component):
         rank = comm.rank
         print "foo"
         if name == 'invec':
-            base = self.invec.size//mpi_size
+            base = self.invec.size / comm.size
             leftover = self.invec.size % comm.size
             sizes = np.ones(comm.size, dtype="int") * base
             sizes[:leftover]+=1 # evenly distribute the remainder across size-leftover procs, instead of giving the whole remainder to one proc
@@ -130,7 +130,7 @@ class MPITests1(MPITestCase):
         self.assertTrue(all(top.C2.outvec==np.ones(size, float)*7.5))
 
     def test_distrib_idx_in_full_out(self):
-        size = 10
+        size = 11
 
         print "foobarbar"
 
