@@ -28,7 +28,7 @@ from openmdao.main.mpiwrap import MPI
 #from mpi4py import MPI
 
 
-print_metadata_log = False
+# print_metadata_log = False
 
 def write_to_hdf5( group, name, value ):
 
@@ -101,8 +101,8 @@ def write_groups_to_hdf5( group, name, value ):
         rank = 0
 
 
-    if print_metadata_log:
-        print 'write_groups_to_hdf5_metadata', group.name, name, rank
+    # if print_metadata_log:
+    #     print 'write_groups_to_hdf5_metadata', group.name, name, rank
 
     if isinstance(value,dict):
         print 'write_groups_to_hdf5 group dict', filename, rank,  group.name, name
@@ -335,11 +335,11 @@ class HDF5CaseRecorder(object):
            write_groups_to_hdf5( expressions_grp, k, v )
             
 
-        print_metadata_log = True
+        # print_metadata_log = True
         variable_metadata_grp = simulation_info_grp.create_group("variable_metadata")
         for k,v in info['variable_metadata'].items():
             write_groups_to_hdf5( variable_metadata_grp, k, v )
-        print_metadata_log = False
+        # print_metadata_log = False
 
 
         ##### Write the datasets using only the data available to this process ######
@@ -356,10 +356,10 @@ class HDF5CaseRecorder(object):
         for k,v in info['expressions'].items():
            write_to_hdf5( expressions_grp, k, v )
             
-        print_metadata_log = True
+        # print_metadata_log = True
         for k,v in info['variable_metadata'].items():
             write_to_hdf5( variable_metadata_grp, k, v )
-        print_metadata_log = False
+        # print_metadata_log = False
 
 
         ##### Just create group structure on all processes using the merged JSON info ######
@@ -434,13 +434,12 @@ class HDF5CaseRecorder(object):
         prefix = scope.get_pathname()
 
         ##### Write the datasets using only the data available to this process ######
+        data_grp = iteration_case_group['data']
         for k,v in info.items():
             if k != 'data':
                 write_to_hdf5( iteration_case_group, k, v )
             else:
-                data_grp = iteration_case_group[k]
                 for name,value in v.items():
-
                     if self.is_variable_local( driver, prefix, name ): # TODO should cache these. 
                         if isinstance(value,int):
                             idx = int_names.index(name) # where in the index is this value?
