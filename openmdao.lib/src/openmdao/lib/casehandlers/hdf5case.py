@@ -30,6 +30,10 @@ from openmdao.main.mpiwrap import MPI
 
 # print_metadata_log = False
 
+str_dtype = 'S30'
+
+
+
 def write_to_hdf5( group, name, value ):
 
     filename = group.file.filename
@@ -128,7 +132,7 @@ def write_groups_to_hdf5( group, name, value ):
                 print 'write_groups_to_hdf5 dataset strlist', filename, rank,  group.name, name
                 # dt = h5py.special_dtype(vlen=bytes)
                 # group.create_dataset(name, (len(value),), dtype=dt)
-                group.create_dataset(name, (len(value),1),'S50' ) # TODO use variable length strings
+                group.create_dataset(name, (len(value),1),str_dtype ) # TODO use variable length strings
         else:
             print 'write_groups_to_hdf5 dataset unknownlist', filename, rank,  group.name, name
             group.create_dataset(name,(0,)) # TODO How do we handle empty lists? Do not know type
@@ -142,10 +146,10 @@ def write_groups_to_hdf5( group, name, value ):
     elif isinstance(value,int):
         print 'write_groups_to_hdf5 dataset int', filename, rank,  group.name, name
         #group.create_dataset(name, (1,), dtype='i')
-        group.create_dataset(name, (), dtype='i')
+        group.create_dataset(name, (), dtype=np.int64)
     elif isinstance(value,str):
         print 'write_groups_to_hdf5 dataset string', filename, rank,  group.name, name
-        dset = group.create_dataset(name, (1,), dtype="S50")
+        dset = group.create_dataset(name, (1,), dtype=str_dtype)
         # dt = h5py.special_dtype(vlen=bytes)
         # #dset = group.create_dataset(name, (1,), dtype=dt)
         # dset = group.create_dataset(name, (), dtype=dt)
@@ -403,13 +407,17 @@ class HDF5CaseRecorder(object):
 
         int_names = []
         float_names = []
+        str_names = []
+
+        
+
 
         ##### Just create group structure on all processes using the merged JSON info ######
         self._count += 1
         iteration_case_group = hdf5_file_object.create_group(iteration_case_name)
         data_grp = iteration_case_group.create_group( 'data' )
         for k,v in info.items():
-            if k != 'data':
+            if k != 'data': # record metadata
                 write_groups_to_hdf5( iteration_case_group, k, v ) 
             else:
                 for name,value in v.items():
@@ -417,6 +425,8 @@ class HDF5CaseRecorder(object):
                         int_names.append(name)
                     elif isinstance(value,( np.float64, float )):
                         float_names.append(name)
+                    elif isinstance(value, str):
+                        str_names.append(name)
                     else: 
                         write_groups_to_hdf5(data_grp, name, value )
 
@@ -425,10 +435,13 @@ class HDF5CaseRecorder(object):
             hdf5_file_object.create_dataset('float_names', data=np.array( float_names ) ) 
         if not "/int_names" in hdf5_file_object: # only add this info once per record file
             hdf5_file_object.create_dataset('int_names', data=np.array( int_names ) ) 
+        if not "/str_names" in hdf5_file_object: # only add this info once per record file
+            hdf5_file_object.create_dataset('str_names', data=np.array( str_names ) ) 
 
         # Create the datasets for the int and float arrays
-        int_arrays_dset = data_grp.create_dataset('array_of_ints', (len(int_names),))
+        int_arrays_dset = data_grp.create_dataset('array_of_ints', (len(int_names),),dtype=np.int64)
         float_arrays_dset = data_grp.create_dataset('array_of_floats', (len(float_names),),dtype=np.float64)
+        str_arrays_dset = data_grp.create_dataset('array_of_strs', (len(str_names),),str_dtype )
 
         scope = driver.parent
         prefix = scope.get_pathname()
@@ -447,6 +460,9 @@ class HDF5CaseRecorder(object):
                         elif isinstance(value,(np.float64,float)):
                             idx = float_names.index(name) # where in the index is this value?
                             float_arrays_dset[idx] = value
+                        elif isinstance(value,str):
+                            idx = str_names.index(name) # where in the index is this value?
+                            str_arrays_dset[idx] = value
                         else:
                             write_to_hdf5( data_grp, name, value )
 
