@@ -77,6 +77,7 @@ class DistribInputComp(Component):
     """Uses 2 procs and takes input var slices"""
     def __init__(self, arr_size=11):
         super(DistribInputComp, self).__init__()
+        self.arr_size = arr_size
         self.add_trait('invec', Array(np.ones(arr_size, float), iotype='in'))
         self.add_trait('outvec', Array(np.ones(arr_size, float), iotype='out'))
 
@@ -88,7 +89,8 @@ class DistribInputComp(Component):
             self.local_outvec[i] = 2*val
 
         #self.mpi.comm.Allgatherv([self.local_outvec, MPI.DOUBLE],[self.outvec, MPI.DOUBLE])
-        #outvecs = self.mpi.comm.allgather(self.local_outvec)
+        outvecs = self.mpi.comm.allgather(self.local_outvec)
+        print outvecs
 
     def get_arg_indices(self, name):
         """ component declares the local sizes and sets initial values
@@ -98,8 +100,8 @@ class DistribInputComp(Component):
 
         rank = comm.rank
         if name == 'invec':
-            base = self.invec.size / comm.size
-            leftover = self.invec.size % comm.size
+            base = self.arr_size / comm.size
+            leftover = self.arr_size % comm.size
             sizes = np.ones(comm.size, dtype="int") * base
             sizes[:leftover]+=1 # evenly distribute the remainder across size-leftover procs, instead of giving the whole remainder to one proc
 
@@ -170,7 +172,12 @@ if __name__ == '__main__':
     top.C1.a = np.ones(size, float) * 3.0
     top.C1.b = np.ones(size, float) * 7.0
 
+    print "%d ready to run" % MPI.COMM_WORLD.rank; sys.stdout.flush()
     top.run()
+    print "%d done" % MPI.COMM_WORLD.rank; sys.stdout.flush()
+
+    # from openmdao.util.dotgraph import plot_graph
+    # plot_graph(top._reduced_graph, "%s.pdf" % str(MPI.COMM_WORLD.rank))
 
     #assert(all(top.C2.outvec==np.ones(size, float)*20))
     print top.C2.outvec

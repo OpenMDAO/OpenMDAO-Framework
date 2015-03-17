@@ -77,7 +77,6 @@ class PETSc(object):
         raise AttributeError(name)
 
 def create_petsc_vec(comm, arr):
-    #print "create petsc: %s:  (%s)" % (arr, comm==MPI.COMM_NULL or comm==None);sys.stdout.flush()
     if under_mpirun() or PETSc.needs_ksp:
         if PETSc.installed and (MPI is None or comm != MPI.COMM_NULL):
             return PETSc.Vec().createWithArray(arr, comm=comm)

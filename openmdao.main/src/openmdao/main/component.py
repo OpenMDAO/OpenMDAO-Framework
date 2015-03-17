@@ -1383,15 +1383,7 @@ class Component(Container):
 
     @rbac(('owner', 'user'))
     def setup_communicators(self, comm):
-        cpus = self.get_req_cpus()
-        if cpus == 1 or IAssembly.providedBy(self) or IDriver.providedBy(self):
-            self.mpi.comm = comm
-        else:
-            color = [0]* cpus
-            if comm.size > cpus:
-                color.extend([MPI.UNDEFINED]*(comm.size-cpus))
-
-            self.mpi.comm = comm.Split(color[comm.rank])
+        self.mpi.comm = comm
 
     @rbac(('owner', 'user'))
     def get_full_nodeset(self):

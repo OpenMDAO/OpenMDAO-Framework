@@ -971,9 +971,20 @@ class SimpleSystem(System):
         yield self
 
     def setup_communicators(self, comm):
-        self.mpi.comm = comm
         if self._comp:
+            cpus = self._comp.get_req_cpus()
+            if cpus == 1 or IAssembly.providedBy(self._comp) or IDriver.providedBy(self._comp):
+                pass
+            else:
+                color = [0] * cpus
+                if comm.size > cpus:
+                    color.extend([MPI.UNDEFINED]*(comm.size-cpus))
+
+                comm = comm.Split(color[comm.rank])
+
             self._comp.setup_communicators(comm)
+
+        self.mpi.comm = comm
 
     def get_arg_indices(self, name):
         """These indices are actually the indices in the *source*
@@ -1317,10 +1328,6 @@ class AssemblySystem(SimpleSystem):
         super(AssemblySystem, self).__init__(scope, graph, name)
         self._provideJ_bounds = None
 
-    def setup_communicators(self, comm):
-        super(AssemblySystem, self).setup_communicators(comm)
-        self._comp.setup_communicators(comm)
-
     def setup_variables(self, resid_state_map=None):
         super(AssemblySystem, self).setup_variables(resid_state_map)
         self._comp.setup_variables()
@@ -1543,7 +1550,7 @@ class CompoundSystem(System):
                     src_idxs, dest_idxs, nflat = self._get_scatter_idxs(node, noflats,
                                                                         arg_idxs, dest_start,
                                                                         destsys=subsystem)
-                    if (src_idxs is None) and (dest_idxs is None) and (nflat is None):
+                    if (arg_idxs is None) and (src_idxs is None) and (dest_idxs is None) and (nflat is None):
                         continue
 
                     if nflat:
@@ -1551,6 +1558,11 @@ class CompoundSystem(System):
                             continue
                         noflat_conns.add(node)
                     else:
+                        if src_idxs is None:
+                            src_idxs = petsc_linspace(0, 0)
+                        if dest_idxs is None:
+                            dest_idxs = petsc_linspace(0, 0)
+
                         src_partial.append(src_idxs)
                         dest_partial.append(dest_idxs)
 
@@ -2133,10 +2145,6 @@ class DriverSystem(SimpleSystem):
         for s in self.local_subsystems():
             s.pre_run()
 
-    def setup_communicators(self, comm):
-        super(DriverSystem, self).setup_communicators(comm)
-        self._comp.setup_communicators(self.mpi.comm)
-
     def setup_variables(self, resid_state_map=None):
         super(DriverSystem, self).setup_variables(resid_state_map)
         # calculate relevant vars for GMRES mult
@@ -2497,6 +2505,9 @@ def get_comm_if_active(obj, comm):
         return comm
 
     req = obj.get_req_cpus()
+    if req == comm.size:
+        return comm
+
     if comm.rank+1 > req:
         color = MPI.UNDEFINED
     else:
