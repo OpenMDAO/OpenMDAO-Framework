@@ -25,6 +25,8 @@ class ABCDArrayComp(Component):
 
     def __init__(self, arr_size=10):
         super(ABCDArrayComp, self).__init__()
+        self.mpi.requested_cpus = 2
+
         self.add_trait('a', Array(np.ones(arr_size, float), iotype='in'))
         self.add_trait('b', Array(np.ones(arr_size, float), iotype='in'))
         self.add_trait('c', Array(np.ones(arr_size, float), iotype='out'))
@@ -46,6 +48,8 @@ class DistribCompSimple(Component):
     """Uses 2 procs but takes full input vars"""
     def __init__(self, arr_size=10):
         super(DistribCompSimple, self).__init__()
+        self.mpi.requested_cpus = 2
+
         self.add_trait('invec', Array(np.ones(arr_size, float), iotype='in'))
         self.add_trait('outvec', Array(np.ones(arr_size, float), iotype='out'))
 
@@ -79,7 +83,8 @@ class DistribInputComp(Component):
         for i,val in enumerate(self.invec):
             self.local_outvec[i] = 2*val
 
-        comm.Allgatherv([self.local_output, MPI.DOUBLE],[self.outvec, MPI.DOUBLE])
+        #self.mpi.comm.Allgatherv([self.local_outvec, MPI.DOUBLE],[self.outvec, MPI.DOUBLE])
+        outvecs = self.mpi.comm.allgather(self.local_outvec)
 
     def get_arg_indices(self, name):
         """ component declares the local sizes and sets initial values
@@ -149,5 +154,18 @@ class MPITests1(MPITestCase):
 
 
 if __name__ == '__main__':
-    from openmdao.test.mpiunittest import mpirun_tests
-    mpirun_tests()
+    # from openmdao.test.mpiunittest import mpirun_tests
+    # mpirun_tests()
+    size = 11
+    top = set_as_top(Assembly())
+    top.add("C1", ABCDArrayComp(size))
+    top.add("C2",DistribInputComp(size))
+    top.driver.workflow.add(['C1', 'C2'])
+    top.connect('C1.c', 'C2.invec')
+
+    top.C1.a = np.ones(size, float) * 3.0
+    top.C1.b = np.ones(size, float) * 7.0
+
+    top.run()
+
+    self.assertTrue(all(top.C2.outvec==np.ones(size, float)*20))
