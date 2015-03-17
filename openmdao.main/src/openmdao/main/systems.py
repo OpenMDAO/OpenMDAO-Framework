@@ -1007,9 +1007,9 @@ class SimpleSystem(System):
                     info = self.scope._get_var_info(n)
                     sub_idxs = info['flat_idx']
                     assert(len(src_idxs) == len(sub_idxs))
-                    idxs = numpy.array([i for i,j in zip(src_idxs, sub_idxs)
+                    return numpy.array([i for i,j in zip(src_idxs, sub_idxs)
                                            if j in full_idxs], dtype=idx_arr_type)
-                return idxs
+                return full_idxs
             else:
                 return petsc_linspace(0, self.scope._var_meta[name]['size'])
                 #return super(SimpleSystem, self).get_arg_indices(name)
@@ -1188,6 +1188,14 @@ class VarSystem(SimpleSystem):
 
     def linearize(self):
         pass
+
+    def get_arg_indices(self, name):
+        return None
+
+
+class OutVarSystem(VarSystem):
+    def get_arg_indices(self, name):
+        return SimpleSystem.get_arg_indices(self, name)
 
 
 class ParamSystem(VarSystem):
@@ -2347,7 +2355,7 @@ def _create_simple_sys(scope, graph, name):
     elif graph.node[name].get('comp') == 'invar':
         sub = InVarSystem(scope, graph, name)
     elif graph.node[name].get('comp') == 'outvar':
-        sub = VarSystem(scope, graph, name)
+        sub = OutVarSystem(scope, graph, name)
     elif graph.node[name].get('comp') == 'dumbvar':
         sub = VarSystem(scope, graph, name)
     else:

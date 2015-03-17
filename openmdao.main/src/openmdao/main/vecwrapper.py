@@ -350,20 +350,10 @@ class InputVecWrapper(VecWrapperBase):
         start, end = 0, 0
 
         #print "%s: %s: %s" % (system.name, type(system), flat_ins)
-        dests = set()
         for sub in system.simple_subsystems():
             #print "SUB %s: %s  _in_nodes = %s" % (sub.name, type(sub),sub._in_nodes)
             for name in [n for n in system.vector_vars if n in sub._in_nodes]:
                 if name in flat_ins and name not in self._info:
-                    skip = False
-                    for v in name[1]:
-                        if v in dests or v.split('[')[0] in dests:
-                            skip = True
-                            break
-                    #if skip:
-                    #    continue
-                    #dests.update(v.split('[')[0] for v in name[1])
-                    #dests.update(name[1])
                     arg_idx = sub.get_arg_indices(name)
                     if arg_idx is None:
                         continue
@@ -371,7 +361,7 @@ class InputVecWrapper(VecWrapperBase):
                     end += sz
                     self._info[name] = ViewInfo(self.array[start:end], start,
                                                 slice(None), end-start, False)
-                    if end-start > self.array[start:end].size:
+                    if end-start != self.array[start:end].size:
                         raise RuntimeError("size mismatch: in system %s view for %s is %s, size=%d" %
                                      (system.name,name, [start,end],self[name].size))
                     start += sz
@@ -573,9 +563,11 @@ class DataTransfer(object):
         stream.write("scatter vars: %s\n" % sorted(self.scatter_conns))
         stream.write(" "*nest)
         stream.write("%s --> %s\n" % (self.var_idxs, self.input_idxs))
+        stream.write(" "*nest)
         stream.write("local array = %s\n" % srcvec.array)
         var_idxs = to_indices(self.var_idxs, zeros(numpy.sum(system.local_var_sizes)))
         input_idxs = self.input_idxs
+        stream.write(" "*nest)
         stream.write("%s --> %s\n" % (var_idxs, input_idxs))
 
         if MPI and system.app_ordering:

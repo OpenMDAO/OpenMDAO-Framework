@@ -88,7 +88,6 @@ class DistribInputComp(Component):
         comm = self.mpi.comm
 
         rank = comm.rank
-        print "foo"
         if name == 'invec':
             base = self.invec.size / comm.size
             leftover = self.invec.size % comm.size
