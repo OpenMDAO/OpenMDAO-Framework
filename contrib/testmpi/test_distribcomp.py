@@ -88,9 +88,9 @@ class DistribInputComp(Component):
         for i,val in enumerate(self.invec):
             self.local_outvec[i] = 2*val
 
-        #self.mpi.comm.Allgatherv([self.local_outvec, MPI.DOUBLE],[self.outvec, MPI.DOUBLE])
-        outvecs = self.mpi.comm.allgather(self.local_outvec)
-        print outvecs
+        self.mpi.comm.Allgatherv(self.local_outvec,
+                                [self.outvec, self.sizes,
+                                 self.offsets, MPI.DOUBLE])
 
     def get_arg_indices(self, name):
         """ component declares the local sizes and sets initial values
@@ -102,18 +102,18 @@ class DistribInputComp(Component):
         if name == 'invec':
             base = self.arr_size / comm.size
             leftover = self.arr_size % comm.size
-            sizes = np.ones(comm.size, dtype="int") * base
-            sizes[:leftover]+=1 # evenly distribute the remainder across size-leftover procs, instead of giving the whole remainder to one proc
+            self.sizes = np.ones(comm.size, dtype="int") * base
+            self.sizes[:leftover] += 1 # evenly distribute the remainder across size-leftover procs, instead of giving the whole remainder to one proc
 
-            offsets = np.zeros(comm.size, dtype="int")
-            offsets[1:] = np.cumsum(sizes)[:-1]
+            self.offsets = np.zeros(comm.size, dtype="int")
+            self.offsets[1:] = np.cumsum(self.sizes)[:-1]
 
-            start = offsets[rank]
-            end = start + sizes[rank]
+            start = self.offsets[rank]
+            end = start + self.sizes[rank]
 
             #need to re-initialize the variable to have the correct local size
-            self.invec = np.ones(sizes[rank], dtype=float)
-            self.local_outvec = np.empty(sizes[rank], dtype=float)
+            self.invec = np.ones(self.sizes[rank], dtype=float)
+            self.local_outvec = np.empty(self.sizes[rank], dtype=float)
             return np.arange(start, end, dtype=np.int)
 
     def get_req_cpus(self):
@@ -160,24 +160,5 @@ class MPITests1(MPITestCase):
 
 
 if __name__ == '__main__':
-    # from openmdao.test.mpiunittest import mpirun_tests
-    # mpirun_tests()
-    size = 11
-    top = set_as_top(Assembly())
-    top.add("C1", ABCDArrayComp(size))
-    top.add("C2",DistribInputComp(size))
-    top.driver.workflow.add(['C1', 'C2'])
-    top.connect('C1.c', 'C2.invec')
-
-    top.C1.a = np.ones(size, float) * 3.0
-    top.C1.b = np.ones(size, float) * 7.0
-
-    print "%d ready to run" % MPI.COMM_WORLD.rank; sys.stdout.flush()
-    top.run()
-    print "%d done" % MPI.COMM_WORLD.rank; sys.stdout.flush()
-
-    # from openmdao.util.dotgraph import plot_graph
-    # plot_graph(top._reduced_graph, "%s.pdf" % str(MPI.COMM_WORLD.rank))
-
-    #assert(all(top.C2.outvec==np.ones(size, float)*20))
-    print top.C2.outvec
+    from openmdao.test.mpiunittest import mpirun_tests
+    mpirun_tests()
