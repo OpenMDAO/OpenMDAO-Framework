@@ -36,7 +36,7 @@ config.add_extension('cobyla',
 config.add_data_files('LICENSE','README')
 
 kwds = {'install_requires':['numpy'],
-        'version': '1.0.2-1',
+        'version': '1.0.2',
         'zip_safe': False,
         'license': 'permissive open source',
    # NOTE: we use 'url' here, but it really translates to 'home-page'

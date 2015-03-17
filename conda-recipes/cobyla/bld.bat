@@ -7,7 +7,6 @@ cd %SRC_DIR%
 %PYTHON% setup.py install
 %PYTHON% -c "from pkg_resources import get_distribution; print get_distribution('%PKG_NAME%').parsed_version.base_version" > __conda_version__.txt
 
-SET /p BASE_VERSION=<__conda_version__.txt
+TYPE __buildnum__.txt > __conda_buildnum__.txt
 
-%PYTHON% -c "from pkg_resources import get_distribution; print get_distribution('%PKG_NAME%').parsed_version.public[len('%BASE_VERSION%')+5:]" > __conda_buildnum__.txt
 ENDLOCAL
