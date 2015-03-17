@@ -54,6 +54,8 @@ class DistribCompSimple(Component):
         self.add_trait('outvec', Array(np.ones(arr_size, float), iotype='out'))
 
     def execute(self):
+        if self.mpi.comm == MPI.COMM_NULL:
+            return
         if self.mpi.comm != MPI.COMM_NULL:
             if self.mpi.comm.rank == 0:
                 self.outvec = self.invec * 0.25
@@ -79,12 +81,14 @@ class DistribInputComp(Component):
         self.add_trait('outvec', Array(np.ones(arr_size, float), iotype='out'))
 
     def execute(self):
+        if self.mpi.comm == MPI.COMM_NULL:
+            return
 
         for i,val in enumerate(self.invec):
             self.local_outvec[i] = 2*val
 
         #self.mpi.comm.Allgatherv([self.local_outvec, MPI.DOUBLE],[self.outvec, MPI.DOUBLE])
-        outvecs = self.mpi.comm.allgather(self.local_outvec)
+        #outvecs = self.mpi.comm.allgather(self.local_outvec)
 
     def get_arg_indices(self, name):
         """ component declares the local sizes and sets initial values
@@ -168,4 +172,5 @@ if __name__ == '__main__':
 
     top.run()
 
-    self.assertTrue(all(top.C2.outvec==np.ones(size, float)*20))
+    #assert(all(top.C2.outvec==np.ones(size, float)*20))
+    print top.C2.outvec

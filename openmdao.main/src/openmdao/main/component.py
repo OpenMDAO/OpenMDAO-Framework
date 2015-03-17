@@ -1387,12 +1387,11 @@ class Component(Container):
         if cpus == 1 or IAssembly.providedBy(self) or IDriver.providedBy(self):
             self.mpi.comm = comm
         else:
-            color = [1] * cpus
-
+            color = [0]* cpus
             if comm.size > cpus:
                 color.extend([MPI.UNDEFINED]*(comm.size-cpus))
 
-            self.mpi.comm = comm.Split(1)
+            self.mpi.comm = comm.Split(color[comm.rank])
 
     @rbac(('owner', 'user'))
     def get_full_nodeset(self):
