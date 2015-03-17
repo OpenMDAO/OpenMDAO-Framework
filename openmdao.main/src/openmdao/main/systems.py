@@ -854,6 +854,8 @@ class System(object):
             self.sol_vec.array[:] = 0.0
             return self.sol_vec.array
 
+        #print "solving linear sys", self.name
+
         if options is not None:
             self.set_options(self.mode, options)
         self.initialize_gradient_solver()
@@ -1347,6 +1349,10 @@ class AssemblySystem(SimpleSystem):
         fvec = self.vec['df']
         mode = self.mode
         inner.set_options(mode, self._comp.driver.gradient_options)
+        requested_ins = [item for item in self.list_inputs() \
+                         if self.scope.name2collapsed.get(item) in variables]
+        requested_outs = [item for item in self.list_outputs() \
+                          if self.scope.name2collapsed.get(item) in variables]
 
         # Clean up any old solves
         inner.rhs_vec.array[:] = 0.0
@@ -1355,7 +1361,7 @@ class AssemblySystem(SimpleSystem):
         if mode == 'forward':
 
             # Copy arg to inner scope
-            for name in self.list_inputs():
+            for name in requested_ins:
 
                 key = name
                 parent = self
@@ -1370,10 +1376,12 @@ class AssemblySystem(SimpleSystem):
                 inner.rhs_vec[inner_name] = val
 
             # Solve inner linear system
-            inner.solve_linear()
+            if len(requested_ins) > 0 and len(requested_outs) > 0:
+                inner.solve_linear()
 
             # Copy result to outer scope
             for name in self.list_outputs():
+
                 _, _, inner_name = name.partition('.')
                 fvec[name] = inner.sol_vec[inner_name]
                 fvec[name][:] -= self.vec['du'][name][:]
@@ -1386,7 +1394,8 @@ class AssemblySystem(SimpleSystem):
                 inner.rhs_vec[inner_name] = -val
 
             # Solve inner linear system
-            inner.solve_linear()
+            if len(requested_ins) > 0:
+                inner.solve_linear()
 
             # Copy result to outer scope
             for name in self.list_inputs():
