@@ -142,8 +142,6 @@ class MPITests1(MPITestCase):
     def test_distrib_idx_in_full_out(self):
         size = 11
 
-        print "foobarbar"
-
         top = set_as_top(Assembly())
         top.add("C1", ABCDArrayComp(size))
         top.add("C2",DistribInputComp(size))
