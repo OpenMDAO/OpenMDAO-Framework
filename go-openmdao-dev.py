@@ -2189,7 +2189,7 @@ def after_install(options, home_dir, activated=False):
     if(os.path.exists(setuptools_egg)):
         os.remove(setuptools_egg)
 
-    reqs = ['Fabric==0.9.3', 'Jinja2==2.7.3', 'Pyevolve==0.6', 'Pygments==2.0.2', 'boto==2.36.0', 'bson==0.3.3', 'cobyla==1.0.2', 'conmin==1.0.2', 'decorator==3.4.0', 'docutils==0.12', 'mock==1.0.1', 'networkx==1.9.1', 'newsumt==1.1.1', 'nose==1.3.4', 'paramiko==1.7.7.1', 'pycrypto==2.3', 'pyparsing==2.0.3', 'pytz==2014.9', 'requests==2.6.0', 'setupdocs>=1.0', 'slsqp==1.0.2', 'sphinx==1.2.2', 'traits==4.3.0', 'virtualenv==1.9.1', 'zope.interface==4.1.2']
+    reqs = ['Fabric==0.9.3', 'Jinja2==2.4', 'Pyevolve==0.6', 'Pygments==1.3.1', 'SetupDocs==1.0.5', 'Sphinx==1.2.2', 'boto==2.0rc1', 'bson==0.3.3', 'cobyla==1.0.2', 'conmin==1.0.2', 'decorator==3.4.0', 'docutils==0.10', 'mock==1.0.1', 'networkx==1.9.1', 'newsumt==1.1.1', 'nose==1.3.3', 'paramiko==1.7.7.1', 'pycrypto==2.3', 'pyparsing==1.5.7', 'pytz==2014.4', 'requests==2.2.1', 'slsqp==1.0.2', 'traits==4.3.0', 'virtualenv==1.9.1', 'zope.interface==3.6.1']
 
     if options.findlinks is None:
         url = 'http://openmdao.org/dists'
