@@ -312,8 +312,8 @@ class Case(object):
             else:
                 scope.set(name, value)
                 # FIXME: this extra setting of the vector is messy...
-                if hasattr(scope, 'get_system'):
-                    system = scope.get_system()
+                if hasattr(scope, '_system'):
+                    system = scope._system
                     if system is not None:
                         uvec = system.vec.get('u')
                         if uvec and name in uvec:

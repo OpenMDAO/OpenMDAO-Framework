@@ -4,7 +4,7 @@ from openmdao.main.api import Component, Assembly, set_as_top
 from openmdao.lib.datatypes.api import Float
 
 
-class SimpleBase(Component): 
+class SimpleBase(Component):
 
     a = Float(iotype="in")
     b = Float(iotype="in")
@@ -12,18 +12,18 @@ class SimpleBase(Component):
 
     y = Float(iotype="out")
 
-    def execute(self): 
+    def execute(self):
         pass
 
 
-class Simple1(SimpleBase): 
+class Simple1(SimpleBase):
 
-    def execute(self): 
-        self.y = self.a + self.b + self.c 
+    def execute(self):
+        self.y = self.a + self.b + self.c
 
-class BaseSubAsm(Assembly): 
+class BaseSubAsm(Assembly):
 
-    def configure(self): 
+    def configure(self):
         self.add('comp', SimpleBase())
 
         self.create_passthrough('comp.a')
@@ -31,36 +31,36 @@ class BaseSubAsm(Assembly):
         self.create_passthrough('comp.c')
         self.create_passthrough('comp.y')
 
-class SubAsm(BaseSubAsm): 
+class SubAsm(BaseSubAsm):
 
-    def configure(self): 
+    def configure(self):
         super(SubAsm, self).configure()
-        
+
         self.replace('comp', Simple1())
 
 
-class BaseAsm(Assembly): 
+class BaseAsm(Assembly):
 
-    def configure(self): 
+    def configure(self):
 
-        self.add('s1', SimpleBase())        
-        self.add('s2', SimpleBase())        
-        self.add('s3', SimpleBase())        
+        self.add('s1', SimpleBase())
+        self.add('s2', SimpleBase())
+        self.add('s3', SimpleBase())
         self.add('s4', SimpleBase())
         self.add('s5', SimpleBase())
 
-        self.connect('s1.y', 's2.a')        
-        self.connect('s2.y', 's3.a')        
+        self.connect('s1.y', 's2.a')
+        self.connect('s2.y', 's3.a')
         self.connect('s3.y', 's4.a')
-        self.connect('s4.y', 's5.a')        
+        self.connect('s4.y', 's5.a')
         self.connect('s1.y', 's5.b')
         self.connect('s2.y', 's5.c')
 
         self.driver.workflow.add(['s1', 's2', 's3', 's4', 's5' ])
 
-class RealAsm(BaseAsm): 
+class RealAsm(BaseAsm):
 
-    def configure(self): 
+    def configure(self):
         super(RealAsm, self).configure()
 
         #breaks things
@@ -76,14 +76,15 @@ class RealAsm(BaseAsm):
 class TestCase(unittest.TestCase):
     def test_connections_after_add_trait(self):
         asm = set_as_top(RealAsm())
+        asm._setup()
         conns = asm._depgraph.list_connections()
         self.assertEqual(set(conns),
-                         set([('s4.y', 's5.a'), 
-                              ('s3.y', 's4.b'), 
-                              ('s3.y', 's4.a'), 
-                              ('s2.y', 's5.c'), 
-                              ('s2.y', 's3.a'), 
-                              ('s1.y', 's2.a'), 
+                         set([('s4.y', 's5.a'),
+                              ('s3.y', 's4.b'),
+                              ('s3.y', 's4.a'),
+                              ('s2.y', 's5.c'),
+                              ('s2.y', 's3.a'),
+                              ('s1.y', 's2.a'),
                               ('s1.y', 's5.b')]))
 
 

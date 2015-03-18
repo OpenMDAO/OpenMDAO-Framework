@@ -26,9 +26,9 @@ class OptProblemSolutionCheck(Architecture):
     def configure(self):
         des_vars = self.parent.get_des_vars_by_comp()
         coupling_indeps = self.parent.get_coupling_indeps_by_comp()
-        
-        for k,v in des_vars.iteritems(): 
-            for param in v: 
+
+        for k,v in des_vars.iteritems():
+            for param in v:
                 param.set(self.parent.solution[param.name],
                           self.parent.solution[param.name])
             self.parent.driver.workflow.add(k)
@@ -37,7 +37,7 @@ class OptProblemSolutionCheck(Architecture):
         for k,v in coupling_indeps.iteritems():
             for couple in v:
                 couple.indep.set(self.parent.solution[couple.name])
-            if k not in self.parent.driver.workflow:
+            if k not in self.parent.driver.workflow._explicit_names:
                 self.parent.driver.workflow.add(k)
 
 #set all parameters to initial values
@@ -78,6 +78,7 @@ class TestOptProblems(unittest.TestCase):
 
             prob = getattr(prob_package,prob_class)() #create instance of the OptProblem
             prob = set_as_top(prob)
+            prob._setup()
 
             try:
                 prob.check_solution(strict=True)

@@ -532,6 +532,7 @@ class TestDerivativeVarTree(unittest.TestCase):
         else:
             self.fail("exception expected")
 
+        top.disconnect('dis1.outs', 'dis2.ins')
         top.driver.remove_constraint('dis1.outs.x2 < 24.0')
         top.driver.add_constraint('dis2.ins.x2 < 5')
         top.driver.remove_parameter('dis1.x1')

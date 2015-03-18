@@ -134,7 +134,7 @@ class FixedPointIteratorTestCase(unittest.TestCase):
 
         self.assertAlmostEqual(self.top.simple.invar,
                                self.top.simple.outvar, places=6)
-        self.assertEqual(self.top.driver.current_iteration, 1)
+        self.assertEqual(self.top.driver.current_iteration, 0)
 
     def test_badcon(self):
         self.top.add("driver", FixedPointIterator())
@@ -179,7 +179,7 @@ class FixedPointIteratorTestCase(unittest.TestCase):
 
         assert_rel_error(self, self.top.simple.in1, .01, .002)
         assert_rel_error(self, self.top.simple.out1, .001, .0002)
-        self.assertEqual(self.top.driver.current_iteration, 3)
+        self.assertEqual(self.top.driver.current_iteration, 2)
 
     def test_multi_swapped(self):
         self.top.add("driver", FixedPointIterator())
@@ -195,7 +195,7 @@ class FixedPointIteratorTestCase(unittest.TestCase):
 
         assert_rel_error(self, self.top.simple.in1, .01, .002)
         assert_rel_error(self, self.top.simple.out1, .001, .0002)
-        self.assertEqual(self.top.driver.current_iteration, 3)
+        self.assertEqual(self.top.driver.current_iteration, 2)
 
     def test_multi_swapped_reversed(self):
         self.top.add("driver", FixedPointIterator())
@@ -211,7 +211,7 @@ class FixedPointIteratorTestCase(unittest.TestCase):
 
         assert_rel_error(self, self.top.simple.in1, .01, .002)
         assert_rel_error(self, self.top.simple.out1, .001, .0002)
-        self.assertEqual(self.top.driver.current_iteration, 3)
+        self.assertEqual(self.top.driver.current_iteration, 2)
 
     def test_array_multi(self):
         self.top.add("driver", FixedPointIterator())
@@ -225,7 +225,7 @@ class FixedPointIteratorTestCase(unittest.TestCase):
 
         assert_rel_error(self, self.top.simple.arr[0], .01, .002)
         assert_rel_error(self, self.top.simple.out[0], .001, .0002)
-        self.assertEqual(self.top.driver.current_iteration, 3)
+        self.assertEqual(self.top.driver.current_iteration, 2)
 
     def test_simple_div10(self):
         self.top.add("driver", FixedPointIterator())
@@ -239,7 +239,7 @@ class FixedPointIteratorTestCase(unittest.TestCase):
 
         assert_rel_error(self, self.top.simple.invar, .01, .002)
         assert_rel_error(self, self.top.simple.outvar, .001, .0002)
-        self.assertEqual(self.top.driver.current_iteration, 3)
+        self.assertEqual(self.top.driver.current_iteration, 2)
 
     def test_multi_array_multi(self):
         self.top.add("driver", FixedPointIterator())
@@ -261,7 +261,7 @@ class FixedPointIteratorTestCase(unittest.TestCase):
         assert_rel_error(self, self.top.simple.arr2[1], .01, .002)
         assert_rel_error(self, self.top.simple.out2[0], .001, .0002)
         assert_rel_error(self, self.top.simple.out2[1], .001, .0002)
-        self.assertEqual(self.top.driver.current_iteration, 3)
+        self.assertEqual(self.top.driver.current_iteration, 2)
 
 
     def test_mixed_scalar_array_multi(self):
@@ -282,7 +282,7 @@ class FixedPointIteratorTestCase(unittest.TestCase):
         assert_rel_error(self, self.top.simple.out1[0], .001, .0002)
         assert_rel_error(self, self.top.simple.out1[1], .001, .0002)
         assert_rel_error(self, self.top.simple.in2, .01, .002)
-        self.assertEqual(self.top.driver.current_iteration, 3)
+        self.assertEqual(self.top.driver.current_iteration, 2)
 
     def test_mixed_scalar_array_multi_swapped(self):
         self.top.add("driver", FixedPointIterator())
@@ -302,7 +302,7 @@ class FixedPointIteratorTestCase(unittest.TestCase):
         assert_rel_error(self, self.top.simple.out1[0], .001, .0002)
         assert_rel_error(self, self.top.simple.out1[1], .001, .0002)
         assert_rel_error(self, self.top.simple.in2, .01, .002)
-        self.assertEqual(self.top.driver.current_iteration, 3)
+        self.assertEqual(self.top.driver.current_iteration, 2)
 
     def test_maxiteration(self):
         self.top.add("driver", FixedPointIterator())
@@ -527,4 +527,3 @@ class TestIterateUntill(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

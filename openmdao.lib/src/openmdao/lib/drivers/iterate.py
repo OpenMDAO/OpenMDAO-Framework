@@ -77,7 +77,7 @@ class FixedPointIterator(Driver):
         if self.iprint > 0:
             self.print_norm('NLN_GS', 0, self.normval, self.norm0)
 
-    def run_iteration(self):
+    def pre_iteration(self):
         """Runs an iteration."""
         self.current_iteration += 1
         system = self.workflow._system
@@ -88,8 +88,6 @@ class FixedPointIterator(Driver):
         for name in uvec.keys():
             if name not in cycle_vars:
                 uvec[name] -= fvec[name]
-
-        self.workflow.run()
 
     def continue_iteration(self):
         """Convergence check."""

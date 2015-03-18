@@ -279,8 +279,7 @@ def run_openmdao_suite(argv=None):
         if (i > 0 and not arg.startswith('-')) or arg in break_check:
             break
     else:
-        if '--mpi' not in args:
-            args.append("--all")
+        args.append("--all")
 
     args.append('--exe')  # by default, nose will skip any .py files that are
                           # executable. --exe prevents this behavior
@@ -315,7 +314,7 @@ def run_openmdao_suite(argv=None):
         args.remove('--enable_console')
         os.environ['OPENMDAO_ENABLE_CONSOLE'] = '1'
 
-    if '--mpi' not in args and '--all' in args:
+    if '--all' in args:
         args.remove('--all')
         args.extend(tlist)
 
@@ -326,17 +325,6 @@ def run_openmdao_suite(argv=None):
         parser = _get_plugin_parser()
         options, argz = parser.parse_known_args(argv)
         plugin_install(parser, options, argz)
-
-    # don't run MPI tests by default
-    if '--mpi' in args:
-        args.remove('--mpi')
-        tdir = os.path.dirname(os.path.abspath(__file__))
-        # up 4 levels to the top of the repo
-        for i in range(4):
-            tdir = os.path.dirname(tdir)
-        tdir = os.path.join(tdir, 'contrib', 'testmpi')
-        args.append(tdir)
-        args.append('--no-path-adjustment')
 
     # some libs we use call multiprocessing.cpu_count() on import, which can
     # raise NotImplementedError, so try to monkeypatch it here to return 1 if

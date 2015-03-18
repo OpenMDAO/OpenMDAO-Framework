@@ -154,11 +154,11 @@ class ProblemFormulationTest(unittest.TestCase):
 
         self.asm.architecture = DummyArchitecture()
         self.asm.architecture.has_coupling_vars = True
-        self.asm.check_config()
+        self.asm._setup()
 
         self.asm.architecture.has_coupling_vars = False
         try:
-            self.asm.check_config()
+            self.asm._setup()
         except Exception as err:
             self.assertEqual(str(err), "this Architecture doesn't support "
                              "coupling variables")
@@ -173,7 +173,7 @@ class ProblemFormulationTest(unittest.TestCase):
         self.asm.architecture = DummyArchitecture()
         # no exception expected since arch isn'g configured yet
         self.asm.architecture = DummyArchitecture()
-        self.asm.check_config()
+        self.asm._setup()
         arch = self.asm.architecture
         try:
         #    import pdb;pdb.set_trace()
@@ -192,10 +192,10 @@ class ProblemFormulationTest(unittest.TestCase):
 
         arch.param_types = ['continuous']
         self.asm.add_parameter("D1.a", low=0.1, high=9.9)
-        self.asm.check_config()
+        self.asm._setup()
         self.asm.add_parameter("D1.i", low=0, high=9)
         try:
-            self.asm.check_config()
+            self.asm._setup()
         except Exception as err:
             self.assertEqual(str(err), "this Architecture doesn't support the "
                              "following parameter types: ['discrete']")
@@ -203,11 +203,11 @@ class ProblemFormulationTest(unittest.TestCase):
             self.fail("Exception expected")
 
         arch.param_types.append('discrete')
-        self.asm.check_config()
+        self.asm._setup()
 
         self.asm.add_parameter("D1.en")
         try:
-            self.asm.check_config()
+            self.asm._setup()
         except Exception as err:
             self.assertEqual(str(err), "this Architecture doesn't support the "
                              "following parameter types: ['enum']")
@@ -215,7 +215,7 @@ class ProblemFormulationTest(unittest.TestCase):
             self.fail("Exception expected")
 
         arch.param_types.append('enum')
-        self.asm.check_config()
+        self.asm._setup()
 
         # now look at array entries
         self.asm.clear_parameters()
@@ -224,7 +224,7 @@ class ProblemFormulationTest(unittest.TestCase):
         self.asm.check_config()
         self.asm.add_parameter("D1.iarr[2]", low=0, high=9)
         try:
-            self.asm.check_config()
+            self.asm._setup()
         except Exception as err:
             self.assertEqual(str(err), "this Architecture doesn't support the "
                              "following parameter types: ['discrete']")
@@ -235,10 +235,10 @@ class ProblemFormulationTest(unittest.TestCase):
         self.asm.clear_parameters()
         arch.param_types = ['continuous']
         self.asm.add_parameter("D1.farr", low=0.1, high=9.9)
-        self.asm.check_config()
+        self.asm._setup()
         self.asm.add_parameter("D1.iarr", low=0, high=9)
         try:
-            self.asm.check_config()
+            self.asm._setup()
         except Exception as err:
             self.assertEqual(str(err), "this Architecture doesn't support the "
                              "following parameter types: ['discrete']")
@@ -256,7 +256,7 @@ class ProblemFormulationTest(unittest.TestCase):
 
         arch.param_types = None
         try:
-            self.asm.check_config()
+            self.asm._setup()
         except RuntimeError as err:
             self.assertEqual(str(err), "this Architecture doesn't support "
                              "parameters, but parameter types ['discrete', "
@@ -267,7 +267,7 @@ class ProblemFormulationTest(unittest.TestCase):
         arch.has_global_des_vars = True
         arch.param_types = ['continuous', 'discrete']
         try:
-            self.asm.check_config()
+            self.asm._setup()
         except RuntimeError as err:
             self.assertEqual(str(err), "this Architecture requires global "
                              "design variables in the problem formulation but "
@@ -281,11 +281,12 @@ class ProblemFormulationTest(unittest.TestCase):
 
         arch.constraint_types = ['eq']
         self.asm.add_constraint("D1.x = D2.y")
-        self.asm.check_config()
+        self.asm._setup()
 
         self.asm.add_constraint("D1.x < D2.y")
         try:
-            self.asm.check_config()
+            self.asm._setup()
+            #self.asm.check_config()
         except Exception as err:
             self.assertEqual(str(err), "this Architecture doesn't support the "
                              "following constraint types: ['ineq']")
@@ -298,7 +299,8 @@ class ProblemFormulationTest(unittest.TestCase):
         self.asm.add_constraint("D1.x = D2.y")
         arch.constraint_types = ['ineq']
         try:
-            self.asm.check_config()
+            self.asm._setup()
+            #self.asm.check_config()
         except Exception as err:
             self.assertEqual(str(err), "this Architecture doesn't support the "
                              "following constraint types: ['eq']")
@@ -316,7 +318,8 @@ class ProblemFormulationTest(unittest.TestCase):
 
         arch.constraint_types = None
         try:
-            self.asm.check_config()
+            self.asm._setup()
+            #self.asm.check_config()
         except RuntimeError as err:
             self.assertEqual(str(err), "this Architecture doesn't support "
                              "constraints")
@@ -327,11 +330,11 @@ class ProblemFormulationTest(unittest.TestCase):
         self.asm.add_objective("D1.x + D2.y")
         self.asm.architecture = arch = DummyArchitecture()
         arch.num_allowed_objectives = 1
-        self.asm.check_config()
+        self.asm._setup()
         self.asm.add_objective("D1.a - D2.b")
 
         try:
-            self.asm.check_config()
+            self.asm._setup()
         except Exception as err:
             self.assertEqual(str(err), "this Architecture supports 1 "
                              "objectives, but 2 were found in the parent")
@@ -339,11 +342,11 @@ class ProblemFormulationTest(unittest.TestCase):
             self.fail("Exception expected")
 
         arch.num_allowed_objectives = 2
-        self.asm.check_config()
+        self.asm._setup()
 
         arch.num_allowed_objectives = None
         try:
-            self.asm.check_config()
+            self.asm._setup()
         except Exception as err:
             self.assertEqual(str(err), "this Architecture doesn't support "
                              "objectives, but 2 were found in the parent")

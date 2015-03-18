@@ -193,7 +193,7 @@ class SLSQPdriver(Driver):
 
         Note: m, me, la, n, f, and g are unused inputs."""
 
-        J = self.workflow.calc_gradient(self.inputs, self.obj + self.con)
+        J = self._calc_gradient(self.inputs, self.obj + self.con)
         #print "gradient", J
         df[0:self.nparam] = J[0, :].ravel()
 
