@@ -92,7 +92,7 @@ class DistribInputComp(Component):
                                 [self.outvec, self.sizes,
                                  self.offsets, MPI.DOUBLE])
 
-    def get_arg_indices(self, name):
+    def get_input_idxs(self, name):
         """ component declares the local sizes and sets initial values
         for all distributed inputs and outputs"""
 
@@ -135,7 +135,7 @@ class DistribInputDistribOutputComp(Component):
         for i,val in enumerate(self.invec):
             self.outvec[start+i] = 2*val
 
-    def get_arg_indices(self, name):
+    def get_input_idxs(self, name):
         """ component declares the local sizes and sets initial values
         for all distributed inputs and outputs"""
 
