@@ -713,6 +713,9 @@ class System(object):
         """ Sets all user-configurable options for this system and all
         subsystems. """
 
+        for subsystem in self.subsystems():
+            subsystem.set_options(mode, options)
+
         if not self.is_active():
             return
 
@@ -727,9 +730,6 @@ class System(object):
             self.rhs_vec = self.vec['du']
         else:
             raise RuntimeError("invalid mode. must be 'forward' or 'adjoint' but value is '%s'" % mode)
-
-        for subsystem in self.local_subsystems():
-            subsystem.set_options(mode, options)
 
     # ------- derivative stuff -----------
 
@@ -902,7 +902,7 @@ class System(object):
 
         self.sol_vec.array[:] = self.sol_buf[:]
 
-        #print 'dx', self.sol_vec.array
+        print 'dx', self.sol_vec.array
         return self.sol_vec
 
 
@@ -1025,6 +1025,10 @@ class SimpleSystem(System):
         pass
 
     def run(self, iterbase, case_label='', case_uuid=None):
+
+        print "Running", self.name, self.is_active()
+        print self.local_var_sizes
+
         if self.is_active():
             #print "    runsys", str(self.name)
             graph = self.scope._reduced_graph
@@ -1077,15 +1081,19 @@ class SimpleSystem(System):
         """ df = du - dGdp * dp or du = df and dp = -dGdp^T * df """
 
         vec = self.vec
+        print "In ApplyJ", self.name, self.mode
 
         # Forward Mode
         if self.mode == 'forward':
 
+            print self.name, variables, self.list_inputs(), self.list_outputs()
+            print "before applyJ", vec['du'].array, vec['df'].array
             if self._comp is None:
                 applyJ(self, variables)
             else:
                 self._comp.applyJ(self, variables)
 
+            print "after applyJ", vec['du'].array, vec['df'].array
             vec['df'].array[:] *= -1.0
 
             for var in self.list_outputs():
@@ -1293,6 +1301,9 @@ class AssemblySystem(SimpleSystem):
         calculated."""
         self.options = options
         self.mode = mode
+
+        if not self.is_active():
+            return
 
         if mode in ('forward', 'fd'):
             self.sol_vec = self.vec['du']
@@ -1545,13 +1556,12 @@ class CompoundSystem(System):
     def applyJ(self, variables):
         """ Delegate to subsystems """
 
-        if self.is_active():
-            if self.mode == 'forward':
-                self.scatter('du', 'dp')
-            for subsystem in self.local_subsystems():
-                subsystem.applyJ(variables)
-            if self.mode == 'adjoint':
-                self.scatter('du', 'dp')
+        if self.mode == 'forward':
+            self.scatter('du', 'dp')
+        for subsystem in self.subsystems():
+            subsystem.applyJ(variables)
+        if self.mode == 'adjoint':
+            self.scatter('du', 'dp')
 
     def stop(self):
         self._stop = True
@@ -2165,13 +2175,17 @@ class TransparentDriverSystem(DriverSystem):
         # Need to clean out the dp vector because the parent systems can't
         # see into this subsystem.
         self.clear_dp()
+        print "TRANSPARENT", self.name, self.is_active(), self.list_subsystems()
 
-        if self.mode == 'forward':
-            self.scatter('du', 'dp')
-        for subsystem in self.local_subsystems():
-            subsystem.applyJ(variables)
-        if self.mode == 'adjoint':
-            self.scatter('du', 'dp')
+        if self.is_active():
+            if self.mode == 'forward':
+                self.scatter('du', 'dp')
+            for subsystem in self.subsystems():
+                print "TRANS SUB start", subsystem.name
+                subsystem.applyJ(variables)
+                print "TRANS SUB end", subsystem.name
+            if self.mode == 'adjoint':
+                self.scatter('du', 'dp')
 
     def linearize(self):
         """ Solvers must Linearize all of their subsystems. """
@@ -2187,6 +2201,16 @@ class TransparentDriverSystem(DriverSystem):
         # has its own.
         for sub in self.local_subsystems():
             sub.solve_linear()
+
+    def set_options(self, mode, options):
+        """ Sets all user-configurable options for this system and all
+        subsystems. """
+
+        if not self.is_active():
+            return
+
+        for subsystem in self.subsystems():
+            subsystem.set_options(mode, options)
 
 
 class SolverSystem(TransparentDriverSystem):  # Implicit
