@@ -119,6 +119,53 @@ class DistribInputComp(Component):
     def get_req_cpus(self):
         return 2
 
+class DistribInputDistribOutputComp(Component):
+    """Uses 2 procs and takes input var slices and has output var slices as well"""
+    def __init__(self, arr_size=11):
+        super(DistribInputDistribOutputComp, self).__init__()
+        self.arr_size = arr_size
+        self.add_trait('invec', Array(np.ones(arr_size, float), iotype='in'))
+        self.add_trait('outvec', Array(np.ones(arr_size, float), iotype='out'))
+
+    def execute(self):
+        if self.mpi.comm == MPI.COMM_NULL:
+            return
+
+        start = self.offsets[self.mpi.comm.rank]
+        for i,val in enumerate(self.invec):
+            self.outvec[start+i] = 2*val
+
+    def get_arg_indices(self, name):
+        """ component declares the local sizes and sets initial values
+        for all distributed inputs and outputs"""
+
+        comm = self.mpi.comm
+        rank = comm.rank
+
+        base = self.arr_size / comm.size
+        leftover = self.arr_size % comm.size
+        self.sizes = np.ones(comm.size, dtype="int") * base
+        self.sizes[:leftover] += 1 # evenly distribute the remainder across size-leftover procs, instead of giving the whole remainder to one proc
+
+        self.offsets = np.zeros(comm.size, dtype="int")
+        self.offsets[1:] = np.cumsum(self.sizes)[:-1]
+
+        start = self.offsets[rank]
+        end = start + self.sizes[rank]
+
+        if name == 'invec':
+
+            #need to re-initialize the variable to have the correct local size
+            self.invec = np.ones(self.sizes[rank], dtype=float)
+            return np.arange(start, end, dtype=np.int)
+
+        if name == "outvec":
+            self.outvec = np.ones(self.sizes[rank], dtype=float)
+            return np.arange(start, end, dtype=np.int)
+
+    def get_req_cpus(self):
+        return 2
+
 class MPITests1(MPITestCase):
 
     N_PROCS = 2
@@ -154,6 +201,25 @@ class MPITests1(MPITestCase):
         top.run()
 
         self.assertTrue(all(top.C2.outvec==np.ones(size, float)*20))
+
+
+    def test_distrib_idx_in_distrb_idx_out(self):
+            size = 11
+
+            top = set_as_top(Assembly())
+            top.add("C1", ABCDArrayComp(size))
+            top.add("C2",DistribInputDistribOutputComp(size))
+            top.add("C3",DistribInputComp(size))
+            top.driver.workflow.add(['C1', 'C2', 'C3'])
+            top.connect('C1.c', 'C2.invec')
+            top.connect('C2.outvec', 'C3.invec')
+
+            top.C1.a = np.ones(size, float) * 3.0
+            top.C1.b = np.ones(size, float) * 7.0
+
+            top.run()
+
+            self.assertTrue(all(top.C3.outvec==np.ones(size, float)*40))
 
 
 
