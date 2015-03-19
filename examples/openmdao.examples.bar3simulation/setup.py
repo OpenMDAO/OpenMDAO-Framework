@@ -14,6 +14,7 @@ sys.path.insert(0, os.path.normpath(os.path.join(here,
                                                  'bar3simulation')))
 
 import releaseinfo
+
 version = releaseinfo.__version__
 
 include_dirs = []
