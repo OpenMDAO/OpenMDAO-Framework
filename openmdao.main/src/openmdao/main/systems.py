@@ -1295,9 +1295,6 @@ class AssemblySystem(SimpleSystem):
         self.options = options
         self.mode = mode
 
-        if not self.is_active():
-            return
-
         if mode in ('forward', 'fd'):
             self.sol_vec = self.vec['du']
             self.rhs_vec = self.vec['df']
