@@ -165,7 +165,7 @@ else:
                 if method:
                     parent = getattr(mod, tcase)(methodName=method)
                     if hasattr(parent, 'N_PROCS') and not under_mpirun():
-                        raise RuntimeError("You must run MPITestCases using mpirun")
+                        retcode = run_in_sub(getattr(mod, tcase), mod.__file__+':'+test)
                 else:
                     raise NotImplentedError("module test functions not supported")
                     parent = mod
@@ -197,10 +197,15 @@ else:
                             if not hasattr(v, 'N_PROCS'):
                                 print run_test(testspec, v(methodName=n), n)
                             else:
-                                cmd = "mpirun -n %d %s %s %s" % \
-                                           (v.N_PROCS, sys.executable,
-                                            mod.__file__, testspec)
-                                retcode = subprocess.call(cmd, shell=True)
+                                retcode = run_in_sub(v, testspec)
         #         # TODO:
         #         # elif k.startswith('test_') and it's a method:
         #         #     run module test function
+
+def run_in_sub(testcase, testspec):
+    mod = __import__('__main__')
+
+    cmd = "mpirun -n %d %s %s %s" % \
+               (testcase.N_PROCS, sys.executable,
+                mod.__file__, testspec)
+    return subprocess.call(cmd, shell=True)

@@ -3,7 +3,7 @@ from collections import OrderedDict, namedtuple
 import numpy
 from numpy import ndarray, zeros
 
-from openmdao.main.mpiwrap import MPI, create_petsc_vec, PETSc
+from openmdao.main.mpiwrap import MPI, create_petsc_vec, PETSc, make_idx_array, to_idx_array
 from openmdao.main.array_helpers import offset_flat_index, \
                                         get_flat_index_start, get_val_and_index, get_shape, \
                                         get_flattened_index, to_slice, to_indices
@@ -12,9 +12,6 @@ from openmdao.util.typegroups import int_types
 from openmdao.util.graph import base_var
 
 ViewInfo = namedtuple('ViewInfo', 'view, start, idxs, size, hide')
-
-# dtype needed for index arrays
-idx_arr_type = PETSc.IntType if MPI else 'i'
 
 
 class VecWrapperBase(object):
@@ -137,7 +134,7 @@ class VecWrapperBase(object):
                 self._add_subview(scope, name)
                 self._add_tuple_members(system, [name])
         _, start, _, size, _ = self._info[name]
-        return petsc_linspace(start, start+size)
+        return make_idx_array(start, start+size)
 
     def set_to_array(self, arr, vnames=None):
         """Pull values for the given set of names out of our array
@@ -604,7 +601,7 @@ def merge_idxs(src_idxs, dest_idxs):
     dest_idxs = [i for i in dest_idxs if len(i)]
 
     if len(src_idxs) == 0:
-        return petsc_linspace(0, 0), petsc_linspace(0,0)
+        return make_idx_array(0, 0), make_idx_array(0,0)
 
     src_tups = list(enumerate(src_idxs))
 
@@ -628,14 +625,6 @@ def idx_merge(idxs):
             else:
                 return numpy.concatenate(idxs)
     return idxs
-
-def petsc_linspace(start, end):
-    """ Return a linspace vector of the right int type for PETSc """
-    return numpy.arange(start, end, dtype=idx_arr_type)
-
-def petsc_idxs(idxs):
-    """ Return an index vector of the right int type for PETSc """
-    return numpy.array(idxs, dtype=idx_arr_type)
 
 def _filter(scope, lst):
     filtered = _filter_subs(lst)

@@ -1119,9 +1119,9 @@ class Driver(Component):
                 dgraph.add_driver_input(self.name, vname)
 
     @rbac(('owner', 'user'))
-    def size_variables(self):
+    def init_var_sizes(self):
         for cname in self._ordering:
-            getattr(self.parent, cname).size_variables()
+            getattr(self.parent, cname).init_var_sizes()
 
 
 def _flattened_names(name, val, names=None):

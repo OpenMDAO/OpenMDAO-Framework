@@ -392,7 +392,7 @@ class PseudoComponent(object):
         self.Jsize = None
         self._provideJ_bounds = None
 
-    def size_variables(self):
+    def init_var_sizes(self):
         self.ensure_init()
 
     def setup_depgraph(self, dgraph):

@@ -8,7 +8,8 @@ import networkx as nx
 from zope.interface import implements
 
 # pylint: disable-msg=E0611,F0401
-from openmdao.main.mpiwrap import MPI, MPI_info, PETSc, get_norm
+from openmdao.main.mpiwrap import MPI, MPI_info, PETSc, get_norm, make_idx_array,\
+                                  to_idx_array, idx_arr_type
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.finite_difference import FiniteDifference, DirectionalFD
 from openmdao.main.linearsolver import ScipyGMRES, PETSc_KSP, LinearGS
@@ -16,9 +17,9 @@ from openmdao.main.mp_support import has_interface
 from openmdao.main.interfaces import IDriver, IAssembly, IImplicitComponent, \
                                      ISolver, IPseudoComp, IComponent, ISystem
 from openmdao.main.vecwrapper import VecWrapper, InputVecWrapper, DataTransfer, \
-                                     idx_merge, petsc_linspace, _filter, _filter_subs, \
-                                     _filter_flat, _filter_ignored, idx_arr_type, \
-                                     petsc_idxs, dedup
+                                     idx_merge, _filter, _filter_subs, \
+                                     _filter_flat, _filter_ignored, \
+                                     dedup
 from openmdao.main.depgraph import break_cycles, get_node_boundary, gsort, \
                                    collapse_nodes, simple_node_iter
 from openmdao.main.derivatives import applyJ, applyJT
@@ -153,20 +154,20 @@ class System(object):
 
         start = numpy.sum(self.local_var_sizes[:rank])
         end = numpy.sum(self.local_var_sizes[:rank+1])
-        petsc_idxs = petsc_linspace(start, end)
+        to_idx_array = make_idx_array(start, end)
 
         app_idxs = []
         for ivar in xrange(len(self.vector_vars)):
             start = numpy.sum(self.local_var_sizes[:, :ivar]) + \
                         numpy.sum(self.local_var_sizes[:rank, ivar])
             end = start + self.local_var_sizes[rank, ivar]
-            app_idxs.append(petsc_linspace(start, end))
+            app_idxs.append(make_idx_array(start, end))
 
         if app_idxs:
             app_idxs = numpy.concatenate(app_idxs)
 
         app_ind_set = PETSc.IS().createGeneral(app_idxs, comm=self.mpi.comm)
-        petsc_ind_set = PETSc.IS().createGeneral(petsc_idxs, comm=self.mpi.comm)
+        petsc_ind_set = PETSc.IS().createGeneral(to_idx_array, comm=self.mpi.comm)
 
         return PETSc.AO().createBasic(app_ind_set, petsc_ind_set,
                                       comm=self.mpi.comm)
@@ -437,7 +438,7 @@ class System(object):
     def get_src_indices(self, name):
         """Return the index array corresponding to the given source name."""
         if name in self.vector_vars:
-            return petsc_linspace(0, self.scope._var_meta[name]['size'])
+            return make_idx_array(0, self.scope._var_meta[name]['size'])
         elif '[' in name[0]:
             return self.scope._var_meta[name].get('flat_idx')
 
@@ -497,13 +498,6 @@ class System(object):
             comm.Allgather(insize[0], self.input_sizes)
 
         self.input_sizes[rank] = insize[0]
-
-        # # create an arg_idx dict to keep track of indices of
-        # # inputs
-        # self.arg_idx = OrderedDict()
-        # for name in self.flat_vars.keys(): #_filter_flat(self.scope, self._owned_args):
-        #     for n in name[1]:
-        #         self.arg_idx[n] = self.get_input_idxs(n)
 
     def setup_vectors(self, arrays=None, state_resid_map=None):
         """Creates vector wrapper objects to manage local and
@@ -938,6 +932,7 @@ class SimpleSystem(System):
         self._comp = comp
         self.J = None
         self._mapped_resids = {}
+        self.input_idxs = {}
 
     def setup_sizes(self):
         super(SimpleSystem, self).setup_sizes()
@@ -984,6 +979,9 @@ class SimpleSystem(System):
 
             self._comp.setup_communicators(comm)
 
+            if hasattr(self._comp, 'get_input_idxs'):
+                self.input_idxs = self._comp.get_input_idxs()
+
         self.mpi.comm = comm
 
     def get_input_idxs(self, name):
@@ -997,20 +995,22 @@ class SimpleSystem(System):
                 break
         else:
             return None
-            # raise RuntimeError("Component %s doesn't contain any of %s" %
-            #                       (self._comp.name, name[1]))
 
         if self._comp is None:
             if n == me:
-                return petsc_linspace(0, self.scope._var_meta[name]['size'])
+                return make_idx_array(0, self.scope._var_meta[name]['size'])
             return super(SimpleSystem, self).get_input_idxs(name)
         else:
             # find the name of the input var corresponding to our comp
 
             if hasattr(self._comp, 'get_input_idxs'):
                 # get input indices for full variable
-                full_idxs = petsc_idxs(self._comp.get_input_idxs(
-                                     n.split('[', 1)[0].split('.',1)[1]))
+                full_idxs = self.input_idxs.get(
+                                     n.split('[', 1)[0].split('.',1)[1])
+                if full_idxs is None:
+                    full_idxs = self.get_src_indices(name)
+                else:
+                    full_idxs = to_idx_array(full_idxs)
                 # if input is a subvar, we have to take a subset of the
                 # input indices
                 if '[' in n:
@@ -1022,7 +1022,7 @@ class SimpleSystem(System):
                                            if j in full_idxs], dtype=idx_arr_type)
                 return full_idxs
             else:
-                return petsc_linspace(0, self.scope._var_meta[name]['size'])
+                return make_idx_array(0, self.scope._var_meta[name]['size'])
                 #return super(SimpleSystem, self).get_input_idxs(name)
 
     def _create_var_dicts(self, resid_state_map):
@@ -1294,7 +1294,6 @@ class EqConstraintSystem(SimpleSystem):
         for _, state_node in resid_state_map.items():
             if state_node == srcnode:
                 self._comp._negate = True
-                #print "NEGATE"
                 break
             elif state_node == destnode:
                 break
@@ -1446,7 +1445,7 @@ class CompoundSystem(System):
             idxs = s.get_input_idxs(name)
             if idxs is not None:
                 all_idxs.extend(idxs)
-        return petsc_idxs(dedup(all_idxs))
+        return to_idx_array(dedup(all_idxs))
 
     def _get_scatter_idxs(self, node, noflats, arg_idxs, dest_start, destsys):
         varkeys = self.vector_vars.keys()
@@ -1464,7 +1463,7 @@ class CompoundSystem(System):
             src_idxs = offset + arg_idxs
 
             dest_idxs = dest_start + self.vec['p']._info[node].start + \
-                        petsc_linspace(0, len(arg_idxs))
+                        make_idx_array(0, len(arg_idxs))
 
             if sizes[self.mpi.rank, isrc]:
                 src_idxs += numpy.sum(sizes[:self.mpi.rank, isrc])
@@ -1501,7 +1500,7 @@ class CompoundSystem(System):
                           self.scope._var_meta[node]['flat_idx']
 
             dest_idxs = dest_start + self.vec['p']._info[node].start + \
-                          petsc_linspace(0, len(self.scope._var_meta[node]['flat_idx']))
+                          make_idx_array(0, len(self.scope._var_meta[node]['flat_idx']))
             return (src_idxs, dest_idxs, None)
 
         return (None, None, None)
@@ -1559,9 +1558,9 @@ class CompoundSystem(System):
                         noflat_conns.add(node)
                     else:
                         if src_idxs is None:
-                            src_idxs = petsc_linspace(0, 0)
+                            src_idxs = make_idx_array(0, 0)
                         if dest_idxs is None:
-                            dest_idxs = petsc_linspace(0, 0)
+                            dest_idxs = make_idx_array(0, 0)
 
                         src_partial.append(src_idxs)
                         dest_partial.append(dest_idxs)
@@ -1570,8 +1569,8 @@ class CompoundSystem(System):
                             sidxs = src_idxs
                             didxs = dest_idxs
                         else:
-                            sidxs = petsc_linspace(0, 0)
-                            didxs = petsc_linspace(0, 0)
+                            sidxs = make_idx_array(0, 0)
+                            didxs = make_idx_array(0, 0)
 
                         src_rev_partial.append(sidxs)
                         dest_rev_partial.append(didxs)

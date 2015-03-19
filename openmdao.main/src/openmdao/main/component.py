@@ -1401,7 +1401,7 @@ class Component(Container):
         self._provideJ_bounds = None
 
     @rbac(('owner', 'user'))
-    def size_variables(self):
+    def init_var_sizes(self):
         pass
 
     @rbac(('owner', 'user'))
