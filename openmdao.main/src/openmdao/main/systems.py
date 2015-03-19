@@ -1556,12 +1556,13 @@ class CompoundSystem(System):
     def applyJ(self, variables):
         """ Delegate to subsystems """
 
-        if self.mode == 'forward':
-            self.scatter('du', 'dp')
-        for subsystem in self.subsystems():
-            subsystem.applyJ(variables)
-        if self.mode == 'adjoint':
-            self.scatter('du', 'dp')
+        if self.is_active():
+            if self.mode == 'forward':
+                self.scatter('du', 'dp')
+            for subsystem in self.local_subsystems():
+                subsystem.applyJ(variables)
+            if self.mode == 'adjoint':
+                self.scatter('du', 'dp')
 
     def stop(self):
         self._stop = True
@@ -2180,7 +2181,7 @@ class TransparentDriverSystem(DriverSystem):
         if self.is_active():
             if self.mode == 'forward':
                 self.scatter('du', 'dp')
-            for subsystem in self.subsystems():
+            for subsystem in self.local_subsystems():
                 print "TRANS SUB start", subsystem.name
                 subsystem.applyJ(variables)
                 print "TRANS SUB end", subsystem.name
