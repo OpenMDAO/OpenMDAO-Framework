@@ -1707,13 +1707,23 @@ class SerialSystem(CompoundSystem):
     def setup_communicators(self, comm):
         self._local_subsystems = []
 
-        self.mpi.comm = get_comm_if_active(self, comm)
+        print "setup comm", self.name, not isinstance(self._parent_system, TransparentDriverSystem)
+
+        if isinstance(self._parent_system, TransparentDriverSystem) and \
+           self._parent_system._comp.name != 'driver':
+            self.mpi.comm = comm
+            print "OTHER BRANCH", self.name
+            pass
+        else:
+            self.mpi.comm = get_comm_if_active(self, comm)
+
         if not self.is_active():
             return
 
         for sub in self.all_subsystems():
             sub.setup_communicators(self.mpi.comm)
             sub._parent_system = self
+            print "setup comm - SERIAL loop", self.name, sub.name
             if sub.is_active():
                 self._local_subsystems.append(sub)
 
@@ -2077,6 +2087,7 @@ class DriverSystem(SimpleSystem):
             s.pre_run()
 
     def setup_communicators(self, comm):
+        print "setup comm for driver", self.name
         super(DriverSystem, self).setup_communicators(comm)
         self._comp.setup_communicators(self.mpi.comm)
 
@@ -2132,7 +2143,7 @@ class FiniteDiffDriverSystem(DriverSystem):
 
 class TransparentDriverSystem(DriverSystem):
     """A system for an driver that allows derivative calculation across its
-    boundary."""
+    boundary. At present this driver is only used for the Driver base class."""
 
     def _get_resid_state_map(self):
         """ Essentially, this system behaves like a solver system, except it
@@ -2149,6 +2160,18 @@ class TransparentDriverSystem(DriverSystem):
             for key, value in local_resid_map.iteritems():
                 resid_state_map[key] = value
         super(TransparentDriverSystem, self).setup_variables(resid_state_map)
+
+    def setup_communicators(self, comm):
+        """ Special case if Driver is not base driver """
+        print "setup comm for xparent driver", self.name
+
+        if self._comp.name == 'driver':
+            super(TransparentDriverSystem, self).setup_communicators(comm)
+            self._comp.setup_communicators(self.mpi.comm)
+        else:
+            self.mpi.comm = comm
+            self._comp.workflow._system.setup_communicators(self.mpi.comm)
+            self._comp.workflow.mpi.comm = comm
 
     def evaluate(self, iterbase, case_label='', case_uuid=None):
         """ Evalutes a component's residuals without invoking its
@@ -2176,7 +2199,7 @@ class TransparentDriverSystem(DriverSystem):
         # Need to clean out the dp vector because the parent systems can't
         # see into this subsystem.
         self.clear_dp()
-        print "TRANSPARENT", self.name, self.is_active(), self.list_subsystems()
+        print "TRANSPARENT", self.name, self.is_active(), self.list_subsystems(), self.local_subsystems()
 
         if self.is_active():
             if self.mode == 'forward':
@@ -2275,6 +2298,12 @@ class SolverSystem(TransparentDriverSystem):  # Implicit
         sub_options = self._comp.gradient_options
         for sub in self.subsystems():
             sub.solve_linear(sub_options)
+
+    def setup_communicators(self, comm):
+        """ This is setup_communicators from DriverSystem and SimpleSystem
+        unrolled so that our direct parent's method isn't called. """
+        self.mpi.comm = comm
+        self._comp.setup_communicators(self.mpi.comm)
 
 
 def _create_simple_sys(scope, graph, name):
