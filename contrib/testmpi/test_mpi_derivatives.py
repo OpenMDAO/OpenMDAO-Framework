@@ -4,7 +4,7 @@ import sys
 
 from openmdao.util.testutil import assert_rel_error
 from openmdao.test.mpiunittest import MPITestCase, MPIContext
-from openmdao.main.api import Assembly, Component, set_as_top
+from openmdao.main.api import Assembly, Component, set_as_top, Driver
 from openmdao.main.datatypes.api import Float, Array
 from openmdao.main.test.simpledriver import SimpleDriver
 from openmdao.test.execcomp import ExecCompWithDerivatives, ExecComp
@@ -1018,6 +1018,88 @@ class MPITests_2Proc(MPITestCase):
                                     7229.25, 0.0001)
         assert_rel_error(self, J['_pseudo_1.out0']['sub1.x1'][0][0],
                                     3.0, 0.0001)
+
+    def test_parsys_transdriver(self):
+
+        class Sub(Assembly):
+
+            def __init__(self, factor):
+                super(Sub, self).__init__()
+
+                self.factor = factor
+
+            def configure(self):
+
+                exp = ['y = %f*x' % self.factor]
+                deriv = ['dy_dx = %f' % self.factor]
+
+                self.add('comp', ExecCompWithDerivatives(exp, deriv))
+
+                self.driver.workflow.add(['comp'])
+
+                self.create_passthrough('comp.x')
+                self.create_passthrough('comp.y')
+
+                self.driver.system_type = 'serial'
+
+
+        top = set_as_top(Assembly())
+        top.add('sub1', Sub(factor=1.0))
+        top.add('sub2', Sub(factor=3.0))
+        top.add('stuff', Driver())
+        top.stuff.system_type = "serial"
+
+        exp = ['y = 3.0*x1 + 5.0*x2']
+        deriv = ['dy_dx1 = 3.0', 'dy_dx2 = 5.0']
+
+        top.add('post', ExecCompWithDerivatives(exp, deriv))
+        top.connect('sub1.y', 'post.x1')
+        top.connect('sub2.y', 'post.x2')
+
+        top.replace('driver', SimpleDriver())
+        top.driver.workflow.add(['sub1', 'sub2', 'stuff'])
+        top.stuff.workflow.add(['post'])
+
+        top.driver.add_parameter('sub1.x', low=-10, high=10)
+        top.driver.add_parameter('sub2.x', low=-10, high=10)
+        top.driver.add_objective('post.y')
+
+        top.sub1.x = 2.0
+        top.sub2.x = 3.0
+
+        top.run()
+
+        with MPIContext():
+            assert_rel_error(self, top.post.y, 51.0, 0.0001)
+
+        # from openmdao.util.dotgraph import plot_system_tree
+        # plot_system_tree(top._system)
+
+        J = top.driver.calc_gradient(mode='forward', return_format='dict')
+
+        with MPIContext():
+            assert_rel_error(self, J['_pseudo_0.out0']['sub1.x'][0][0],
+                             3.0, 0.0001)
+            assert_rel_error(self, J['_pseudo_0.out0']['sub2.x'][0][0],
+                             15.0, 0.0001)
+
+        J = top.driver.calc_gradient(mode='adjoint', return_format='dict')
+
+        with MPIContext():
+            assert_rel_error(self, J['_pseudo_0.out0']['sub1.x'][0][0],
+                             3.0, 0.0001)
+            assert_rel_error(self, J['_pseudo_0.out0']['sub2.x'][0][0],
+                             15.0, 0.0001)
+
+        J = top.driver.calc_gradient(mode='fd', return_format='dict')
+
+        with MPIContext():
+            assert_rel_error(self, J['_pseudo_0.out0']['sub1.x'][0][0],
+                             3.0, 0.0001)
+            assert_rel_error(self, J['_pseudo_0.out0']['sub2.x'][0][0],
+                             15.0, 0.0001)
+
+
 
     def test_parallel_gather_for_objective(self):
 
