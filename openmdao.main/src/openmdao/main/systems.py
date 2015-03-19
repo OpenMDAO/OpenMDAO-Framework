@@ -2271,12 +2271,6 @@ class SolverSystem(TransparentDriverSystem):  # Implicit
         for sub in self.subsystems():
             sub.solve_linear(sub_options)
 
-    #def setup_communicators(self, comm):
-        #""" This is setup_communicators from DriverSystem and SimpleSystem
-        #unrolled so that our direct parent's method isn't called. """
-        #self.mpi.comm = comm
-        #self._comp.setup_communicators(self.mpi.comm)
-
 
 def _create_simple_sys(scope, graph, name):
     """Given a Component or Variable node, create the
