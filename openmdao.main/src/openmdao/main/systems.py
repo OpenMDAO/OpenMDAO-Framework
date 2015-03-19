@@ -902,7 +902,7 @@ class System(object):
 
         self.sol_vec.array[:] = self.sol_buf[:]
 
-        print 'dx', self.sol_vec.array
+        #print 'dx', self.sol_vec.array
         return self.sol_vec
 
 
@@ -1026,9 +1026,6 @@ class SimpleSystem(System):
 
     def run(self, iterbase, case_label='', case_uuid=None):
 
-        print "Running", self.name, self.is_active()
-        print self.local_var_sizes
-
         if self.is_active():
             #print "    runsys", str(self.name)
             graph = self.scope._reduced_graph
@@ -1081,19 +1078,15 @@ class SimpleSystem(System):
         """ df = du - dGdp * dp or du = df and dp = -dGdp^T * df """
 
         vec = self.vec
-        print "In ApplyJ", self.name, self.mode
 
         # Forward Mode
         if self.mode == 'forward':
 
-            print self.name, variables, self.list_inputs(), self.list_outputs()
-            print "before applyJ", vec['du'].array, vec['df'].array
             if self._comp is None:
                 applyJ(self, variables)
             else:
                 self._comp.applyJ(self, variables)
 
-            print "after applyJ", vec['du'].array, vec['df'].array
             vec['df'].array[:] *= -1.0
 
             for var in self.list_outputs():
@@ -1707,13 +1700,9 @@ class SerialSystem(CompoundSystem):
     def setup_communicators(self, comm):
         self._local_subsystems = []
 
-        print "setup comm", self.name, not isinstance(self._parent_system, TransparentDriverSystem)
-
         if isinstance(self._parent_system, TransparentDriverSystem) and \
            self._parent_system._comp.name != 'driver':
             self.mpi.comm = comm
-            print "OTHER BRANCH", self.name
-            pass
         else:
             self.mpi.comm = get_comm_if_active(self, comm)
 
@@ -1723,7 +1712,6 @@ class SerialSystem(CompoundSystem):
         for sub in self.all_subsystems():
             sub.setup_communicators(self.mpi.comm)
             sub._parent_system = self
-            print "setup comm - SERIAL loop", self.name, sub.name
             if sub.is_active():
                 self._local_subsystems.append(sub)
 
@@ -2087,7 +2075,6 @@ class DriverSystem(SimpleSystem):
             s.pre_run()
 
     def setup_communicators(self, comm):
-        print "setup comm for driver", self.name
         super(DriverSystem, self).setup_communicators(comm)
         self._comp.setup_communicators(self.mpi.comm)
 
@@ -2143,7 +2130,7 @@ class FiniteDiffDriverSystem(DriverSystem):
 
 class TransparentDriverSystem(DriverSystem):
     """A system for an driver that allows derivative calculation across its
-    boundary. At present this driver is only used for the Driver base class."""
+    boundary. At present this system will only appear for the Driver base class."""
 
     def _get_resid_state_map(self):
         """ Essentially, this system behaves like a solver system, except it
@@ -2163,14 +2150,12 @@ class TransparentDriverSystem(DriverSystem):
 
     def setup_communicators(self, comm):
         """ Special case if Driver is not base driver """
-        print "setup comm for xparent driver", self.name
 
         if self._comp.name == 'driver':
             super(TransparentDriverSystem, self).setup_communicators(comm)
-            self._comp.setup_communicators(self.mpi.comm)
         else:
             self.mpi.comm = comm
-            self._comp.workflow._system.setup_communicators(self.mpi.comm)
+            self._comp.workflow._system.setup_communicators(comm)
             self._comp.workflow.mpi.comm = comm
 
     def evaluate(self, iterbase, case_label='', case_uuid=None):
@@ -2199,15 +2184,12 @@ class TransparentDriverSystem(DriverSystem):
         # Need to clean out the dp vector because the parent systems can't
         # see into this subsystem.
         self.clear_dp()
-        print "TRANSPARENT", self.name, self.is_active(), self.list_subsystems(), self.local_subsystems()
 
         if self.is_active():
             if self.mode == 'forward':
                 self.scatter('du', 'dp')
             for subsystem in self.local_subsystems():
-                print "TRANS SUB start", subsystem.name
                 subsystem.applyJ(variables)
-                print "TRANS SUB end", subsystem.name
             if self.mode == 'adjoint':
                 self.scatter('du', 'dp')
 
@@ -2225,16 +2207,6 @@ class TransparentDriverSystem(DriverSystem):
         # has its own.
         for sub in self.local_subsystems():
             sub.solve_linear()
-
-    def set_options(self, mode, options):
-        """ Sets all user-configurable options for this system and all
-        subsystems. """
-
-        if not self.is_active():
-            return
-
-        for subsystem in self.subsystems():
-            subsystem.set_options(mode, options)
 
 
 class SolverSystem(TransparentDriverSystem):  # Implicit
@@ -2299,11 +2271,11 @@ class SolverSystem(TransparentDriverSystem):  # Implicit
         for sub in self.subsystems():
             sub.solve_linear(sub_options)
 
-    def setup_communicators(self, comm):
-        """ This is setup_communicators from DriverSystem and SimpleSystem
-        unrolled so that our direct parent's method isn't called. """
-        self.mpi.comm = comm
-        self._comp.setup_communicators(self.mpi.comm)
+    #def setup_communicators(self, comm):
+        #""" This is setup_communicators from DriverSystem and SimpleSystem
+        #unrolled so that our direct parent's method isn't called. """
+        #self.mpi.comm = comm
+        #self._comp.setup_communicators(self.mpi.comm)
 
 
 def _create_simple_sys(scope, graph, name):

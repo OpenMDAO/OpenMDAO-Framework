@@ -427,7 +427,7 @@ class PETSc_KSP(LinearSolver):
 
         rhs_vec.array[:] = system.rhs_vec.array[:]
         #print 'names = %s' % system.sol_vec.keys()
-        print 'arg = %s, result=%s' % (sol_vec.array, rhs_vec.array)
+        #print 'arg = %s, result=%s' % (sol_vec.array, rhs_vec.array)
         #print 'df, du, dp', system.vec['df'].array, system.vec['du'].array, system.vec['dp'].array
 
     def apply(self, mat, sol_vec, rhs_vec):
