@@ -713,6 +713,9 @@ class System(object):
         """ Sets all user-configurable options for this system and all
         subsystems. """
 
+        for subsystem in self.subsystems():
+            subsystem.set_options(mode, options)
+
         if not self.is_active():
             return
 
@@ -727,9 +730,6 @@ class System(object):
             self.rhs_vec = self.vec['du']
         else:
             raise RuntimeError("invalid mode. must be 'forward' or 'adjoint' but value is '%s'" % mode)
-
-        for subsystem in self.local_subsystems():
-            subsystem.set_options(mode, options)
 
     # ------- derivative stuff -----------
 
@@ -1027,6 +1027,7 @@ class SimpleSystem(System):
         pass
 
     def run(self, iterbase, case_label='', case_uuid=None):
+
         if self.is_active():
             #print "    runsys", str(self.name)
             graph = self.scope._reduced_graph
@@ -1296,6 +1297,9 @@ class AssemblySystem(SimpleSystem):
         calculated."""
         self.options = options
         self.mode = mode
+
+        if not self.is_active():
+            return
 
         if mode in ('forward', 'fd'):
             self.sol_vec = self.vec['du']
@@ -1786,7 +1790,12 @@ class SerialSystem(CompoundSystem):
     def setup_communicators(self, comm):
         self._local_subsystems = []
 
-        self.mpi.comm = get_comm_if_active(self, comm)
+        if isinstance(self._parent_system, TransparentDriverSystem) and \
+           self._parent_system._comp.name != 'driver':
+            self.mpi.comm = comm
+        else:
+            self.mpi.comm = get_comm_if_active(self, comm)
+
         if not self.is_active():
             return
 
@@ -2211,7 +2220,7 @@ class FiniteDiffDriverSystem(DriverSystem):
 
 class TransparentDriverSystem(DriverSystem):
     """A system for an driver that allows derivative calculation across its
-    boundary."""
+    boundary. At present this system will only appear for the Driver base class."""
 
     def _get_resid_state_map(self):
         """ Essentially, this system behaves like a solver system, except it
@@ -2228,6 +2237,16 @@ class TransparentDriverSystem(DriverSystem):
             for key, value in local_resid_map.iteritems():
                 resid_state_map[key] = value
         super(TransparentDriverSystem, self).setup_variables(resid_state_map)
+
+    def setup_communicators(self, comm):
+        """ Special case if Driver is not base driver """
+
+        if self._comp.name == 'driver':
+            super(TransparentDriverSystem, self).setup_communicators(comm)
+        else:
+            self.mpi.comm = comm
+            self._comp.workflow._system.setup_communicators(comm)
+            self._comp.workflow.mpi.comm = comm
 
     def evaluate(self, iterbase, case_label='', case_uuid=None):
         """ Evalutes a component's residuals without invoking its
@@ -2256,12 +2275,13 @@ class TransparentDriverSystem(DriverSystem):
         # see into this subsystem.
         self.clear_dp()
 
-        if self.mode == 'forward':
-            self.scatter('du', 'dp')
-        for subsystem in self.local_subsystems():
-            subsystem.applyJ(variables)
-        if self.mode == 'adjoint':
-            self.scatter('du', 'dp')
+        if self.is_active():
+            if self.mode == 'forward':
+                self.scatter('du', 'dp')
+            for subsystem in self.local_subsystems():
+                subsystem.applyJ(variables)
+            if self.mode == 'adjoint':
+                self.scatter('du', 'dp')
 
     def linearize(self):
         """ Solvers must Linearize all of their subsystems. """
