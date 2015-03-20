@@ -1141,7 +1141,9 @@ class Assembly(Component):
                         if dcomp in loc_comps:
                             if dcomp:
                                 dsys = self._reduced_graph.node[dcomp]['system']
-                                if dsys._comp and dsys.input_idxs and dest.split('[')[0].split('.',1)[1] in dsys.input_idxs:
+                                # don't overwrite inputs if they have distrib_idxs declared, because those
+                                # determine the size
+                                if dsys._comp and dsys.distrib_idxs and dest.split('[')[0].split('.',1)[1] in dsys.distrib_idxs:
                                     continue
                             dval, didx = get_val_and_index(self, dest)
                             if isinstance(dval, ndarray):
@@ -1614,6 +1616,7 @@ class Assembly(Component):
             #     plot_system_tree(self._system,'sys.pdf')
             #     plot_graph(self._reduced_graph, 'red.pdf')
 
+            # communicators are distributed and dist idxs are gathered from comps here
             self.setup_communicators(comm)
 
             self.collect_metadata()

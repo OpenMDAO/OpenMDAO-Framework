@@ -489,7 +489,6 @@ class System(object):
 
         insize = numpy.zeros(1, int)
         for arg in _filter_flat(self.scope, self._owned_args):
-            #insize[0] += varmeta[arg]['size']
             idx = self.get_distrib_idxs(arg)
             assert(idx is not None)
             insize[0] += len(idx)
@@ -932,7 +931,7 @@ class SimpleSystem(System):
         self._comp = comp
         self.J = None
         self._mapped_resids = {}
-        self.input_idxs = {}
+        self.distrib_idxs = {}
 
     def setup_sizes(self):
         super(SimpleSystem, self).setup_sizes()
@@ -980,7 +979,7 @@ class SimpleSystem(System):
             self._comp.setup_communicators(comm)
 
             if hasattr(self._comp, 'get_distrib_idxs'):
-                self.input_idxs = self._comp.get_distrib_idxs()
+                self.distrib_idxs = self._comp.get_distrib_idxs()
 
         self.mpi.comm = comm
 
@@ -988,6 +987,7 @@ class SimpleSystem(System):
         """These indices are actually the indices in the *source*
         vector that get scattered to a particular input.
         """
+        raise RuntimeError('blah')
         me = self.name.strip('@')
         for n in name[1]:
             destbase = n.split('[')[0]
@@ -1005,7 +1005,7 @@ class SimpleSystem(System):
 
             if hasattr(self._comp, 'get_distrib_idxs'):
                 # get input indices for full variable
-                full_idxs = self.input_idxs.get(
+                full_idxs = self.distrib_idxs.get(
                                      n.split('[', 1)[0].split('.',1)[1])
                 if full_idxs is None:
                     full_idxs = self.get_src_indices(name)
@@ -1023,7 +1023,6 @@ class SimpleSystem(System):
                 return full_idxs
             else:
                 return make_idx_array(0, self.scope._var_meta[name]['size'])
-                #return super(SimpleSystem, self).get_distrib_idxs(name)
 
     def _create_var_dicts(self, resid_state_map):
         varmeta = self.scope._var_meta

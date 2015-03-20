@@ -319,13 +319,13 @@ class MPITests(MPITestCase):
         self.assertTrue(all(top.C3.outvec == np.array(full_list, 'f')*4))
 
     def test_overlapping_inputs_idxs(self):
-        # distrib comp with input_idxs that overlap, i.e. the same
+        # distrib comp with distrib_idxs that overlap, i.e. the same
         # entries are distributed to multiple processes
         self.fail("not implemented")
 
     def test_nondistrib_gather(self):
-        # regular comp to distrib comp to regular comp.  last comp should
-        # automagically gather the full vector without declaring input_idxs
+        # regular comp --> distrib comp --> regular comp.  last comp should
+        # automagically gather the full vector without declaring distrib_idxs
         size = 11
 
         top = set_as_top(Assembly())
@@ -340,7 +340,8 @@ class MPITests(MPITestCase):
 
         top.run()
 
-        self.assertTrue(all(top.C3.outvec==np.array(range(size, 0, -1), float)*4))
+        if self.comm.rank == 0:
+            self.assertTrue(all(top.C3.outvec==np.array(range(size, 0, -1), float)*4))
 
 
 if __name__ == '__main__':
