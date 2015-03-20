@@ -905,6 +905,16 @@ class System(object):
         #print 'dx', self.sol_vec.array
         return self.sol_vec
 
+    def is_var_in_parallel_system(self, varname):
+        """ Returns True if a full varnode name is an input under a parallel
+        system."""
+
+        for system in self.all_subsystems():
+            if system.is_var_in_parallel_system(varname):
+                return True
+
+        return False
+
 
 class SimpleSystem(System):
     """A System for a single Component. This component can have Inputs,
@@ -1409,7 +1419,7 @@ class CompoundSystem(System):
                 src_idxs += numpy.sum(sizes[:self.mpi.rank, isrc])
                 sidxs = [src_idxs]
                 didxs = [dest_idxs]
-                if isinstance(destsys, ParallelSystem):
+                if self.is_var_in_parallel_system(node):
                      # for reverse scatter, need to scatter to srcs from other ranks
                     for i in range(self.mpi.size):
                         if i == self.mpi.rank:
@@ -1419,6 +1429,7 @@ class CompoundSystem(System):
                         if sizes[i, isrc]:
                             sidxs.append(offset + numpy.sum(sizes[:i, isrc]) + self.arg_idx[node])
                             didxs.append(dest_idxs)
+
 
                 src_idxs = numpy.concatenate(sidxs)
                 dest_idxs = numpy.concatenate(didxs)
@@ -1859,6 +1870,18 @@ class ParallelSystem(CompoundSystem):
         for s in self.all_subsystems():
             s.set_ordering(ordering, opaque_map)
 
+    def is_var_in_parallel_system(self, varname):
+        """ Returns True if a full varnode name is an input under a parallel
+        system. """
+
+        if varname in self._in_nodes:
+            return True
+
+        for system in self.all_subsystems():
+            if system.is_var_in_parallel_system(varname):
+                return True
+
+        return False
 
 class OpaqueSystem(SimpleSystem):
     """A system with an external interface like that
