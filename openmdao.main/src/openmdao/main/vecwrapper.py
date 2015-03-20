@@ -351,7 +351,7 @@ class InputVecWrapper(VecWrapperBase):
             #print "SUB %s: %s  _in_nodes = %s" % (sub.name, type(sub),sub._in_nodes)
             for name in [n for n in system.vector_vars if n in sub._in_nodes]:
                 if name in flat_ins and name not in self._info:
-                    arg_idx = sub.get_input_idxs(name)
+                    arg_idx = sub.get_distrib_idxs(name)
                     if arg_idx is None:
                         continue
                     sz = len(arg_idx) #arg_idx[name])

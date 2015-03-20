@@ -442,7 +442,7 @@ class System(object):
         elif '[' in name[0]:
             return self.scope._var_meta[name].get('flat_idx')
 
-    def get_input_idxs(self, name):
+    def get_distrib_idxs(self, name):
         return self.get_src_indices(name)
 
     def setup_sizes(self):
@@ -490,7 +490,7 @@ class System(object):
         insize = numpy.zeros(1, int)
         for arg in _filter_flat(self.scope, self._owned_args):
             #insize[0] += varmeta[arg]['size']
-            idx = self.get_input_idxs(arg)
+            idx = self.get_distrib_idxs(arg)
             assert(idx is not None)
             insize[0] += len(idx)
 
@@ -979,12 +979,12 @@ class SimpleSystem(System):
 
             self._comp.setup_communicators(comm)
 
-            if hasattr(self._comp, 'get_input_idxs'):
-                self.input_idxs = self._comp.get_input_idxs()
+            if hasattr(self._comp, 'get_distrib_idxs'):
+                self.input_idxs = self._comp.get_distrib_idxs()
 
         self.mpi.comm = comm
 
-    def get_input_idxs(self, name):
+    def get_distrib_idxs(self, name):
         """These indices are actually the indices in the *source*
         vector that get scattered to a particular input.
         """
@@ -999,11 +999,11 @@ class SimpleSystem(System):
         if self._comp is None:
             if n == me:
                 return make_idx_array(0, self.scope._var_meta[name]['size'])
-            return super(SimpleSystem, self).get_input_idxs(name)
+            return super(SimpleSystem, self).get_distrib_idxs(name)
         else:
             # find the name of the input var corresponding to our comp
 
-            if hasattr(self._comp, 'get_input_idxs'):
+            if hasattr(self._comp, 'get_distrib_idxs'):
                 # get input indices for full variable
                 full_idxs = self.input_idxs.get(
                                      n.split('[', 1)[0].split('.',1)[1])
@@ -1023,7 +1023,7 @@ class SimpleSystem(System):
                 return full_idxs
             else:
                 return make_idx_array(0, self.scope._var_meta[name]['size'])
-                #return super(SimpleSystem, self).get_input_idxs(name)
+                #return super(SimpleSystem, self).get_distrib_idxs(name)
 
     def _create_var_dicts(self, resid_state_map):
         varmeta = self.scope._var_meta
@@ -1200,13 +1200,13 @@ class VarSystem(SimpleSystem):
     def linearize(self):
         pass
 
-    def get_input_idxs(self, name):
+    def get_distrib_idxs(self, name):
         return None
 
 
 class OutVarSystem(VarSystem):
-    def get_input_idxs(self, name):
-        return SimpleSystem.get_input_idxs(self, name)
+    def get_distrib_idxs(self, name):
+        return SimpleSystem.get_distrib_idxs(self, name)
 
 
 class ParamSystem(VarSystem):
@@ -1439,10 +1439,10 @@ class CompoundSystem(System):
         for s in self.local_subsystems():
             s.pre_run()
 
-    def get_input_idxs(self, name):
+    def get_distrib_idxs(self, name):
         all_idxs = []
         for s in self.simple_subsystems():
-            idxs = s.get_input_idxs(name)
+            idxs = s.get_distrib_idxs(name)
             if idxs is not None:
                 all_idxs.extend(idxs)
         return to_idx_array(dedup(all_idxs))
@@ -1545,7 +1545,7 @@ class CompoundSystem(System):
                 for node in self.variables:
                     if node not in sub._in_nodes or node in scatter_conns:
                         continue
-                    arg_idxs = sub.get_input_idxs(node)
+                    arg_idxs = sub.get_distrib_idxs(node)
                     src_idxs, dest_idxs, nflat = self._get_scatter_idxs(node, noflats,
                                                                         arg_idxs, dest_start,
                                                                         destsys=subsystem)
@@ -2024,11 +2024,11 @@ class OpaqueSystem(SimpleSystem):
             inner_u = self._inner_system.vec['u']
             inner_u.set_from_scope(self.scope)
 
-    def get_input_idxs(self, name):
+    def get_distrib_idxs(self, name):
         """These indices are actually the indices in the *source*
         vector that get scattered to a particular input.
         """
-        return self._inner_system.get_input_idxs(name)
+        return self._inner_system.get_distrib_idxs(name)
 
     def setup_scatters(self):
         self._inner_system.setup_scatters()
@@ -2163,13 +2163,13 @@ class DriverSystem(SimpleSystem):
             #       unless we really have to.
             self._comp.workflow._need_prescatter = True
 
-    def get_input_idxs(self, name):
+    def get_distrib_idxs(self, name):
         """These indices are actually the indices in the *source*
         vector that get scattered to a particular input.
         """
-        idx = super(DriverSystem, self).get_input_idxs(name)
+        idx = super(DriverSystem, self).get_distrib_idxs(name)
         if idx is None:
-            idx = self._comp.workflow._system.get_input_idxs(name)
+            idx = self._comp.workflow._system.get_distrib_idxs(name)
         return idx
 
     def setup_scatters(self):

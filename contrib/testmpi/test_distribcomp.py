@@ -102,7 +102,7 @@ class DistribInputComp(Component):
                                 [self.outvec, self.sizes,
                                  self.offsets, MPI.DOUBLE])
 
-    def get_input_idxs(self):
+    def get_distrib_idxs(self):
         """ component declares the local sizes and sets initial values
         for all distributed inputs and outputs"""
 
@@ -115,7 +115,10 @@ class DistribInputComp(Component):
         self.invec = np.ones(self.sizes[rank], dtype=float)
         self.local_outvec = np.empty(self.sizes[rank], dtype=float)
 
-        return { 'invec': make_idx_array(start, end) }
+        return {
+            'invec': make_idx_array(start, end),
+            'outvec': make_idx_array(start, end)
+        }
 
     def get_req_cpus(self):
         return 2
@@ -136,7 +139,7 @@ class DistribInputDistribOutputComp(Component):
         for i,val in enumerate(self.invec):
             self.outvec[i] = 2*val
 
-    def get_input_idxs(self):
+    def get_distrib_idxs(self):
         """ component declares the local sizes and sets initial values
         for all distributed inputs and outputs. Returns a dict of
         index arrays keyed to variable names.
@@ -152,7 +155,10 @@ class DistribInputDistribOutputComp(Component):
 
         print self.name,".outvec",self.outvec
 
-        return { 'invec': make_idx_array(start, end) }
+        return {
+            'invec': make_idx_array(start, end),
+            'outvec': make_idx_array(start, end)
+        }
 
     def get_req_cpus(self):
         return 2
@@ -175,7 +181,7 @@ class DistribNoncontiguousComp(Component):
         for i,val in enumerate(self.invec):
             self.outvec[i] = 2*val
 
-    def get_input_idxs(self):
+    def get_distrib_idxs(self):
         """ component declares the local sizes and sets initial values
         for all distributed inputs and outputs. Returns a dict of
         index arrays keyed to variable names.
@@ -189,7 +195,10 @@ class DistribNoncontiguousComp(Component):
         self.invec = np.ones(len(idxs), dtype=float)
         self.outvec = np.ones(len(idxs), dtype=float)
 
-        return { 'invec': to_idx_array(idxs) }
+        return {
+            'invec': to_idx_array(idxs),
+            'outvec': to_idx_array(idxs)
+        }
 
     def get_req_cpus(self):
         return 2
@@ -210,7 +219,7 @@ class DistribGatherComp(Component):
                                 [self.outvec, self.sizes,
                                  self.offsets, MPI.DOUBLE])
 
-    def get_input_idxs(self):
+    def get_distrib_idxs(self):
         """ component declares the local sizes and sets initial values
         for all distributed inputs and outputs"""
 
@@ -220,6 +229,17 @@ class DistribGatherComp(Component):
 
     def get_req_cpus(self):
         return 2
+
+class NonDistribGatherComp(Component):
+    """Uses 2 procs gathers a distrib input into a full output"""
+    def __init__(self):
+        super(NonDistribGatherComp, self).__init__()
+        self.add_trait('invec', Array(np.ones(0, float), iotype='in'))
+        self.add_trait('outvec', Array(np.ones(0, float), iotype='out'))
+
+    def execute(self):
+        self.outvec[:] = self.invec
+
 
 class MPITests(MPITestCase):
 
@@ -257,6 +277,7 @@ class MPITests(MPITestCase):
 
 
     def test_distrib_idx_in_distrb_idx_out(self):
+        # normal comp to distrib comp to distrb gather comp
         size = 11
 
         top = set_as_top(Assembly())
@@ -298,10 +319,28 @@ class MPITests(MPITestCase):
         self.assertTrue(all(top.C3.outvec == np.array(full_list, 'f')*4))
 
     def test_overlapping_inputs_idxs(self):
+        # distrib comp with input_idxs that overlap, i.e. the same
+        # entries are distributed to multiple processes
         self.fail("not implemented")
 
     def test_nondistrib_gather(self):
-        self.fail("not implemented")
+        # regular comp to distrib comp to regular comp.  last comp should
+        # automagically gather the full vector without declaring input_idxs
+        size = 11
+
+        top = set_as_top(Assembly())
+        top.add("C1", InOutArrayComp(size))
+        top.add("C2", DistribInputDistribOutputComp(size))
+        top.add("C3", NonDistribGatherComp())
+        top.driver.workflow.add(['C1', 'C2', 'C3'])
+        top.connect('C1.outvec', 'C2.invec')
+        top.connect('C2.outvec', 'C3.invec')
+
+        top.C1.invec = np.array(range(size, 0, -1), float)
+
+        top.run()
+
+        self.assertTrue(all(top.C3.outvec==np.array(range(size, 0, -1), float)*4))
 
 
 if __name__ == '__main__':
