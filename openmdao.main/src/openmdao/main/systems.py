@@ -2205,6 +2205,10 @@ class TransparentDriverSystem(DriverSystem):
     def applyJ(self, variables):
         """ Delegate to subsystems """
 
+        # Need to clean out the dp vector because the parent systems can't
+        # see into this subsystem.
+        self.clear_dp()
+
         if self.is_active():
             if self.mode == 'forward':
                 self.scatter('du', 'dp')
