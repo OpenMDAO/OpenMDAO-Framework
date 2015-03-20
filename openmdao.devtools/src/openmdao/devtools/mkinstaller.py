@@ -71,10 +71,7 @@ def _get_adjust_options(options, version, setuptools_url, setuptools_version):
             sys.exit(-1)
     args.append(join(os.path.dirname(__file__), 'devenv'))  # force the virtualenv to be in <top>/devenv
 """
-        cmd = 'cmd /c' if sys.platform == 'win32' else 'bash'
-        ext = 'bat' if sys.platform == 'win32' else 'sh'
-        
-        anaconda_error = "ERROR: OpenMDAO go scripts cannot be used with Anaconda distributions.\\nUse the command below to install the dev version of OpenMDAO:\\n\\n\\t{0} conda-openmdao-dev.{1}".format(cmd, ext)
+        anaconda_error = "if sys.platform == 'win32':\n            print 'ERROR: OpenMDAO go scripts cannot be used with Anaconda distributions.\\nUse the command below to install the dev version of OpenMDAO:\\n\\n\\tcmd /c conda-openmdao-dev.bat\\n'\n\n        else:\n            print 'ERROR: OpenMDAO go scripts cannot be used with Anaconda distributions.\\nUse the command below to install the dev version of OpenMDAO:\\n\\n\\tbash conda-openmdao.dev.sh\\n'\n"
         
     else:
         code = """
@@ -83,14 +80,14 @@ def _get_adjust_options(options, version, setuptools_url, setuptools_version):
         args.append('openmdao-%%s' %% '%s')
 """ % version
 
-        anaconda_error = "ERROR: OpenMDAO go scripts cannot be used with Anaconda distributions.\\nUse the command below to install the latest version of OpenMDAO:\\n\\n\\tconda create --name <environment name> openmdao"
+        anaconda_error = "print 'ERROR: OpenMDAO go scripts cannot be used with Anaconda distributions.\\nUse the command below to install the latest version of OpenMDAO:\\n\\n\\tconda create --name <environment name> openmdao'"
     
     adjuster = """
 def adjust_options(options, args):
     version = sys.version
     
     if "Analytics" in version or "Anaconda" in version:
-        print "%s"
+        %s
         sys.exit(-1)
         
     major_version = sys.version_info[:2]
