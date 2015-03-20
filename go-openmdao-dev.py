@@ -1940,7 +1940,7 @@ def adjust_options(options, args):
             print 'ERROR: OpenMDAO go scripts cannot be used with Anaconda distributions.\nUse the command below to install the dev version of OpenMDAO:\n\n\tcmd /c conda-openmdao-dev.bat\n'
 
         else:
-            print 'ERROR: OpenMDAO go scripts cannot be used with Anaconda distributions.\nUse the command below to install the dev version of OpenMDAO:\n\n\tbash conda-openmdao.dev.sh\n'
+            print 'ERROR: OpenMDAO go scripts cannot be used with Anaconda distributions.\nUse the command below to install the dev version of OpenMDAO:\n\n\tbash conda-openmdao-dev.sh\n'
 
         sys.exit(-1)
         
