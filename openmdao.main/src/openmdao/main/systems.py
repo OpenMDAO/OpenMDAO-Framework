@@ -1828,7 +1828,10 @@ class ParallelSystem(CompoundSystem):
         requested_procs = []
         for system in self.all_subsystems():
             subsystems.append(system)
-            requested_procs.append(system.get_req_cpus())
+            cpus = system.get_req_cpus()
+            if cpus < 1:
+                cpus = 1
+            requested_procs.append(cpus)
 
         assigned_procs = [0]*len(requested_procs)
 
@@ -1843,8 +1846,6 @@ class ParallelSystem(CompoundSystem):
         if requested:
             while assigned < limit:
                 for i, system in enumerate(subsystems):
-                    if requested_procs[i] == 0: # skip and deal with these later
-                        continue
                     if assigned_procs[i] < requested_procs[i]:
                         assigned_procs[i] += 1
                         assigned += 1
@@ -1873,8 +1874,6 @@ class ParallelSystem(CompoundSystem):
 
         for i,sub in enumerate(subsystems):
             if i == rank_color:
-                self._local_subsystems.append(sub)
-            elif requested_procs[i] == 0:  # sub is duplicated everywhere
                 self._local_subsystems.append(sub)
 
         for sub in self.local_subsystems():

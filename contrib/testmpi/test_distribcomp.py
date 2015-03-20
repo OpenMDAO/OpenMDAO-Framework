@@ -221,7 +221,7 @@ class DistribGatherComp(Component):
     def get_req_cpus(self):
         return 2
 
-class MPITests1(MPITestCase):
+class MPITests(MPITestCase):
 
     N_PROCS = 2
 
@@ -296,6 +296,12 @@ class MPITests1(MPITestCase):
 
         full_list = list(take_nth(0, 2, range(size))) + list(take_nth(1, 2, range(size)))
         self.assertTrue(all(top.C3.outvec == np.array(full_list, 'f')*4))
+
+    def test_overlapping_inputs_idxs(self):
+        self.fail("not implemented")
+
+    def test_nondistrib_gather(self):
+        self.fail("not implemented")
 
 
 if __name__ == '__main__':
