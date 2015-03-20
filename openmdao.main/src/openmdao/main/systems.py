@@ -1740,7 +1740,6 @@ class ParallelSystem(CompoundSystem):
     def run(self, iterbase, case_label='', case_uuid=None):
         # don't scatter unless we contain something that's actually
         # going to run
-
         if not self.local_subsystems() or not self.is_active():
             return
 
