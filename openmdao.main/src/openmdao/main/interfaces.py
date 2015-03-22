@@ -5,7 +5,8 @@ Interfaces for the OpenMDAO project.
 
 # pylint: disable=E0213,E0211,W0232
 
-from zope.interface import implements, classImplements, Attribute, Interface
+from zope.interface import implements, classImplements, Attribute, Interface,\
+                           directlyProvides
 
 from openmdao.main.constants import SAVE_CPICKLE
 
@@ -69,12 +70,9 @@ class IContainer(Interface):
             Trait to be used for validation.
         """
 
-    def get(path, index=None):
+    def get(path):
         """Return the object specified by the given
-        path, which may contain '.' characters.  *index*, if not None,
-        should be a list of container indices and/or tuples following
-        the protocol described in the docs for the
-        openmdao.main.index.process_index_entry() function.
+        path, which may contain '.' characters.
         """
 
     def get_pathname(rel_to_scope=None):
@@ -139,14 +137,10 @@ class IContainer(Interface):
             Protocol used.
         """
 
-    def set(path, value, index=None, src=None, force=False):
+    def set(path, value):
         """Set the value of the Variable specified by the given path, which
         may contain '.' characters. The Variable will be set to the given
-        value, subject to validation and constraints. *index*, if not None,
-        should be a list of container indices and/or single entry lists of attribute
-        names.  For example, to get something like comp.x[2]['mykey'].child.value,
-        *index* would look like:  [2,'mykey',['child'],['value']].  Attribute names
-        are placed in sublists to avoid ambiguity with string container indices.
+        value, subject to validation and constraints.
         """
 
     def cpath_updated():
@@ -154,6 +148,10 @@ class IContainer(Interface):
 
     def configure():
         """Called once, after this Container has been placed in a rooted Container hierarchy."""
+
+
+class IContainerProxy(IContainer):
+    """Marker interface for proxy containers."""
 
 
 class IVariableTree(IContainer):
@@ -168,7 +166,7 @@ class IComponent(IContainer):
     def check_config(strict=False):
         """Verify that this component is properly configured to execute.
         Classes overriding this method must call the base class method.
-        If strict is True, even configuration warnings should raise an exception.  
+        If strict is True, even configuration warnings should raise an exception.
         """
 
     def run(force=False):
@@ -228,6 +226,31 @@ class IImplicitComponent(IComponent):
         values for the given state var values.
         """
 
+class IPseudoComp(IContainer):
+    """Special interface for Pseudocomps for checking.
+    """
+
+    def check_config(strict=False):
+        """Verify that this component is properly configured to execute.
+        Classes overriding this method must call the base class method.
+        If strict is True, even configuration warnings should raise an exception.
+        """
+
+    def run(force=False):
+        """Run this object. This should include fetching input variables,
+        executing, and updating output variables. Do not override this function.
+        """
+
+    def list_inputs(valid=None):
+        """Return a list of names of input values. If valid is not None,
+        the the list will contain names of inputs with matching validity.
+        """
+
+    def list_outputs(valid=None):
+        """Return a list of names of output values. If valid is not None,
+        the the list will contain names of outputs with matching validity.
+        """
+
 
 class IDriver(IComponent):
     """An interface for objects that manage the iteration of workflows.
@@ -241,10 +264,8 @@ class IDriver(IComponent):
         in this Driver's workflow or any of its sub-workflows.
         """
 
-    def get_workflow(self):
-        """ Get the driver info and the list of components that make up the
-            driver's workflow; recurse on nested drivers.
-        """
+    def requires_derivs(self):
+        """ Returns True if this Driver requires derivatives. """
 
 
 class ISolver(IDriver):
@@ -279,12 +300,6 @@ class IAssembly(IComponent):
     def disconnect(srcpath, destpath):
         """Removes the connection between one source variable and one
         destination variable.
-        """
-
-    def get_dataflow(self):
-        """ Get a dictionary of components and the connections between them
-            that make up the data flow for the assembly;
-            also includes parameter, constraint, and objective flows
         """
 
 
@@ -486,9 +501,8 @@ class IHasCouplingVars(Interface):
 
     #def list_global_des_vars():
         #"""returns a list of all the names of global design variable objects in the assembly"""
-
-
-class ISurrogate(Interface):
+        
+class IPredictor(Interface):
 
     def get_uncertain_value(value):
         """Converts a deterministic value into an uncertain quantity which
@@ -503,6 +517,8 @@ class ISurrogate(Interface):
         Returns the predicted output value.
         """
 
+class ISurrogate(IPredictor):
+
     def train(X, Y):
         """Trains the surrogate model, based on the given training data set.
 
@@ -511,6 +527,20 @@ class ISurrogate(Interface):
         y: iterator
             Training case output history for this surrogate's output,
             which corresponds to the training case input history given by X.
+        """
+
+
+class IMultiFiSurrogate(IPredictor):
+
+    def train_multifi(X, Y):
+        """Trains the surrogate model, based on the given training data set.
+
+        X: list of (m samples, n inputs) lists of lists
+            Values representing the multi-fidelity training case input history.
+        y: list of lists
+            Training case output history for this surrogate's output,
+            which corresponds to the multi-fidelity training case input history 
+            given by X.
         """
 
 
@@ -696,6 +726,30 @@ class IHasConstraints(IHasEqConstraints, IHasIneqConstraints):
         """Evaluates the constraint expressions and returns a list of values."""
 
 
+class IHas2SidedConstraints(Interface):
+    """An Interface for objects that can accept constraints defined like
+    a < x < b, where x is a variable and a and b are constants."""
+
+    def add_2sided_constraint(lhs, center, rhs, rel, name=None, scope=None,
+                               linear=False):
+        """Adds an 2-sided constraint as four strings; a left-hand side, a
+        center, a right-hand side, and a comparator ('<','>','<=', or '>=')
+        """
+
+    def get_2sided_constraints(linear=None):
+        """Returns an ordered dict of inequality constraint objects.
+
+        linear: obj
+            Set to True or False to return linear or nonlinear constraints.
+            Default is None, for all constraints."""
+
+    def list_2sided_constraints(self):
+        """Return a list of strings containing constraint expressions."""
+
+    def list_2sided_constraint_targets(self):
+        """Returns a list of outputs suitable for calc_gradient()."""
+
+
 class IHasObjectives(Interface):
     """An Interface for objects having a multiple objectives."""
 
@@ -773,92 +827,8 @@ class IVariable(Interface):
         to the data value corresponding to this Variable.
         """
 
-
-class IRepository(Interface):
-    """An Interface to a version control system repository."""
-
-    def commit():
-        """Commit any uncommitted changes to the repo."""
-
-    def revert():
-        """Revert to a previous commit.  Default is to revert to
-        the most recent commit, discarding any uncommitted changes.
-        """
-
-
-class IParametricGeometry(Interface):
-    """An Interface to a parametric geometry model"""
-
-    def regen_model():
-        """Rebuild the model based on current parameter values."""
-
-    def list_parameters():
-        """Return a list tuples of input and output parameters and their
-        metadata.  The tuples should be of the form: (name, meta) where
-        meta is a dict.  Two required pieces of metadata are 'value', the
-        current value of the parameter, and 'iotype', which should be 'in'
-        for inputs and 'out' for outputs.
-        """
-
-    def set_parameter(name, val):
-        """Set new value for an input parameter."""
-
-    def get_parameters(names):
-        """Return a list of values for the given list of parameter
-        names.
-        """
-
-    def register_param_list_changedCB(callback):
-        """Register a function to be called when the list of parameters
-        changes, e.g., when a new model is loaded or parameters are added
-        or removed.  Note that this function is already defined in the
-        openmdao.main.geom.ParametricGeometry class. If you inherit from that
-        class, you can simply call self.invoke_callbacks() to execute
-        any callbacks that have been registered.
-        """
-
-    def get_static_geometry():
-        """Return an object that implements the IStaticGeometry interface.
-        """
-
-
-class IStaticGeometry(Interface):
-    """An interface for a geometry object that can be queried and tesselated.
-    These are created by Parametric Geometry objects.
-    """
-
-    def get_visualization_data(wv_wrapper, **kwargs):
-        """Populate the wv_wrapper object with data for faces and edges by
-        calling the following methods on wv_wrapper:
-
-        set_face_data(points, tris, colors=None, normals=None, name='',
-                      bounding_box=None, visible=True, transparency=False,
-                      shading=False, orientation=True, points_visible=False,
-                      lines_visible=False)
-
-        set_edge_data(points, colors=None,
-                      name='', bounding_box=None,
-                      visible=True, transparency=False,
-                      shading=False, orientation=False,
-                      points_visible=False, lines_visible=False)
-
-        where:
-
-        points is a float32 1xN*3 ndarray of vertex point coordinates where N is the
-            number of vertices, i.e., [x1,y1,z1,x2,y2,z2,...x_n,y_n,z_n]
-
-        tris is an int 1xM*3 ndarray of triangle connectivities (vertex indices) where
-            M is the number of triangles.
-
-        colors is an optional 1x3 float32 ndarray
-
-        normals is an optional 1xM*3 float32 ndarray where M is the number of triangles
-
-        For more info, see the WV_Wrapper class definition in _pyV3D.pyx in the pyV3D
-        distribution.
-
-        """
-
+class ISystem(Interface):
+    pass
 
 def obj_has_interface(obj, *ifaces):
     """Returns True if the specified object implements one of the interfaces

@@ -1,10 +1,15 @@
 """
 Program used to check that instances of a class defined in the main module
 can be passed as inputs to a CaseIteratorDriver.
+
+# BAN - modified this module because in the mpi-enabled framework, no variable
+#       is visible to a CaseIteratorDriver (or any other component) unless it
+#       has iotype metadata defined.  Grabbing data from an internal component
+#       Slot is no longer possible.
 """
 
 from openmdao.main.api import Assembly, Component
-from openmdao.main.datatypes.slot import Slot
+from openmdao.main.datatypes.api import Instance
 from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
 from openmdao.main.datatypes.api import Int
 
@@ -19,7 +24,10 @@ class PGrafObject(object):
 class PGrafComponent(Component):
 
     num = Int(iotype='in')
-    obj = Slot(PGrafObject)
+    # BAN - changed obj to an Instance with iotype defined in order to make obj
+    #       visible in the mpi-enabled framework.
+    #obj = Slot(PGrafObject)
+    obj = Instance(PGrafObject, iotype='in')
     result = Int(iotype='out')
 
     def execute(self):

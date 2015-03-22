@@ -46,6 +46,7 @@ class DBCaseRecorderTestCase(unittest.TestCase):
         outputs = ['comp1.z', 'comp2.z']
         cases = []
         for i in range(10):
+            i = float(i)
             inputs = [('comp1.x', i), ('comp1.y', i*2),
                       ('comp1.a_dict', {'a': 'b'}),
                       ('comp1.a_list', ['a', 'b'])]
@@ -62,18 +63,6 @@ class DBCaseRecorderTestCase(unittest.TestCase):
         self.top.recorders = [DBCaseRecorder()]
         self.top.run()
 
-        # Gui pane stuff
-
-        attrs = self.top.recorders[0].get_attributes()
-        self.assertTrue("Inputs" in attrs.keys())
-        self.assertTrue({'name': 'dbfile',
-                         'id': 'dbfile',
-                         'type': 'str',
-                         'connected': '',
-                         'value': ':memory:',
-                         'desc': 'Name of the database file to be recorded. Default ' +
-                       'is ":memory:", which writes the database to memory.'} in attrs['Inputs'])
-
         # now use the DB as source of Cases
         cases = [case for case in self.top.recorders[0].get_iterator()]
         Case.set_vartree_inputs(self.top.driver, cases)
@@ -82,18 +71,28 @@ class DBCaseRecorderTestCase(unittest.TestCase):
         self.top.recorders = [DumpCaseRecorder(sout)]
         self.top.run()
         expected = [
-            'Case:',
-            '   uuid: ad4c1b76-64fb-11e0-95a8-001e8cf75fe',
-            '   timestamp: 1383239074.309192',
-            '   inputs:',
+            "Case:",
+            "   uuid: d99424f3-9c1b-11e4-801d-20c9d0478eff",
+            "   timestamp: 1421260415.638640",
+            "   inputs:",
             "      comp1.a_dict: {'a': 'b'}",
             "      comp1.a_list: ['a', 'b']",
-            '      comp1.x: 8.0',
-            '      comp1.y: 16.0',
-            '   outputs:',
-            '      _pseudo_0: 24.0',
-            '      _pseudo_1: 25.0',
-        ]
+            "      comp1.x: 8.0",
+            "      comp1.y: 16.0",
+            "   outputs:",
+            "      _pseudo_0.out0: 24.0",
+            "      _pseudo_1.out0: 25.0",
+            "      comp1.derivative_exec_count: 0",
+            "      comp1.exec_count: 19",
+            "      comp1.itername: 9-comp1",
+            "      comp1.z: 24.0",
+            "      comp2.derivative_exec_count: 0",
+            "      comp2.exec_count: 19",
+            "      comp2.itername: 9-comp2",
+            "      comp2.z: 25.0",
+            "      driver.workflow.itername: 9",
+           ]
+        #print sout.getvalue()
         lines = sout.getvalue().split('\n')
         count = 0
         for index, line in enumerate(lines):
@@ -202,25 +201,6 @@ class DBCaseRecorderTestCase(unittest.TestCase):
         except OSError:
             logging.error("problem removing directory %s", tmpdir)
 
-    def test_dbcaseiterator_get_attributes(self):
-
-        caseiter = DBCaseIterator()
-        attrs = caseiter.get_attributes()
-        self.assertTrue("Inputs" in attrs.keys())
-        self.assertTrue({'name': 'dbfile',
-                         'type': 'str',
-                         'connected': '',
-                         'value': ':memory:',
-                         'desc': 'Name of the database file to be iterated.'
-                                 ' Default is ":memory:", which reads the'
-                                 ' database from memory.'} in attrs['Inputs'])
-        self.assertTrue({'name': 'selectors',
-                         'type': 'NoneType',
-                         'connected': '',
-                         'value': 'None',
-                         'desc': 'String of additional SQL queries to apply to'
-                                 ' the case selection.'} in attrs['Inputs'])
-
     def test_string(self):
         recorder = DBCaseRecorder()
         inputs = ['str', 'unicode', 'list']  # Check pickling.
@@ -317,6 +297,7 @@ class NestedCaseTestCase(unittest.TestCase):
         outputs = ['comp1.z', 'comp2.z']
         cases = []
         for i in range(self.num_cases):
+            i = float(i)
             inputs = [('comp1.x', 100*level+i),
                       ('comp1.y', 100*level+i+1),
                       ('comp1.label', 'L%d_case%d' % (level, i))]

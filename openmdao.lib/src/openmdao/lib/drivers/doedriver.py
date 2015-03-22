@@ -6,12 +6,39 @@
 """
 
 import csv
+import numpy as np
 
 # pylint: disable-msg=E0611,F0401
+from openmdao.main.hasparameters import ParameterGroup
 from openmdao.main.datatypes.api import Bool, Slot, Float, Str
 from openmdao.main.interfaces import IDOEgenerator
 from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
 
+def check_parameter(parameter):
+    try:
+        if parameter.vartypename == 'Array':
+            if 'float' not in parameter.valtypename:
+                msg = "DOEdriver cannot add array parameter '{}'" \
+                      " because target is not of type 'numpy.float'."
+                msg = msg.format(parameter.name)
+
+                raise TypeError(msg)
+
+        elif not parameter.vartypename == 'Float':
+            msg = "DOEdriver cannot add parameter '{}'" \
+                  " because target is not of type 'Float'."
+            msg = msg.format(parameter.name)
+
+            raise TypeError(msg)
+
+    except AttributeError as exception:
+        if not parameter.typename == 'float':
+            msg = "DOEdriver cannot add parameter group '{}'" \
+                  " because targets are not of type 'float'."
+
+            msg = msg.format(parameter.name)
+
+            raise TypeError(msg)
 
 class DOEdriver(CaseIteratorDriver):
     """ Driver for Design of Experiments. """
@@ -26,6 +53,32 @@ class DOEdriver(CaseIteratorDriver):
     doe_filename = Str('', iotype='in',
                        desc='Name of CSV file to record to'
                             ' (default is <driver-name>.csv).')
+
+    def add_parameter(self, target, low=None, high=None,
+                      scaler=None, adder=None, start=None,
+                      fd_step=None, name=None, scope=None):
+        super(DOEdriver, self).add_parameter(target, low, high, scaler, adder,
+            start, fd_step, name, scope, case_inputs_iotype='out')
+
+        parameters = self.get_parameters()
+
+        try:
+            parameter = parameters[target]
+        except KeyError as exception:
+            try:
+                parameter = parameters[name]
+            except KeyError as exception:
+                parameter = target
+
+        try:
+            check_parameter(parameter)
+        except TypeError as type_error:
+            try:
+                self.remove_parameter(parameter.name)
+            except AttributeError as attr_error:
+                self.remove_parameter(tuple(parameter.targets))
+                self.raise_exception(type_error.message, type_error.__class__)
+
 
     def execute(self):
         """Generate and evaluate cases."""
@@ -100,4 +153,3 @@ class NeighborhoodDOEdriver(CaseIteratorDriver):
 
             vals = new_low + (new_high-new_low)*row
             yield vals
-

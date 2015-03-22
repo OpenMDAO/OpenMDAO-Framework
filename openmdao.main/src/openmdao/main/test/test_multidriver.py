@@ -1,21 +1,23 @@
 # pylint: disable-msg=C0111,C0103
 
+from nose import SkipTest
+
 import unittest
 from math import sqrt  # so expr can find it
 from StringIO import StringIO
 
 from openmdao.lib.drivers.conmindriver import CONMINdriver
 from openmdao.lib.drivers.slsqpdriver import SLSQPdriver
-from openmdao.main.api import Assembly, Component, Driver, \
-                              SequentialWorkflow, set_as_top, \
-                              dump_iteration_tree
+from openmdao.main.api import Assembly, Component, Driver, Workflow, \
+                              set_as_top, dump_iteration_tree
 from openmdao.main.datatypes.api import Float, Int, Str
 from openmdao.main.hasobjective import HasObjective
 from openmdao.main.hasparameters import HasParameters
-from openmdao.main.test.test_derivatives import SimpleDriver
+from openmdao.main.test.simpledriver import SimpleDriver
 from openmdao.test.execcomp import ExecCompWithDerivatives
 from openmdao.util.decorators import add_delegate
 from openmdao.util.testutil import assert_rel_error
+import openmdao.main.pseudocomp as pcompmod
 
 exec_order = []
 
@@ -76,8 +78,7 @@ class ExprComp(Component):
     def execute(self):
         global exec_order
         exec_order.append(self.name)
-        x = self.x
-        self.f_x = eval(self.expr)
+        self.f_x = eval(self.expr, globals(), self.__dict__)
 
 
 class ExprComp2(Component):
@@ -95,15 +96,14 @@ class ExprComp2(Component):
     def execute(self):
         global exec_order
         exec_order.append(self.name)
-        x = self.x
-        y = self.y
-        self.f_xy = eval(self.expr)
+        self.f_xy = eval(self.expr, globals(), self.__dict__)
 
 class MultiDriverTestCase(unittest.TestCase):
 
     def setUp(self):
         global exec_order
         exec_order = []
+        pcompmod._count = 0
 
     def tearDown(self):
         self.top = None
@@ -157,16 +157,19 @@ class MultiDriverTestCase(unittest.TestCase):
     def test_var_depends(self):
         print "*** test_var_depends ***"
         self.rosen_setUp()
+        self.top._setup()
         srcs, dests = self.top.driver.get_expr_var_depends(recurse=True)
         self.assertEqual(set(['comp1.x', 'comp2.x', 'comp3.x', 'comp4.x']), dests)
-        self.assertEqual(set(['comp1.x', 'comp2.x', 'comp3.x', 'comp4.x', 'adder3.sum']), srcs)
+        self.assertEqual(set(['_pseudo_0.out0','_pseudo_1.out0','_pseudo_2.out0','_pseudo_3.out0']),
+                         srcs)
         srcs, dests = self.top.driver.get_expr_var_depends(recurse=False)
         self.assertEqual(set(), srcs)
         self.assertEqual(set(), dests)
         self.top.driver1.remove_parameter('comp2.x')
+        self.top._setup()
         srcs, dests = self.top.driver.get_expr_var_depends(recurse=True)
         self.assertEqual(set(['comp1.x', 'comp3.x', 'comp4.x']), dests)
-        self.assertEqual(set(['comp1.x', 'comp2.x', 'comp3.x', 'comp4.x', 'adder3.sum']), srcs)
+        self.assertEqual(set(['_pseudo_0.out0','_pseudo_1.out0','_pseudo_2.out0','_pseudo_3.out0']), srcs)
 
     def test_one_driver(self):
         global exec_order
@@ -208,8 +211,8 @@ class MultiDriverTestCase(unittest.TestCase):
 
         self.top.run()
 
-        assert_rel_error(self, self.opt_objective,
-                         self.top.driver1.eval_objective(), 0.01)
+        assert_rel_error(self, self.top.driver1.eval_objective(),
+                         self.opt_objective, 0.01)
         self.assertAlmostEqual(self.opt_design_vars[0],
                                self.top.comp1.x, places=1)
         assert_rel_error(self, self.opt_design_vars[1], self.top.comp2.x, 0.01)
@@ -237,7 +240,6 @@ class MultiDriverTestCase(unittest.TestCase):
         nested = self.top.add('nested', Assembly())
         # create the inner driver
         inner_driver = nested.add('driver', CONMINdriver())
-        #inner_driver = nested.driver
 
         nested.add('comp1', ExprComp(expr='x-3'))
         nested.add('comp2', ExprComp(expr='-3'))
@@ -267,7 +269,7 @@ class MultiDriverTestCase(unittest.TestCase):
         outer_driver.itmax = 30
         outer_driver.fdch = .000001
         outer_driver.fdchm = .000001
-        outer_driver.conmin_diff = True
+        #outer_driver.conmin_diff = True
         outer_driver.add_objective('nested.f_xy')   # comp4.f_xy passthrough
         outer_driver.add_parameter('nested.x', low=-50, high=50)  # comp1.x passthrough
 
@@ -320,8 +322,8 @@ class MultiDriverTestCase(unittest.TestCase):
         top.connect('comp2.f_x', 'comp4.x')
 
         # Driver process definition
-        outer_driver.workflow.add('driver1')
-        inner_driver.workflow.add(['comp1','comp2','comp3','comp4'])
+        outer_driver.workflow.add(['comp1', 'driver1', 'comp2', 'comp4'])
+        inner_driver.workflow.add(['comp3'])
 
         inner_driver.itmax = 30
         inner_driver.fdch = .000001
@@ -346,16 +348,9 @@ class MultiDriverTestCase(unittest.TestCase):
         stream = StringIO()
         dump_iteration_tree(top, full=False, f=stream, tabsize=3)
         s = stream.getvalue()
-        s = s.replace('comp2', 'comp2or3')
-        s = s.replace('comp3', 'comp2or3')
         self.assertEqual(s,
-            '\n   driver\n      driver1\n         comp1\n         comp2or3\n'
-            '         comp2or3\n         comp4\n')
-
-        # test all_wflows_order
-        comps = top.all_wflows_order()
-        self.assertEqual(comps, 
-                         ['driver', 'driver1', 'comp1', 'comp3', '_pseudo_0', 'comp2', 'comp4', '_pseudo_1'])
+            '\n   driver\n      comp1\n      driver1\n         comp3\n      comp2\n'
+            '      comp4\n')
 
     def test_2_nested_drivers_same_assembly_extra_comp(self):
         print "*** test_2_nested_drivers_same_assembly ***"
@@ -428,6 +423,8 @@ class MultiDriverTestCase(unittest.TestCase):
         #       |      |
         #       |<-----D2
         #
+
+        raise SkipTest("We currently don't allow a component instance in multiple workflows.")
         print "*** test_2drivers_same_iterset ***"
         global exec_order
         top = set_as_top(Assembly())
@@ -465,6 +462,7 @@ class MultiDriverTestCase(unittest.TestCase):
         #              |    |
         #              |<---D2
         #
+        raise SkipTest("We currently don't allow a component instance in multiple workflows.")
         global exec_order
         print "*** test_2drivers_discon_same_iterset ***"
         top = set_as_top(Assembly())
@@ -526,8 +524,8 @@ class MultiDriverTestCase(unittest.TestCase):
         top.D2.max_iterations = 3
 
         top.driver.workflow.add(['D1', 'D2'])
-        top.D1.workflow = SequentialWorkflow(top.D1, members=['C1'])
-        top.D2.workflow = SequentialWorkflow(top.D1, members=['C2'])
+        top.D1.workflow = Workflow(top.D1, members=['C1'])
+        top.D2.workflow = Workflow(top.D2, members=['C2'])
 
         top.run()
         self.assertEqual(top.D2.exec_count, 1)
@@ -555,6 +553,9 @@ class MultiDriverTestCase(unittest.TestCase):
                           'D2', 'C2', 'C2', 'C2', 'C2'])
 
     def test_cascade_opt(self):
+
+        raise SkipTest("We currently don't allow a component instance in multiple workflows.")
+
         top = set_as_top(Assembly())
 
         eq = ['f = (x-3)**2 + x*y + (y+4)**2 - 3']
@@ -583,14 +584,15 @@ class MultiDriverTestCase(unittest.TestCase):
         assert_rel_error(self, top.comp.x, 6.666309, 0.01)
         assert_rel_error(self, top.comp.y, -7.333026, 0.01)
 
-        J = top.driver.workflow.calc_gradient(inputs=['comp.x', 'comp.y'],
-                                              outputs=['comp.f'])
+        J = top.driver.calc_gradient(inputs=['comp.x', 'comp.y'],
+                                     outputs=['comp.f'])
         edges = top.driver.workflow._edges
         print edges
         self.assertEqual(set(edges['@in0']), set(['~opt1.comp|x', '~opt2.comp|x']))
         self.assertEqual(set(edges['@in1']), set(['~opt1.comp|y', '~opt2.comp|y']))
         self.assertEqual(set(edges['~opt1.comp|f']), set(['@out0']))
         self.assertEqual(set(edges['~opt2.comp|f']), set(['@out0']))
+
 
 if __name__ == "__main__":
 
@@ -608,5 +610,3 @@ if __name__ == "__main__":
     #p.print_callees()
 
     unittest.main()
-
-

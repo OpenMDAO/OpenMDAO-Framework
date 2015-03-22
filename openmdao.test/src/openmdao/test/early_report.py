@@ -66,6 +66,13 @@ class EarlyTestInfo(Plugin):
                           dest="report",
                           default="test_report.out",
                           help="name of report file. (defaults to 'test_report.out')")
+        parser.add_option("--quicktime", action="store", type="float",
+                          dest="quicktime",
+                          default=1.0,
+                          help="cutoff time for tests saved in quick.cfg")
+        parser.add_option("--save-configs", action="store_true",
+                          dest="save_configs",
+                          help="set this to save passing/failing tests in passing.cfg and failing.cfg files")
         super(EarlyTestInfo, self).options(parser, env)
 
     def configure(self, options, config):
@@ -76,6 +83,8 @@ class EarlyTestInfo(Plugin):
         self._failed_tests = []
         self._error_tests = []
         self._report_path = os.path.abspath(options.report)
+        self._save_configs = options.save_configs
+        self._quick_time = options.quicktime
 
     def report(self, stream):
         """Report the test failures."""
@@ -85,10 +94,16 @@ class EarlyTestInfo(Plugin):
         failed = []
         errors = []
         skips = []
+        passed = []
+        quick = []
+
         total_time = 0.
 
         for v in self._tests.values():
             total_time += v.elapsed
+
+            if v.elapsed <= self._quick_time:
+                quick.append(v.name)
 
             if v.status == 'F':
                 failed.append(v.name)
@@ -96,16 +111,21 @@ class EarlyTestInfo(Plugin):
                 errors.append(v.name)
             elif v.status == 'S':
                 skips.append(v.name)
+            else:
+                passed.append(v.name)
 
         self.stream.writeln("\n\n")
         
+        total_failed = sorted(chain(failed, errors))
+        skips = sorted(skips)
+
         if skips:
             stream.writeln("The following tests were skipped")
             for test in skips:
                 stream.writeln(test)
         if failed or errors:
             stream.writeln("\nThe following tests failed:")
-            for test in sorted(chain(failed, errors)):
+            for test in total_failed:
                 stream.writeln(test)
 
         hrs = int(total_time/3600)
@@ -116,6 +136,60 @@ class EarlyTestInfo(Plugin):
                          (hrs, mins, total_time))
                 
         self.stream.writeln("\n")
+
+        if self._save_configs:
+            self._save_passing(sorted(passed))
+            self._save_failing(total_failed)
+            self._save_quick(quick)
+
+    def _cvt_test_path(self, tname):
+        """Converts from an all dotted name to a name
+        with a ':' before the TestCase name.
+        """
+        parts = tname.split('.')
+        part1 = '.'.join(parts[:-2])
+        part2 = '.'.join(parts[-2:])
+
+        return ':'.join((part1, part2))
+
+    def _sort_tests(self, tests):
+        tlist = []
+        for test in tests:
+            tail = test.rsplit('.',1)[1]
+            if not tail.startswith('test'):
+                continue
+            tlist.append(self._cvt_test_path(test))
+        return sorted(tlist)
+            
+    def _save_passing(self, passed):
+        with open("passing.cfg", "w") as f:
+            f.write("\n[nosetests]\ntests=")
+            for i,test in enumerate(self._sort_tests(passed)):
+                if i>0:
+                    f.write(",\n   ")
+                f.write(test)
+            f.write('\n')
+
+    def _save_failing(self, failed):
+        with open("failing.cfg", "w") as f:
+            f.write("\n[nosetests]\ntests=")
+            for i,test in enumerate(self._sort_tests(failed)):
+                if i>0:
+                    f.write(",\n   ")
+                f.write(test)
+            f.write('\n')
+
+    def _save_quick(self, quick):
+        with open("quick.cfg", "w") as f:
+            f.write("# all tests here ran in <= %s seconds\n" % self._quick_time)
+            f.write("# (if they failed at the time of recording, \n")
+            f.write("#   they may take significantly longer when they pass)\n")
+            f.write("\n[nosetests]\ntests=")
+            for i,test in enumerate(self._sort_tests(quick)):
+                if i>0:
+                    f.write(",\n   ")
+                f.write(test)
+            f.write('\n')
 
     def formatErr(self, err):
         exctype, value, tb = err
@@ -133,9 +207,9 @@ class EarlyTestInfo(Plugin):
             self.stream.writeln('SKIP')
 
     def addError(self, test, err, capt=None):
+        if id(test) not in self._tests:
+            self.startTest(test)
         if err[0] == SkipTest:
-            if id(test) not in self._tests:
-                self.startTest(test)
             self._tests[id(test)].status = 'S'
         else:
             self._tests[id(test)].status = 'E'
@@ -143,6 +217,8 @@ class EarlyTestInfo(Plugin):
         self.stream.writeln(self.formatErr(err))
 
     def addFailure(self, test, err, capt=None, tb_info=None):
+        if id(test) not in self._tests:
+            self.startTest(test)
         if err[0] == SkipTest:
             self._tests[id(test)].status = 'S'
         else:
@@ -151,9 +227,13 @@ class EarlyTestInfo(Plugin):
         self.stream.writeln(self.formatErr(err))
 
     def addSuccess(self, test, capt=None):
+        if id(test) not in self._tests:
+            self.startTest(test)
         self._show_test(self._tests[id(test)])
         
     def addSkip(self, test, *args, **kwargs):
+        if id(test) not in self._tests:
+            self.startTest(test)
         self._show_test(self._tests[id(test)])
 
     def finalize(self, result):
@@ -174,7 +254,6 @@ class EarlyTestInfo(Plugin):
             self.stream.write('  skipped=%d ' % len(skips))
 
         self.stream.write("\n\n")
-                        
 
     def setOutputStream(self, stream):
         outfile = open(self._report_path, 'w')

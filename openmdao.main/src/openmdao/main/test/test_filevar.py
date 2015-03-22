@@ -8,10 +8,11 @@ import os.path
 import shutil
 import sys
 import unittest
+import tempfile
 
 from traits.api import TraitError
 
-from openmdao.main.api import Assembly, Component, set_as_top
+from openmdao.main.api import Assembly, Component, set_as_top, SimulationRoot
 from openmdao.main.datatypes.api import Bool, File, FileRef, Str, List
 from openmdao.util.fileutil import onerror
 from openmdao.util.testutil import assert_raises
@@ -135,17 +136,23 @@ class TestCase(unittest.TestCase):
 
     def setUp(self):
         """ Called before each test in this class. """
+        self.startdir = os.getcwd()
+        self.tempdir = tempfile.mkdtemp(prefix='test_filevar-')
+        os.chdir(self.tempdir)
+        SimulationRoot.chroot(self.tempdir)
         self.model = set_as_top(Model())
 
     def tearDown(self):
         """ Called after each test in this class. """
         self.model.pre_delete()
-        for directory in ('Source', 'Middle', 'Sink'):
+        self.model = None
+        os.chdir(self.startdir)
+        SimulationRoot.chroot(self.startdir)
+        if not os.environ.get('OPENMDAO_KEEPDIRS', False):
             try:
-                shutil.rmtree(directory, onerror=onerror)
+                shutil.rmtree(self.tempdir)
             except OSError:
                 pass
-        self.model = None
 
     def test_connectivity(self):
         logging.debug('')
@@ -188,10 +195,15 @@ class TestCase(unittest.TestCase):
 
         # Set illegal path (during execution of sink), verify error message.
         self.model.sink.bogus_path = '/illegal'
-        code = 'self.model.run()'
         msg = "middle.passthrough (1-middle.1-passthrough): Illegal path '/illegal'," \
               " not a descendant of"
-        assert_raises(self, code, globals(), locals(), ValueError, msg)
+        try:
+            self.model.run()
+        except ValueError as exc:
+            print exc
+            self.assertTrue(msg in str(exc))
+        else:
+            self.fail('ValueError expected')
 
     def test_legal_types(self):
         logging.debug('')
@@ -199,17 +211,26 @@ class TestCase(unittest.TestCase):
 
         # Set mismatched type and verify error message.
         self.model.source.text_file.content_type = 'invalid'
-        code = 'self.model.run()'
         msg = ": cannot set 'middle.text_in' from 'source.text_file':" \
-              " Content type 'invalid' not one of ['xyzzy', 'txt']"
-        assert_raises(self, code, globals(), locals(), ValueError, msg)
+              " : Content type 'invalid' not one of ['xyzzy', 'txt']"
+        try:
+            self.model.run()
+        except ValueError as exc:
+            print exc
+            self.assertTrue(msg in str(exc))
+        else:
+            self.fail('ValueError expected')
 
         # Set null type and verify error message.
         self.model.source.text_file.content_type = ''
-        code = 'self.model.run()'
         msg = ": cannot set 'middle.text_in' from 'source.text_file':" \
-              " Content type '' not one of ['xyzzy', 'txt']"
-        assert_raises(self, code, globals(), locals(), ValueError, msg)
+              " : Content type '' not one of ['xyzzy', 'txt']"
+        try:
+            self.model.run()
+        except ValueError as exc:
+            self.assertTrue(msg in str(exc))
+        else:
+            self.fail('ValueError expected')
 
     def test_formatting(self):
         logging.debug('')

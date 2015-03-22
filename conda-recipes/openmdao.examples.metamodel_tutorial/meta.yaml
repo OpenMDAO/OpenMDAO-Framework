@@ -1,0 +1,34 @@
+{% set pkg_version = environ['PKG_VERSION'] %}
+{% set remote = "https://github.com/OpenMDAO/OpenMDAO-Framework.git" %}
+
+{% if pkg_version == "dev" %}
+{% set source="git_url: {}\n  git_branch: {}".format(remote, pkg_version) %}
+{% else %}
+{% set source="  git_url: {}\n  git_branch: {}".format(remote, pkg_version) %}
+{% endif %}
+
+package:
+  name: openmdao.examples.metamodel_tutorial
+  version: !!str {{ pkg_version }}
+
+source:
+{{ source }}
+
+build:
+    preserve_egg_dir: True
+    
+requirements:
+  build:
+    - python
+    - setuptools
+
+  run:
+    - python
+    - setuptools
+    - openmdao.main
+    - openmdao.lib
+
+about:
+  home:  http://openmdao.org
+  license:  Apache 2.0
+  summary:  "Open-source Multidisciplinary Design, Analysis and Optimazation framework in Python."

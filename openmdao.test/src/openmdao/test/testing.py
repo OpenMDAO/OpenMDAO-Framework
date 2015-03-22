@@ -20,13 +20,11 @@ from pkg_resources import working_set, to_filename
 
 import atexit
 
-'''
-This is a monkey patch for nose.loader.loadTestsFromModule
-to correctly find tests on all platforms.
-A pull request was issued to github.com/nose-devs/nose that
-fixes this problem: https://github.com/nose-devs/nose/pull/810
 
-'''
+# This is a monkey patch for nose.loader.loadTestsFromModule
+# to correctly find tests on all platforms.
+# A pull request was issued to github.com/nose-devs/nose that
+# fixes this problem: https://github.com/nose-devs/nose/pull/810
 def loadTestsFromModule(self, module, path=None, discovered=False):
         """Load all tests from module and return a suite containing
         them. If the module has been discovered and is not test-like,
@@ -60,35 +58,35 @@ def loadTestsFromModule(self, module, path=None, discovered=False):
         module_paths = getattr(module, '__path__', [])
         if path:
             path = os.path.realpath(path)
-            
-        
+
         for module_path in module_paths:
             log.debug("Load tests from module path %s?", module_path)
             log.debug("path: %s os.path.realpath(%s): %s",
                       path, module_path, os.path.realpath(module_path))
-            
+
             # BEGIN MONKEYPATCH
             #If a path was passed in, the case of path and
             #module_path need to be normalized before comparing the two.
             #This is to resolve a Windows-only issue with tests not being
-            #discovered correctly for namespace packages.           
+            #discovered correctly for namespace packages.
             if path:
                 norm_module_path = os.path.normcase(module_path)
                 norm_path = os.path.normcase(path)
             # END MONKEYPATCH
-            
+
             if (self.config.traverseNamespace or not path) or \
                     os.path.realpath(norm_module_path).startswith(norm_path):
                 # Egg files can be on sys.path, so make sure the path is a
                 # directory before trying to load from it.
                 if os.path.isdir(module_path):
                     tests.extend(self.loadTestsFromDir(module_path))
-            
+
         for test in self.config.plugins.loadTestsFromModule(module, path):
             tests.append(test)
 
         return self.suiteClass(ContextList(tests, context=module))
-        
+
+
 class TestFailureSummary(Plugin):
     """This plugin lists the names of the failed tests. Run nose
     with the option ``--with-fail-summary`` to activate it.
@@ -176,6 +174,7 @@ def _run_exitfuncs():
     if exc_info is not None:
         raise exc_info[0], exc_info[1], exc_info[2]
 
+
 def _trace_atexit():
     """
     This code can be used to display atexit handlers as they are executed during
@@ -190,29 +189,30 @@ def _trace_atexit():
 def _get_openmdao_packages():
     # pkg_resources uses a 'safe' name for dists, which replaces all 'illegal' chars with '-'
     # '_' is an illegal char used in one of our packages
-    return [to_filename(d.project_name) for d in working_set 
+    return [to_filename(d.project_name) for d in working_set
             if d.project_name.startswith('openmdao.')]
+
 
 def read_config(options):
     """Reads the config file specified in options.cfg.
-    
+
     Returns a tuple of the form (hosts, config), where `hosts` is the list of
     host names and `config` is the ConfigParser object for the config file.
     """
     options.cfg = os.path.expanduser(options.cfg)
-    
+
     config = ConfigParser.ConfigParser()
     config.readfp(open(options.cfg))
-    
+
     hostlist = config.sections()
-    
+
     return (hostlist, config)
-    
+
 
 def filter_config(hostlist, config, options):
-    """Looks for sections in the config file that match the host names 
+    """Looks for sections in the config file that match the host names
     specified in options.hosts.
-    
+
     Returns a list of host names that match the given options.
     """
     hosts = []
@@ -221,7 +221,7 @@ def filter_config(hostlist, config, options):
             if host in hostlist:
                 hosts.append(host)
             else:
-                raise RuntimeError("host '%s' is not in config file %s" % 
+                raise RuntimeError("host '%s' is not in config file %s" %
                                    (host, options.cfg))
 
         if not hosts:
@@ -246,26 +246,18 @@ def filter_config(hostlist, config, options):
                 final_hosts.append(h)
     else:
         final_hosts = hosts
-    
+
     return final_hosts
 
 
-def run_openmdao_suite_deprecated():
-    try:
-        run_openmdao_suite()
-    finally:
-        print '\n***'
-        print "'openmdao_test' is deprecated and will be removed in a later release."
-        print "Please use 'openmdao test' instead"
-        print '***'
-        
 def is_dev_install():
     return (os.path.basename(os.path.dirname(os.path.dirname(sys.executable))) == "devenv")
+
 
 def run_openmdao_suite(argv=None):
     """This function is exported as a script that is runnable as part of
     an OpenMDAO virtual environment as openmdao test.
-    
+
     This function wraps nosetests, so any valid nose args should also
     work here.
     """
@@ -274,30 +266,24 @@ def run_openmdao_suite(argv=None):
 
     #Add any default packages/directories to search for tests to tlist.
     tlist = _get_openmdao_packages()
-    
+
     break_check = ['--help', '-h', '--all']
-    
-    covpkg = False # if True, --cover-package was specified by the user
-    
+
+    covpkg = False  # if True, --cover-package was specified by the user
+
     # check for args not starting with '-'
     args = argv[:]
     for i, arg in enumerate(args):
         if arg.startswith('--cover-package'):
             covpkg = True
-        if (i>0 and not arg.startswith('-')) or arg in break_check:
+        if (i > 0 and not arg.startswith('-')) or arg in break_check:
             break
-    else:  # no non '-' args, so assume they want to run the default test suite
-        # in a release install, default is the set of tests specified in release_tests.cfg
-        if not is_dev_install() or '--small' in args:
-            if '--small' in args:
-                args.remove('--small')
-            args.extend(['-c', os.path.join(os.path.dirname(__file__), 'release_tests.cfg')])
-        else: # in a dev install, default is all tests
-            args.append('--all') 
-        
-    args.append('--exe') # by default, nose will skip any .py files that are
-                         # executable. --exe prevents this behavior
-    
+    else:
+        args.append("--all")
+
+    args.append('--exe')  # by default, nose will skip any .py files that are
+                          # executable. --exe prevents this behavior
+
     # Clobber cached data in case Python environment has changed.
     base = os.path.expanduser(os.path.join('~', '.openmdao'))
     for name in ('eggsaver.dat', 'fileanalyzer.dat'):
@@ -322,43 +308,23 @@ def run_openmdao_suite(argv=None):
                 os.remove(path)
 
     # this tells it to enable the console in the environment so that
-    # the logger will print output to stdout. This helps greatly when 
+    # the logger will print output to stdout. This helps greatly when
     # debugging openmdao scripts running in separate processes.
     if '--enable_console' in args:
         args.remove('--enable_console')
         os.environ['OPENMDAO_ENABLE_CONSOLE'] = '1'
-        
+
     if '--all' in args:
         args.remove('--all')
         args.extend(tlist)
-    
+
     if '--plugins' in args:
         args.remove('--plugins')
         from openmdao.main.plugin import plugin_install, _get_plugin_parser
         argv = ['install', '--all']
         parser = _get_plugin_parser()
-        options, argz = parser.parse_known_args(argv) 
+        options, argz = parser.parse_known_args(argv)
         plugin_install(parser, options, argz)
-
-    # The default action should be to run the GUI functional tests.
-    # The 'win32' test here is to allow easily changing the default for Windows.
-    if sys.platform == 'win32':
-        do_gui_tests = True
-    else:
-        do_gui_tests = True
-
-    # run GUI functional tests, overriding default action
-    if '--gui' in args:
-        args.remove('--gui')
-        do_gui_tests = True
-
-    # skip GUI functional tests, overriding default action
-    if '--skip-gui' in args:
-        args.remove('--skip-gui')
-        do_gui_tests = False
-
-    if not do_gui_tests:
-        os.environ['OPENMDAO_SKIP_GUI'] = '1'
 
     # some libs we use call multiprocessing.cpu_count() on import, which can
     # raise NotImplementedError, so try to monkeypatch it here to return 1 if
@@ -370,12 +336,13 @@ def run_openmdao_suite(argv=None):
         pass
     except NotImplementedError:
         multiprocessing.cpu_count = lambda: 1
-    
+
 #    _trace_atexit()
     nose.run_exit(argv=args)
 
 
-setattr(nose.loader.TestLoader, 'loadTestsFromModule', loadTestsFromModule)
+if sys.platform == 'win32':
+    setattr(nose.loader.TestLoader, 'loadTestsFromModule', loadTestsFromModule)
 
 if __name__ == '__main__':
     run_openmdao_suite()

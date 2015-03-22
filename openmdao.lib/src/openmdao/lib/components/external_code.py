@@ -23,6 +23,7 @@ from openmdao.util import shellproc
 
 from distutils.spawn import find_executable
 
+
 class ExternalCode(Component):
     """
     Run an external code as a component. The component can be configured to
@@ -32,7 +33,6 @@ class ExternalCode(Component):
     default stderr is ``error.out``.
     """
 
-    PIPE     = shellproc.PIPE
     STDOUT   = shellproc.STDOUT
     DEV_NULL = shellproc.DEV_NULL
 
@@ -69,7 +69,7 @@ class ExternalCode(Component):
         return _AccessController()
 
     @rbac(('owner', 'user'))
-    def set(self, path, value, index=None, force=False):
+    def set(self, path, value):
         """
         Don't allow setting of 'command' or 'resources' by a remote client.
         """
@@ -77,7 +77,7 @@ class ExternalCode(Component):
            and remote_access():
             self.raise_exception('%r may not be set() remotely' % path,
                                  RuntimeError)
-        return super(ExternalCode, self).set(path, value, index, force)
+        return super(ExternalCode, self).set(path, value)
 
     def execute(self):
         """
@@ -410,7 +410,7 @@ class ExternalCode(Component):
         filename = 'inputs.zip'
         pfiles, pbytes = pack_zipfile(patterns, filename, self._logger)
         try:
-            filexfer(None, filename, self._server, filename, 'b')
+            filexfer(None, filename, self._server, filename, 'b', False)
             ufiles, ubytes = self._server.unpack_zipfile(filename,
                                                          textfiles=textfiles)
         finally:
@@ -434,7 +434,7 @@ class ExternalCode(Component):
 
         filename = 'outputs.zip'
         pfiles, pbytes = self._server.pack_zipfile(patterns, filename)
-        filexfer(self._server, filename, None, filename, 'b')
+        filexfer(self._server, filename, None, filename, 'b', False)
 
         # Valid, but empty, file causes unpack_zipfile() problems.
         try:

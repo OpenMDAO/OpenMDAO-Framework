@@ -270,10 +270,19 @@ class NEWSUMTdriverParaboloidTestCase(unittest.TestCase):
         self.assertAlmostEqual(self.top.comp.opt_design_vars[1],
                                self.top.comp.x[1], places=2)
 
+    def test_empty_ilin_initialization(self):
+        # Test the bug fix related to ilin parameter (re)initialization
+        self.top.driver.add_objective('comp.result')
+        self.top.driver.add_parameter('comp.x[0]', -10, 10)
+        self.top.driver.add_parameter('comp.x[1]', -10, 10)
+
+        self.top.run()
+        self.top.run()
 
     def test_initial_run(self):
         # Test the fix that put run_iteration at the top
         #   of the start_iteration method
+
         class MyComp(Component):
 
             x = Float(0.0, iotype='in', low=-10, high=10)
@@ -294,7 +303,7 @@ class NEWSUMTdriverParaboloidTestCase(unittest.TestCase):
 
             def execute(self):
                 self.set_parameters([1.0])
-                self.workflow.run()
+                super(SpecialDriver, self).run_iteration()
 
         top = set_as_top(Assembly())
         top.add('comp', MyComp())
@@ -522,7 +531,7 @@ class NEWSUMTdriverRosenSuzukiTestCase(unittest.TestCase):
         self.assertEqual(self.top.comp.x[1],
                          end_case.get_input('comp.x[1]'))
         self.assertEqual(self.top.comp.result,
-                         end_case.get_output('_pseudo_0'))
+                         end_case.get_output('_pseudo_0.out0'))
 
 
     def test_opt1_a(self):
@@ -550,7 +559,7 @@ class NEWSUMTdriverRosenSuzukiTestCase(unittest.TestCase):
         self.assertEqual(self.top.comp.x[1],
                          end_case.get_input('comp.x')[1])
         self.assertEqual(self.top.comp.result,
-                         end_case.get_output('_pseudo_0'))
+                         end_case.get_output('_pseudo_0.out0'))
 
 
 class NEWSUMTdriverExample1FromManualTestCase(unittest.TestCase):

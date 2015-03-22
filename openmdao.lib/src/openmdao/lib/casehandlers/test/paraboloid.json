@@ -1,0 +1,1091 @@
+{
+"__length_1": 6923
+, "simulation_info": {
+    "OpenMDAO_Version": "0.10.3.2", 
+    "comp_graph": "{\"directed\": true, \"graph\": [], \"nodes\": [{\"comp\": true, \"pseudo\": \"objective\", \"id\": \"_pseudo_0\"}, {\"comp\": true, \"id\": \"writer\"}, {\"comp\": true, \"driver\": true, \"id\": \"driver\"}, {\"comp\": true, \"id\": \"c2\"}], \"links\": [{\"source\": 1, \"target\": 3}, {\"source\": 3, \"target\": 0}], \"multigraph\": false}", 
+    "constants": {}, 
+    "expressions": {
+        "c2.f_xy": {
+            "data_type": "Objective", 
+            "pcomp_name": "_pseudo_0"
+        }
+    }, 
+    "graph": "{\"directed\": true, \"graph\": [[\"title\", \"unknown\"]], \"nodes\": [{\"full\": \"driver.theta\", \"color_idx\": 2, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.theta\", \"short\": \"theta\"}, {\"full\": \"c2.file_in\", \"color_idx\": 3, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"file_in\", \"var\": true, \"iotype\": \"in\", \"id\": \"c2.file_in\"}, {\"full\": \"writer.x\", \"color_idx\": 1, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"writer.x\", \"short\": \"x\"}, {\"full\": \"driver.fdchm\", \"color_idx\": 2, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.fdchm\", \"short\": \"fdchm\"}, {\"short\": \"_pseudo_0\", \"color_idx\": 0, \"full\": \"_pseudo_0\", \"title\": \"{}\", \"comp\": true, \"pseudo\": \"objective\", \"id\": \"_pseudo_0\"}, {\"full\": \"_pseudo_0.in0\", \"color_idx\": 0, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"_pseudo_0.in0\", \"short\": \"in0\"}, {\"full\": \"driver.ctl\", \"color_idx\": 2, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.ctl\", \"short\": \"ctl\"}, {\"full\": \"driver.delfun\", \"color_idx\": 2, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.delfun\", \"short\": \"delfun\"}, {\"short\": \"writer\", \"color_idx\": 1, \"full\": \"writer\", \"title\": \"{}\", \"comp\": true, \"id\": \"writer\"}, {\"full\": \"driver.linobj\", \"color_idx\": 2, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"linobj\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.linobj\"}, {\"full\": \"driver.fdch\", \"color_idx\": 2, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.fdch\", \"short\": \"fdch\"}, {\"full\": \"c2.f_xy\", \"color_idx\": 3, \"title\": \"{}\", \"var\": true, \"iotype\": \"out\", \"id\": \"c2.f_xy\", \"short\": \"f_xy\"}, {\"full\": \"driver.iprint\", \"color_idx\": 2, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"iprint\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.iprint\"}, {\"full\": \"driver.conmin_diff\", \"color_idx\": 2, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"conmin_diff\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.conmin_diff\"}, {\"full\": \"writer.y\", \"color_idx\": 1, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"writer.y\", \"short\": \"y\"}, {\"short\": \"driver\", \"color_idx\": 2, \"full\": \"driver\", \"title\": \"{'driver': True}\", \"comp\": true, \"driver\": true, \"id\": \"driver\"}, {\"full\": \"driver.icndir\", \"color_idx\": 2, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.icndir\", \"short\": \"icndir\"}, {\"full\": \"driver.dabfun\", \"color_idx\": 2, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.dabfun\", \"short\": \"dabfun\"}, {\"short\": \"c2\", \"color_idx\": 3, \"full\": \"c2\", \"title\": \"{}\", \"comp\": true, \"id\": \"c2\"}, {\"full\": \"_pseudo_0.out0\", \"color_idx\": 0, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"out0\", \"var\": true, \"iotype\": \"out\", \"id\": \"_pseudo_0.out0\"}, {\"full\": \"driver.ctlmin\", \"color_idx\": 2, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.ctlmin\", \"short\": \"ctlmin\"}, {\"full\": \"driver.ctmin\", \"color_idx\": 2, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.ctmin\", \"short\": \"ctmin\"}, {\"full\": \"driver.itrm\", \"color_idx\": 2, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"itrm\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.itrm\"}, {\"full\": \"driver.ct\", \"color_idx\": 2, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.ct\", \"short\": \"ct\"}, {\"full\": \"writer.file_out\", \"color_idx\": 1, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"file_out\", \"var\": true, \"iotype\": \"out\", \"id\": \"writer.file_out\"}, {\"full\": \"driver.phi\", \"color_idx\": 2, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.phi\", \"short\": \"phi\"}, {\"full\": \"driver.itmax\", \"color_idx\": 2, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"itmax\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.itmax\"}], \"links\": [{\"source\": 0, \"target\": 15}, {\"source\": 22, \"target\": 15}, {\"source\": 2, \"target\": 8}, {\"source\": 3, \"target\": 15}, {\"source\": 17, \"target\": 15}, {\"source\": 5, \"target\": 4}, {\"source\": 6, \"target\": 15}, {\"source\": 7, \"target\": 15}, {\"source\": 8, \"target\": 24}, {\"source\": 9, \"target\": 15}, {\"source\": 10, \"target\": 15}, {\"source\": 11, \"target\": 5, \"conn\": true}, {\"source\": 12, \"target\": 15}, {\"source\": 13, \"target\": 15}, {\"source\": 14, \"target\": 8}, {\"drv_conn\": \"driver\", \"target\": 15, \"source\": 19}, {\"drv_conn\": \"driver\", \"target\": 2, \"source\": 15}, {\"drv_conn\": \"driver\", \"target\": 14, \"source\": 15}, {\"source\": 16, \"target\": 15}, {\"source\": 4, \"target\": 19}, {\"source\": 18, \"target\": 11}, {\"source\": 20, \"target\": 15}, {\"source\": 21, \"target\": 15}, {\"source\": 1, \"target\": 18}, {\"source\": 23, \"target\": 15}, {\"source\": 24, \"target\": 1, \"conn\": true}, {\"source\": 25, \"target\": 15}, {\"source\": 26, \"target\": 15}], \"multigraph\": false}", 
+    "name": "", 
+    "uuid": "0a708705-9c1d-11e4-ab8e-20c9d0478eff", 
+    "variable_metadata": {
+        "c2.f_xy": {
+            "assumed_default": false, 
+            "high": null, 
+            "iotype": "out", 
+            "low": null, 
+            "target": "func.f_xy", 
+            "vartypename": "Float"
+        }, 
+        "writer.file_out": {
+            "iotype": "out", 
+            "vartypename": "File"
+        }, 
+        "writer.x": {
+            "assumed_default": false, 
+            "high": null, 
+            "iotype": "in", 
+            "low": null, 
+            "vartypename": "Float"
+        }, 
+        "writer.y": {
+            "assumed_default": false, 
+            "high": null, 
+            "iotype": "in", 
+            "low": null, 
+            "vartypename": "Float"
+        }
+    }
+}
+, "__length_2": 333
+, "driver_info_1": {
+    "_id": 4437105552, 
+    "ineq_constraints": [], 
+    "name": "driver", 
+    "objectives": [
+        "c2.f_xy"
+    ], 
+    "parameters": [
+        "writer.x", 
+        "writer.y"
+    ], 
+    "recording": [
+        "writer.x", 
+        "writer.y", 
+        "_pseudo_0.out0", 
+        "writer.file_out", 
+        "c2.f_xy"
+    ]
+}
+, "__length_3": 733
+, "iteration_case_1": {
+    "_driver_id": 4437105552, 
+    "_id": "0a724dfa-9c1d-11e4-8001-20c9d0478eff", 
+    "_parent_id": "0a708705-9c1d-11e4-ab8e-20c9d0478eff", 
+    "data": {
+        "_pseudo_0.out0": 39.0, 
+        "c2.f_xy": 39.0, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
+        "writer.x": 1.0, 
+        "writer.y": 2.0
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1421260927.137904
+}
+, "__length_4": 733
+, "iteration_case_2": {
+    "_driver_id": 4437105552, 
+    "_id": "0a7553e1-9c1d-11e4-8003-20c9d0478eff", 
+    "_parent_id": "0a708705-9c1d-11e4-ab8e-20c9d0478eff", 
+    "data": {
+        "_pseudo_0.out0": 39.0, 
+        "c2.f_xy": 39.0, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
+        "writer.x": 1.0, 
+        "writer.y": 2.0
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1421260927.143827
+}
+, "__length_5": 739
+, "iteration_case_3": {
+    "_driver_id": 4437105552, 
+    "_id": "0a761e63-9c1d-11e4-8005-20c9d0478eff", 
+    "_parent_id": "0a708705-9c1d-11e4-ab8e-20c9d0478eff", 
+    "data": {
+        "_pseudo_0.out0": 38.9801, 
+        "c2.f_xy": 38.9801, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
+        "writer.x": 1.01, 
+        "writer.y": 2.0
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1421260927.14826
+}
+, "__length_6": 760
+, "iteration_case_4": {
+    "_driver_id": 4437105552, 
+    "_id": "0a76e46e-9c1d-11e4-8007-20c9d0478eff", 
+    "_parent_id": "0a708705-9c1d-11e4-ab8e-20c9d0478eff", 
+    "data": {
+        "_pseudo_0.out0": 39.26039999999999, 
+        "c2.f_xy": 39.26039999999999, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
+        "writer.x": 1.0, 
+        "writer.y": 2.02
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1421260927.153129
+}
+, "__length_7": 791
+, "iteration_case_5": {
+    "_driver_id": 4437105552, 
+    "_id": "0a7784dc-9c1d-11e4-8009-20c9d0478eff", 
+    "_parent_id": "0a708705-9c1d-11e4-ab8e-20c9d0478eff", 
+    "data": {
+        "_pseudo_0.out0": 36.372760999999997, 
+        "c2.f_xy": 36.372760999999997, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
+        "writer.x": 1.0305683568303128, 
+        "writer.y": 1.7999999970197678
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1421260927.157231
+}
+, "__length_8": 791
+, "iteration_case_6": {
+    "_driver_id": 4437105552, 
+    "_id": "0a782721-9c1d-11e4-800b-20c9d0478eff", 
+    "_parent_id": "0a708705-9c1d-11e4-ab8e-20c9d0478eff", 
+    "data": {
+        "_pseudo_0.out0": 26.564408999999998, 
+        "c2.f_xy": 26.564408999999998, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
+        "writer.x": 1.1528417841515644, 
+        "writer.y": 0.99999998509883881
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1421260927.16129
+}
+, "__length_9": 791
+, "iteration_case_7": {
+    "_driver_id": 4437105552, 
+    "_id": "0a78c728-9c1d-11e4-800d-20c9d0478eff", 
+    "_parent_id": "0a708705-9c1d-11e4-ab8e-20c9d0478eff", 
+    "data": {
+        "_pseudo_0.out0": -5.7643040000000001, 
+        "c2.f_xy": -5.7643040000000001, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
+        "writer.x": 1.764208920757822, 
+        "writer.y": -3.000000074505806
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1421260927.16601
+}
+, "__length_10": 773
+, "iteration_case_8": {
+    "_driver_id": 4437105552, 
+    "_id": "0a797c9c-9c1d-11e4-800f-20c9d0478eff", 
+    "_parent_id": "0a708705-9c1d-11e4-ab8e-20c9d0478eff", 
+    "data": {
+        "_pseudo_0.out0": -5.862476, 
+        "c2.f_xy": -5.862476, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
+        "writer.x": 1.7818510099654001, 
+        "writer.y": -3.000000074505806
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1421260927.169988
+}
+, "__length_11": 793
+, "iteration_case_9": {
+    "_driver_id": 4437105552, 
+    "_id": "0a7a1935-9c1d-11e4-8011-20c9d0478eff", 
+    "_parent_id": "0a708705-9c1d-11e4-ab8e-20c9d0478eff", 
+    "data": {
+        "_pseudo_0.out0": -5.6504840000000014, 
+        "c2.f_xy": -5.6504840000000014, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
+        "writer.x": 1.764208920757822, 
+        "writer.y": -2.9700000737607479
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1421260927.174266
+}
+, "__length_12": 794
+, "iteration_case_10": {
+    "_driver_id": 4437105552, 
+    "_id": "0a7abff8-9c1d-11e4-8013-20c9d0478eff", 
+    "_parent_id": "0a708705-9c1d-11e4-ab8e-20c9d0478eff", 
+    "data": {
+        "_pseudo_0.out0": -6.8894070000000003, 
+        "c2.f_xy": -6.8894070000000003, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
+        "writer.x": 1.8788891850925069, 
+        "writer.y": -3.1356631301619964
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1421260927.178331
+}
+, "__length_13": 794
+, "iteration_case_11": {
+    "_driver_id": 4437105552, 
+    "_id": "0a7b64bd-9c1d-11e4-8015-20c9d0478eff", 
+    "_parent_id": "0a708705-9c1d-11e4-ab8e-20c9d0478eff", 
+    "data": {
+        "_pseudo_0.out0": -11.057236000000001, 
+        "c2.f_xy": -11.057236000000001, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
+        "writer.x": 2.3376102424312468, 
+        "writer.y": -3.6783153527867585
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1421260927.183338
+}
+, "__length_14": 794
+, "iteration_case_12": {
+    "_driver_id": 4437105552, 
+    "_id": "0a7c2bc2-9c1d-11e4-8017-20c9d0478eff", 
+    "_parent_id": "0a708705-9c1d-11e4-ab8e-20c9d0478eff", 
+    "data": {
+        "_pseudo_0.out0": -24.219526999999999, 
+        "c2.f_xy": -24.219526999999999, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
+        "writer.x": 4.6312155291249457, 
+        "writer.y": -6.3915764659105703
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1421260927.187945
+}
+, "__length_15": 776
+, "iteration_case_13": {
+    "_driver_id": 4437105552, 
+    "_id": "0a7cf759-9c1d-11e4-8019-20c9d0478eff", 
+    "_parent_id": "0a708705-9c1d-11e4-ab8e-20c9d0478eff", 
+    "data": {
+        "_pseudo_0.out0": -24.364428, 
+        "c2.f_xy": -24.364428, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
+        "writer.x": 4.6775276844161953, 
+        "writer.y": -6.3915764659105703
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1421260927.194449
+}
+, "__length_16": 776
+, "iteration_case_14": {
+    "_driver_id": 4437105552, 
+    "_id": "0a7dd62b-9c1d-11e4-801b-20c9d0478eff", 
+    "_parent_id": "0a708705-9c1d-11e4-ab8e-20c9d0478eff", 
+    "data": {
+        "_pseudo_0.out0": -24.225223, 
+        "c2.f_xy": -24.225223, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
+        "writer.x": 4.6312155291249457, 
+        "writer.y": -6.3276607012514647
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1421260927.199298
+}
+, "__length_17": 792
+, "iteration_case_15": {
+    "_driver_id": 4437105552, 
+    "_id": "0a7e92de-9c1d-11e4-801d-20c9d0478eff", 
+    "_parent_id": "0a708705-9c1d-11e4-ab8e-20c9d0478eff", 
+    "data": {
+        "_pseudo_0.out0": -27.129673000000004, 
+        "c2.f_xy": -27.129673000000004, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
+        "writer.x": 6.1940719634916768, 
+        "writer.y": -6.90711982519767
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1421260927.203703
+}
+, "__length_18": 794
+, "iteration_case_16": {
+    "_driver_id": 4437105552, 
+    "_id": "0a7f3e85-9c1d-11e4-801f-20c9d0478eff", 
+    "_parent_id": "0a708705-9c1d-11e4-ab8e-20c9d0478eff", 
+    "data": {
+        "_pseudo_0.out0": -27.262503000000002, 
+        "c2.f_xy": -27.262503000000002, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
+        "writer.x": 6.5886277470278447, 
+        "writer.y": -7.0372729279379174
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1421260927.208208
+}
+, "__length_19": 793
+, "iteration_case_17": {
+    "_driver_id": 4437105552, 
+    "_id": "0a7feeba-9c1d-11e4-8021-20c9d0478eff", 
+    "_parent_id": "0a708705-9c1d-11e4-ab8e-20c9d0478eff", 
+    "data": {
+        "_pseudo_0.out0": -27.263148999999999, 
+        "c2.f_xy": -27.263148999999999, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
+        "writer.x": 6.6109227140348423, 
+        "writer.y": -7.0446274244439513
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1421260927.21259
+}
+, "__length_20": 794
+, "iteration_case_18": {
+    "_driver_id": 4437105552, 
+    "_id": "0a809aca-9c1d-11e4-8023-20c9d0478eff", 
+    "_parent_id": "0a708705-9c1d-11e4-ab8e-20c9d0478eff", 
+    "data": {
+        "_pseudo_0.out0": -27.247111000000004, 
+        "c2.f_xy": -27.247111000000004, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
+        "writer.x": 6.6770319411751906, 
+        "writer.y": -7.0446274244439513
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1421260927.217565
+}
+, "__length_21": 776
+, "iteration_case_19": {
+    "_driver_id": 4437105552, 
+    "_id": "0a815a8c-9c1d-11e4-8025-20c9d0478eff", 
+    "_parent_id": "0a708705-9c1d-11e4-ab8e-20c9d0478eff", 
+    "data": {
+        "_pseudo_0.out0": -27.221117, 
+        "c2.f_xy": -27.221117, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
+        "writer.x": 6.6109227140348423, 
+        "writer.y": -6.9741811501995121
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1421260927.221541
+}
+, "__length_22": 792
+, "iteration_case_20": {
+    "_driver_id": 4437105552, 
+    "_id": "0a81f654-9c1d-11e4-8027-20c9d0478eff", 
+    "_parent_id": "0a708705-9c1d-11e4-ab8e-20c9d0478eff", 
+    "data": {
+        "_pseudo_0.out0": -14.672609000000001, 
+        "c2.f_xy": -14.672609000000001, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
+        "writer.x": 5.3807031993338494, 
+        "writer.y": -10.070262241004933
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1421260927.2259
+}
+, "__length_23": 793
+, "iteration_case_21": {
+    "_driver_id": 4437105552, 
+    "_id": "0a82a023-9c1d-11e4-8029-20c9d0478eff", 
+    "_parent_id": "0a708705-9c1d-11e4-ab8e-20c9d0478eff", 
+    "data": {
+        "_pseudo_0.out0": -27.317853000000007, 
+        "c2.f_xy": -27.317853000000007, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
+        "writer.x": 6.5228604066048641, 
+        "writer.y": -7.2612102214186844
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1421260927.22999
+}
+, "__length_24": 794
+, "iteration_case_22": {
+    "_driver_id": 4437105552, 
+    "_id": "0a835f0a-9c1d-11e4-802b-20c9d0478eff", 
+    "_parent_id": "0a708705-9c1d-11e4-ab8e-20c9d0478eff", 
+    "data": {
+        "_pseudo_0.out0": -27.318541000000003, 
+        "c2.f_xy": -27.318541000000003, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
+        "writer.x": 6.5415625877875776, 
+        "writer.y": -7.2152135762217471
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1421260927.234888
+}
+, "__length_25": 794
+, "iteration_case_23": {
+    "_driver_id": 4437105552, 
+    "_id": "0a83ff59-9c1d-11e4-802d-20c9d0478eff", 
+    "_parent_id": "0a708705-9c1d-11e4-ab8e-20c9d0478eff", 
+    "data": {
+        "_pseudo_0.out0": -27.322831000000001, 
+        "c2.f_xy": -27.322831000000001, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
+        "writer.x": 6.6069782136654531, 
+        "writer.y": -7.2152135762217471
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1421260927.239204
+}
+, "__length_26": 794
+, "iteration_case_24": {
+    "_driver_id": 4437105552, 
+    "_id": "0a84a838-9c1d-11e4-802f-20c9d0478eff", 
+    "_parent_id": "0a708705-9c1d-11e4-ab8e-20c9d0478eff", 
+    "data": {
+        "_pseudo_0.out0": -27.305293000000006, 
+        "c2.f_xy": -27.305293000000006, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
+        "writer.x": 6.5415625877875776, 
+        "writer.y": -7.1430614404595296
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1421260927.243311
+}
+, "__length_27": 793
+, "iteration_case_25": {
+    "_driver_id": 4437105552, 
+    "_id": "0a8547f0-9c1d-11e4-8031-20c9d0478eff", 
+    "_parent_id": "0a708705-9c1d-11e4-ab8e-20c9d0478eff", 
+    "data": {
+        "_pseudo_0.out0": -25.264728999999999, 
+        "c2.f_xy": -25.264728999999999, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
+        "writer.x": 6.838965543807503, 
+        "writer.y": -8.8499570410262187
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1421260927.248018
+}
+, "__length_28": 793
+, "iteration_case_26": {
+    "_driver_id": 4437105552, 
+    "_id": "0a85fefd-9c1d-11e4-8033-20c9d0478eff", 
+    "_parent_id": "0a708705-9c1d-11e4-ab8e-20c9d0478eff", 
+    "data": {
+        "_pseudo_0.out0": -27.323180999999998, 
+        "c2.f_xy": -27.323180999999998, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
+        "writer.x": 6.5615898850107977, 
+        "writer.y": -7.325298202452438
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1421260927.252165
+}
+, "__length_29": 793
+, "iteration_case_27": {
+    "_driver_id": 4437105552, 
+    "_id": "0a86a035-9c1d-11e4-8035-20c9d0478eff", 
+    "_parent_id": "0a708705-9c1d-11e4-ab8e-20c9d0478eff", 
+    "data": {
+        "_pseudo_0.out0": -27.323749000000003, 
+        "c2.f_xy": -27.323749000000003, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
+        "writer.x": 6.5543127464410915, 
+        "writer.y": -7.285297743551463
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1421260927.256053
+}
+, "__length_30": 792
+, "iteration_case_28": {
+    "_driver_id": 4437105552, 
+    "_id": "0a873ba1-9c1d-11e4-8037-20c9d0478eff", 
+    "_parent_id": "0a708705-9c1d-11e4-ab8e-20c9d0478eff", 
+    "data": {
+        "_pseudo_0.out0": -27.331075000000002, 
+        "c2.f_xy": -27.331075000000002, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
+        "writer.x": 6.619855873905502, 
+        "writer.y": -7.285297743551463
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1421260927.260252
+}
+, "__length_31": 794
+, "iteration_case_29": {
+    "_driver_id": 4437105552, 
+    "_id": "0a880942-9c1d-11e4-8039-20c9d0478eff", 
+    "_parent_id": "0a708705-9c1d-11e4-ab8e-20c9d0478eff", 
+    "data": {
+        "_pseudo_0.out0": -27.319588000000003, 
+        "c2.f_xy": -27.319588000000003, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
+        "writer.x": 6.5543127464410915, 
+        "writer.y": -7.2124447661159481
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1421260927.265576
+}
+, "__length_32": 793
+, "iteration_case_30": {
+    "_driver_id": 4437105552, 
+    "_id": "0a88b40a-9c1d-11e4-803b-20c9d0478eff", 
+    "_parent_id": "0a708705-9c1d-11e4-ab8e-20c9d0478eff", 
+    "data": {
+        "_pseudo_0.out0": -27.314951000000001, 
+        "c2.f_xy": -27.314951000000001, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
+        "writer.x": 6.7226225125029639, 
+        "writer.y": -7.4875115523846079
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1421260927.26964
+}
+, "__length_33": 794
+, "iteration_case_31": {
+    "_driver_id": 4437105552, 
+    "_id": "0a894eba-9c1d-11e4-803d-20c9d0478eff", 
+    "_parent_id": "0a708705-9c1d-11e4-ab8e-20c9d0478eff", 
+    "data": {
+        "_pseudo_0.out0": -27.328783999999999, 
+        "c2.f_xy": -27.328783999999999, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
+        "writer.x": 6.6195607460771662, 
+        "writer.y": -7.3636891930428963
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1421260927.273776
+}
+, "__length_34": 794
+, "iteration_case_32": {
+    "_driver_id": 4437105552, 
+    "_id": "0a89f266-9c1d-11e4-803f-20c9d0478eff", 
+    "_parent_id": "0a708705-9c1d-11e4-ab8e-20c9d0478eff", 
+    "data": {
+        "_pseudo_0.out0": -27.328723000000004, 
+        "c2.f_xy": -27.328723000000004, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
+        "writer.x": 6.6129564628703879, 
+        "writer.y": -7.3557545538766558
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1421260927.278754
+}
+, "__length_35": 793
+, "iteration_case_33": {
+    "_driver_id": 4437105552, 
+    "_id": "0a8ab445-9c1d-11e4-8041-20c9d0478eff", 
+    "_parent_id": "0a708705-9c1d-11e4-ab8e-20c9d0478eff", 
+    "data": {
+        "_pseudo_0.out0": -27.332611999999997, 
+        "c2.f_xy": -27.332611999999997, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
+        "writer.x": 6.6857563535379381, 
+        "writer.y": -7.3636891930428963
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1421260927.28279
+}
+, "__length_36": 794
+, "iteration_case_34": {
+    "_driver_id": 4437105552, 
+    "_id": "0a8b5119-9c1d-11e4-8043-20c9d0478eff", 
+    "_parent_id": "0a708705-9c1d-11e4-ab8e-20c9d0478eff", 
+    "data": {
+        "_pseudo_0.out0": -27.331299999999999, 
+        "c2.f_xy": -27.331299999999999, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
+        "writer.x": 6.6195607460771662, 
+        "writer.y": -7.2900523011124676
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1421260927.286761
+}
+, "__length_37": 793
+, "iteration_case_35": {
+    "_driver_id": 4437105552, 
+    "_id": "0a8be6b5-9c1d-11e4-8045-20c9d0478eff", 
+    "_parent_id": "0a708705-9c1d-11e4-ab8e-20c9d0478eff", 
+    "data": {
+        "_pseudo_0.out0": -27.332775000000005, 
+        "c2.f_xy": -27.332775000000005, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
+        "writer.x": 6.6852257059805744, 
+        "writer.y": -7.3248914811661976
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1421260927.29058
+}
+, "__length_38": 794
+, "iteration_case_36": {
+    "_driver_id": 4437105552, 
+    "_id": "0a8c9b23-9c1d-11e4-8047-20c9d0478eff", 
+    "_parent_id": "0a708705-9c1d-11e4-ab8e-20c9d0478eff", 
+    "data": {
+        "_pseudo_0.out0": -27.313967999999999, 
+        "c2.f_xy": -27.313967999999999, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
+        "writer.x": 6.7681541291549614, 
+        "writer.y": -7.2758937649802506
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1421260927.295271
+}
+, "__length_39": 794
+, "iteration_case_37": {
+    "_driver_id": 4437105552, 
+    "_id": "0a8d3335-9c1d-11e4-8049-20c9d0478eff", 
+    "_parent_id": "0a708705-9c1d-11e4-ab8e-20c9d0478eff", 
+    "data": {
+        "_pseudo_0.out0": -27.332852000000003, 
+        "c2.f_xy": -27.332852000000003, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
+        "writer.x": 6.6837693609986939, 
+        "writer.y": -7.3257519530690693
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1421260927.299119
+}
+, "__length_40": 794
+, "iteration_case_38": {
+    "_driver_id": 4437105552, 
+    "_id": "0a8dc94a-9c1d-11e4-804b-20c9d0478eff", 
+    "_parent_id": "0a708705-9c1d-11e4-ab8e-20c9d0478eff", 
+    "data": {
+        "_pseudo_0.out0": -27.332852000000003, 
+        "c2.f_xy": -27.332852000000003, 
+        "writer.file_out": {
+            "big_endian": false, 
+            "binary": false, 
+            "content_type": "", 
+            "desc": "", 
+            "integer_8": false, 
+            "path": "x.in", 
+            "platform": "darwin", 
+            "recordmark_8": false, 
+            "single_precision": false, 
+            "unformatted": false
+        }, 
+        "writer.x": 6.6837693609986939, 
+        "writer.y": -7.3257519530690693
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1421260927.302965
+}
+}

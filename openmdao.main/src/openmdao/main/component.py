@@ -12,35 +12,29 @@ from os.path import isabs, isdir, dirname, exists, join, normpath, relpath
 import pkg_resources
 import sys
 import weakref
-import re
 
 # pylint: disable=E0611,F0401
 from traits.trait_base import not_event
 from traits.api import Property
 
+from openmdao.main.array_helpers import flattened_value
 from openmdao.main.container import Container
+from openmdao.main.derivatives import applyJ, applyJT
 from openmdao.main.interfaces import implements, obj_has_interface, \
-                                     IAssembly, IComponent, IDriver, \
-                                     IHasCouplingVars, IHasObjectives, \
-                                     IHasParameters, IHasResponses, \
-                                     IHasConstraints, \
-                                     IHasEqConstraints, IHasIneqConstraints, \
-                                     IHasEvents, IImplicitComponent
-from openmdao.main.hasparameters import ParameterGroup
+                                     IAssembly, IComponent, IDriver
 from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, \
                                          HasIneqConstraints
 from openmdao.main.hasobjective import HasObjective, HasObjectives
 from openmdao.main.file_supp import FileMetadata
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import has_interface, is_instance
-from openmdao.main.datatypes.api import Bool, List, Str, Int, Slot, Dict, \
+from openmdao.main.datatypes.api import Bool, List, Str, Int, Slot, \
                                         FileRef, Enum
-from openmdao.main.publisher import Publisher
 from openmdao.main.vartree import VariableTree
+from openmdao.main.mpiwrap import MPI_info
 
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.eggobserver import EggObserver
-from openmdao.util.graph import list_deriv_vars
 
 import openmdao.util.log as tracing
 
@@ -113,9 +107,6 @@ class DirectoryContext(object):
 
 _iodict = {'out': 'output', 'in': 'input'}
 
-# this key in publish_vars indicates a subscriber to the Component attributes
-__attributes__ = '__attributes__'
-
 
 class Component(Container):
     """This is the base class for all objects containing Traits that are
@@ -157,24 +148,24 @@ class Component(Container):
     def __init__(self):
         super(Component, self).__init__()
 
+        self.mpi = MPI_info()
+
         self._exec_state = None
         self._stop = False
-        self._call_check_config = True
+        self._new_config = True
 
         # cached configuration information
         self._input_names = None
         self._output_names = None
         self._container_names = None
-        self._expr_sources = None
 
         self._dir_stack = []
         self._dir_context = None
 
         # Flags and caching used by the derivatives calculation
-        self.ffd_order = 0
         self._provideJ_bounds = None
 
-        self._publish_vars = {}  # dict of varname to subscriber count
+        self._case_id = ''
         self._case_uuid = ''
 
     @property
@@ -187,9 +178,6 @@ class Component(Container):
     def _set_exec_state(self, state):
         if self._exec_state != state:
             self._exec_state = state
-            pub = Publisher.get_instance()
-            if pub:
-                pub.publish('.'.join((self.get_pathname(), 'exec_state')), state)
 
     @rbac(('owner', 'user'))
     def get_itername(self):
@@ -234,7 +222,6 @@ class Component(Container):
         state['_input_names'] = None
         state['_output_names'] = None
         state['_container_names'] = None
-        state['_expr_sources'] = None
 
         return state
 
@@ -247,6 +234,15 @@ class Component(Container):
             if trait.iotype == 'in':
                 self._set_input_callback(name)
 
+    @rbac(('owner', 'user'))
+    def is_differentiable(self):
+        """Return True if analytical derivatives can be
+        computed for this Component.
+        """
+        if self.force_fd:
+            return False
+
+        return hasattr(self, 'provideJ')
 
     @rbac(('owner', 'user'))
     def get_req_default(self, self_required=None):
@@ -259,7 +255,7 @@ class Component(Container):
                 obj = getattr(self, name)
                 if is_instance(obj, VariableTree):
                     if self.name:
-                        req.extend(['.'.join((self.name, n)) 
+                        req.extend(['.'.join((self.name, n))
                                      for n in obj.get_req_default(trait.required)])
                     else:
                         req.extend(obj.get_req_default(trait.required))
@@ -298,13 +294,18 @@ class Component(Container):
         if hasattr(self, 'apply_deriv') or hasattr(self, 'apply_derivT'):
             if not hasattr(self, 'provideJ'):
                 self.raise_exception("required method 'provideJ' is missing")
-            if not hasattr(self, 'list_deriv_vars'):
-                self.raise_exception("required method 'list_deriv_vars' is missing")
-
-        if hasattr(self, 'provideJ') and not hasattr(self, 'list_deriv_vars'):
-            self.raise_exception("required method 'list_deriv_vars' is missing")
+            self._check_deriv_vars()
+            if not hasattr(self, 'apply_deriv'):
+                self.raise_exception("method 'apply_deriv' must be also specified "
+                                     " if 'apply_derivT' is specified")
+            if not hasattr(self, 'apply_derivT'):
+                self.raise_exception("method 'apply_derivT' must be also specified "
+                                     " if 'apply_deriv' is specified")
+        elif hasattr(self, 'provideJ'):
+            self._check_deriv_vars()
 
         visited = set([id(self), id(self.parent)])
+
         for name, trait in self.traits(type=not_event).items():
             obj = getattr(self, name)
             #self._check_req_trait(name, obj, trait)
@@ -312,6 +313,7 @@ class Component(Container):
                 if obj is None:
                     self.raise_exception("required plugin '%s' is not"
                                          " present" % name, RuntimeError)
+
             if has_interface(obj, IComponent) and id(obj) not in visited:
                 visited.add(id(obj))
                 obj.check_config(strict=strict)
@@ -322,7 +324,47 @@ class Component(Container):
                 self.raise_exception("required variables %s were"
                                      " not set" % reqs, RuntimeError)
 
-        self._call_check_config = False
+        self._new_config = False
+
+    def _check_deriv_var(self, var_name):
+        try:
+            val = self.get(var_name)
+        except AttributeError:
+            msg = "'{var_name}' was given in 'list_deriv_vars' "\
+                  "but '{var_name}' is undefined"
+
+            msg = msg.format(var_name=var_name, comp_name=self.__class__.__name__)
+            self.raise_exception(msg)
+
+        var_type_name = self.get_metadata(var_name).get('vartypename')
+
+        if var_type_name == 'VarTree':
+            msg = "'{var_name}', of type '{var_type}', was given in 'list_deriv_vars' but you must declare "\
+                  "sub-vars of a vartree individually"
+
+            msg = msg.format(var_name=var_name, var_type=var_type_name)
+            self.raise_exception(msg)
+
+        try:
+            flattened_value(var_name, val)
+        except Exception:
+            msg = "'{var_name}', of type '{var_type}', was given in 'list_deriv_vars' "\
+                  "but variables must be of a type convertable to a 1D float array"
+
+            msg = msg.format(var_name=var_name, var_type=var_type_name)
+            self.raise_exception(msg)
+
+    def _check_deriv_vars(self):
+        try:
+            inputs, outputs = self.list_deriv_vars()
+        except AttributeError:
+            self.raise_exception("required method 'list_deriv_vars' is missing")
+
+        for var_name in inputs:
+            self._check_deriv_var(var_name)
+
+        for var_name in outputs:
+            self._check_deriv_var(var_name)
 
     @rbac(('owner', 'user'))
     def cpath_updated(self):
@@ -380,17 +422,23 @@ class Component(Container):
             self._call_configure = False
 
     def _pre_execute(self):
-        """Prepares for execution by calling *cpath_updated()* and
-        *check_config()* if their "dirty" flags are set and by requesting that
-        the parent Assembly update this Component's invalid inputs.
+        """Prepares for execution by calling various initialization methods
+        if necessary.
 
         Overrides of this function must call this version.
         """
+
         if self._call_cpath_updated:
             self.cpath_updated()
 
-        if self._call_check_config:
-            self.check_config()
+        if self._new_config:
+            self._setup()
+
+        if self.parent is None and has_interface(self, IAssembly):
+            self.configure_recording(self.recording_options)
+
+    def _setup(self, inputs=None, outputs=None):
+        self.check_config()
 
     def execute(self):
         """Perform calculations or other actions, assuming that inputs
@@ -398,121 +446,63 @@ class Component(Container):
         """
         raise NotImplementedError('%s.execute' % self.get_pathname())
 
-    def _execute_ffd(self, ffd_order):
-        """During Fake Finite Difference, instead of executing, a component
-        can use the available derivatives to calculate the output efficiently.
-        Before FFD can execute, calc_derivatives must be called to save the
-        baseline state and the derivatives at that baseline point.
-
-        This method approximates the output using a Taylor series expansion
-        about the saved baseline point.
-
-        ffd_order: int
-            Order of the derivatives to be used (1 or 2).
-        """
-
-        input_keys, output_keys = list_deriv_vars(self)
-        J = self.provideJ()
-
-        if ffd_order == 1:
-            for j, out_name in enumerate(output_keys):
-                y = self._ffd_outputs[out_name]
-                for i, in_name in enumerate(input_keys):
-                    y += J[j, i]*(self.get(in_name) - self._ffd_inputs[in_name])
-
-                self.set(out_name, y)
-
-    def calc_derivatives(self, first=False, second=False, savebase=False,
-                         required_inputs=None, required_outputs=None):
-        """Prepare for Fake Finite Difference runs by calculating all needed
-        derivatives, and saving the current state as the baseline if
-        requested. The user must supply *provideJ* and *list_deriv_vars*
-        in the component.
-
-        This function should not be overriden.
+    def linearize(self, first=False, second=False):
+        """Component wrapper for the ProvideJ hook. This function should not
+        be overriden.
 
         first: Bool
             Set to True to calculate first derivatives.
 
         second: Bool
-            Set to True to calculate second derivatives.
-
-        savebase: Bool
-            If set to true, then we save our baseline state for fake finite
-            difference.
-
-        required_inputs:
-            Not needed by Component
-
-        required_outputs
-            Not needed by Component
+            Set to True to calculate second derivatives. This is not cuurrently supported.
         """
 
         J = None
 
-        # Allow user to force finite difference on a comp. This also turns off
-        # fake finite difference (i.e., there must be a reason they don't
-        # trust their own derivatives.)
+        # Allow user to force finite difference on a comp.
         if self.force_fd is True:
             return
 
         # Calculate first derivatives using the new API.
         if first and hasattr(self, 'provideJ'):
-
-            # Don't fake finite difference assemblies, but do fake finite
-            # difference on their contained components.
-            if obj_has_interface(self, IAssembly):
-                if savebase:
-                    self.driver.calc_derivatives(first, second, savebase,
-                                                 required_inputs, required_outputs)
-                    return
-
-                J = self.provideJ(required_inputs=required_inputs,
-                                  required_outputs=required_outputs)
-            else:
-                J = self.provideJ()
-
+            J = self.provideJ()
             self.derivative_exec_count += 1
         else:
             return
 
-        # Save baseline state for fake finite difference.
-        # TODO: fake finite difference something with apply_der?
-        ffd_inputs, ffd_outputs = list_deriv_vars(self)
-        if savebase and J is not None:
-            self._ffd_inputs = {}
-            self._ffd_outputs = {}
-
-            for name in ffd_inputs:
-                self._ffd_inputs[name] = self.get(name)
-
-            for name in ffd_outputs:
-                self._ffd_outputs[name] = self.get(name)
-
         return J
+
+    def applyJ(self, system, variables):
+        """ Wrapper for component derivative specification methods.
+        Forward Mode.
+        """
+        applyJ(system, variables)
+
+    def applyJT(self, system, variables):
+        """ Wrapper for component derivative specification methods.
+        Adjoint Mode.
+        """
+        applyJT(system, variables)
+
+    def name_changed(self, old, new):
+        pass
 
     def _post_execute(self):
         """Update output variables and anything else needed after execution.
         Overrides of this function must call this version.  This is only
         called if execute() actually ran.
         """
-        if Publisher.get_instance() is not None:
-            self.publish_vars()
+        pass
 
     def _post_run(self):
         """"Runs at the end of the run function, whether execute() ran or not."""
         pass
 
     @rbac('*', 'owner')
-    def run(self, ffd_order=0, case_uuid=''):
+    def run(self, case_uuid=''):
         """Run this object. This should include fetching input variables
         (if necessary), executing, and updating output variables.
         Do not override this function.
-
-        ffd_order: int
-            Order of the derivatives to be used during Fake
-            Finite Difference (typically 1 or 2). During regular execution,
-            ffd_order should be 0. (Default is 0.)
 
         case_uuid: str
             Identifier for the Case that is associated with this run.
@@ -522,60 +512,33 @@ class Component(Container):
             self.push_dir()
 
         self._stop = False
-        self.ffd_order = ffd_order
         self._case_uuid = case_uuid
 
-        if self.parent is None:
-            self._run_begins()
         try:
             self._pre_execute()
             self._set_exec_state('RUNNING')
 
-            if ffd_order == 1 \
-               and not obj_has_interface(self, IDriver, IAssembly) \
-               and hasattr(self, '_ffd_inputs') \
-               and self.force_fd is not True:
-                # During Fake Finite Difference, the available derivatives
-                # are used to approximate the outputs.
-                #print 'execute_ffd: %s' % self.get_pathname()
-                self._execute_ffd(1)
+            #print '  execute: %s' % self.get_pathname()
+            # Component executes as normal
+            self.exec_count += 1
+            if tracing.TRACER is not None and \
+               not obj_has_interface(self, IDriver, IAssembly):
+                tracing.TRACER.debug(self.get_itername())
+                #tracing.TRACER.debug(self.get_itername() + '  ' + self.name)
 
-            elif ffd_order == 2 and \
-               hasattr(self, 'calculate_second_derivatives'):
-                # During Fake Finite Difference, the available derivatives
-                # are used to approximate the outputs.
-                #print "FFD pass. doing nothing for %s" % self.get_pathname()
-                pass
-
-            else:
-                #print 'execute: %s' % self.get_pathname()
-                # Component executes as normal
-                self.exec_count += 1
-                if tracing.TRACER is not None and \
-                   not obj_has_interface(self, IDriver, IAssembly):
-                    tracing.TRACER.debug(self.get_itername())
-                    #tracing.TRACER.debug(self.get_itername() + '  ' + self.name)
-                self.execute()
-
-                self._post_execute()
-            #else:
-            #    print 'skipping: %s' % self.get_pathname()
+            self.execute()
+            self._post_execute()
             self._post_run()
-        except:
+        except Exception:
+            info = sys.exc_info()
             self._set_exec_state('INVALID')
-            raise
+            raise info[0], info[1], info[2]
         finally:
             # If this is the top-level component, perform run termination.
             if self.parent is None:
                 self._run_terminated()
             if self.directory:
                 self.pop_dir()
-
-    @rbac(('owner', 'user'))
-    def _run_begins(self):
-        """ Executed at start of top-level run. """
-        if hasattr(self, 'recorders'):
-            self.configure_recording()
 
     @rbac(('owner', 'user'))
     def _run_terminated(self):
@@ -624,7 +587,8 @@ class Component(Container):
                 self.reraise_exception("Couldn't replace '%s' of type %s with"
                                        " type %s" % (target_name,
                                                      type(tobj).__name__,
-                                                     type(newobj).__name__))
+                                                     type(newobj).__name__),
+                                        sys.exc_info())
 
         self.add(target_name, newobj)  # this will remove the old object
 
@@ -674,8 +638,7 @@ class Component(Container):
         self._input_names = None
         self._output_names = None
         self._container_names = None
-        self._expr_sources = None
-        self._call_check_config = True
+        self._new_config = True
         self._provideJ_bounds = None
 
     @rbac(('owner', 'user'))
@@ -1342,442 +1305,6 @@ class Component(Container):
         """Set logging message level."""
         self._logger.level = level
 
-    def register_published_vars(self, names, publish=True):
-        if isinstance(names, basestring):
-            names = [names]
-        for name in names:
-            obj = None
-            parts = name.split('.', 1)
-            if len(parts) == 1:
-                if not name == __attributes__:
-                    try:
-                        obj = self.get(name)
-                    except AttributeError:
-                        self.raise_exception("%s has no attribute named '%s'"
-                                              % (self.get_pathname(), name),
-                                             NameError)
-                    else:
-                        if has_interface(obj, IComponent):
-                            obj.register_published_vars(__attributes__, publish)
-                            return
-
-                if publish:
-                    Publisher.register('.'.join((self.get_pathname(), name)),
-                                       obj)
-                    if name in self._publish_vars:
-                        self._publish_vars[name] += 1
-                    else:
-                        self._publish_vars[name] = 1
-                else:
-                    Publisher.unregister('.'.join((self.get_pathname(), name)))
-                    if name in self._publish_vars:
-                        self._publish_vars[name] -= 1
-                        if self._publish_vars[name] < 1:
-                            del self._publish_vars[name]
-            else:
-                obj = getattr(self, parts[0])
-                obj.register_published_vars(parts[1], publish)
-
-    def publish_vars(self):
-        pub = Publisher.get_instance()
-        if pub:
-            pub_vars = self._publish_vars.keys()
-            if len(pub_vars) > 0:
-                pname = self.get_pathname()
-                lst = []
-                for var in pub_vars:
-                    if var == __attributes__:
-                        lst.append((pname, self.get_attributes(io_only=False)))
-                    else:
-                        lst.append(('.'.join((pname, var)), getattr(self, var)))
-                pub.publish_list(lst)
-
-    def get_attributes(self, io_only=True):
-        """ Get attributes of component. Includes inputs and ouputs and, if
-        *io_only* is not true, a dictionary of attributes for each interface
-        implemented by the component.
-
-        io_only: Bool
-            Set to true if we only want to populate the input and output
-            fields of the attributes dictionary.
-        """
-        attrs = {}
-        attrs['type'] = type(self).__name__
-
-        # We need connection information before we process the variables.
-        if self.parent is None:
-            connected_inputs = []
-            connected_outputs = []
-        else:
-            connected_inputs = self.parent._depgraph.list_inputs(self.name, connected=True)
-            connected_outputs = self.parent._depgraph.list_outputs(self.name, connected=True)
-
-        # Additionally, we need to know if anything is connected to a
-        # parameter, objective, response, or constraint.
-        # Objectives, responses, and constraints are "implicit" connections.
-        # Parameters are as well, though they lock down their variable targets.
-        parameters = {}
-        implicit = {}
-        partial_parameters = {}
-
-        if self.parent and has_interface(self.parent, IAssembly):
-            dataflow = self.parent.get_dataflow()
-            for parameter, target in dataflow['parameters']:
-                if "[" in target:
-                    target_name = target.split('[')[0]
-                    if not target_name in partial_parameters:
-                        partial_parameters[target_name] = []
-                    partial_parameters[target_name].append(parameter)
-                else:
-                    if not target in parameters:
-                        parameters[target] = []
-                    parameters[target].append(parameter)
-
-            for target, objective in dataflow['objectives']:
-                if target not in implicit:
-                    implicit[target] = []
-                implicit[target].append(objective)
-
-            for target, response in dataflow['responses']:
-                if target not in implicit:
-                    implicit[target] = []
-                implicit[target].append(response)
-
-            for target, constraint in dataflow['constraints']:
-                if target not in implicit:
-                    implicit[target] = []
-                implicit[target].append(constraint)
-
-        inputs = []
-        outputs = []
-        slots = []
-
-        inputs_list  = self.list_inputs()
-        outputs_list = self.list_outputs()
-        io_list      = inputs_list + outputs_list
-
-        for name in io_list:
-            # for variable trees
-            if '.' in name:
-                continue
-
-            value = getattr(self, name)
-
-            meta  = self.get_metadata(name)
-
-            # If this is a passthrough, reach in to get the trait
-            if 'validation_trait' in meta:
-                trait = meta['validation_trait']
-                ttype = trait.trait_type
-            else:
-                trait = self.get_trait(name)
-                ttype = trait.trait_type
-
-            # Each variable type provides its own basic attributes
-            io_attr, slot_attr = ttype.get_attribute(name, value, trait, meta)
-
-            io_attr['id'] = name
-
-            # prepend tilde to id of framework variables for sorting purposes
-            if 'framework_var' in meta:
-                io_attr['id'] = '~' + name
-
-            io_attr['indent'] = 0
-
-            # connections
-            io_attr['connected'] = ''
-            io_attr['connection_types'] = 0
-
-            connected = []
-            partially_connected_indices = []
-
-            for inp in connected_inputs:
-                cname = inp.split('[', 1)[0].split('.',1)[1]  # Could be 'inp[0]'.
-
-                if cname == name:
-                    connections = self.parent._depgraph._var_connections(inp)
-                    connections = [src for src, dst in connections]
-                    connected.extend(connections)
-
-                    if '[' in inp:
-
-                        io_attr['connection_types'] |= 2
-                        array_indices = re.findall("\[\d+\]", inp)
-                        array_indices = [index.split('[')[1].split(']')[0]
-                                         for index in array_indices]
-                        array_indices = [int(index) for index in array_indices]
-
-                        dimensions = self.get(name).ndim - 1
-                        shape = self.get(name).shape
-                        column_index = 0
-
-                        for dimension, array_index in enumerate(array_indices[:-1]):
-                            column_index += (shape[-1] ** (dimensions - dimension) * array_index)
-
-                        column_index += array_indices[-1]
-
-                        partially_connected_indices.append(column_index)
-
-                    else:  # '[' not in imp
-                        io_attr['connection_types'] |= 1
-
-            if connected:
-                io_attr['connected'] = str(connected)
-
-            if partially_connected_indices:
-                io_attr['partially_connected_indices'] = str(partially_connected_indices)
-
-            if '.'.join((self.name, name)) in connected_outputs:  # No array element indications.
-                connections = self.parent._depgraph._var_connections('.'.join((self.name, name)))
-                io_attr['connected'] = \
-                    str([dst for src, dst in connections])
-
-            io_attr['implicit'] = []
-
-            if "%s.%s" % (self.name, name) in partial_parameters:
-                implicit_partial_indices = []
-                shape = self.get(name).shape
-                io_attr['connection_types'] |= 8
-
-                for key, target in partial_parameters.iteritems():
-                    for value in target:
-                        array_indices = re.findall("\[\d+\]", value)
-                        array_indices = [index.split('[')[1].split(']')[0]
-                                         for index in array_indices]
-                        array_indices = [int(index) for index in array_indices]
-
-                        dimensions = self.get(name).ndim - 1
-                        shape = self.get(name).shape
-                        column_index = 0
-
-                        for dimension, array_index in enumerate(array_indices[:-1]):
-                            column_index += (shape[-1] ** (dimensions - dimension) * array_index)
-
-                        if array_indices:
-                            column_index += array_indices[-1]
-                        implicit_partial_indices.append(column_index)
-
-                io_attr['implicit_partial_indices'] = str(implicit_partial_indices)
-
-                io_attr['implicit'].extend([driver_name.split('.')[0] for
-                    driver_name in partial_parameters["%s.%s" % (self.name, name)]])
-
-            if "%s.%s" % (self.name, name) in parameters:
-                io_attr['connection_types'] |= 4
-
-                io_attr['implicit'].extend([driver_name.split('.')[0] for
-                    driver_name in parameters["%s.%s" % (self.name, name)]])
-
-                io_attr['implicit'] = str(io_attr['implicit'])
-
-            if "%s.%s" % (self.name, name) in implicit:
-                io_attr['connection_types'] |= 4
-
-                io_attr['implicit'] = str([driver_name.split('.')[0] for
-                    driver_name in implicit["%s.%s" % (self.name, name)]])
-
-            if not io_attr['implicit']:
-                io_attr['implicit'] = ''
-
-            # indicate that this var is the top element of a variable tree
-            if io_attr.get('ttype') == 'vartree':
-                vartable = self.get(name)
-                if isinstance(vartable, VariableTree):
-                    io_attr['vt'] = 'vt'
-
-            if name in inputs_list:
-                inputs.append(io_attr)
-            else:
-                outputs.append(io_attr)
-
-            # Process singleton and contained slots.
-            if not io_only and slot_attr is not None:
-                # We can hide slots (e.g., the Workflow slot in drivers)
-                if 'hidden' not in meta or meta['hidden'] is False:
-                    slots.append(slot_attr)
-
-            # For variables trees only: recursively add the inputs and outputs
-            # into this variable list
-            if 'vt' in io_attr:
-                vt_attrs = vartable.get_attributes(io_only, indent=1,
-                                                   parent=name)
-                if name in inputs_list:
-                    vt_inputs = vt_attrs.get('Inputs', [])
-                    if "~" in io_attr['id']:
-                        for vt_input in vt_inputs:
-                            vt_input['id'] = '~{0}'.format(vt_input['id'])
-
-                    inputs += vt_inputs
-                else:
-                    vt_outputs = vt_attrs.get('Outputs', [])
-                    if "~" in io_attr['id']:
-                        for vt_output in vt_outputs:
-                            vt_outputs['id'] = '~{0}'.format(vt_output['id'])
-
-                    outputs += vt_outputs
-
-        attrs['Inputs'] = inputs
-        attrs['Outputs'] = outputs
-
-        # Find any event traits
-        tset1 = set(self._alltraits(events=True))
-        tset2 = set(self._alltraits(events=False))
-        event_set = tset1.difference(tset2)
-
-        # Remove the Enthought events common to all has_traits objects
-        event_set.remove('trait_added')
-        event_set.remove('trait_modified')
-
-        events = []
-        for name in event_set:
-            meta  = self.get_metadata(name)
-            trait = self.get_trait(name)
-            ttype = trait.trait_type
-            event_attr = ttype.get_attribute(name, meta)
-            events.append(event_attr)
-
-        if len(events) > 0:
-            attrs['Events'] = events
-
-        if not io_only:
-            # Add Slots that are not inputs or outputs
-            for name, value in self.traits().items():
-                if name not in io_list and (value.is_trait_type(Slot)
-                                            or value.is_trait_type(List)
-                                            or value.is_trait_type(Dict)):
-                    trait = self.get_trait(name)
-                    meta = self.get_metadata(name)
-                    value = getattr(self, name)
-                    ttype = trait.trait_type
-                    # We can hide slots (e.g., the Workflow slot in drivers)
-                    if 'hidden' not in meta or meta['hidden'] is False:
-                        io_attr, slot_attr = ttype.get_attribute(name, value, trait, meta)
-                        if slot_attr is not None:
-                            slots.append(slot_attr)
-
-            if obj_has_interface(self, IAssembly):
-                attrs['Dataflow'] = self.get_dataflow()
-
-            if obj_has_interface(self, IDriver):
-                attrs['Workflow'] = self.get_workflow()
-
-            if obj_has_interface(self, IHasCouplingVars):
-                couples = []
-                objs = self.list_coupling_vars()
-                for indep, dep in objs:
-                    attr = {}
-                    attr['independent'] = indep
-                    attr['dependent'] = dep
-                    couples.append(attr)
-                attrs['CouplingVars'] = couples
-
-            if obj_has_interface(self, IHasObjectives):
-                objectives = []
-                objs = self.get_objectives()
-                for key in objs:
-                    attr = {}
-                    attr['name'] = str(key)
-                    attr['expr'] = objs[key].text
-                    attr['scope'] = objs[key].scope.name
-                    objectives.append(attr)
-                attrs['Objectives'] = objectives
-
-            if obj_has_interface(self, IHasResponses):
-                responses = []
-                resps = self.get_responses()
-                for key in resps:
-                    attr = {}
-                    attr['name'] = str(key)
-                    attr['expr'] = resps[key].text
-                    attr['scope'] = resps[key].scope.name
-                    responses.append(attr)
-                attrs['Responses'] = responses
-
-            if obj_has_interface(self, IHasParameters):
-                parameters = []
-                for key, parm in self.get_parameters().items():
-                    attr = {}
-
-                    if isinstance(parm, ParameterGroup):
-                        attr['target'] = str(tuple(parm.targets))
-                    else:
-                        attr['target'] = parm.target
-
-                    attr['name']    = str(key)
-                    attr['low']     = parm.low
-                    attr['high']    = parm.high
-                    attr['scaler']  = parm.scaler
-                    attr['adder']   = parm.adder
-                    attr['fd_step'] = parm.fd_step
-                    #attr['scope']   = parm.scope.name
-                    parameters.append(attr)
-
-                attrs['Parameters'] = parameters
-
-            constraints = []
-            has_constraints = False
-            if obj_has_interface(self, IHasConstraints) or \
-               obj_has_interface(self, IHasEqConstraints):
-                has_constraints = True
-                cons = self.get_eq_constraints()
-                for key, con in cons.iteritems():
-                    attr = {}
-                    attr['name'] = str(key)
-                    attr['expr'] = str(con)
-                    constraints.append(attr)
-
-            if obj_has_interface(self, IHasConstraints) or \
-               obj_has_interface(self, IHasIneqConstraints):
-                has_constraints = True
-                cons = self.get_ineq_constraints()
-                for key, con in cons.iteritems():
-                    attr = {}
-                    attr['name'] = str(key)
-                    attr['expr'] = str(con)
-                    constraints.append(attr)
-
-            if has_constraints:
-                attrs['Constraints'] = constraints
-
-            if obj_has_interface(self, IHasEvents):
-                attrs['Triggers'] = [dict(target=path)
-                                     for path in self.get_events()]
-
-            if obj_has_interface(self, IImplicitComponent):
-                states = []
-                names = self.list_states()
-                for name in names:
-                    value = getattr(self, name)
-                    meta  = self.get_metadata(name)
-                    trait = self.get_trait(name)
-                    ttype = trait.trait_type
-
-                    attr, slot_attr = ttype.get_attribute(name, value, trait, meta)
-                    attr['id'] = name
-                    states.append(attr)
-                attrs['States'] = states
-
-                residuals = []
-                names = self.list_residuals()
-                for name in names:
-                    value = getattr(self, name)
-                    meta  = self.get_metadata(name)
-                    trait = self.get_trait(name)
-                    ttype = trait.trait_type
-
-                    attr, slot_attr = ttype.get_attribute(name, value, trait, meta)
-                    attr['id'] = name
-                    residuals.append(attr)
-                attrs['Residuals'] = residuals
-
-        if len(slots) > 0:
-            attrs['Slots'] = slots
-
-        if hasattr(self, '_repr_svg_'):
-            attrs['Drawing'] = self._repr_svg_()
-
-        return attrs
-
     def check_gradient(self, inputs=None, outputs=None,
                        stream=sys.stdout, mode='auto',
                        fd_form='forward', fd_step=1.0e-6,
@@ -1785,8 +1312,6 @@ class Component(Container):
         """Compare the OpenMDAO-calculated gradient with one calculated
         by straight finite-difference. This provides the user with a way
         to validate his derivative functions (apply_deriv and provideJ.)
-        Note that fake finite difference is turned off so that we are
-        doing a straight comparison.
 
         inputs: (optional) iter of str or None
             Names of input variables. The calculated gradient will be
@@ -1846,3 +1371,35 @@ class Component(Container):
                                               stream=stream, mode=mode,
                                               fd_form=fd_form, fd_step=fd_step,
                                               fd_step_type=fd_step_type)
+
+    @rbac(('owner', 'user'))
+    def get_req_cpus(self):
+        """Return requested_cpus"""
+        return self.mpi.requested_cpus
+
+    @rbac(('owner', 'user'))
+    def setup_systems(self):
+        return ()
+
+    @rbac(('owner', 'user'))
+    def get_full_nodeset(self):
+        """Return the node in the depgraph
+        belonging to this component.
+        """
+        return set((self.name,))
+
+    @rbac(('owner', 'user'))
+    def setup_depgraph(self, inputs=None, outputs=None):
+        pass
+
+    @rbac(('owner', 'user'))
+    def setup_init(self):
+        self._provideJ_bounds = None
+
+    @rbac(('owner', 'user'))
+    def size_variables(self):
+        pass
+
+    @rbac(('owner', 'user'))
+    def post_setup(self):
+        pass

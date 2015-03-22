@@ -47,9 +47,9 @@ class SellarMDF(Assembly):
         # self.solver.add_constraint('dis2.y2 - dis1.y2 = 0')
 
         #Driver Settings
-        self.solver.itmax = 10
-        self.solver.alpha = .4
-        self.solver.tol = .0000001
+        self.solver.itmax = 25
+        #self.solver.alpha = .4
+        self.solver.tol = 1e-9
         self.solver.algorithm = "broyden2"
 
         # Optimization parameters
@@ -75,7 +75,7 @@ if __name__ == "__main__": # pragma: no cover
     tt = time.time()
     prob.run()
 
-    #prob.driver.workflow.check_gradient()
+    #prob.driver.check_gradient()
 
     print "\n"
     print "Minimum found at (%f, %f, %f)" % (prob.dis1.z1,

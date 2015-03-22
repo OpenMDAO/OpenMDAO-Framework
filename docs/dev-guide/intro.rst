@@ -16,7 +16,7 @@ System Requirements
 ===================
 
 Working with OpenMDAO as a developer means there are some additional system requirements besides
-those mentioned in the :ref:`User Guide <System-Requirements>`. Make sure that you have installed 
+those mentioned in the :ref:`User Guide <System-Requirements>`. Make sure that you have installed
 all of those requirements first, and then add the other requirements described below.
 
 **Git**
@@ -27,7 +27,9 @@ excellent documentation describing how to install Git and how to become
 familiar with Git and GitHub.  You can find it `here`__.
 
 .. __: https://help.github.com
-
+                                                                                                   
+                                                                                                   
+   
 **C/C++ and Fortran Compilers**
 
 Certain packages used in OpenMDAO contain Python extensions, meaning that they contain non-Python
@@ -47,7 +49,7 @@ compilers.
 
 - *Mac OS X*:
 
-  - Xcode 
+  - Xcode
 
     You can get the latest version from Apple, but to do so you'll have to register (free) as a developer
     or log in if you are already registered. If you're using Lion or Mountain Lion, you can also get
@@ -57,18 +59,18 @@ compilers.
     <https://developer.apple.com/xcode/downloads>`_.
 
 
-  - gfortran 
+  - gfortran
 
     It's sometimes hard to figure out which version of gfortran to install on your Mac. See
-    this `page <http://gcc.gnu.org/wiki/GFortranBinaries#MacOS>`_ for a pretty good overview 
-    of what's available. Alternatively, you can follow the instructions for installing a package manager 
-    called `Homebrew <http://www.thisisthegreenroom.com/2011/installing-python-numpy-scipy-matplotlib-and-ipython-on-lion/>`_,
-    which will figure out the right kind of gfortran for you. 
+    this `page <http://gcc.gnu.org/wiki/GFortranBinaries#MacOS>`_ for a pretty good overview
+    of what's available. Alternatively, you can follow the instructions for installing a package manager
+    called `Homebrew <http://www.lowindata.com/2013/installing-scientific-python-on-mac-os-x/>`_,
+    which will figure out the right kind of gfortran for you.
 
 
   - Lion (OS X 10.7) and Mountain Lion (OS X 10.8)
 
-    - If you want to get the full Xcode, make sure version 4.3.2 or higher is installed. You can try the 
+    - If you want to get the full Xcode, make sure version 4.3.2 or higher is installed. You can try the
       Mac App Store. When you install Xcode (via the app store or not), it does not install the compilers you
       need by default.  So go to Xcode's  **Preferences** menu, choose **Downloads**, and then choose **Command Line Tools.**
 
@@ -76,9 +78,10 @@ compilers.
          :align: center
          :alt: Screenshot of Xcode's Downloads screen showing options
 
-         XCode's *Downloads* Screen     
+         XCode's *Downloads* Screen
 
-    - `gfortran 4.6.2 <http://quatramaran.ens.fr/~coudert/gfortran/gfortran-4.6.2-x86_64-Lion.dmg>`_, or use Homebrew 
+    - As mentioned previously, you may install and use the package manager `Homebrew <http://www.lowindata.com/2013/installing-scientific-python-on-mac-os-x/>`_.
+     
 
 
   - On **Leopard:**
@@ -90,7 +93,7 @@ compilers.
       moment, the recommended fix is to change the name of g77 to something else, for example, ``_g77`` so
       that it won't be found by ``numpy.distutils``.
 
-    .. __: http://openmdao.org/downloads/recent/      
+    .. __: http://openmdao.org/downloads/recent/
 
 .. _`Windows`:
 
@@ -99,11 +102,9 @@ compilers.
   - *mingw32*   (for Fortran and C++)
 
 
-    You can find mingw32 `here`__. You must do the following things when installing it:
+    You can find mingw32 `here`__. Note that if you use Anaconda as your Python development distribution, it comes bundled with MinGw, including C, C++ and Fortran compilers. If you manually install MinGw, during installation you must check the C++ and Fortran compiler installation options to get g++ (required to run OpenMDAO).
 
-    - Check the C++ and Fortran compiler installation options to get g++ (required to run OpenMDAO)
-
-    - Create a file in your home directory called ``pydistutils.cfg`` that contains the following lines:
+    Once you've confirmed that MinGw is installed, you must create a file in your home directory called ``pydistutils.cfg`` that contains the following lines:
 
       ::
 
@@ -116,7 +117,7 @@ compilers.
 
           echo %USERPROFILE%
 
-    - Make sure to put the ``bin`` directory of the mingw32 install in your path.
+    Next, make sure that MinGw is on your path. If it's not, you'll need to put the ``bin`` directory of the mingw32 install in your path.
 
       To check if this directory is already in your path, type the following in your command-prompt:
 
@@ -129,15 +130,17 @@ compilers.
         ::
 
           set PATH=%PATH%;/path/to/bin_dir
+          
+    
 
-  - *Visual C++ 2008 (Optional)*
+  - *Visual C++ (Optional)*
 
-    You can optionally use Visual C++ 2008 as your C++ compiler. You don't need it; mingw32 will work fine,
-    but if you prefer Visual C++ 2008, you're welcome to use it instead. The Express version will work, 
-    but others (Professional, Standard) should work too. To get this software,
-    go to the `downloads page <http://www.microsoft.com/visualstudio/eng/products/visual-studio-overview#2008-Visual-CPP>`_.
+    You can optionally use Visual C++ as your C++ compiler. You don't need it; mingw32 will work fine,
+    but if you prefer Visual C++, you're welcome to use it instead. The Express version will work,
+    and other versions (Professional, Standard) should work too. To get this software,
+    go to the `downloads page <http://www.visualstudio.com/downloads/download-visual-studio-vs>`_.
 
-.. __: http://sourceforge.net/projects/mingw/files
+.. __: http://sourceforge.net/projects/mingw/files    
 
 
 .. index:: proxy settings
@@ -149,8 +152,8 @@ Some steps of the development process, e.g., downloading a branch of the source 
 downloading Python distributions, require network access.  If you're using Linux or Mac OS X and
 are behind an http proxy, you may have to set the ``http_proxy`` environment variable on
 your system for Git and :term:`virtualenv` to function properly. If you're using Windows 7,
-please follow this 
-`link <http://answers.oreilly.com/topic/675-how-to-configure-proxy-settings-in-windows-7/>`_
+please follow this
+`link <http://support.oreilly.com/oreilly/topics/how_to_configure_proxy_settings_in_windows_7>`_
 for information on configuring proxy settings.
 
 
@@ -158,29 +161,29 @@ for information on configuring proxy settings.
 ++++++++++++++++++++++
 
 The source repository for the OpenMDAO project is available on
-:term:`GitHub`.  There is a wealth of good documentation available online 
-about :term:`Git` and Github itself. The 
-`GitHub help page <https://help.github.com/>`_ is a good place to start. If you're a 
-Windows user, make sure to read the details about using Git Bash on the `Windows 
-specific installation instructions <https://help.github.com/articles/set-up-git>`_. 
-The `Pro Git book <http://git-scm.com/book>`_ is also excellent.  It's very
+:term:`GitHub`.  There is a wealth of good documentation available online
+about :term:`Git` and Github itself. The
+`GitHub help page <https://help.github.com/>`_ is a good place to start. If you're a
+Windows user, make sure to read the details about using Git Bash on the `Windows
+specific installation instructions <https://help.github.com/articles/set-up-git>`_.
+The `Pro Git book <http://git-scm.com/book/en/v2>`_ is also excellent.  It's very
 important to take a look at these, because Git differs from other version
-control systems in some significant ways. 
+control systems in some significant ways.
 
 The first major difference is that Git has a *staging area* that files must be
-placed in before they're committed.  Luckily the ``git commit`` command has 
+placed in before they're committed.  Luckily the ``git commit`` command has
 an option, ``-a``, that will eliminate this odd behavior and commit all of the
-modified files in the repository without having to stage them first. See the 
+modified files in the repository without having to stage them first. See the
 :ref:`Committing-changes` section for further explanation of ``git commit``.
 
 The other major difference is how branches are handled.  In Git, creating a branch
 does not create a separate copy of the repository, but instead is basically a pointer
 to a commit history within the repository. This makes Git branches cheap to create. This
 means that you should not hesitate to make a new branch when working on something. This
-will be discussed a little more below in the :ref:`getting-the-source-code` section. 
+will be discussed a little more below in the :ref:`getting-the-source-code` section.
 
 
-The following figure gives an overall view of the version control process while 
+The following figure gives an overall view of the version control process while
 using Git and GitHub.
 
 .. figure:: version_control.png
@@ -190,13 +193,13 @@ using Git and GitHub.
 
    Version Control Process
 
-From the OpenMDAO repository on GitHub, you create a personal `fork` of the 
+From the OpenMDAO repository on GitHub, you create a personal `fork` of the
 project, so there is now a repository that you can write to.  In addition to
-creating a fork, you must also create a clone of the OpenMDAO repository on 
-your machine.  This is the repository that you will be working directly off 
-of, via the creation of branches.  Once you are satisfied with a branch's 
+creating a fork, you must also create a clone of the OpenMDAO repository on
+your machine.  This is the repository that you will be working directly off
+of, via the creation of branches.  Once you are satisfied with a branch's
 development, you can push this branch back up to your personal fork.  From here,
-if you would like to contribute this work back to the OpenMDAO repository, you 
+if you would like to contribute this work back to the OpenMDAO repository, you
 must issue a pull request to have your modifications merged in.
 
 
@@ -243,31 +246,31 @@ the Windows start menu.
 
 1. First, check to see if you already have an SSH key.  Look for a file called ``~/.ssh/id_rsa.pub``.
    If the file is there, skip to the next section and learn how to register your key with GitHub.
-2. You should be in your home directory on your Linux machine. At the prompt, type: 
-   ``ssh-keygen -t rsa -C "your_email@youremail.com"``. 
-3. When prompted, press *Enter* to accept the default file name for your key. 
+2. You should be in your home directory on your Linux machine. At the prompt, type:
+   ``ssh-keygen -t rsa -C "your_email@youremail.com"``.
+3. When prompted, press *Enter* to accept the default file name for your key.
 4. Press *Enter* when prompted for a password and then press it again to
    confirm that you are NOT entering a password. Your key pair is stored in ``~/.ssh/
    as id_rsa.pub`` (public key) and ``id_rsa`` (private key).
 
 .. note::  In the unusual event that the ``ssh-keygen`` command fails, you may need to install
    OpenSSH. To do this requires that you have admin privileges. On Ubuntu, you can install
-   OpenSSH by opening your terminal and typing: ``sudo apt-get install openssh-client``. 
+   OpenSSH by opening your terminal and typing: ``sudo apt-get install openssh-client``.
 
 
 *Registering the Key with GitHub*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-You need to register and upload the *public* portion of your SSH key to GitHub. 
+You need to register and upload the *public* portion of your SSH key to GitHub.
 
 1. Open your public key in a text editor and copy its contents to your clipboard. The public key
-   file has the extension ``.pub``; for example:  ``id_rsa.pub`` 
-2. You must be logged into GitHub for this step. Go to *Account Settings --> SSH Public Keys*, 
+   file has the extension ``.pub``; for example:  ``id_rsa.pub``
+2. You must be logged into GitHub for this step. Go to *Account Settings --> SSH Public Keys*,
    then click on *Add another public key*.
-3. Enter a name into the *Title* text field to remind you which machine/account you're 
+3. Enter a name into the *Title* text field to remind you which machine/account you're
    entering ssh information for.
 4. Paste your public key into the *Key* text box and then click the *Add Key* button (below the
-   text box) to continue. 
+   text box) to continue.
 
 
 .. index:: pair: source code; location
@@ -279,7 +282,7 @@ Getting the Source Code
 +++++++++++++++++++++++
 
 The *official* OpenMDAO-Framework repository lives on GitHub at
-https://github.com/OpenMDAO/OpenMDAO-Framework. 
+https://github.com/OpenMDAO/OpenMDAO-Framework.
 
 To create a local
 OpenMDAO-Framework repository, you need to *clone* the OpenMDAO-Framework
@@ -322,7 +325,7 @@ changes into the *dev* branch of the official repository.
 
 The directory structure of your repository should look like this:
 
-``contrib`` 
+``contrib``
     The directory containing source to be packaged into distributions that can
     be released separately from OpenMDAO. These distributions may or may not depend upon
     OpenMDAO. Distributions that have not yet been approved to be part of
@@ -335,9 +338,9 @@ The directory structure of your repository should look like this:
     the ``go-openmdao-dev.py`` script that sits at the top of the source
     repository.  See :ref:`Creating-the-Virtual-Environment`.
     
-``docs``  
+``docs``
     The directory containing all user documentation for OpenMDAO. The
-    documentation is broken up into several major documents, each found in a separate 
+    documentation is broken up into several major documents, each found in a separate
     subdirectory, e.g., ``plugin-guide`` contains the *Plugin Developer Guide,* ``dev-guide`` contains
     the *Developer Guide,* and so on.
   
@@ -355,7 +358,7 @@ The directory structure of your repository should look like this:
     package is not distributed as part of an OpenMDAO release.
 
 ``openmdao.lib``
-    Python package containing source for the OpenMDAO standard library of 
+    Python package containing source for the OpenMDAO standard library of
     modules.
 
 ``openmdao.main``
@@ -366,7 +369,7 @@ The directory structure of your repository should look like this:
     testing.
     
 ``openmdao.units``
-     Python package containing tools for doing unit conversion.   
+     Python package containing tools for doing unit conversion.
 
 ``openmdao.util``
     Python package containing source for various Python utility routines
@@ -390,7 +393,7 @@ namespace have a similar directory layout: ``openmdao.main``,
 
 ``openmdao.<package>``
     The top level directory for the package denoted by ``<package>``. This
-    contains the ``setup.py`` script which is used to build and 
+    contains the ``setup.py`` script which is used to build and
     create a distribution for the package.
     
 ``openmdao.<package>/src``

@@ -1,0 +1,21 @@
+package:
+    name: conmin
+    version: !!str 1.0.2
+
+source:
+    path: ../../contrib/conmin
+
+build:
+    preserve_egg_dir: True
+
+requirements:
+    build:
+        - python
+        - setuptools
+        - numpy ==1.7.1
+        - libpython # [win]
+
+    run:
+        - python
+        - numpy >=1.7.1
+        - libpython # [win]

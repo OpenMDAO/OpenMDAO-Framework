@@ -14,7 +14,7 @@ from openmdao.lib.casehandlers.dbcase import DBCaseIterator, DBCaseRecorder, \
 from openmdao.lib.casehandlers.dumpcase import DumpCaseRecorder
 
 from openmdao.lib.casehandlers.jsoncase import JSONCaseRecorder, \
-                                               BSONCaseRecorder
+                                               BSONCaseRecorder, verify_json
 
 from openmdao.lib.casehandlers.listcase import ListCaseRecorder, \
                                                ListCaseIterator
@@ -25,4 +25,8 @@ from openmdao.lib.casehandlers.caseset import CaseArray, CaseSet, \
 from openmdao.lib.casehandlers.filters import SequenceCaseFilter, \
                                               SliceCaseFilter, ExprCaseFilter
 
+from openmdao.lib.casehandlers.query import CaseDataset
 
+from openmdao.lib.casehandlers.csv_post_processor import caseset_query_to_csv
+from openmdao.lib.casehandlers.dump_post_processor import caseset_query_dump
+from openmdao.lib.casehandlers.html_post_processor import caseset_query_to_html

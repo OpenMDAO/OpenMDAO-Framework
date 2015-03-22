@@ -16,7 +16,7 @@ def norm(a, ord=None):
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.datatypes.api import Float, Int, Enum
 
-from openmdao.main.api import Driver, CyclicWorkflow
+from openmdao.main.driver import Driver
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasEqConstraints
@@ -78,7 +78,6 @@ class BroydenSolver(Driver):
     def __init__(self):
 
         super(BroydenSolver, self).__init__()
-        self.workflow = CyclicWorkflow()
 
         self.xin = numpy.zeros(0, 'd')
         self.F = numpy.zeros(0, 'd')

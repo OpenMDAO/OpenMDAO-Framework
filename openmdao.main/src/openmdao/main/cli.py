@@ -60,7 +60,7 @@ def _get_openmdao_parser():
                         default=[],
                         help='Select host from config file to run on. '
                              'To run on multiple hosts, use multiple --host args.')
-    parser.add_argument('--all', action='store_true', dest='allhosts',
+    parser.add_argument('--all', action='store_true', dest='allhosts', default=True,
                         help='Use all hosts found in testhosts.cfg file.')
     parser.set_defaults(func=list_testhosts)
 
@@ -174,29 +174,15 @@ def _get_openmdao_parser():
     except ImportError:
         pass
 
-    # the following subcommands will only be available in a gui build
+    # case data viewer (i.e. html_post_processor)
     try:
-        import openmdao.gui.omg as gui
-        parser = subparsers.add_parser('gui', help='launch the graphical user interface')
-        # I'd like to do this but argparse doesn't have this signature
-        #parser = subparsers.add_parser('gui', gui.get_argument_parser())
-        # so I'll just copy and paste from openmdao.gui.omg :(
-        parser.add_argument('-p', '--port', type=int, dest='port', default=0,
-                            help='port to run server on (defaults to any'
-                                 ' available port)')
-        parser.add_argument('-b', '--browser', dest='browser', default='chrome',
-                            help='preferred browser')
-        parser.add_argument('-s', '--server', action='store_true', dest='serveronly',
-                            help="don't launch browser, just run server")
-        parser.add_argument('-r', '--reset', action='store_true', dest='reset',
-                            help='reset project database')
-        parser.add_argument('-x', '--external', action='store_true', dest='external',
-                            help='allow access to server from external clients'
-                                 ' (WARNING: Not Safe or Secure!!)')
-        parser.set_defaults(func=gui.run)
-
-    except ImportError as err:
-        print str(err)
+        import openmdao.lib.casehandlers.html_post_processor as viewer
+        parser = subparsers.add_parser('view_case_data', help='visualize JSON case data')
+        parser.add_argument('json_file', type=str, metavar='json_file',
+                            help='JSON format case data file')
+        parser.set_defaults(func=viewer.run)
+    except ImportError:
+        pass
 
     return top_parser
 

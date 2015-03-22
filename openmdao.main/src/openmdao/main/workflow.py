@@ -1,14 +1,32 @@
 """ Base class for all workflows. """
 
 from fnmatch import fnmatch
-from traceback import format_exc
-import weakref
+from math import isnan
+import sys
+from types import NoneType
 
-# pylint: disable=E0611,F0401
+import weakref
+from StringIO import StringIO
+
+from numpy import ndarray
+from networkx.algorithms.dag import is_directed_acyclic_graph
+from networkx.algorithms.components import strongly_connected_components
+
+# pylint: disable-msg=E0611,F0401
+from openmdao.main.mp_support import has_interface
 from openmdao.main.case import Case
-from openmdao.main.depgraph import _get_inner_connections
-from openmdao.main.exceptions import RunStopped, TracedError
-from openmdao.main.pseudocomp import PseudoComponent
+from openmdao.main.mpiwrap import MPI, MPI_info
+from openmdao.main.systems import SerialSystem, ParallelSystem, \
+                                  OpaqueSystem, VarSystem, CompoundSystem, \
+                                  partition_subsystems, ParamSystem, \
+                                  get_comm_if_active, collapse_to_system_node
+from openmdao.main.depgraph import _get_inner_connections, get_nondiff_groups, \
+                                   collapse_nodes, simple_node_iter, CollapsedGraph
+from openmdao.main.exceptions import RunStopped
+from openmdao.main.interfaces import IVariableTree, IDriver
+from openmdao.main.depgraph import is_connection
+from openmdao.util.decorators import method_accepts
+
 
 __all__ = ['Workflow']
 
@@ -16,18 +34,14 @@ __all__ = ['Workflow']
 class Workflow(object):
     """
     A Workflow consists of a collection of Components which are to be executed
-    in some order.
+    in some order during a single iteration of a Driver.
     """
 
     def __init__(self, parent, members=None):
         """Create a Workflow.
 
         parent: Driver
-            The Driver that contains this Workflow.  This option is normally
-            passed instead of scope because scope usually isn't known at
-            initialization time.  If scope is not provided, it will be
-            set to parent.parent, which should be the Assembly that contains
-            the parent Driver.
+            The Driver that contains this Workflow.
 
         members: list of str (optional)
             A list of names of Components to add to this workflow.
@@ -39,7 +53,10 @@ class Workflow(object):
         self._exec_count = 0     # Workflow executions since reset.
         self._initial_count = 0  # Value to reset to (typically zero).
         self._comp_count = 0     # Component index in workflow.
-        self._var_graph = None
+        self._system = None
+        self._reduced_graph = None
+
+        self._explicit_names = []  # names the user adds explicitly
 
         self._rec_required = None  # Case recording configuration.
         self._rec_parameters = None
@@ -48,11 +65,20 @@ class Workflow(object):
         self._rec_constraints = None
         self._rec_outputs = None
 
+        self._need_prescatter = False
+
+        self._ordering = None
+
+        self._calc_gradient_inputs = None
+        self._calc_gradient_outputs = None
+
         if members:
             for member in members:
                 if not isinstance(member, basestring):
                     raise TypeError("Components must be added to a workflow by name.")
                 self.add(member)
+
+        self.mpi = MPI_info()
 
     def __getstate__(self):
         state = self.__dict__.copy()
@@ -64,6 +90,9 @@ class Workflow(object):
         self.__dict__.update(state)
         self.parent = state['_parent']
         self.scope = state['_scope']
+
+    def __contains__(self, comp):
+        return comp in self.parent._iter_set
 
     @property
     def parent(self):
@@ -107,58 +136,62 @@ class Workflow(object):
         count: int
             Initial value for workflow execution count.
         """
-        self._initial_count = count - 1  # run() and step() will increment.
+        self._initial_count = count - 1  # run() will increment.
 
     def reset(self):
         """ Reset execution count. """
         self._exec_count = self._initial_count
 
-    def run(self, ffd_order=0, case_uuid=None):
-        """ Run the Components in this Workflow. """
-        self._stop = False
-        self._exec_count += 1
+    def calc_gradient(self, inputs=None, outputs=None, mode='auto',
+                      return_format='array', force_regen=False, options=None):
+        """Returns the Jacobian of derivatives between inputs and outputs.
 
-        iterbase = self._iterbase()
+        inputs: list of strings
+            List of OpenMDAO inputs to take derivatives with respect to.
 
-        if case_uuid is None:
-            # We record the case and are responsible for unique case ids.
-            record_case = True
-            case_uuid = Case.next_uuid()
-        else:
-            record_case = False
+        outputs: list of strings
+            Lis of OpenMDAO outputs to take derivatives of.
 
-        err = None
-        scope = self.scope
-        try:
-            for comp in self:
-                # before the workflow runs each component, update that
-                # component's inputs based on the graph
-                scope.update_inputs(comp.name, graph=self._var_graph)
-                if isinstance(comp, PseudoComponent):
-                    comp.run(ffd_order=ffd_order)
-                else:
-                    comp.set_itername('%s-%s' % (iterbase, comp.name))
-                    comp.run(ffd_order=ffd_order, case_uuid=case_uuid)
-                if self._stop:
-                    raise RunStopped('Stop requested')
-        except Exception as exc:
-            err = TracedError(exc, format_exc())
+        mode: string in ['forward', 'adjoint', 'auto', 'fd']
+            Mode for gradient calculation. Set to 'auto' to let OpenMDAO choose
+            forward or adjoint based on problem dimensions. Set to 'fd' to
+            finite difference the entire workflow.
 
-        if record_case and self._rec_required:
-            try:
-                self._record_case(case_uuid, err)
-            except Exception as exc:
-                if err is None:
-                    err = TracedError(exc, format_exc())
-                self.parent._logger.error("Can't record case: %s", exc)
+        return_format: string in ['array', 'dict']
+            Format for return value. Default is array, but some optimizers may
+            want a dictionary instead.
 
-        if err is not None:
-            err.reraise(with_traceback=False)
+        force_regen: boolean
+            Set to True to force a regeneration of the system hierarchy.
 
-    def configure_recording(self, includes, excludes):
+        options: Gradient_Options Vartree
+            Override this driver's Gradient_Options with others.
+        """
+
+        return self._system.calc_gradient(inputs, outputs, mode=mode,
+                                       options=options if options else self.parent.gradient_options,
+                                       iterbase=self._iterbase(),
+                                       return_format=return_format)
+
+    def calc_newton_direction(self):
+        """ Solves for the new state in Newton's method and leaves it in the
+        df vector."""
+
+        self._system.calc_newton_direction(options=self.parent.gradient_options,
+                                           iterbase=self._iterbase())
+
+    def configure_recording(self, recording_options=None):
         """Called at start of top-level run to configure case recording.
         Returns set of paths for changing inputs."""
-        if not includes:
+
+        if recording_options:
+            includes = recording_options.includes
+            excludes = recording_options.excludes
+            save_problem_formulation = recording_options.save_problem_formulation
+        else:
+            includes = excludes = save_problem_formulation = None
+
+        if not recording_options or not (save_problem_formulation or includes):
             self._rec_required = False
             return (set(), dict())
 
@@ -177,7 +210,8 @@ class Workflow(object):
                 if isinstance(name, tuple):
                     name = name[0]
                 path = prefix+name
-                if self._check_path(path, includes, excludes):
+                if save_problem_formulation or \
+                   self._check_path(path, includes, excludes):
                     self._rec_parameters.append(param)
                     inputs.append(name)
 
@@ -186,10 +220,18 @@ class Workflow(object):
         if hasattr(driver, 'eval_objectives'):
             for key, objective in driver.get_objectives().items():
                 name = objective.pcomp_name
+                if key != objective.text:
+                    name = key
+
+                #name = objective.pcomp_name
                 path = prefix+name
-                if self._check_path(path, includes, excludes):
+                if save_problem_formulation or \
+                   self._check_path(path, includes, excludes):
                     self._rec_objectives.append(key)
-                    outputs.append(name)
+                    if key != objective.text:
+                        outputs.append(name)
+                    else:
+                        outputs.append(name + '.out0')
 
         # Responses
         self._rec_responses = []
@@ -197,9 +239,10 @@ class Workflow(object):
             for key, response in driver.get_responses().items():
                 name = response.pcomp_name
                 path = prefix+name
-                if self._check_path(path, includes, excludes):
+                if save_problem_formulation or \
+                   self._check_path(path, includes, excludes):
                     self._rec_responses.append(key)
-                    outputs.append(name)
+                    outputs.append(name + '.out0')
 
         # Constraints
         self._rec_constraints = []
@@ -207,47 +250,99 @@ class Workflow(object):
             for con in driver.get_eq_constraints().values():
                 name = con.pcomp_name
                 path = prefix+name
-                if self._check_path(path, includes, excludes):
+                if save_problem_formulation or \
+                   self._check_path(path, includes, excludes):
                     self._rec_constraints.append(con)
-                    outputs.append(name)
+                    outputs.append(name + '.out0')
         if hasattr(driver, 'get_ineq_constraints'):
             for con in driver.get_ineq_constraints().values():
                 name = con.pcomp_name
                 path = prefix+name
-                if self._check_path(path, includes, excludes):
+                if save_problem_formulation or \
+                   self._check_path(path, includes, excludes):
                     self._rec_constraints.append(con)
-                    outputs.append(name)
+                    outputs.append(name + '.out0')
+                    #outputs.append(path+'.out0')
+
+        self._rec_outputs = []
+        for comp in self:
+            successors = driver._reduced_graph.successors(comp.name)
+            for output_name, aliases in successors:
+
+                # From Bret: it does make sense to skip subdrivers like you said, except for the
+                #      case where a driver has actual outputs of its own.  So you may have to keep
+                #  subdriver successors if the edge between the subdriver and the successor
+                #  is an actual data connection.
+                # look at the edge metadata to see if there's maybe a 'conn' in there for real connections.
+                if has_interface(comp, IDriver):
+                    if not is_connection(driver._reduced_graph, comp.name, output_name):
+                        continue
+
+                if '.in' in output_name: # look for something that is not a pseudo input
+                    for n in aliases:
+                        if not ".in" in n:
+                            output_name = n
+                            break
+                #output_name = prefix + output_name
+                if output_name not in outputs and self._check_path(output_name, includes, excludes) :
+                    outputs.append(output_name)
+                    self._rec_outputs.append(output_name)
+                    #self._rec_all_outputs.append(output_name)
+
+        #####
+        # also need get any outputs of comps that are not connected vars
+        #   and therefore not in the graph
+        # could use
+        #   scope._depgraph
+        #      there's 'iotype' metadata in the var nodes
+        #
+        #   also:
+        #         scope._depgraph.list_outputs('comp2')
+
+        for cname in driver._ordering:
+            comp = getattr(self.scope, cname)
+            for output_name in scope._depgraph.list_outputs(comp.name):
+                if has_interface(comp, IDriver): # Only record outputs from drivers if they are framework variables
+                    metadata = scope.get_metadata(output_name)
+                    if not ('framework_var' in metadata and metadata[ 'framework_var'] ):
+                        continue
+
+                #output_name = prefix + output_name
+                if output_name not in outputs and self._check_path(output_name, includes, excludes) :
+                    outputs.append(output_name)
+                    self._rec_outputs.append(output_name)
 
         # Other outputs.
-        self._rec_outputs = []
-        srcs = scope.list_inputs()
-        if hasattr(driver, 'get_parameters'):
-            srcs.extend(param.target
-                        for param in driver.get_parameters().values())
-        dsts = scope.list_outputs()
-        if hasattr(driver, 'get_objectives'):
-            dsts.extend(objective.pcomp_name+'.out0'
-                        for objective in driver.get_objectives().values())
-        if hasattr(driver, 'get_responses'):
-            dsts.extend(response.pcomp_name+'.out0'
-                        for response in driver.get_responses().values())
-        if hasattr(driver, 'get_eq_constraints'):
-            dsts.extend(constraint.pcomp_name+'.out0'
-                        for constraint in driver.get_eq_constraints().values())
-        if hasattr(driver, 'get_ineq_constraints'):
-            dsts.extend(constraint.pcomp_name+'.out0'
-                        for constraint in driver.get_ineq_constraints().values())
+        #self._rec_outputs = []
+        # srcs = scope.list_inputs()
+        # if hasattr(driver, 'get_parameters'):
+        #     srcs.extend(param.target
+        #                 for param in driver.get_parameters().values())
+        # dsts = scope.list_outputs()
 
-        graph = scope._depgraph
-#        graph = scope._depgraph.full_subgraph(self.get_names(full=True))
-        for src, dst in _get_inner_connections(graph, srcs, dsts):
-            if scope.get_metadata(src)['iotype'] == 'in':
-                continue
-            path = prefix+src
-            if src not in inputs and src not in outputs and \
-               self._check_path(path, includes, excludes):
-                self._rec_outputs.append(src)
-                outputs.append(src)
+        # if hasattr(driver, 'get_objectives'):
+        #     dsts.extend(objective.pcomp_name+'.out0'
+        #                 for objective in driver.get_objectives().values())
+        # if hasattr(driver, 'get_responses'):
+        #     dsts.extend(response.pcomp_name+'.out0'
+        #                 for response in driver.get_responses().values())
+        # if hasattr(driver, 'get_eq_constraints'):
+        #     dsts.extend(constraint.pcomp_name+'.out0'
+        #                 for constraint in driver.get_eq_constraints().values())
+        # if hasattr(driver, 'get_ineq_constraints'):
+        #     dsts.extend(constraint.pcomp_name+'.out0'
+        #                 for constraint in driver.get_ineq_constraints().values())
+
+        # graph = scope._depgraph
+        # for src, dst in _get_inner_connections(graph, srcs, dsts):
+        #     if scope.get_metadata(src)['iotype'] == 'in':
+        #         continue
+        #     path = prefix+src
+        #     if src not in inputs and src not in outputs and \
+        #        self._check_path(path, includes, excludes):
+        #         self._rec_outputs.append(src)
+        #         #outputs.append(src)
+
 
         name = '%s.workflow.itername' % driver.name
         path = prefix+name
@@ -269,16 +364,20 @@ class Workflow(object):
     @staticmethod
     def _check_path(path, includes, excludes):
         """ Return True if `path` should be recorded. """
+        record = False
+
+        # first see if it's included
         for pattern in includes:
             if fnmatch(path, pattern):
-                break
-        else:
-            return False
+                record = True
 
-        for pattern in excludes:
-            if fnmatch(path, pattern):
-                return False
-        return True
+        # if it passes include filter, check exclude filter
+        if record:
+            for pattern in excludes:
+                if fnmatch(path, pattern):
+                    record = False
+
+        return record
 
     def _record_case(self, case_uuid, err):
         """ Record case in all recorders. """
@@ -355,40 +454,311 @@ class Workflow(object):
         Stop all Components in this Workflow.
         We assume it's OK to to call stop() on something that isn't running.
         """
-        for comp in self.get_components(full=True):
-            comp.stop()
+        self._system.stop()
         self._stop = True
 
+    @method_accepts(TypeError,
+                    compnames=(str, list, tuple),
+                    index=(int, NoneType),
+                    check=bool)
     def add(self, compnames, index=None, check=False):
-        """ Add new component(s) to the workflow by name."""
-        raise NotImplementedError("This Workflow has no 'add' function")
+        """
+        add(self, compnames, index=None, check=False)
+        Add new component(s) to the end of the workflow by name.
+        """
+
+        if isinstance(compnames, basestring):
+            nodes = [compnames]
+        else:
+            nodes = compnames
+
+        try:
+            iter(nodes)
+        except TypeError:
+            raise TypeError("Components must be added by name to a workflow.")
+
+        # workflow deriv graph, etc. must be recalculated
+        self.config_changed()
+
+        for node in nodes:
+            if isinstance(node, basestring):
+
+                if check:
+                    # check whether each node is valid and if not then
+                    # construct a useful error message.
+                    parent = self.parent
+                    name = parent.parent.name
+                    if not name:
+                        name = "the top assembly."
+
+                    # Components in subassys are never allowed.
+                    if '.' in node:
+                        msg = "Component '%s' is not" % node + \
+                              " in the scope of %s" % name
+                        raise AttributeError(msg)
+
+                    # Does the component really exist?
+                    try:
+                        target = parent.parent.get(node)
+                    except AttributeError:
+                        msg = "Component '%s'" % node + \
+                              " does not exist in %s" % name
+                        raise AttributeError(msg)
+
+                    # Don't add yourself to your own workflow
+                    if target == parent:
+                        msg = "You cannot add a driver to its own workflow"
+                        raise AttributeError(msg)
+
+                if index is None:
+                    self._explicit_names.append(node)
+                else:
+                    self._explicit_names.insert(index, node)
+                    index += 1
+            else:
+                msg = "Components must be added by name to a workflow."
+                raise TypeError(msg)
 
     def config_changed(self):
         """Notifies the Workflow that workflow configuration
         (dependencies, etc.) has changed.
         """
-        self._var_graph = None
+        self._system = None
+        self._ordering = None
 
-    def remove(self, comp):
-        """Remove a component from this Workflow by name."""
-        raise NotImplementedError("This Workflow has no 'remove' function")
-
-    def get_names(self, full=False):
-        """Return a list of component names in this workflow."""
-        raise NotImplementedError("This Workflow has no 'get_names' function")
-
-    def get_components(self, full=False):
-        """Returns a list of all component objects in the workflow. No ordering
-        is assumed.
+    def remove(self, compname):
+        """Remove a component from the workflow by name. Do not report an
+        error if the specified component is not found.
         """
-        scope = self.scope
-        return [getattr(scope, name) for name in self.get_names(full)]
+        if not isinstance(compname, basestring):
+            msg = "Components must be removed by name from a workflow."
+            raise TypeError(msg)
+        try:
+            self._explicit_names.remove(compname)
+        except ValueError:
+            pass
+        self.config_changed()
 
     def __iter__(self):
-        """Returns an iterator over the components in the workflow in
-        some order.
-        """
-        raise NotImplementedError("This Workflow has no '__iter__' function")
+        """Returns an iterator over the components in the workflow."""
+        return iter([getattr(self.scope, n) for n in self.parent._ordering])
 
     def __len__(self):
         raise NotImplementedError("This Workflow has no '__len__' function")
+
+    def setup_init(self):
+        self._system = None
+        #self._reduced_graph = None
+
+        self._rec_required = None  # Case recording configuration.
+        self._rec_parameters = None
+        self._rec_objectives = None
+        self._rec_responses = None
+        self._rec_constraints = None
+        self._rec_outputs = None
+
+        self._need_prescatter = False
+
+        self._ordering = None
+
+    def setup_systems(self, system_type):
+        """Get the subsystem for this workflow. Each
+        subsystem contains a subgraph of this workflow's component
+        graph, which contains components and/or other subsystems.
+        """
+
+        scope = self.scope
+        drvname = self.parent.name
+
+        parent_graph = self.scope._reduced_graph
+        reduced = parent_graph.subgraph(parent_graph.nodes_iter())
+
+        # collapse driver iteration sets into a single node for
+        # the driver.
+        reduced.collapse_subdrivers(self.parent._iter_set,
+                                    self.subdrivers())
+
+        reduced = reduced.full_subgraph(self.parent._iter_set)
+
+        params = set()
+        for s in parent_graph.successors(drvname):
+            if parent_graph[drvname][s].get('drv_conn') == drvname:
+                if reduced.in_degree(s):
+                    continue
+            params.add(s)
+            reduced.add_node(s[0], comp='param')
+            reduced.add_edge(s[0], s)
+
+        # we need to connect a param comp node to all param nodes
+        for node in params:
+            param = node[0]
+            reduced.node[param]['system'] = \
+                ParamSystem(scope, reduced, param)
+
+        #outs = []
+        #for p in parent_graph.predecessors(drvname):
+        #    if parent_graph[p][drvname].get('drv_conn') == drvname:
+        #        outs.append(p)
+
+        #for out in outs:
+        #    vname = out[1][0]
+        #    if reduced.out_degree(vname) == 0:
+        #        reduced.add_node(vname, comp='dumbvar')
+        #        reduced.add_edge(out, vname)
+        #        reduced.node[vname]['system'] = \
+        #                   VarSystem(scope, reduced, vname)
+
+        cgraph = reduced.component_graph()
+
+        opaque_map = {} # map of all internal comps to collapsed
+                                # name of opaque system
+        if self.scope._derivs_required:
+            # collapse non-differentiable system groups into
+            # opaque systems
+            systems = {}
+            for group in get_nondiff_groups(reduced, cgraph, self.scope):
+                gtup = tuple(sorted(group))
+                system = OpaqueSystem(scope, parent_graph,
+                                      cgraph.subgraph(group),
+                                      str(gtup))
+                systems[gtup] = system
+
+            for gtup, system in systems.items():
+                collapse_to_system_node(cgraph, system, gtup)
+                reduced.add_node(gtup, comp=True)
+                collapse_nodes(reduced, gtup, reduced.internal_nodes(gtup))
+                reduced.node[gtup]['comp'] = True
+                reduced.node[gtup]['system'] = system
+                for c in gtup:
+                    opaque_map[c] = gtup
+
+            # get rid of any back edges for opaque boundary nodes that
+            # originate inside of the opaque system
+            to_remove = []
+            for node in systems:
+                for s in reduced.successors(node):
+                    if node in reduced.predecessors(s):
+                        to_remove.append((s, node))
+            reduced.remove_edges_from(to_remove)
+
+        self._reduced_graph = reduced
+
+        if system_type == 'auto' and MPI:
+            self._auto_setup_systems(scope, reduced, cgraph)
+        elif MPI and system_type == 'parallel':
+            self._system = ParallelSystem(scope, reduced, cgraph,
+                                          str(tuple(sorted(cgraph.nodes()))))
+        else:
+            self._system = SerialSystem(scope, reduced, cgraph,
+                                        str(tuple(sorted(cgraph.nodes()))))
+
+        self._system.set_ordering([p[0] for p in params]+self._ordering,
+                                  opaque_map)
+
+        self._system._parent_system = self.parent._system
+
+        for comp in self:
+            comp.setup_systems()
+
+    def _auto_setup_systems(self, scope, reduced, cgraph):
+        """
+        Collapse the graph into nodes representing parallel
+        and serial subsystems.
+        """
+        cgraph = partition_subsystems(scope, reduced, cgraph)
+
+        if len(cgraph) > 1:
+            if len(cgraph.edges()) > 0:
+                self._system = SerialSystem(scope, reduced,
+                                            cgraph, tuple(cgraph.nodes()))
+            else:
+                self._system = ParallelSystem(scope, reduced,
+                                              cgraph, str(tuple(cgraph.nodes())))
+        elif len(cgraph) == 1:
+            name = cgraph.nodes()[0]
+            self._system = cgraph.node[name].get('system')
+        else:
+            raise RuntimeError("setup_systems called on %s.workflow but component graph is empty!" %
+                               self.parent.get_pathname())
+
+    def get_req_cpus(self):
+        """Return requested_cpus"""
+        if self._system is None:
+            return 1
+        else:
+            return self._system.get_req_cpus()
+
+    def setup_communicators(self, comm):
+        """Allocate communicators from here down to all of our
+        child Components.
+        """
+        self.mpi.comm = get_comm_if_active(self, comm)
+        if MPI and self.mpi.comm == MPI.COMM_NULL:
+            return
+        self._system.setup_communicators(self.mpi.comm)
+
+    def setup_scatters(self):
+        if MPI and self.mpi.comm == MPI.COMM_NULL:
+            return
+        self._system.setup_scatters()
+
+    def get_full_nodeset(self):
+        """Return the set of nodes in the depgraph
+        belonging to this driver (inlcudes full iteration set).
+        """
+        return set([c.name for c in self.parent.iteration_set()])
+
+    def subdrivers(self):
+        """Return a list of direct subdrivers in this workflow."""
+        return [c for c in self if has_interface(c, IDriver)]
+
+    def clear(self):
+        """Remove all components from this workflow."""
+        self._explicit_names = []
+        self.config_changed()
+
+    def mimic(self, src):
+        '''Mimic capability'''
+        self.clear()
+        par = self.parent.parent
+        if par is not None:
+            self._explicit_names = [n for n in src._explicit_names
+                                            if hasattr(par, n)]
+        else:
+            self._explicit_names = src._explicit_names[:]
+
+def get_cycle_vars(graph, varmeta):
+    # examine the graph to see if we have any cycles that we need to
+    # deal with
+    cycle_vars = []
+
+    # make a copy of the graph since we don't want to modify it
+    g = graph.subgraph(graph.nodes_iter())
+
+    sizes = []
+
+    while not is_directed_acyclic_graph(g):
+        if not sizes:
+            # get total data sizes for subsystem connections
+            for u,v,data in g.edges_iter(data=True):
+                sz = 0
+                for node in data['varconns']:
+                    sz += varmeta[node].get('size', 0)
+                data['conn_size'] = sz
+                sizes.append((sz, (u,v)))
+
+            sizes = sorted(sizes)
+
+        strong = list(strongly_connected_components(g))[0]
+        if len(strong) == 1:
+            break
+
+        # find the connection with the smallest data xfer
+        for sz, (src, dest) in sizes:
+            if src in strong and dest in strong:
+                cycle_vars.extend(g[src][dest]['varconns'])
+                g.remove_edge(src, dest)
+                sizes.remove((sz, (src, dest)))
+                break
+
+    return cycle_vars

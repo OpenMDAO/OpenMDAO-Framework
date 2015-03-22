@@ -11,14 +11,13 @@ import Queue
 import sys
 import thread
 import threading
-from traceback import format_exc
 from uuid import uuid1, getnode
 
 from numpy import array
 
 from openmdao.main.api import Driver, VariableTree
 from openmdao.main.datatypes.api import Bool, Dict, Enum, Int
-from openmdao.main.exceptions import TracedError, traceback_str
+from openmdao.main.exceptions import traceback_str, exception_str
 from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.hasparameters import HasVarTreeParameters
 from openmdao.main.hasresponses import HasVarTreeResponses
@@ -27,6 +26,7 @@ from openmdao.main.rbac import get_credentials, set_credentials
 from openmdao.main.resource import ResourceAllocationManager as RAM
 from openmdao.main.resource import LocalAllocator
 from openmdao.main.variable import is_legal_name, make_legal_path
+from openmdao.main.array_helpers import flattened_value
 
 from openmdao.util.decorators import add_delegate
 from openmdao.util.filexfer import filexfer
@@ -53,7 +53,7 @@ class _Case(object):
                  case_uuid=None, parent_uuid=''):
         self.index = index  # Index of input and output values.
         self.retries = 0    # Retry counter.
-        self.exc = None     # TracedError.
+        self.exc = None     # a sys.exec_info() tuple
         self._exprs = None  # Dictionary of ExprEvaluators.
 
         self._inputs = {}
@@ -91,21 +91,23 @@ class _Case(object):
                 self._exprs = {}
             self._exprs[name] = expr
 
-    def apply_inputs(self, scope):
+    def apply_inputs(self, scope, parent):
         """
         Take the values of all of the inputs in this case and apply them
         to the specified scope.
         """
-        if self._exprs:
-            for name, value in self._inputs.items():
+        for name, value in self._inputs.items():
+            if self._exprs is None:
+                expr = None
+            else:
                 expr = self._exprs.get(name)
-                if expr:
-                    expr.set(value, scope)
-                else:
-                    scope.set(name, value)
-        else:
-            for name, value in self._inputs.items():
+            if expr:
+                expr.set(value, scope) #, tovector=True)
+            else:
                 scope.set(name, value)
+
+        parent._system.vec.get('u').set_from_scope(scope)
+
 
     def fetch_outputs(self, scope, extra=False, itername=''):
         """
@@ -130,8 +132,8 @@ class _Case(object):
                     else:
                         value = scope.get(name)
                     data.append((name, value))
-                except Exception as exc:
-                    exc = TracedError(exc, format_exc())
+                except Exception:
+                    exc = sys.exc_info()
         else:
             for name in outputs:
                 if extra and name == itername:
@@ -139,8 +141,8 @@ class _Case(object):
                 try:
                     value = scope.get(name)
                     data.append((name, value))
-                except Exception as exc:
-                    exc = TracedError(exc, format_exc())
+                except Exception:
+                    exc = sys.exc_info()
 
         return (data, exc)
 
@@ -160,7 +162,7 @@ class _Case(object):
         for name in sorted(self._extra_outputs):
             write("      %s\n" % name)
         write("   retries: %s\n" % self.retries)
-        write("   exc: %s\n" % self.exc)
+        write("   exc: %s\n" % exception_str(self.exc))
         if self.exc is not None:
             write("        %s\n" % traceback_str(self.exc))
         return stream.getvalue()
@@ -174,7 +176,7 @@ class _ServerData(object):
         self.top = None         # Top level object in server.
         self.state = _EMPTY     # See states above.
         self.case = None        # Current case being evaluated.
-        self.exception = None   # Exception from last operation.
+        self.exception = None   # sys.exc_info() from last operation.
 
         self.server = None      # Remote server proxy.
         self.info = None        # Identifying information (host, pid, etc.)
@@ -289,12 +291,19 @@ class CaseIteratorDriver(Driver):
             self._cleanup()
 
         if self._abort_exc is not None:
-            self.raise_exception('Run aborted: %s'
-                                 % traceback_str(self._abort_exc),
-                                 RuntimeError)
+            msg = "%s: Run aborted: %s" % (self.get_pathname(), traceback_str(self._abort_exc))
+            newexc = self._abort_exc[0](msg)
+            raise self._abort_exc[0], newexc, self._abort_exc[2]
 
     def _setup(self):
         """ Setup to begin new run. """
+        # if params have changed we need to setup systems again
+        if self.workflow._system is None:
+            obj = self
+            while obj.parent is not None:
+                obj = obj.parent
+            obj._setup()
+
         if not self.sequential:
             # Save model to egg.
             # Must do this before creating any locks or queues.
@@ -534,14 +543,14 @@ class CaseIteratorDriver(Driver):
         in_use = True
 
         if state == _LOADING:
-            exc = server.exception
-            if exc is None:
+            if server.exception is None:
                 in_use = self._start_next_case(server)
             else:
+                typ, exc, tback = server.exception
                 self._logger.debug('    exception while loading: %r', exc)
                 if self.error_policy == 'ABORT':
                     if self._abort_exc is None:
-                        self._abort_exc = exc
+                        self._abort_exc = server.exception
                     self._stop = True
                     server.state = _EMPTY
                     in_use = False
@@ -557,8 +566,7 @@ class CaseIteratorDriver(Driver):
         elif state == _EXECUTING:
             case = server.case
             server.case = None
-            exc = server.exception
-            if exc is None:
+            if server.exception is None:
                 # Grab the results from the model and record.
                 try:
                     self._record_case(server.top, case)
@@ -568,8 +576,8 @@ class CaseIteratorDriver(Driver):
                     self._logger.debug('%s', case)
                     case.msg = '%s: %s' % (self.get_pathname(), msg)
             else:
-                self._logger.debug('    exception while executing: %r', exc)
-                case.exc = exc
+                self._logger.debug('    exception while executing: %r', server.exception[1])
+                case.exc = server.exception
 
             if case.exc is not None:
                 if self.error_policy == 'ABORT':
@@ -607,7 +615,10 @@ class CaseIteratorDriver(Driver):
             self._logger.error(msg)
             if self.error_policy == 'ABORT':
                 if self._abort_exc is None:
-                    self._abort_exc = RuntimeError(msg)
+                    try:
+                        raise RuntimeError(msg)
+                    except RuntimeError:
+                        self._abort_exc = sys.exc_info()
                 self._stop = True
             in_use = False
 
@@ -686,11 +697,11 @@ class CaseIteratorDriver(Driver):
         case.parent_uuid = self._case_uuid
 
         try:
-            case.apply_inputs(server.top)
-        except Exception as exc:
-            case.exc = TracedError(exc, format_exc())
-            msg = 'Exception setting case inputs: %s' % case.exc
-            self._logger.debug('    %s', msg)
+            case.apply_inputs(server.top, self)
+        except Exception:
+            case.exc = sys.exc_info()
+            msg = 'Exception setting case inputs: %s' % case.exc[1]
+            self._logger.error('    %s', msg)
             if case.retries < self.max_retries:
                 case.retries += 1
                 self._rerun.append(case)
@@ -713,8 +724,7 @@ class CaseIteratorDriver(Driver):
                 path = make_legal_path(path)
                 if self.sequential and isinstance(value, VariableTree):
                     value = value.copy()
-                self.set('case_outputs.'+path, value,
-                         index=(index,), force=True)
+                self.set('case_outputs.%s[%d]'%(path,index), value)
 
         # Record workflow data in recorders.
         workflow = self.workflow
@@ -830,7 +840,7 @@ class CaseIteratorDriver(Driver):
                 self._logger.error('server %r filexfer of %r failed: %r',
                                    server.name, self._egg_file, exc)
                 server.top = None
-                server.exception = TracedError(exc, format_exc())
+                server.exception = sys.exc_info()
                 return
             else:
                 server.info['egg_file'] = self._egg_file
@@ -841,7 +851,7 @@ class CaseIteratorDriver(Driver):
             self._logger.error('server.load_model of %r failed: %r',
                                self._egg_file, exc)
             server.top = None
-            server.exception = TracedError(exc, format_exc())
+            server.exception = sys.exc_info()
         else:
             server.top = tlo
 
@@ -850,10 +860,9 @@ class CaseIteratorDriver(Driver):
         server.exception = None
         if server.queue is None:
             try:
-#                self.workflow.parent.update_parameters()
-                self.workflow.run(case_uuid=server.case.uuid)
+                self.run_iteration(server.case.uuid)
             except Exception as exc:
-                server.exception = TracedError(exc, format_exc())
+                server.exception = sys.exc_info()
                 self._logger.critical('Caught exception: %r' % exc)
         else:
             server.queue.put((self._remote_model_execute, server))
@@ -865,7 +874,7 @@ class CaseIteratorDriver(Driver):
             server.top.set_itername(self.get_itername(), case.index+1)
             server.top.run(case_uuid=case.uuid)
         except Exception as exc:
-            server.exception = TracedError(exc, format_exc())
+            server.exception = sys.exc_info()
             self._logger.error('Caught exception from server %r,'
                                ' PID %d on %s: %r',
                                server.info['name'], server.info['pid'],

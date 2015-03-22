@@ -4,101 +4,111 @@ output to the input for the next iteration. Relative change and number of
 iterations are used as termination criteria.
 """
 
-from numpy import zeros
-from numpy.linalg import norm
+# pylint: disable=E0611,F0401
+
+from openmdao.main.mpiwrap import MPI, get_norm
+if not MPI:
+    from numpy.linalg import norm
 
 from openmdao.main.datatypes.api import Float, Int, Bool, Enum
-from openmdao.main.api import Driver, CyclicWorkflow
 from openmdao.util.decorators import add_delegate
+from openmdao.main.driver import Driver
 from openmdao.main.hasstopcond import HasStopConditions
-from openmdao.main.exceptions import RunStopped
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasEqConstraints
 from openmdao.main.interfaces import IHasParameters, IHasEqConstraints, \
                                      ISolver, implements
+from networkx.algorithms.components import strongly_connected_components
 
 @add_delegate(HasParameters, HasEqConstraints, HasStopConditions)
 class FixedPointIterator(Driver):
     """ A simple fixed point iteration driver, which runs a workflow and passes
     the value from the output to the input for the next iteration. Relative
-    change and number of iterations are used as termination criterea. This type
+    change and number of iterations are used as termination criteria. This type
     of iteration is also known as Gauss-Seidel."""
 
     implements(IHasParameters, IHasEqConstraints, ISolver)
 
-    # pylint: disable-msg=E1101
+    # pylint: disable=E1101
     max_iteration = Int(25, iotype='in', desc='Maximum number of '
                                          'iterations before termination.')
 
-    tolerance = Float(1.0e-3, iotype='in', desc='Absolute convergence '
+    tolerance = Float(1.0e-6, iotype='in', desc='Absolute convergence '
                                             'tolerance between iterations.')
 
     norm_order = Enum('Infinity', ['Infinity', 'Euclidean'],
                        desc='For multivariable iteration, type of norm '
                                    'to use to test convergence.')
 
+    iprint = Enum(0, [0, 1], iotype='in', desc='set to 1 to print '
+                  'residual during convergence.')
+
     def __init__(self):
         super(FixedPointIterator, self).__init__()
         self.current_iteration = 0
-        self.workflow = CyclicWorkflow()
+        self.normval = 1.e99
+        self.norm0 = 1.e99
 
     def execute(self):
-        """Perform the iteration."""
-
-        # perform an initial run
-        self.pre_iteration()
-        self.run_iteration()
-        self.post_iteration()
+        """ Executes an iterative solver """
         self.current_iteration = 0
-
-        # Find dimension of our problem.
-        self.workflow.initialize_residual()
-
-        # Get and save the intial value of the input parameters
-        val0 = self.workflow.get_independents()
-
-        nvar = len(val0)
-        delta = zeros(nvar)
-
-        res = self.workflow.get_dependents(fixed_point=True)
-
-        if self.norm_order == 'Infinity':
-            order = float('inf')
-        else:
-            order = self.norm_order
-
-        unconverged = True
-        while unconverged:
-
-            if self._stop:
-                self.raise_exception('Stop requested', RunStopped)
-
-            # check max iteration
-            if self.current_iteration >= self.max_iteration-1:
-                self._logger.warning('Max iterations exceeded without '
-                                     'convergence.')
+        if MPI:
+            self._norm_order = None # norm order not used in MPI
+            if self.workflow._system.mpi.comm == MPI.COMM_NULL:
                 return
+        else:
+            if self.norm_order == 'Infinity':
+                self._norm_order = float('inf')
+            else:
+                self._norm_order = self.norm_order
 
-            # Pass output to input
-            val0 += res
-            self.workflow.set_independents(val0)
+        super(FixedPointIterator, self).execute()
 
-            # run the workflow
-            self.pre_iteration()
-            self.run_iteration()
-            self.post_iteration()
+    def start_iteration(self):
+        """ Commands run before any iterations """
+        self.current_iteration = 0
+        self.normval = 1.e99
+        self.norm0 = 1.e99
+        self.run_iteration()
+        self.normval = get_norm(self.workflow._system.vec['f'],
+                                self._norm_order)
+        self.norm0 = self.normval if self.normval != 0.0 else 1.0
 
-            self.current_iteration += 1
+        if self.iprint > 0:
+            self.print_norm('NLN_GS', 0, self.normval, self.norm0)
 
-            # check convergence
-            delta[:] = self.workflow.get_dependents(fixed_point=True)
-            res = delta
+    def pre_iteration(self):
+        """Runs an iteration."""
+        self.current_iteration += 1
+        system = self.workflow._system
+        uvec = system.vec['u']
+        fvec = system.vec['f']
 
-            if norm(delta, order) < self.tolerance or self.should_stop():
-                break
-            # relative tolerance -- problematic around 0
-            #if abs( (val1-val0)/val0 ) < self.tolerance:
-            #    break
+        cycle_vars = self.workflow._cycle_vars
+        for name in uvec.keys():
+            if name not in cycle_vars:
+                uvec[name] -= fvec[name]
+
+    def continue_iteration(self):
+        """Convergence check."""
+        return not self.should_stop() and \
+               self.current_iteration < self.max_iteration and \
+               self.normval > self.tolerance
+              # and self.normval/self.norm0 > self.rtol:
+
+    def post_iteration(self):
+        """Runs after each iteration"""
+        self.normval = get_norm(self.workflow._system.vec['f'],
+                                self._norm_order)
+        if self.iprint > 0:
+            self.print_norm('NLN_GS', self.current_iteration-1, self.normval,
+                            self.norm0)
+
+    def end_iteration(self):
+        """Print convergence."""
+        if self.iprint > 0:
+            self.print_norm('NLN_GS', self.current_iteration-1, self.normval,
+                            self.norm0, msg='Converged')
 
     def check_config(self, strict=False):
         """Make sure the problem is set up right."""
@@ -117,8 +127,9 @@ class FixedPointIterator(Driver):
 
         # Check to make sure we don't have a null problem.
         if n_dep == 0:
-            self.workflow._get_topsort()
-            if len(self.workflow._severed_edges) == 0:
+            cgraph = self.parent._depgraph.component_graph().subgraph([c.name for c in self.workflow])
+            strong = list(strongly_connected_components(cgraph))
+            if not ((strong and len(strong[0]) > 1) or self._get_param_constraint_pairs()):
                 msg = "FixedPointIterator requires a cyclic workflow, or a " \
                       "parameter/constraint pair."
                 self.raise_exception(msg, RuntimeError)
@@ -152,6 +163,7 @@ class IterateUntil(Driver):
         self.iteration = 0
 
     def continue_iteration(self):
+        """ Convergence check."""
         if self.iteration < 1 and self.run_at_least_once:
             self.iteration += 1
             return True
@@ -164,6 +176,3 @@ class IterateUntil(Driver):
             return True
 
         return False
-
-
-# End iterate.py

@@ -1,18 +1,15 @@
 """
 Testing differentiation of ffd body and shell objects.
 """
-
-
 import os
+import tempfile
+import shutil
 import unittest
 
 import numpy as np
 
-from openmdao.lib.components.geomcomp import GeomComponent
 from openmdao.main.api import Component, Assembly, set_as_top
 from openmdao.main.datatypes.api import Float, Array
-from openmdao.main.interfaces import IParametricGeometry, implements, \
-                                     IStaticGeometry
 from openmdao.main.variable import Variable
 from openmdao.util.testutil import assert_rel_error
 
@@ -27,6 +24,17 @@ class TestFFDDerivatives(unittest.TestCase):
 
     def setUp(self): 
         self.this_dir, self.this_filename = os.path.split(os.path.abspath(openmdao.examples.nozzle_geometry_doe.__file__))
+        self.startdir = os.getcwd()
+        self.tempdir = tempfile.mkdtemp(prefix='test_ffd-')
+        os.chdir(self.tempdir)
+
+    def tearDown(self):
+        os.chdir(self.startdir)
+        if not os.environ.get('OPENMDAO_KEEPDIRS', False):
+            try:
+                shutil.rmtree(self.tempdir)
+            except OSError:
+                pass
 
     def test_body(self): 
         plug_file = os.path.join(self.this_dir, 'plug.stl')

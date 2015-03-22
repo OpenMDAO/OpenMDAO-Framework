@@ -1,0 +1,928 @@
+<html>
+    <head>
+        <link rel='stylesheet' type='text/css' href='http://w2ui.com/src/w2ui-1.4.1.min.css' />
+        <script src='http://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js'></script>
+        <script src="http://d3js.org/d3.v3.min.js"></script>
+        <script type='text/javascript' src='http://w2ui.com/src/w2ui-1.4.1.min.js'></script>
+        <script type='text/javascript' src='http://www.flotcharts.org/javascript/jquery.flot.min.js'></script>
+        <style>
+            .d3-context-menu {
+                position: absolute;
+                display: none;
+                background-color: #f2f2f2;
+                border-radius: 4px;
+
+                font-family: Arial, sans-serif;
+                font-size: 14px;
+                min-width: 150px;
+                border: 1px solid #d4d4d4;
+
+                z-index:1200;
+            }
+            .d3-context-menu ul {
+                list-style-type: none;
+                margin: 4px 0px;
+                padding: 0px;
+                cursor: default;
+            }
+            .d3-context-menu ul li {
+                padding: 4px 16px;
+            }
+            .d3-context-menu ul li:hover {
+                background-color: #4677f8;
+                color: #fefefe;
+            }
+        </style>
+        <script>
+            d3.contextMenu = function (menu, openCallback) {
+                // create the div element that will hold the context menu
+                d3.selectAll('.d3-context-menu').data([1])
+                    .enter()
+                    .append('div')
+                    .attr('class', 'd3-context-menu');
+
+                // close menu
+                d3.select('body').on('click.d3-context-menu', function() {
+                    d3.select('.d3-context-menu').style('display', 'none');
+                });
+
+                // this gets executed when a contextmenu event occurs
+                return function(data, index) {
+                    var elm = this;
+
+                    d3.selectAll('.d3-context-menu').html('');
+                    var list = d3.selectAll('.d3-context-menu').append('ul');
+                    list.selectAll('li').data(menu).enter()
+                        .append('li')
+                        .html(function(d) {
+                            return d.title;
+                        })
+                        .on('click', function(d, i) {
+                            d.action(elm, data, index);
+                            d3.select('.d3-context-menu').style('display', 'none');
+                        });
+
+                    // the openCallback allows an action to fire before the menu is displayed
+                    // an example usage would be closing a tooltip
+                    if (openCallback) openCallback(data, index);
+
+                    // display context menu
+                    d3.select('.d3-context-menu')
+                        .style('left', (d3.event.pageX - 2) + 'px')
+                        .style('top', (d3.event.pageY - 2) + 'px')
+                        .style('display', 'block');
+
+                    d3.event.preventDefault();
+                };
+            };
+        </script>
+        <style>
+            .valbutton {
+                float:         left;
+                border:        1px solid #bbb;
+                border-radius: 3px;
+                padding:       2px;
+                margin:        5px;
+                font-size:     12px;
+                font-family':  Arial, sans-serif;
+            }
+        </style>
+    </head>
+    <body>
+        <div id='main' style='width: 100%; height: 100%;'></div>
+        <div id='dep-graph' style='display:none;'>
+            {{ svg_dep_graph }}
+        </div>
+        <div id='comp-graph' style='display:none;'>
+            {{ svg_comp_graph }}
+        </div>
+        <div id='plot-frame' style='display:none;width:600px;height:300px;z-index:999;background-color:white'>
+        </div>
+        <script id='case-data' type='application/json'>
+            {{ case_data }}
+        </script>
+        <script id='visualizer' type='text/javascript'>
+            // global variables
+
+            // NaN is not valid JSON, but is a valid javascript value
+            var case_data = document.getElementById('case-data').innerHTML.replace(/\bNaN\b/g, '"***NaN***"')
+            case_data = JSON.parse(case_data, function(key, value) {
+                return value === "***NaN***" ? NaN : value;
+            });
+
+            var cases = [];
+            var it_case_key = "iteration_case_" ;
+            var simulation_info_key = "simulation_info" ;
+            var driver_info_key = "driver_info" ;
+            var case_objects = new Object();
+            var simulation_info_id = "" ;
+            var driver_name = new Object();
+            var driver_id = new Object();
+            var driver_info = new Object();
+            var parameter_list = [];
+            var case_id = new Object();
+            var num_orphan_cases = 0;
+            var comps = [];
+            var pseudo_to_expr = {};
+            var plot_frame = $('#plot-frame');
+
+            // makes it easier to create SVG elements
+            function SVG(tag) {
+               return document.createElementNS('http://www.w3.org/2000/svg', tag);
+            }
+
+            // show plot in a pop-up at current mouse position
+            function showPlot(var_name, series) {
+                // hide any existing plot
+                plot_frame.hide();
+
+                // create new plot
+                $.plot('#plot-frame', [series]);
+
+                // add title to plot canvas
+                var canvas = plot_frame.find('canvas')[0];
+                var context = canvas.getContext("2d");
+                var cx = canvas.width / 2;
+                context.font="bold 20px sans-serif";
+                context.textAlign = 'center';
+                context.fillText(var_name, cx, 35);
+
+                // set plot location
+                plot_frame.css({
+                    position: "fixed",
+                    top: d3.event.pageY,
+                    left: d3.event.pageX
+                });
+
+                // add close button
+                plot_frame.append("<span id='close'>x</span>");
+                plot_frame.find('#close').css({
+                    'float': 'right',
+                    'padding': '10px 20px',
+                    'font-family': 'Arial',  // san-serif
+                    'z-index': '9999'
+                });
+
+                // hide plot if clicked in the top right 30px area
+                // (flot seems to prevent getting click event on #close)
+                plot_frame.on('click', function(event) {
+                    offset = plot_frame.offset();
+                    if ((event.pageX > (offset.left + plot_frame.width() - 30)) &&
+                        (event.pageY < (offset.top + 30))) {
+                        plot_frame.hide();
+                    }
+                    return false;
+                });
+
+                // show plot
+                plot_frame.show();
+            }
+
+            // get history of values for a variable
+            function getHistory(var_name) {
+                var vals = [];
+                $.each(case_data, function(key, val) {
+                    if (key.lastIndexOf('iteration_case', 0) === 0) {
+                        if (val['data'].hasOwnProperty(var_name)) {
+                            vals.push(val['data'][var_name])
+                        }
+                    }
+                });
+                return vals;
+            }
+
+            // a context menu for plotting
+            var plotMenu = [
+                {
+                    title: 'Plot History',
+                    action: function(elm, d, i) {
+                        var name = $(elm).find('text').filter(":first").text().trim();
+                        var vals = getHistory(name);
+                        if (! Array.isArray(vals[0])) {
+                            var series = vals.map(function(e, i) {
+                                return [i, vals[i]]
+                            })
+                            showPlot($(elm).find('title').text(), series);
+                        }
+                        else {
+                            alert(name+' is not a scalar! \n (Can only plot history of a scalar)');
+                        }
+                    }
+                },
+                {
+                    title: 'Plot Array Value',
+                    action: function(elm, d, i) {
+                        var name = $(elm).find('text').filter(":first").text().trim();
+                        if ($(elm).find('text').eq(1).text().trim() === 'Array') {
+                            var vals = JSON.parse('['+$(elm).find('title').text()+']');
+                            var series = vals.map(function(e, i) {
+                                // assume it's a 2-D or 1-D array
+                                if (Array.isArray(vals[i])) {
+                                    return [vals[i][0], vals[i][1]]
+                                }
+                                else {
+                                    return [i, vals[i]]
+                                }
+                            });
+                            showPlot(name, series);
+                        }
+                        else {
+                            alert(name + ' does not have an Array value! \n (Did you select a case?)');
+                        }
+                    }
+                }
+            ]
+
+            // load a graph from the div with the specified ID (dep-graph or comp-graph)
+            function load_graph(graph_id) {
+                w2ui.layout.content('main', '<div id="svgContent" style="background-color:white"></div>');
+
+                var svg = d3.select("#svgContent")
+                              .append("svg")
+                              .attr("height", "100%")
+                              .attr("width", "100%")
+                              .attr('preserveAspectRatio', 'xMinYMin slice') ;
+
+                // For pan and zoom
+                var vis = svg
+                  .append('svg:g')
+                    .call(d3.behavior.zoom().on("zoom", rescale))
+                    .on("dblclick.zoom", null)
+                  .append('svg:g');
+
+                function rescale() {
+                  trans=d3.event.translate;
+                  scale=d3.event.scale;
+                  vis.attr("transform", "translate(" + trans + ")" + " scale(" + scale + ")");
+                }
+
+                vis.append('svg:rect')
+                    .attr('width', "100%")
+                    .attr('height', "100%")
+                    .attr('fill', 'white');
+                // end pan and zoom code
+
+                // populate SVG from hidden graph div
+                var graph = d3.select(graph_id+" svg")
+                vis.html(graph.html())
+
+                // identify type of each node based on it's text label
+                $("#svgContent").find("text").each(function() {
+                    var label = $(this).text();
+
+                    if (driver_info.hasOwnProperty(label)) {
+                        // get parent and flag it as a driver node
+                        var parent = $(this).parent();
+                        parent.attr('class', 'driver');
+
+                        // replace ellipse with rect
+                        var ellipse = parent.find('ellipse');
+                        var cx = ellipse.attr('cx');
+                        var cy = ellipse.attr('cy');
+                        var rx = ellipse.attr('rx');
+                        var ry = ellipse.attr('ry');
+                        $(SVG('rect'))
+                            .attr('fill', 'lime')
+                            .attr('stroke', 'black')
+                            .attr('x', cx-rx)
+                            .attr('y', cy-ry)
+                            .attr('width', 2*rx)
+                            .attr('height', 2*ry)
+                            .attr('rx', 5)
+                            .attr('ry', 5)
+                            .prependTo(parent);
+                        ellipse.remove();
+                    }
+                    else if ($.inArray(label, comps) >= 0) {
+                        // get parent and flag it as a component
+                        var parent = $(this).parent();
+                        parent.attr('class', 'component');
+
+                        // replace ellipse with rect
+                        var ellipse = parent.find('ellipse');
+                        var cx = ellipse.attr('cx');
+                        var cy = ellipse.attr('cy');
+                        var rx = ellipse.attr('rx');
+                        var ry = ellipse.attr('ry');
+                        $(SVG('rect'))
+                            .attr('fill', 'tan')
+                            .attr('stroke', 'black')
+                            .attr('x', cx-rx)
+                            .attr('y', cy-ry)
+                            .attr('width', 2*rx)
+                            .attr('height', 2*ry)
+                            .attr('rx', 5)
+                            .attr('ry', 5)
+                            .prependTo(parent);
+                        ellipse.remove();
+                    }
+                    else if (parameter_list.indexOf(label) >= 0) {
+                        // get parent and flag it as a parameter variable node
+                        var parent = $(this).parent();
+                        parent.attr('class', 'parameter variable');
+
+                        // set color
+                        var ellipse = parent.find('ellipse');
+                        ellipse.attr('fill', 'pink');
+                    }
+                    else if (case_data.simulation_info.constants.hasOwnProperty(label)) {
+                        // get parent and flag it as a constant node
+                        var parent = $(this).parent();
+                        parent.attr('class', 'constant');
+
+                        // set color
+                        var ellipse = parent.find('ellipse');
+                        ellipse.attr('fill', 'lightgray');
+                    }
+                    else if (case_data.simulation_info.variable_metadata.hasOwnProperty(label)) {
+                        // some additional ways to infer it's a variable ...
+                        // (label.indexOf('[') >= 0) ||
+                        // (label.indexOf('_pseudo_') >= 0 && label.indexOf('.') >= 0) ||
+
+                        // get parent and flag it as a variable node
+                        var parent = $(this).parent();
+                        parent.attr('class', 'variable');
+
+                        // get metadata, if available
+                        metadata = case_data.simulation_info.variable_metadata[label];
+
+                        // set color
+                        var ellipse = parent.find('ellipse');
+                        // if (metadata && metadata.iotype=='in') {
+                            ellipse.attr('fill', 'aqua');
+                        // }
+                    }
+                    else if (pseudo_to_expr.hasOwnProperty(label)) {
+                        // get the type of the expression (constraint, objective, ...)
+                        var expr_type = pseudo_to_expr[label].type;
+
+                        // get parent and flag it as an expression type node
+                        var parent = $(this).parent();
+                        parent.attr('class', expr_type.toLowerCase() + ' expression');
+
+                        // set title (tooltip) to be the actual expression
+                        parent.find('title').text(pseudo_to_expr[label].expr);
+
+                        // define 6-sided polygon to replace the ellipse
+                        var ellipse = parent.find('ellipse');
+                        var cx = ellipse.attr('cx');
+                        var cy = ellipse.attr('cy');
+                        var rx = ellipse.attr('rx');
+                        var ry = ellipse.attr('ry');
+                        var x = cx-rx;
+                        var y = cy-ry;
+                        var width = 2*rx;
+                        var height = 2*ry;
+                        var points = x             + ',' + cy         + ' ' +
+                                     (x+1*width/5) + ',' + y          + ' ' +
+                                     (x+4*width/5) + ',' + y          + ' ' +
+                                     (x+width)     + ',' + cy         + ' ' +
+                                     (x+4*width/5) + ',' + (y+height) + ' ' +
+                                     (x+1*width/5) + ',' + (y+height) + ' ' +
+                                     x             + ',' + cy         ;
+
+                        // set color and shape
+                        if (expr_type === 'Constraint') {
+                            $(SVG('polygon'))
+                                .attr('points', points)
+                                .attr('fill', 'red')
+                                .attr('stroke', 'black')
+                                .attr('x', cx-rx)
+                                .attr('y', cy-ry)
+                                .attr('width', 2*rx)
+                                .attr('height', 2*ry)
+                                .attr('rx', 5)
+                                .attr('ry', 5)
+                                .prependTo(parent);
+                            ellipse.remove();
+                        }
+                        else if (expr_type === 'Objective') {
+                            $(SVG('polygon'))
+                                .attr('points', points)
+                                .attr('fill', 'gold')
+                                .attr('stroke', 'black')
+                                .attr('x', cx-rx)
+                                .attr('y', cy-ry)
+                                .attr('width', 2*rx)
+                                .attr('height', 2*ry)
+                                .attr('rx', 5)
+                                .attr('ry', 5)
+                                .prependTo(parent);
+                            ellipse.remove();
+                        }
+                    }
+                    else {
+                        // console.log(label, 'is an unknown (probably a variable');
+                        // get parent and flag it as an unknown node
+                        // var parent = $(this).parent();
+                        // parent.attr('class', 'unknown');
+
+                        // get parent and flag it as a variable node
+                        var parent = $(this).parent();
+                        parent.attr('class', 'variable');
+
+                        // set color
+                        var ellipse = parent.find('ellipse');
+                        ellipse.attr('fill', 'aqua');  // color code it as variable
+                    }
+                })
+
+                // add variable context menu to all variable nodes
+                d3.selectAll('.variable').on("contextmenu", d3.contextMenu(plotMenu));
+                d3.selectAll('.expression').on("contextmenu", d3.contextMenu(plotMenu));
+
+                $("#svgContent").find(".edge").each(function() {
+                    var label = $(this).find('title').text();
+                    var tokens = label.split('->');
+                    var src = tokens[0];
+                    var dst = tokens[1];
+                    if (driver_info.hasOwnProperty(src) && (parameter_list.indexOf(dst) >= 0)) {
+                        // dashed line for connection between driver and parameter
+                        $(this).find('path').attr('stroke-dasharray', '5,5');
+                    }
+                    else if (pseudo_to_expr.hasOwnProperty(dst)) {
+                        // wide gray line for connection between vars and expressions
+                        $(this).find('path').attr('stroke', 'gray').attr('stroke-width', '6');
+                        $(this).find('polygon').attr('stroke', 'gray').attr('fill', 'gray');
+                    }
+                })
+
+                return graph_id;
+            }
+
+            // load plotting UI
+            function load_plotting() {
+                w2ui.layout.content('main', '<div id="plotContent" style="background-color:white"></div>');
+
+                var plotContent = $('#plotContent');
+                var plotDiv  = plotContent.append('<div id="plotDiv" style="height:90%"></div>');
+                var queryDiv = plotContent.append('<div id="queryDiv" style="height:10%></div>');
+                var comboDiv = $('<div id="comboDiv">')
+                        .appendTo(queryDiv);
+                var toggleButtons = $('<div class="valbutton" style="position:absolute;right:0;">Buttons</div>')
+                        .appendTo(queryDiv)
+                        .on('click', function() { buttonDiv.toggle(); })
+                var buttonDiv = $('<div id="buttonDiv" style="clear:both;display:none;overflow:auto">')
+                        .appendTo(queryDiv);
+                var queryValue  = undefined;
+                var queryCase   = undefined;
+                var queryDriver = undefined;
+                var plottable = {};
+
+                // update plot for currently selected var, case and driver
+                function updatePlot() {
+                    if (! queryValue) {
+                        return;
+                    }
+
+                    var vals = [];
+
+                    var included_cases = [];
+                    function add_cases(cid) {
+                        included_cases.push(case_objects[cid].case_number);
+                        $.each(case_objects[cid].children, function() {
+                            add_cases(this._id);
+                        });
+                    }
+                    if (queryCase) {
+                        add_cases(case_id[queryCase]);
+                        console.log('checking cases', included_cases);
+                    }
+
+                    $.each(case_data, function(key, val) {
+                        if (key.lastIndexOf('iteration_case', 0) === 0) {
+                            // console.log('checking case', val.case_number, included_cases);
+                            var include = true;
+                            if (! val.data.hasOwnProperty(queryValue)) {
+                                // console.log('value', queryValue, 'not in case data', Object.keys(val.data));
+                                include = false;
+                            }
+                            else if (queryCase && ($.inArray(val.case_number.toString(), included_cases) < 0)) {
+                                // console.log('case', val.case_number, 'not in included_cases', included_cases);
+                                include = false;
+                            }
+                            else if (queryDriver && !(val._driver_id === driver_id[queryDriver])) {
+                                // console.log('driver', queryDriver, 'not', val._driver_id);
+                                include = false;
+                            }
+                            if (include) {
+                                console.log('found value for', queryValue, 'in case:', queryCase,'for driver', queryDriver);
+                                vals.push(val['data'][queryValue])
+                            }
+                        }
+                    });
+
+                    var label = plottable[queryValue].title;
+                    var series = [];
+
+                    if (vals.length > 0) {
+                        // if it's an array and a single case is selected, plot the array
+                        if (vals[0] instanceof Array) {
+                            if (vals.length === 1) {
+                                label = label + ' for Case #' + queryCase
+                                series = vals[0].map(function(e, i) {
+                                    // assume it's a 2-D or 1-D array
+                                    if (Array.isArray(vals[i])) {
+                                        return [vals[0][i][0], vals[0][i][1]]
+                                    }
+                                    else {
+                                        return [i, vals[0][i]]
+                                    }
+                                });
+                            }
+                            else {
+                                alert(queryValue+' is an Array variable,\nplease select a single case.');
+                            }
+                        }
+                        else {
+                            series = vals.map(function(e, i) {
+                                return [i, vals[i]]
+                            })
+                        }
+                    }
+
+                    $.plot('#plotDiv', [{ label: label, data: series }], {
+                        series: {
+                            lines: { show: true },
+                            points: { show: true }
+                        }
+                    });
+                }
+
+                // generate plot
+                function plotSeries(title, series) {
+                    // create new plot
+                    $.plot('#plotDiv', [series]);
+
+                    // add title to plot canvas
+                    var canvas = plotDiv.find('canvas')[0];
+                    var context = canvas.getContext("2d");
+                    var cx = canvas.width / 2;
+                    context.font="bold 20px sans-serif";
+                    context.textAlign = 'center';
+                    context.fillText(title, cx, 35);
+                }
+
+                // get all plottable values (numeric variables and expressions)
+                function getPlottable(simulation_info) {
+                    // find every numeric variable in variable_metadata and every (objective/constraint) expression
+                    var plottable = {};
+                    $.each(simulation_info.variable_metadata, function(name, value) {
+                        var type = 'Variable';
+                        if ((value.vartypename === 'Float') || (value.vartypename === 'Int') || (value.vartypename === 'Array')) {
+                            if (parameter_list.indexOf(name) >= 0) {
+                                type = 'Parameter';
+                            }
+                            else if (simulation_info.constants.hasOwnProperty(name)) {
+                                // don't include constants that are not parameters
+                                return true;
+                            }
+                            plottable[name] = { 'title': name, 'type': type };
+                        }
+                    });
+                    $.each(pseudo_to_expr, function(name, value) {
+                        var type = 'Expression';
+                        if ((value.type === 'Constraint') ||  (value.type === 'Objective')) {
+                            type = value.type;
+                        }
+                        plottable[name] = { 'title': value.expr, 'type': type };
+                    });
+                    return plottable;
+                }
+
+                // add a button for every plottable value
+                function addButtons(plottable) {
+                    function clickHandler() {
+                        queryValue = $(this).attr('title');
+                        $('#select-value').val(queryValue).change();
+                    }
+
+                    $.each(plottable, function(name, value) {
+                        var color = 'white';
+                        switch(value.type) {
+                            case 'Parameter' : color = 'pink'; break;
+                            case 'Constraint': color = 'red';  break;
+                            case 'Objective' : color = 'gold'; break;
+                        }
+                        $('<div class="valbutton" style="float:left;background-color:'+color+'" title="'+name+'">'+value.title+'</div>')
+                            .on('click', clickHandler)
+                            .appendTo(buttonDiv);
+                    });
+                }
+
+                // add combo boxes to select value, case and driver for query
+                function addCombos(plottable, case_objects, driver_info) {
+                    // add combo box for selecting plottable variable/expression
+                    var html = '<div class="ui-widget"><label>Value: </label><select id="select-value">';
+                    html += '<option value=""></option>';
+                    $.each(plottable, function(name, val) {
+                        html += '<option value="'+name+'"">'+val.title+'</option>';
+                    });
+                    html += '</select></div>';
+
+                    var combo = $(html).appendTo(comboDiv);
+                    combo.on('change', function() {
+                        $(this).find('option:selected').each(function() {
+                            queryValue =  $(this).attr('value');
+                            updatePlot();
+                        });
+                    });
+                    combo.css({
+                        'font-size': '12px',
+                        'margin': '5px',
+                        'float': 'left'
+                    });
+
+                    // add combo box for selecting Case
+                    var html = '<div class="ui-widget"><label>Case : </label><select id="select-case">';
+                    html += '<option value=""></option>';
+                    $.each(case_objects, function(uuid, val) {
+                        if (val.case_number) {
+                            html += '<option value="'+val.case_number+'"">'+val.case_number+'</option>';
+                        }
+                    });
+                    html += '</select></div>';
+                    var combo = $(html).appendTo(comboDiv);
+                    combo.on('change', function() {
+                        $(this).find('option:selected').each(function() {
+                            queryCase =  $(this).attr('value');
+                            updatePlot();
+                        });
+                    });
+                    combo.css({
+                        'font-size': '12px',
+                        'margin': '5px',
+                        'float': 'left'
+                    });
+
+                    // add combo box for selecting driver
+                    var html = '<div class="ui-widget"><label>Driver: </label><select id="select-driver">';
+                    html += '<option value=""></option>';
+                    $.each(driver_info, function(name, val) {
+                        html += '<option value="'+name+'"">'+name+'</option>';
+                    });
+                    html += '</select></div>';
+                    var combo = $(html).appendTo(comboDiv);
+                    combo.on('change', function() {
+                        $(this).find('option:selected').each(function() {
+                            queryDriver =  $(this).attr('value');
+                            updatePlot();
+                        });
+                    });
+                    combo.css({
+                        'font-size': '12px',
+                        'margin': '5px',
+                        'float': 'left'
+                    });
+                }
+
+                plottable = getPlottable(case_data.simulation_info);
+                addCombos(plottable, case_objects, driver_info);
+                addButtons(plottable);
+
+                return 'plotting';
+            }
+
+            // recursive function to build up the JavaScript structure that w2ui needs for
+            //   display of a sidebar
+            function get_nodes(root) {
+                var nodes = [] ;
+                var children = root.children ;
+                var child ;
+
+                // Add a label for the driver name at this hierarchy level
+                if (children.length > 0) {
+                    nodes[nodes.length] = {
+                        id:   children[0].driver_name + '_' + children[0].case_number.toString(),
+                        text: children[0].driver_name.toString(),
+                        img:  'icon-page'
+                    };
+                }
+                else {
+                    // there are no cases to pull driver info from, so just add a default driver node
+                    nodes[nodes.length] = {
+                        id:   'driver',
+                        text: 'driver',
+                        img:  'icon-page'
+                    };
+                }
+                for (var i=0; i<children.length; i++) {
+                    child = children[i] ;
+                    if (child.children.length) { // if node has subnodes, recurse
+                        child_nodes = get_nodes(child) ;
+                        // nodes[nodes.length] = {id: child.case_number.toString(), text: child.case_number.toString() + ' (' + child.driver_name + ')', nodes: child_nodes } ;
+                        nodes[nodes.length] = {
+                            id:    child.case_number.toString(),
+                            text:  child.case_number.toString(),
+                            nodes: child_nodes
+                        };
+                    }
+                    else {
+                        // nodes[nodes.length] = {id: child.case_number.toString(), text: child.case_number.toString() + ' (' + child.driver_name + ')' } ;
+                        nodes[nodes.length] = {
+                            id:   child.case_number.toString(),
+                            text: child.case_number.toString()
+                        };
+                    }
+                }
+                return nodes ;
+            };
+
+            var now_showing;
+
+            // widget configuration
+            var config = {
+                layout: {
+                    name: 'layout',
+                    padding: 0,
+                    panels: [
+                        { type: 'left', size: 200, resizable: true, minSize: 120 },
+                        { type: 'main',  minSize: 550, overflow: 'auto',
+                            tabs: {
+                                active : 'tab1',
+                                tabs   : [
+                                    { id: 'tab1', caption: 'Dependency Graph' },
+                                    { id: 'tab2', caption: 'Component Graph' },
+                                    { id: 'tab3', caption: 'Plotting'}
+                                ],
+                                onClick: function (event) {
+                                    if (event.target === 'tab1' && now_showing !== '#dep-graph') {
+                                        now_showing = load_graph('#dep-graph');
+                                    }
+                                    else if (event.target === 'tab2' && now_showing !== '#comp-graph') {;
+                                        now_showing = load_graph('#comp-graph');
+                                    }
+                                    else if (event.target === 'tab3' && now_showing !== 'plotting') {;
+                                        now_showing = load_plotting();
+                                    }
+                                    else {
+                                        alert('Already looking at that tab!')
+                                    }
+                                }
+                            }
+                        }
+                    ]
+                },
+            };
+
+            $(document).ready(function() {
+                // get all the cases in an associative array with the id as the key
+                // Also collect info on the simulation_info and the driver names
+                $.each(case_data, function(key, val) {
+
+                   // val.data has the values of the variables
+                   // need to add simulation info object for top of tree of cases
+                   if (key.lastIndexOf(simulation_info_key, 0) === 0) {
+                        val['children'] = [] ;
+                        case_objects[val.uuid] = val;
+                        simulation_info_id = val.uuid; // need to remember this since it is special since it is not really a case
+                    }
+
+                    // Make a structure to hold all of the driver info
+                    if (key.lastIndexOf(driver_info_key, 0) === 0) {
+                        driver_name[val._id] = val.name;
+                        driver_id[val.name] = val._id;
+                        driver_info[val.name] = val;
+                        // add all parameters to global parameter list
+                        if (val.hasOwnProperty('parameters')) {
+                            Array.prototype.push.apply(parameter_list, val.parameters);
+                        }
+                    }
+
+                    // Make a structure to hold all of the case info
+                    if (key.lastIndexOf(it_case_key, 0) === 0) {
+                        case_number = key.substring(it_case_key.length);
+                        val['children'] = [] ;
+                        val['case_number'] = case_number ;
+                        val['driver_name'] = driver_name[val._driver_id] ;
+                        case_objects[val._id] = val ;
+                        case_id[case_number] = val._id ;
+                    }
+                }); // end each
+
+                console.log('sim_info:', case_data.simulation_info);
+                console.log('driver_name:', driver_name);
+                console.log('driver_id:', driver_id);
+                console.log('driver_info:', driver_info);
+                console.log('parameter_list:', parameter_list);
+
+                $('#comp-graph').find('.node').each(function() {
+                    var comp_name = $(this).find('text')[0].innerHTML;
+                    if (comp_name.indexOf('_pseudo_') < 0) {
+                        comps.push(comp_name);
+                    }
+                });
+
+                $.each(case_data.simulation_info.expressions, function(key, value) {
+                    var expr = {
+                        'expr': key,
+                        'type': value.data_type
+                    }
+                    pseudo_to_expr[value.pcomp_name] = expr;
+                });
+                console.log('pseudo_to_expr:', pseudo_to_expr);
+
+                // Loop over the case_objects and connect parents to children and vice versa
+                Object.keys(case_objects).forEach(function(key) {
+                    var case_object, parent_id, parent_case_object, parent_case_object_children;
+                    if (key != simulation_info_id) {
+                        case_object = case_objects[key];
+                        parent_id = case_object._parent_id;
+                        parent_case_object = case_objects[parent_id];
+
+                        // have to handle the case where a case does not have a parent
+                        if (parent_case_object) {
+                            parent_case_object_children = parent_case_object.children;
+                            parent_case_object_children[ parent_case_object_children.length ] = case_object;
+                        }
+                        else {
+                            num_orphan_cases++;
+                        }
+                    }
+                }); // end keys
+
+                if (num_orphan_cases > 0) {
+                    alert("WARNING: There were " + num_orphan_cases.toString() + " cases with no parent cases");
+                }
+                console.log('case_objects:', case_objects);
+
+                // Starting from the top "case_object", which is really the sim info data,
+                // Walk down the children leaves, creating the value for nodes in the w2ui call below
+                simulation_info_object = case_objects[simulation_info_id];
+                node_tree = get_nodes(simulation_info_object);
+
+                // use w2ui to do the layout of the divs
+                jQuery('#main').w2layout(config.layout);
+
+                w2ui.layout.content('left', jQuery().w2sidebar({
+                    name: 'cases',
+                    nodes: node_tree ,
+                    onClick: function(event) {
+                        // clean up highlighting and value text from the last case selection
+                        var svgContent = $("#svgContent");
+                        svgContent.find('text').remove('.textval');
+                        svgContent.find('polygon').attr('stroke-width', '1').attr('stroke', 'black');
+                        svgContent.find('ellipse').attr('stroke-width', '1').attr('stroke', 'black');
+                        svgContent.find('rect').attr('stroke-width', '1').attr('stroke', 'black');
+                        // keep outer frame hidden
+                        svgContent.find('polygon').filter(":first").attr('stroke-width', '0');
+
+                        if (event.node.img != "icon-page") {
+                            // if plotting tab is open, set the selected case in the query
+                            $('#select-case').val(event.target).change();
+
+                            // if a graph tab is open, show case values on variable nodes
+                            d = case_objects[case_id[event.target]].data;
+                            jQuery.each(d, function(key, val) {
+                                // Get only the text element with exactly the value of key
+                                t = svgContent.find("text").filter(function() {
+                                    return $(this).text() === key;
+                                }) ;
+
+                                if (t.length === 1) {
+                                    // t.siblings('rect').attr('fill', 'yellow').attr('fill-opacity', '0.5');
+                                    // t.siblings('ellipse').attr('fill', 'yellow').attr('fill-opacity', '0.5');
+                                    t.siblings().attr('stroke-width', '5').attr('stroke', 'orange');
+
+                                    if (Object.prototype.toString.call(val) === '[object Number]') {
+                                        $(SVG('text'))
+                                            .attr('x', t.attr('x'))
+                                            .attr('y', t.attr('y'))
+                                            .attr('text-anchor', "middle")
+                                            .attr('alignment-baseline', "text-before-edge")
+                                            .attr('class', "textval")
+                                            .attr('font-size', t.attr('font-size')-2)
+                                            .attr('font-family', t.attr('font-family'))
+                                            .text(val.toPrecision(2).toString())
+                                            .appendTo(t.parent());
+                                    }
+                                    else if (Object.prototype.toString.call(val) === '[object Array]') {
+                                        // Just say "Array" to indicate it has an array value
+                                        //   and user has to hover over it to see actual value
+                                        $(SVG('text'))
+                                            .attr('x', t.attr('x'))
+                                            .attr('y', t.attr('y'))
+                                            .attr('text-anchor', "middle")
+                                            .attr('alignment-baseline', "text-before-edge")
+                                            .attr('class', "textval")
+                                            .attr('font-size', t.attr('font-size')-2)
+                                            .attr('font-family', t.attr('font-family'))
+                                            .text('Array')
+                                            .appendTo(t.parent());
+                                        t.siblings('title').text(val.toString().replace(/,/g, ",\n"));
+                                    }
+                               }
+                            });
+                        }
+                        else {
+                            // if plotting tab is open, set the selected driver in the query
+                            $('#select-driver').val(event.node.text).change();
+                        }
+                    }
+                })); // end layout content left
+
+                now_showing = load_graph('#dep-graph');
+            }); // end ready
+        </script>
+    </body>
+</html>

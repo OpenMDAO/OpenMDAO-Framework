@@ -53,7 +53,7 @@ from *dev*.  In that case you would do the following:
    git checkout -b <my_new_branch>
    
    
-.. note:: To find out what branch you're on, type ``git branch``. You should see 
+.. note:: To find out what branch you're on, type ``git branch``. You should see
       a list of all of the branches you've created, with a ``*`` next to the one
       that is checked out.
 
@@ -61,17 +61,20 @@ from *dev*.  In that case you would do the following:
 .. _Creating-the-Virtual-Environment:
 
 
-Creating the Virtual Environment
+Working from Virtual Environment
 --------------------------------
 
-OpenMDAO operates inside of a virtual Python environment. To create that environment, 
+Creating the Virtual Environment
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+OpenMDAO operates inside of a virtual Python environment. To create that environment,
 run ``python go-openmdao-dev.py`` from the top directory of your
 repository. The script will check the version of Python you are running. **You must
 be running version 2.7.x.** (To find out which Python version you are
 running, you can type ``python --version``.)
 
 
-.. note:: If you're using Visual Studio on Windows, you need to run the installer from a 
+.. note:: If you're using Visual Studio on Windows, you need to run the installer from a
    command window that has the Visual Studio environment variables set. The
    easiest way to do this is to select the *Visual Studio 2008 Command Prompt*
    from the *Visual Studio Tools* menu under *Microsoft Visual C++ 2008
@@ -96,10 +99,10 @@ distributions.
 .. _Activating-the-Virtual-Environment:
 
 Activating the Virtual Environment
-----------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The next step is to activate your virtual Python environment. Change your directory to
-``devenv``. 
+``devenv``.
 
 On Linux or Mac OS X, you must be running the Bash shell. If you are in Bash, omit this step.
 
@@ -125,7 +128,7 @@ Or, on Windows, type:
 At this point, your ``devenv`` directory should contain the following subdirectories, unless you are
 on Windows. On Windows, the directory structure is slightly different, as noted below.
 
-``bin`` 
+``bin``
     Contains Python and a number of other scripts that are associated with the Python
     packages that are installed in the virtual environment. On Windows, this
     directory is called ``Scripts``.
@@ -140,7 +143,7 @@ on Windows. On Windows, the directory structure is slightly different, as noted 
 ``lib``
     Contains Python standard library and installed modules.
 
-After your virtual Python environment has been activated, you can add other 
+After your virtual Python environment has been activated, you can add other
 distributions to the environment by using ``easy_install`` or :term:`pip` in
 the same manner that you would add packages to the system level Python.
 
@@ -150,7 +153,7 @@ Running ``openmdao docs`` will display the documents in HTML in the default brow
 You can deactivate the environment by typing:
 
 
-:: 
+::
 
   deactivate
   
@@ -161,7 +164,40 @@ You can deactivate the environment by typing:
    ``go-openmdao-dev.py``, unless you're certain that no OpenMDAO package
    dependencies have changed.
 
+Working from Anaconda Environment
+---------------------------------
 
+Creating Anaconda Environment
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+To install the development version of OpenMDAO into a conda environment,
+navigate to the root of the OpenMDAO-Framework repository and type:
+
+OS X and Linux ::
+
+  . conda-openmdao-dev.sh
+  
+Windows ::
+
+  conda-openmdao-dev.bat
+ 
+The scripts automatically install OpenMDAO-Framework into an environment named `openmdao`.
+
+Activating Environment
+^^^^^^^^^^^^^^^^^^^^^^
+
+To activate the environment, type:
+
+OS X and Linux ::
+
+  source activate openmdao
+  
+Windows ::
+
+  activate openmdao
+
+Guidelines for Development
+--------------------------
 
 Now that you have built and activated your virtual development environment,
 you are ready to use OpenMDAO.
@@ -170,20 +206,17 @@ The following sections provide information on how to carry out some basic
 actions in the development environment. You would perform these actions on a
 repository that you cloned from the OpenMDAO-Framework repository on GitHub.
 
-.. note::  In some cases the examples are written from the Linux perspective. 
+.. note::  In some cases the examples are written from the Linux perspective.
    Windows users need to replace the ``/`` with a ``\``.
 
 .. index:: pair: source code; editing and debugging
 .. index:: pair: source files; adding
 .. index:: guidelines
 
-Guidelines for Development
---------------------------
-
-We try to follow the `PEP 8`__ style guidelines for Python code, and we use `pylint`__ 
+We try to follow the `PEP 8`__ style guidelines for Python code, and we use `pylint`__
 to check for PEP 8 compliance.
 
-.. __: http://legacy.python.org/dev/peps/pep-0008
+.. __: https://www.python.org/dev/peps/pep-0008/
 .. __: http://www.logilab.org/857
 
 
@@ -201,7 +234,7 @@ If ``<filename>`` is a directory, all files and subdirectories (and their
 files) within the directory will also be added to the repository, unless they
 match any of the patterns in the ``.gitignore`` file(s) located above it in
 the repository directory tree. To add a new pattern for Git to ignore, edit the
-appropriate ``.gitignore`` file.  Directories to be ignored should end with a 
+appropriate ``.gitignore`` file.  Directories to be ignored should end with a
 forward slash (/), and glob patterns are allowed.
 
 
@@ -220,7 +253,7 @@ the working tree in addition to being removed from the staging area.
 
 .. _Committing-changes:
 
-Committing Changes 
+Committing Changes
 ------------------
 
 After you make changes on your branch, make sure you :term:`commit`, or
@@ -272,7 +305,7 @@ message on the command line (inside quotation marks), type:
   git commit -am "<commit message>"
 
 If you omit the ``m`` option and press *Enter,* your default text editor will open a
-new file where you must enter the required commit message.  
+new file where you must enter the required commit message.
 
 .. note:: It's very important to add the ``-a`` option to ``git commit``,
    because if you don't, only the *staged* files will be committed. This can lead
@@ -394,12 +427,12 @@ an example of a failed merge:
    Automatic merge failed; fix conflicts and then commit the result.
 
 
-If you do a ``git status`` after a failed merge, all of the files with conflicts 
+If you do a ``git status`` after a failed merge, all of the files with conflicts
 will be listed as *unmerged*.
 
 The unmerged file will contain a section for each conflict that includes contributions
 from the two merged branches.  Each contribution is clearly delimited, so it's possible
-to just fire up your favorite editor and update the conflicts in each file.  It's 
+to just fire up your favorite editor and update the conflicts in each file.  It's
 easier though if you use the ``git mergetool`` command, which will bring up a graphical
 three way diff tool that should make it a lot easier to see what's going on.  The
 particular diff tool that is used depends on the platform where you run the command.
@@ -455,7 +488,7 @@ follow these steps:
 1. If you are not already logged in, log in to GitHub. You should be on your personal page.
 
 2. On the right side of the page, scroll down until you see the area titled **Your Repositories**
-   with a list your personal repositories. 
+   with a list your personal repositories.
    
    If your page shows tabs for `Contributions, Repositories,` and `Public Activity` across the top, click
    on the **Repositories** tab.
@@ -463,7 +496,7 @@ follow these steps:
 3. Click on **OpenMDAO-Framework** to take you to your personal fork of the OpenMDAO-Framework.
 
    You will probably be on the `master` branch. The branch-name button is circled in red in the
-   figure that follows. 
+   figure that follows.
 
 .. figure:: OpenMDAO-Framework_repo.png
    :align: center
@@ -472,17 +505,17 @@ follow these steps:
    Screen of a personal OpenMDAO-Framework fork showing the branch button
 
 4. If you're on the master branch, you need to switch branches before issuing a
-   pull request. 
+   pull request.
    
-   -  Click on the down arrow next to the branch name. 
+   -  Click on the down arrow next to the branch name.
    
-      A drop-down list of branches will appear (in alphabetical order). 
+      A drop-down list of branches will appear (in alphabetical order).
 
-   -  Use the Search box or the scroll bar to find the branch you want merged. 
+   -  Use the Search box or the scroll bar to find the branch you want merged.
    
-      If you mouse over the branch name, it will be highlighted, and a check mark will appear in front of it. 
+      If you mouse over the branch name, it will be highlighted, and a check mark will appear in front of it.
 
-   -  Click on the branch name to go to that branch. 
+   -  Click on the branch name to go to that branch.
 
 5. Once you're on the correct branch, click on the **Compare and pull request** button. See the following
    graphic with the button circled in red.
@@ -494,7 +527,7 @@ follow these steps:
    Screen showing the "Compare and pull request" button
 
 6. A new window will appear, and you will be prompted to enter a description of
-   your changes. 
+   your changes.
    
    Provide a brief description and then click on the **Send pull request** button.
 

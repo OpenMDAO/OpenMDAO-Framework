@@ -13,6 +13,7 @@ import shutil
 import socket
 import sys
 import traceback
+import tempfile
 import unittest
 
 from Crypto.Random import get_random_bytes
@@ -127,8 +128,8 @@ class BoxDriver(Driver):
             for height in range(1, 3):
                 for depth in range(1, 4):
                     self._logger.debug('w,h,d %s, %s, %s', width, height, depth)
-                    self.set_parameters((width, height, depth))
-                    self.workflow.run()
+                    self.set_parameters((float(width), float(height), float(depth)))
+                    self.run_iteration()
                     volume, area = self.eval_objectives()
                     self._logger.debug('    v,a %s, %s', volume, area)
 
@@ -230,9 +231,9 @@ class ProtectedBox(Box):
         return self.protector
 
     @rbac(('owner', 'user'), proxy_types=[FileRef])
-    def get(self, path, index=None):
+    def get(self, path):
         if self.protector.user_attribute(self, path):
-            return super(ProtectedBox, self).get(path, index)
+            return super(ProtectedBox, self).get(path)
         raise RoleError('No get access to %r' % path)
 
     @rbac(('owner', 'user'), proxy_types=[CTrait])
@@ -242,15 +243,15 @@ class ProtectedBox(Box):
         raise RoleError('No get_dyn_trait access to %r' % name)
 
     @rbac(('owner', 'user'))
-    def get_attr(self, name, index=None):
+    def get_attr_w_copy(self, name):
         if self.protector.user_attribute(self, name):
             return super(ProtectedBox, self).get_attr(name)
-        raise RoleError('No get_attr access to %r' % name)
+        raise RoleError('No get_attr_w_copy access to %r' % name)
 
     @rbac(('owner', 'user'))
-    def set(self, path, value, index=None, force=False):
+    def set(self, path, value):
         if self.protector.user_attribute(self, path):
-            return super(ProtectedBox, self).set(path, value, index, force)
+            return super(ProtectedBox, self).set(path, value)
         raise RoleError('No set access to %r' % path)
 
 
@@ -267,16 +268,19 @@ class TestCase(unittest.TestCase):
 
     def setUp(self):
         """ Called before each test. """
-        self.n_errors = len(self.test_result.errors)
-        self.n_failures = len(self.test_result.failures)
+        self.startdir = os.getcwd()
+        self.tempdir = tempfile.mkdtemp(prefix='omdao-')
+        os.chdir(self.tempdir)
+        # self.n_errors = len(self.test_result.errors)
+        # self.n_failures = len(self.test_result.failures)
 
         self.factories = []
         self.servers = []
         self.server_dirs = []
 
-        # Ensure we control directory cleanup.
-        self.keepdirs = os.environ.get('OPENMDAO_KEEPDIRS', '0')
-        os.environ['OPENMDAO_KEEPDIRS'] = '1'
+        # # Ensure we control directory cleanup.
+        # self.keepdirs = os.environ.get('OPENMDAO_KEEPDIRS', '0')
+        # os.environ['OPENMDAO_KEEPDIRS'] = '1'
 
     def start_factory(self, port=None, allowed_users=None):
         """ Start each factory process in a unique directory. """
@@ -330,21 +334,28 @@ class TestCase(unittest.TestCase):
 
     def tearDown(self):
         """ Shut down server process. """
-        try:
-            for factory in self.factories:
-                factory.cleanup()
-            for server in self.servers:
-                logging.debug('terminating server pid %s', server.pid)
-                server.terminate(timeout=10)
+        #try:
+        for factory in self.factories:
+            factory.cleanup()
+        for server in self.servers:
+            logging.debug('terminating server pid %s', server.pid)
+            server.terminate(timeout=10)
 
-            # Cleanup only if there weren't any new errors or failures.
-            if len(self.test_result.errors) == self.n_errors and \
-               len(self.test_result.failures) == self.n_failures and \
-               not int(self.keepdirs):
-                for server_dir in self.server_dirs:
-                    shutil.rmtree(server_dir, onerror=onerror)
-        finally:
-            os.environ['OPENMDAO_KEEPDIRS'] = self.keepdirs
+        os.chdir(self.startdir)
+        if not os.environ.get('OPENMDAO_KEEPDIRS', False):
+            try:
+                shutil.rmtree(self.tempdir)
+            except OSError:
+                pass
+
+        # # Cleanup only if there weren't any new errors or failures.
+        # if len(self.test_result.errors) == self.n_errors and \
+        #    len(self.test_result.failures) == self.n_failures and \
+        #    not int(self.keepdirs):
+        #     for server_dir in self.server_dirs:
+        #         shutil.rmtree(server_dir, onerror=onerror)
+        # finally:
+        #     os.environ['OPENMDAO_KEEPDIRS'] = self.keepdirs
 
     def test_1_client(self):
         logging.debug('')
@@ -432,7 +443,7 @@ class TestCase(unittest.TestCase):
             for height in range(1, 3):
                 for depth in range(1, 4):
                     case = model.recorders[0].cases.pop(0)
-                    self.assertEqual(case.get_output('_pseudo_0'),
+                    self.assertEqual(case.get_output('volume'),
                                      width*height*depth)
 
         self.assertTrue(is_instance(model.box.parent, Assembly))
@@ -449,12 +460,12 @@ class TestCase(unittest.TestCase):
         self.assertEqual(path, 'subcontainer.subvar')
 
         obj, path = get_closest_proxy(model, 'source.subcontainer.subvar')
-        self.assertEqual(obj, model.source.subcontainer)
-        self.assertEqual(path, 'subvar')
+        self.assertEqual(obj, model.source.subcontainer.subvar)
+        self.assertEqual(path, '')
 
         obj, path = get_closest_proxy(model.source.subcontainer, 'subvar')
-        self.assertEqual(obj, model.source.subcontainer)
-        self.assertEqual(path, 'subvar')
+        self.assertEqual(obj, model.source.subcontainer.subvar)
+        self.assertEqual(path, '')
 
         # Observable proxied type.
         tmp = model.box.open_in_parent('tmp', 'w')
@@ -527,7 +538,7 @@ class TestCase(unittest.TestCase):
             for height in range(1, 3):
                 for depth in range(1, 4):
                     case = model.recorders[0].cases.pop(0)
-                    self.assertEqual(case.get_output('_pseudo_0'),
+                    self.assertEqual(case.get_output('volume'),
                                      width*height*depth)
 
         # Check access protections.
@@ -613,7 +624,7 @@ class TestCase(unittest.TestCase):
                 for height in range(1, 3):
                     for depth in range(1, 4):
                         case = model.recorders[0].cases.pop(0)
-                        self.assertEqual(case.get_output('_pseudo_0'),
+                        self.assertEqual(case.get_output('volume'),
                                          width*height*depth)
         finally:
             if factory is not None:
@@ -657,6 +668,8 @@ class TestCase(unittest.TestCase):
         except RuntimeError as exc:
             if str(exc)[:len(msg1)] != msg1 and str(exc)[:len(msg2)] != msg2:
                 self.fail('Expected send/connect error, got %r' % exc)
+        except EOFError: # this can happen when testing concurrently
+            pass
         else:
             self.fail('Expected RuntimeError')
 

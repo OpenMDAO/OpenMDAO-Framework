@@ -1,0 +1,45 @@
+{% set pkg_version = environ['PKG_VERSION'] %}
+{% set remote = "https://github.com/OpenMDAO/OpenMDAO-Framework.git" %}
+
+{% if pkg_version == "dev" %}
+{% set source="git_url: {}\n  git_branch: {}".format(remote, pkg_version) %}
+{% else %}
+{% set source="  git_url: {}\n  git_branch: {}".format(remote, pkg_version) %}
+{% endif %}
+
+package:
+ name: openmdao.util
+ version: !!str {{ pkg_version }}
+
+source:
+{{ source }}
+    
+requirements:
+  build:
+    - python
+    - setuptools
+    
+  run:
+    - python
+    - setuptools
+    - pycrypto ==2.3
+    - pyparsing
+    - traits ==4.3.0
+
+build:
+  preserve_egg_dir: True
+  entry_points:
+    - xyplot = openmdao.util.casedb:cmdlineXYplot
+    - plotgraph = openmdao.util.graphplot:main
+    - dotgraph = openmdao.util.dotgraph:main
+    - add_reqs = openmdao.util.addreqs:add_reqs
+    - mkpseudo = openmdao.util.mkpseudo:mkpseudo
+    - envdump = openmdao.util.envirodump:envdump
+    - pstadump = openmdao.util.dep:main
+    - update_libpath = openmdao.util.lib:update_libpath
+    - combine_paths = openmdao.util.lib:combine_paths
+
+about:
+  home:  http://openmdao.org
+  license:  Apache 2.0
+  summary:  "Open-source Multidisciplinary Design, Analysis and Optimazation framework in Python."

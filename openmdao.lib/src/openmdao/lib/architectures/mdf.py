@@ -1,4 +1,4 @@
-from openmdao.main.api import Architecture
+from openmdao.main.api import Architecture, Driver
 from openmdao.lib.drivers.api import SLSQPdriver, BroydenSolver#, COBYLAdriver as SLSQPdriver
 
 class MDF(Architecture):
@@ -16,10 +16,11 @@ class MDF(Architecture):
     def configure(self):
         """Setup an MDF architecture inside this assembly.
         """
+
         #create the top level optimizer
         self.parent.add("driver", SLSQPdriver())
         self.parent.driver.iprint = 0
-        self.parent.recorders = self.data_recorders
+        self.parent.recorders.extend(self.data_recorders)
 
         global_dvs = []
         local_dvs = []
@@ -28,12 +29,12 @@ class MDF(Architecture):
             global_dvs.append(v)
             # and add the broadcast parameters to the driver
             self.parent.driver.add_parameter(v, name=k)
-            v.initialize(self.parent)
+            v.initialize(self.parent, self.parent)
 
         for k, v in self.parent.get_local_des_vars():
             local_dvs.append(v)
             self.parent.driver.add_parameter(v, name=k)
-            v.initialize(self.parent)
+            v.initialize(self.parent, self.parent)
 
         #TODO: possibly add method for passing constraint directly?
         #add the constraints to the driver
@@ -59,4 +60,3 @@ class MDF(Architecture):
                                                  couple.dep.target))
         #setup the workflows
         self.parent.driver.workflow.add(['solver'])
-        #self.parent.solver.workflow.add(disciplines)

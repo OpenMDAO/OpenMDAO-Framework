@@ -30,9 +30,9 @@ if __name__ == "__main__":
     outputs = ['comp.y_out[%d, 0]'%n for n in range(N)]
 
     t0 = time()
-    J = top.driver.workflow.calc_gradient(inputs=inputs,
-                                          outputs=outputs,
-                                          mode = 'fd')
+    J = top.driver.calc_gradient(inputs=inputs,
+                                 outputs=outputs,
+                                 mode = 'fd')
     print 'Time elapsed', time() - t0
 
 

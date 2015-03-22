@@ -1,0 +1,45 @@
+# Recipe created using `conda skeleton pypi pycrypto`
+# and modified to create pypi package for pycrypto 2.3
+package:
+  name: pycrypto
+  version: !!str 2.3
+
+source:
+  fn: pycrypto-2.3.tar.gz
+  url: https://pypi.python.org/packages/source/p/pycrypto/pycrypto-2.3.tar.gz
+  md5: 2b811cfbfc342d83ee614097effb8101
+
+requirements:
+  build:
+    - python
+    - libpython # [win]
+
+  run:
+    - python
+    - libpython # [win]
+
+test:
+  # Python imports
+  imports:
+    - Crypto
+    - Crypto.Cipher
+    - Crypto.Hash
+    - Crypto.Protocol
+    - Crypto.PublicKey
+    - Crypto.Random
+    - Crypto.Random.Fortuna
+    - Crypto.Random.OSRNG
+    - Crypto.SelfTest
+    - Crypto.SelfTest.Cipher
+    - Crypto.SelfTest.Hash
+    - Crypto.SelfTest.Protocol
+    - Crypto.SelfTest.PublicKey
+    - Crypto.SelfTest.Random
+    - Crypto.SelfTest.Random.Fortuna
+    - Crypto.SelfTest.Random.OSRNG
+    - Crypto.Util
+
+about:
+  home: http://www.pycrypto.org/
+  license: Public domain
+  summary: 'Cryptographic modules for Python.'

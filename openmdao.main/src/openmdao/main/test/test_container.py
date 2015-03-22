@@ -10,7 +10,7 @@ import copy
 from traits.api import HasTraits
 
 from openmdao.util import eggsaver as constants
-from openmdao.main.container import Container, deep_hasattr, \
+from openmdao.main.container import Container, \
                                     get_default_name, find_name, \
                                     find_trait_and_value, _get_entry_group, \
                                     create_io_traits
@@ -181,25 +181,6 @@ class ContainerTestCase(unittest.TestCase):
         cont = MyContainer()
         io = cont.get_metadata('uncertain.mu', 'iotype')
         self.assertEqual(io, 'out')
-
-    def test_deep_hasattr(self):
-        class MyClass(object):
-            pass
-        obj = MyClass()
-        obj.sub = MyClass()
-        obj.sub.sub = MyClass()
-        obj.a = 1
-        obj.sub.b = 2
-        obj.sub.sub.c = 3
-        self.assertEqual(deep_hasattr(obj, 'a'), True)
-        self.assertEqual(deep_hasattr(obj, 'z'), False)
-        self.assertEqual(deep_hasattr(obj, 'sub'), True)
-        self.assertEqual(deep_hasattr(obj, 'bus'), False)
-        self.assertEqual(deep_hasattr(obj, 'sub.b'), True)
-        self.assertEqual(deep_hasattr(obj, 'sub.y'), False)
-        self.assertEqual(deep_hasattr(obj, 'sub.sub.c'), True)
-        self.assertEqual(deep_hasattr(obj, 'sub.sub.d'), False)
-        self.assertEqual(deep_hasattr(obj, 'sub.blah.foo.d'), False)
 
     def test_get_default_name(self):
         class MyClass(object):
@@ -394,7 +375,7 @@ class ContainerTestCase(unittest.TestCase):
     def test_save_bad_filename(self):
 # TODO: get make_protected_dir() to work on Windows.
         if sys.platform == 'win32':
-            raise nose.SkipTest()
+            raise nose.SkipTest("make_protected_dir() doesn't work on Windows.")
 
         c1 = Container()
         directory = make_protected_dir()
@@ -454,17 +435,6 @@ class ContainerTestCase(unittest.TestCase):
         assert_raises(self, "b.add('a', a)",
                       globals(), locals(), ValueError,
                       "b: add would cause container recursion")
-
-    def test_get_attributes(self):
-        c = Container()
-        c.add_trait('inp', Float(desc='Stuff', low=-200, high=200))
-        c.set('inp', 42)
-        attrs = c.get_attributes()
-        self.assertTrue("Inputs" in attrs.keys())
-        check = {'name': 'inp', 'value': 42.0, 'high': 200.0, 'connected': '', 'low': -200.0,
-                         'type': 'float', 'desc': 'Stuff'}
-        for key in check.keys():
-            self.assertEqual(check[key], attrs["Inputs"][0][key])
 
     def test_set_metadata(self):
         c = Container()

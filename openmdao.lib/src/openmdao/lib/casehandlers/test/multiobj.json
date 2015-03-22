@@ -1,6 +1,8 @@
 {
-"simulation_info": {
-    "OpenMDAO_Version": "0.9.6", 
+"__length_1": 14641
+, "simulation_info": {
+    "OpenMDAO_Version": "0.12.0", 
+    "comp_graph": "{\"directed\": true, \"graph\": [], \"nodes\": [{\"comp\": true, \"id\": \"comp2\"}, {\"comp\": true, \"pseudo\": \"objective\", \"id\": \"_pseudo_3\"}, {\"comp\": true, \"id\": \"comp1\"}, {\"comp\": true, \"driver\": true, \"id\": \"driver\"}, {\"comp\": true, \"pseudo\": \"objective\", \"id\": \"_pseudo_2\"}], \"links\": [{\"source\": 0, \"target\": 1}, {\"source\": 1, \"target\": 3}, {\"source\": 2, \"target\": 0}, {\"source\": 2, \"target\": 4}, {\"source\": 3, \"target\": 2}, {\"source\": 4, \"target\": 3}], \"multigraph\": false}", 
     "constants": {
         "comp1.data": null, 
         "comp1.directory": "", 
@@ -13,21 +15,24 @@
         "directory": "", 
         "driver.directory": "", 
         "driver.force_fd": false, 
+        "driver.gradient_options.atol": 1e-09, 
         "driver.gradient_options.derivative_direction": "auto", 
         "driver.gradient_options.directional_fd": false, 
-        "driver.gradient_options.fd_blocks": [], 
         "driver.gradient_options.fd_form": "forward", 
         "driver.gradient_options.fd_step": 1e-06, 
         "driver.gradient_options.fd_step_type": "absolute", 
         "driver.gradient_options.force_fd": false, 
-        "driver.gradient_options.gmres_maxiter": 100, 
-        "driver.gradient_options.gmres_tolerance": 1e-09, 
-        "excludes": [], 
+        "driver.gradient_options.iprint": 0, 
+        "driver.gradient_options.lin_solver": "scipy_gmres", 
+        "driver.gradient_options.maxiter": 100, 
+        "driver.gradient_options.rtol": 1e-09, 
         "force_fd": false, 
-        "includes": [
+        "missing_deriv_policy": "assume_zero", 
+        "recording_options.excludes": [], 
+        "recording_options.includes": [
             "*"
         ], 
-        "missing_deriv_policy": "assume_zero"
+        "recording_options.save_problem_formulation": true
     }, 
     "expressions": {
         "comp1.z": {
@@ -39,23 +44,50 @@
             "pcomp_name": "_pseudo_3"
         }
     }, 
-    "uuid": "7689ad9a-f0af-11e3-b712-005056000100", 
+    "graph": "{\"directed\": true, \"graph\": [[\"title\", \"unknown\"]], \"nodes\": [{\"short\": \"out0\", \"color_idx\": 1, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"full\": \"_pseudo_3.out0\", \"var\": true, \"iotype\": \"out\", \"id\": \"_pseudo_3.out0\"}, {\"short\": \"data\", \"color_idx\": 2, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"full\": \"comp1.data\", \"var\": true, \"iotype\": \"in\", \"id\": \"comp1.data\"}, {\"short\": \"comp2\", \"color_idx\": 0, \"title\": \"{}\", \"comp\": true, \"full\": \"comp2\", \"id\": \"comp2\"}, {\"short\": \"comp1\", \"color_idx\": 2, \"title\": \"{}\", \"comp\": true, \"full\": \"comp1\", \"id\": \"comp1\"}, {\"short\": \"F\", \"color_idx\": 3, \"title\": \"{}\", \"full\": \"driver.F\", \"var\": true, \"iotype\": \"out\", \"id\": \"driver.F\"}, {\"short\": \"G\", \"color_idx\": 3, \"title\": \"{}\", \"full\": \"driver.G\", \"var\": true, \"iotype\": \"out\", \"id\": \"driver.G\"}, {\"short\": \"dF_names\", \"color_idx\": 3, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"full\": \"driver.dF_names\", \"var\": true, \"iotype\": \"out\", \"id\": \"driver.dF_names\"}, {\"short\": \"dx_names\", \"color_idx\": 3, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"full\": \"driver.dx_names\", \"var\": true, \"iotype\": \"out\", \"id\": \"driver.dx_names\"}, {\"short\": \"z\", \"color_idx\": 2, \"title\": \"{}\", \"full\": \"comp1.z\", \"var\": true, \"iotype\": \"out\", \"id\": \"comp1.z\"}, {\"short\": \"y\", \"color_idx\": 2, \"title\": \"{}\", \"full\": \"comp1.y\", \"var\": true, \"iotype\": \"in\", \"id\": \"comp1.y\"}, {\"short\": \"x\", \"color_idx\": 2, \"title\": \"{}\", \"full\": \"comp1.x\", \"var\": true, \"iotype\": \"in\", \"id\": \"comp1.x\"}, {\"short\": \"x\", \"color_idx\": 3, \"title\": \"{}\", \"full\": \"driver.x\", \"var\": true, \"iotype\": \"out\", \"id\": \"driver.x\"}, {\"short\": \"in0\", \"color_idx\": 1, \"title\": \"{}\", \"full\": \"_pseudo_3.in0\", \"var\": true, \"iotype\": \"in\", \"id\": \"_pseudo_3.in0\"}, {\"short\": \"x\", \"color_idx\": 0, \"title\": \"{}\", \"full\": \"comp2.x\", \"var\": true, \"iotype\": \"in\", \"id\": \"comp2.x\"}, {\"short\": \"driver\", \"color_idx\": 3, \"title\": \"{'driver': True}\", \"comp\": true, \"driver\": true, \"full\": \"driver\", \"id\": \"driver\"}, {\"short\": \"z\", \"color_idx\": 0, \"title\": \"{}\", \"full\": \"comp2.z\", \"var\": true, \"iotype\": \"out\", \"id\": \"comp2.z\"}, {\"short\": \"dG\", \"color_idx\": 3, \"title\": \"{}\", \"full\": \"driver.dG\", \"var\": true, \"iotype\": \"out\", \"id\": \"driver.dG\"}, {\"short\": \"dF\", \"color_idx\": 3, \"title\": \"{}\", \"full\": \"driver.dF\", \"var\": true, \"iotype\": \"out\", \"id\": \"driver.dF\"}, {\"short\": \"in0\", \"color_idx\": 4, \"title\": \"{}\", \"full\": \"_pseudo_2.in0\", \"var\": true, \"iotype\": \"in\", \"id\": \"_pseudo_2.in0\"}, {\"short\": \"_pseudo_3\", \"color_idx\": 1, \"title\": \"{}\", \"comp\": true, \"pseudo\": \"objective\", \"full\": \"_pseudo_3\", \"id\": \"_pseudo_3\"}, {\"short\": \"_pseudo_2\", \"color_idx\": 4, \"title\": \"{}\", \"comp\": true, \"pseudo\": \"objective\", \"full\": \"_pseudo_2\", \"id\": \"_pseudo_2\"}, {\"short\": \"out0\", \"color_idx\": 4, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"full\": \"_pseudo_2.out0\", \"var\": true, \"iotype\": \"out\", \"id\": \"_pseudo_2.out0\"}, {\"short\": \"dG_names\", \"color_idx\": 3, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"full\": \"driver.dG_names\", \"var\": true, \"iotype\": \"out\", \"id\": \"driver.dG_names\"}], \"links\": [{\"drv_conn\": \"driver\", \"target\": 14, \"source\": 0}, {\"source\": 1, \"target\": 3}, {\"source\": 2, \"target\": 15}, {\"source\": 3, \"target\": 8}, {\"source\": 19, \"target\": 0}, {\"source\": 8, \"target\": 18, \"conn\": true}, {\"source\": 8, \"target\": 13, \"conn\": true}, {\"source\": 9, \"target\": 3}, {\"source\": 10, \"target\": 3}, {\"source\": 12, \"target\": 19}, {\"source\": 14, \"target\": 11}, {\"source\": 14, \"target\": 6}, {\"source\": 14, \"target\": 22}, {\"source\": 14, \"target\": 7}, {\"source\": 14, \"target\": 16}, {\"source\": 14, \"target\": 17}, {\"drv_conn\": \"driver\", \"target\": 10, \"source\": 14}, {\"source\": 14, \"target\": 4}, {\"source\": 14, \"target\": 5}, {\"source\": 13, \"target\": 2}, {\"source\": 15, \"target\": 12, \"conn\": true}, {\"source\": 18, \"target\": 20}, {\"source\": 20, \"target\": 21}, {\"drv_conn\": \"driver\", \"target\": 14, \"source\": 21}], \"multigraph\": false}", 
+    "name": "", 
+    "uuid": "5babd064-bb77-11e4-9f99-3c970e57723f", 
     "variable_metadata": {
         "comp1.data": {
             "copy": "deep", 
             "iotype": "in", 
             "vartypename": "Instance"
         }, 
+        "comp1.derivative_exec_count": {
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "exclude_high": false, 
+            "exclude_low": false, 
+            "high": 9223372036854775807, 
+            "iotype": "out", 
+            "low": -9223372036854775807, 
+            "vartypename": "Int"
+        }, 
         "comp1.directory": {
             "deriv_ignore": true, 
             "iotype": "in", 
             "vartypename": "Str"
+        }, 
+        "comp1.exec_count": {
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "exclude_high": false, 
+            "exclude_low": false, 
+            "high": 9223372036854775807, 
+            "iotype": "out", 
+            "low": -9223372036854775807, 
+            "vartypename": "Int"
         }, 
         "comp1.force_fd": {
             "assumed_default": false, 
             "deriv_ignore": true, 
             "iotype": "in", 
             "vartypename": "Bool"
+        }, 
+        "comp1.itername": {
+            "deriv_ignore": true, 
+            "iotype": "out", 
+            "vartypename": "Str"
         }, 
         "comp1.missing_deriv_policy": {
             "assumed_default": false, 
@@ -88,16 +120,41 @@
             "low": null, 
             "vartypename": "Float"
         }, 
+        "comp2.derivative_exec_count": {
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "exclude_high": false, 
+            "exclude_low": false, 
+            "high": 9223372036854775807, 
+            "iotype": "out", 
+            "low": -9223372036854775807, 
+            "vartypename": "Int"
+        }, 
         "comp2.directory": {
             "deriv_ignore": true, 
             "iotype": "in", 
             "vartypename": "Str"
+        }, 
+        "comp2.exec_count": {
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "exclude_high": false, 
+            "exclude_low": false, 
+            "high": 9223372036854775807, 
+            "iotype": "out", 
+            "low": -9223372036854775807, 
+            "vartypename": "Int"
         }, 
         "comp2.force_fd": {
             "assumed_default": false, 
             "deriv_ignore": true, 
             "iotype": "in", 
             "vartypename": "Bool"
+        }, 
+        "comp2.itername": {
+            "deriv_ignore": true, 
+            "iotype": "out", 
+            "vartypename": "Str"
         }, 
         "comp2.missing_deriv_policy": {
             "assumed_default": false, 
@@ -132,6 +189,13 @@
             "iotype": "in", 
             "vartypename": "Bool"
         }, 
+        "driver.gradient_options.atol": {
+            "assumed_default": false, 
+            "high": null, 
+            "iotype": "in", 
+            "low": null, 
+            "vartypename": "Float"
+        }, 
         "driver.gradient_options.derivative_direction": {
             "assumed_default": false, 
             "iotype": "in", 
@@ -146,11 +210,6 @@
             "assumed_default": false, 
             "iotype": "in", 
             "vartypename": "Bool"
-        }, 
-        "driver.gradient_options.fd_blocks": {
-            "copy": "deep", 
-            "iotype": "in", 
-            "vartypename": "List"
         }, 
         "driver.gradient_options.fd_form": {
             "assumed_default": false, 
@@ -185,7 +244,26 @@
             "iotype": "in", 
             "vartypename": "Bool"
         }, 
-        "driver.gradient_options.gmres_maxiter": {
+        "driver.gradient_options.iprint": {
+            "assumed_default": false, 
+            "iotype": "in", 
+            "values": [
+                0, 
+                1
+            ], 
+            "vartypename": "Enum"
+        }, 
+        "driver.gradient_options.lin_solver": {
+            "assumed_default": false, 
+            "iotype": "in", 
+            "values": [
+                "scipy_gmres", 
+                "petsc_ksp", 
+                "linear_gs"
+            ], 
+            "vartypename": "Enum"
+        }, 
+        "driver.gradient_options.maxiter": {
             "assumed_default": false, 
             "exclude_high": false, 
             "exclude_low": false, 
@@ -194,28 +272,18 @@
             "low": -9223372036854775807, 
             "vartypename": "Int"
         }, 
-        "driver.gradient_options.gmres_tolerance": {
+        "driver.gradient_options.rtol": {
             "assumed_default": false, 
             "high": null, 
             "iotype": "in", 
             "low": null, 
             "vartypename": "Float"
         }, 
-        "excludes": {
-            "copy": "deep", 
-            "iotype": "in", 
-            "vartypename": "List"
-        }, 
         "force_fd": {
             "assumed_default": false, 
             "deriv_ignore": true, 
             "iotype": "in", 
             "vartypename": "Bool"
-        }, 
-        "includes": {
-            "copy": "deep", 
-            "iotype": "in", 
-            "vartypename": "List"
         }, 
         "missing_deriv_policy": {
             "assumed_default": false, 
@@ -226,11 +294,27 @@
                 "assume_zero"
             ], 
             "vartypename": "Enum"
+        }, 
+        "recording_options.excludes": {
+            "copy": "deep", 
+            "iotype": "in", 
+            "vartypename": "List"
+        }, 
+        "recording_options.includes": {
+            "copy": "deep", 
+            "iotype": "in", 
+            "vartypename": "List"
+        }, 
+        "recording_options.save_problem_formulation": {
+            "assumed_default": false, 
+            "iotype": "in", 
+            "vartypename": "Bool"
         }
     }
 }
+, "__length_2": 589
 , "driver_info_1": {
-    "_id": 78582608, 
+    "_id": 139770967216496, 
     "eq_constraints": [], 
     "ineq_constraints": [], 
     "name": "driver", 
@@ -240,22 +324,43 @@
     ], 
     "parameters": [
         "comp1.x"
+    ], 
+    "recording": [
+        "comp1.x", 
+        "_pseudo_2.out0", 
+        "_pseudo_3.out0", 
+        "comp1.z", 
+        "comp2.z", 
+        "comp1.derivative_exec_count", 
+        "comp1.itername", 
+        "comp1.exec_count", 
+        "comp2.itername", 
+        "comp2.derivative_exec_count", 
+        "comp2.exec_count", 
+        "driver.workflow.itername"
     ]
 }
+, "__length_3": 665
 , "iteration_case_1": {
-    "_driver_id": 78582608, 
-    "_id": "768a441c-f0af-11e3-8033-005056000100", 
-    "_parent_id": "7689ad9a-f0af-11e3-b712-005056000100", 
+    "_driver_id": 139770967216496, 
+    "_id": "5bac7b85-bb77-11e4-800b-3c970e57723f", 
+    "_parent_id": "5babd064-bb77-11e4-9f99-3c970e57723f", 
     "data": {
-        "_pseudo_2": 0.0, 
-        "_pseudo_3": 1.0, 
+        "_pseudo_2.out0": 0.0, 
+        "_pseudo_3.out0": 1.0, 
+        "comp1.derivative_exec_count": 0, 
+        "comp1.exec_count": 1, 
+        "comp1.itername": "1-comp1", 
         "comp1.x": 0.0, 
         "comp1.z": 0.0, 
+        "comp2.derivative_exec_count": 0, 
+        "comp2.exec_count": 1, 
+        "comp2.itername": "1-comp2", 
         "comp2.z": 1.0, 
         "driver.workflow.itername": "1"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1402412214.997816
+    "timestamp": 1424708204.150215
 }
 }

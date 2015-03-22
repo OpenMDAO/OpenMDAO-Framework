@@ -4,20 +4,20 @@
 """
 
 # disable complaints about Module 'numpy' has no 'array' member
-# pylint: disable-msg=E1101
+# pylint: disable=E1101
 
 # Disable complaints Invalid name "setUp" (should match [a-z_][a-z0-9_]{2,30}$)
-# pylint: disable-msg=C0103
+# pylint: disable=C0103
 
 # Disable complaints about not being able to import modules that Python
 #     really can import
-# pylint: disable-msg=F0401,E0611
+# pylint: disable=F0401,E0611
 
 # Disable complaints about Too many arguments (%s/%s)
-# pylint: disable-msg=R0913
+# pylint: disable=R0913
 
 # Disable complaints about Too many local variables (%s/%s) Used
-# pylint: disable-msg=R0914
+# pylint: disable=R0914
 
 #public symbols
 __all__ = ['NEWSUMTdriver']
@@ -87,7 +87,7 @@ import newsumt.newsumtinterruptible as newsumtinterruptible
 
 
 # Disable complaints about Unused argument
-# pylint: disable-msg=W0613
+# pylint: disable=W0613
 def user_function(info, x, obj, dobj, ddobj, g, dg, n2, n3, n4, imode, driver):
     """
        Calculate the objective functions, constraints,
@@ -105,8 +105,6 @@ def user_function(info, x, obj, dobj, ddobj, g, dg, n2, n3, n4, imode, driver):
         if imode == 1:
 
             # We are in a finite difference step drive by NEWSUMT
-            # However, we still take advantage of a component's
-            # user-defined gradients via Fake Finite Difference.
 
             # Note, NEWSUMT estimates 2nd-order derivatives from
             # the first order differences.
@@ -118,11 +116,8 @@ def user_function(info, x, obj, dobj, ddobj, g, dg, n2, n3, n4, imode, driver):
 
             # update the parameters in the model
             driver.set_parameters(x)
-
-            # Run model under Fake Finite Difference
-            #driver.ffd_order = 1
             super(NEWSUMTdriver, driver).run_iteration()
-            #driver.ffd_order = 0
+
         else:
 
             # Optimization step
@@ -150,23 +145,21 @@ def user_function(info, x, obj, dobj, ddobj, g, dg, n2, n3, n4, imode, driver):
         if driver.newsumt_diff:
             return obj, dobj, ddobj, g, dg
 
-        driver.ffd_order = 1
-        driver.differentiator.calc_gradient()
+        msg = "Hessians currently not supported by OpenMDAO differentiator"
+        raise NotImplementedError(msg)
 
-        driver.ffd_order = 2
-        driver.differentiator.calc_hessian(reuse_first=True)
+        #driver.differentiator.calc_gradient()
+        #driver.differentiator.calc_hessian(reuse_first=True)
 
-        driver.ffd_order = 0
+        #obj_name = driver.get_objectives().keys()[0]
+        #dobj = driver.differentiator.get_gradient(obj_name)
 
-        obj_name = driver.get_objectives().keys()[0]
-        dobj = driver.differentiator.get_gradient(obj_name)
-
-        i_current = 0
-        names = driver.get_parameters().keys()
-        for row, name1 in enumerate(names):
-            for name2 in names[0:row+1]:
-                ddobj[i_current] = driver.differentiator.get_2nd_derivative(obj_name, wrt=(name1, name2))
-                i_current += 1
+        #i_current = 0
+        #names = driver.get_parameters().keys()
+        #for row, name1 in enumerate(names):
+            #for name2 in names[0:row+1]:
+                #ddobj[i_current] = driver.differentiator.get_2nd_derivative(obj_name, wrt=(name1, name2))
+                #i_current += 1
 
     elif info in [4, 5]:
         # evaluate gradient of nonlinear or linear constraints.
@@ -179,18 +172,17 @@ def user_function(info, x, obj, dobj, ddobj, g, dg, n2, n3, n4, imode, driver):
             if driver.newsumt_diff:
                 return obj, dobj, ddobj, g, dg
 
-            driver.ffd_order = 1
-            driver.differentiator.calc_gradient()
-            driver.ffd_order = 0
+            raise RuntimeError("newsumt ifd value of %d is not handled" % info)
+            #driver.differentiator.calc_gradient()
 
-        i_current = 0
-        for param_name in driver.get_parameters():
-            for con_name in driver.get_ineq_constraints():
-                dg[i_current] = -driver.differentiator.get_derivative(con_name, wrt=param_name)
-                i_current += 1
+        #i_current = 0
+        #for param_name in driver.get_parameters():
+            #for con_name in driver.get_ineq_constraints():
+                #dg[i_current] = -driver.differentiator.get_derivative(con_name, wrt=param_name)
+                #i_current += 1
 
     return obj, dobj, ddobj, g, dg
-# pylint: enable-msg=W0613
+# pylint: enable=W0613
 
 
 class _contrl(object):
@@ -205,7 +197,7 @@ class _contrl(object):
     def clear(self):
         """ Clear values. """
 
-        # pylint: disable-msg=W0201
+        # pylint: disable=W0201
         self.c = 0.0
         self.epsgsn = 0.0
         self.epsodm = 0.0
@@ -229,7 +221,7 @@ class _contrl(object):
         self.ramin = 0.0
         self.stepmx = 0.0
         self.tftn = 0.0
-        # pylint: enable-msg=W0201
+        # pylint: enable=W0201
 
 
 class _countr(object):
@@ -244,7 +236,7 @@ class _countr(object):
     def clear(self):
         """ Clear values. """
 
-        # pylint: disable-msg=W0201
+        # pylint: disable=W0201
         self.iobjct = 0
         self.iobapr = 0
         self.iobgrd = 0
@@ -252,10 +244,10 @@ class _countr(object):
         self.icongr = 0
         self.inlcgr = 0
         self.icgapr = 0
-        # pylint: enable-msg=W0201
+        # pylint: enable=W0201
 
 
-# pylint: disable-msg=R0913,R0902
+# pylint: disable=R0913,R0902
 @add_delegate(HasParameters, HasIneqConstraints, HasObjective)
 class NEWSUMTdriver(Driver):
     """ Driver wrapper of Fortran version of NEWSUMT.
@@ -346,6 +338,7 @@ class NEWSUMTdriver(Driver):
         self._sn = zeros(0)
         self._x = zeros(0)
         self._iik = zeros(0, dtype=int)
+        self._ilin = zeros(0, dtype=int)
 
         self._lower_bounds = zeros(0)
         self._upper_bounds = zeros(0)
@@ -367,7 +360,7 @@ class NEWSUMTdriver(Driver):
 
         super(NEWSUMTdriver, self).check_config(strict=strict)
 
-        if not self.newsumt_diff:
+        if self.newsumt_diff is False:
             msg = "Hessians currently not supported by OpenMDAO differentiator"
             raise NotImplementedError(msg)
 
@@ -419,7 +412,7 @@ class NEWSUMTdriver(Driver):
                    self._gb, self._g1, self._g2, self._g3,
                    self._obj, self._objmin,
                    self._s, self._sn, self.design_vals, self.__design_vals_tmp,
-                   self._iik, self.ilin, self._iside,
+                   self._iik, self._ilin, self._iside,
                    self.n1, self.n2, self.n3, self.n4,
                    self.isdone, self.resume, analys_extra_args=(self,))
 
@@ -486,12 +479,15 @@ class NEWSUMTdriver(Driver):
         if len(self.ilin) == 0:
             if ncon > 0:
                 self.ilin = zeros(ncon, dtype=int)
+                self._ilin = self.ilin
             else:
-                self.ilin = zeros(1, dtype=int)
+                self._ilin = zeros(1, dtype=int)
         elif len(self.ilin) != ncon:
             msg = "Dimension of NEWSUMT setting 'ilin' should be equal to " \
                   "the number of constraints."
             self.raise_exception(msg, RuntimeError)
+        else:
+            self._ilin = self.ilin
 
         # Set initial values in the common blocks
         self.countr.clear()
@@ -561,4 +557,6 @@ class NEWSUMTdriver(Driver):
             setattr(common, name,
                     type(value)(getattr(newsumtinterruptible.countr, name)))
 
+    def requires_derivs(self):
+        return True
 

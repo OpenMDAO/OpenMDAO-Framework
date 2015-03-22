@@ -16,6 +16,7 @@ build.out
 *.egg-info
 *.egg
 
+
 # Compiled source #
 ###################
 *.com
@@ -54,7 +55,18 @@ build.out
 ehthumbs.db
 Thumbs.db
 
+# Testing files #
+#################
+test_*.txt
+test_*.png
+pyBspline_pkl
+gui-server
+junk.out
+
+=======
 # Editor generated files #
 ##########################
 *.swp
 *.bak
+learning_sellar.py
+engineCmodule.c

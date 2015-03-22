@@ -1,40 +1,61 @@
 
-import ordereddict
+from collections import OrderedDict
 import weakref
 
 from openmdao.main.expreval import ConnectedExprEvaluator
 from openmdao.main.pseudocomp import PseudoComponent, _remove_spaces
+from openmdao.main.interfaces import IDriver
 
 
 class Objective(ConnectedExprEvaluator):
     def __init__(self, *args, **kwargs):
         super(Objective, self).__init__(*args, **kwargs)
-        self.pcomp_name = None
+        self._pseudo = None
+        unresolved_vars = self.get_unresolved()
+        if unresolved_vars:
+            msg = "Can't add objective '{0}' because of invalid variables {1}"
+            raise ConnectedExprEvaluator._invalid_expression_error(unresolved_vars, self.text, msg)
 
-    def activate(self):
+        self._pseudo = PseudoComponent(self.scope, self, pseudo_type='objective')
+        self.pcomp_name = self._pseudo.name
+
+    def activate(self, driver):
         """Make this constraint active by creating the appropriate
         connections in the dependency graph.
         """
-        if self.pcomp_name is None:
-            pseudo = PseudoComponent(self.scope, self, pseudo_type='objective')
-            self.pcomp_name = pseudo.name
-            self.scope.add(pseudo.name, pseudo)
-        getattr(self.scope, self.pcomp_name).make_connections(self.scope)
+        self._pseudo.activate(self.scope, driver)
 
     def deactivate(self):
         """Remove this objective from the dependency graph and remove
         its pseudocomp from the scoping object.
         """
-        if self.pcomp_name:
+        if self._pseudo is not None:
             scope = self.scope
             try:
-                getattr(scope, self.pcomp_name)
+                getattr(scope, self._pseudo.name)
             except AttributeError:
                 pass
             else:
-                scope.remove(self.pcomp_name)
+                scope.remove(self._pseudo.name)
 
-            self.pcomp_name = None
+    def evaluate(self, scope=None):
+        """Use the value in the u vector if it exists instead of pulling
+        the value from scope.
+        """
+        if self.pcomp_name:
+            scope = self._get_updated_scope(scope)
+            try:
+                system = getattr(scope, self.pcomp_name)._system
+                vname = self.pcomp_name + '.out0'
+                if scope._var_meta[vname].get('scalar'):
+                    return system.vec['u'][scope.name2collapsed[vname]][0]
+                else:
+                    return system.vec['u'][scope.name2collapsed[vname]]
+            except (KeyError, AttributeError):
+                pass
+
+        return super(Objective, self).evaluate(scope)
+
 
 
 class HasObjectives(object):
@@ -44,7 +65,7 @@ class HasObjectives(object):
                        'get_referenced_varpaths']
 
     def __init__(self, parent, max_objectives=0):
-        self._objectives = ordereddict.OrderedDict()
+        self._objectives = OrderedDict()
         # max_objectives of 0 means unlimited objectives
         self._max_objectives = max_objectives
         self._parent = None if parent is None else weakref.ref(parent)
@@ -113,20 +134,18 @@ class HasObjectives(object):
                                         AttributeError)
 
         scope = self._get_scope(scope)
-        expreval = Objective(expr, scope)
-        unresolved_vars = expreval.get_unresolved()
-        if unresolved_vars:
-            msg = "Can't add objective '{0}' because of invalid variables {1}"
-            error = ConnectedExprEvaluator._invalid_expression_error(unresolved_vars, expreval.text, msg)
-            self.parent.raise_exception(str(error), type(error))
+        try:
+            expreval = Objective(expr, scope)
+        except Exception as err:
+            self.parent.raise_exception(str(err), type(err))
 
         name = expr if name is None else name
 
-        expreval.activate()
+        if IDriver.providedBy(self.parent):
+            #expreval.activate(self.parent)
+            self.parent.config_changed()
 
         self._objectives[name] = expreval
-
-        self.parent.config_changed()
 
     def remove_objective(self, expr):
         """Removes the specified objective expression. Spaces within
@@ -143,6 +162,23 @@ class HasObjectives(object):
                                         AttributeError)
         self.parent.config_changed()
 
+    def name_changed(self, old, new):
+        """Change any objectives that reference the old
+        name of an object that has now been changed to a new name.
+
+        old: string
+            Original name of the object
+
+        new: string
+            New name of the object
+        """
+        for name, obj in self._objectives.items():
+            orig = obj.text
+            trans = obj.name_changed(old, new)
+            if orig != trans and name == orig:  # expr changed and no alias
+                del self._objectives[name]
+                self._objectives[trans] = obj
+
     def get_references(self, name):
         """Return references to component `name` in preparation for subsequent
         :meth:`restore_references` call.
@@ -150,7 +186,7 @@ class HasObjectives(object):
         name: string
             Name of component being removed.
         """
-        refs = ordereddict.OrderedDict()
+        refs = OrderedDict()
         for oname, obj in self._objectives.items():
             if name in obj.get_referenced_compnames():
                 refs[oname] = obj
@@ -180,11 +216,16 @@ class HasObjectives(object):
         # Old objective seems to get removed automatically so no need to
         # clear objectives and recreate them.
         for name, obj in refs.items():
-            try:
-                self.add_objective(str(obj), name, obj.scope)
-            except Exception as err:
+            if not obj.check_resolve():
                 self.parent._logger.warning("Couldn't restore objective"
-                                            " '%s': %s" % (name, str(err)))
+                                            " '%s': %s were unresolved" %
+                                            (name, obj.get_unresolved()))
+            else:
+                try:
+                    self.add_objective(str(obj), name, obj.scope)
+                except Exception as err:
+                    self.parent._logger.warning("Couldn't restore objective"
+                                                " '%s': %s" % (name, str(err)))
 
     def get_objectives(self):
         """Returns an OrderedDict of objective expressions."""
@@ -198,18 +239,11 @@ class HasObjectives(object):
     def eval_objectives(self):
         """Returns a list of values of the evaluated objectives."""
         scope = self._get_scope()
-        objs = []
-        for obj in self._objectives.values():
-            pcomp = getattr(scope, obj.pcomp_name)
-            objs.append(pcomp.out0)
-        return objs
+        return [obj.evaluate(scope) for obj in self._objectives.values()]
 
     def eval_named_objective(self, name):
         """Returns the value of objective `name`."""
-        scope = self._get_scope()
-        obj = self._objectives[name]
-        pcomp = getattr(scope, obj.pcomp_name)
-        return pcomp.out0
+        return self._objectives[name].evaluate(self._get_scope())
 
     def list_pseudocomps(self):
         """Returns a list of pseudocomponent names associated with our
@@ -241,11 +275,11 @@ class HasObjectives(object):
             lst.extend(obj.get_referenced_compnames())
         return lst
 
-    def get_referenced_varpaths(self):
+    def get_referenced_varpaths(self, refs=False):
         """Returns the names of variables referenced by the objectives."""
         lst = []
         for obj in self._objectives.values():
-            lst.extend(obj.get_referenced_varpaths(copy=False))
+            lst.extend(obj.get_referenced_varpaths(copy=False, refs=refs))
         return lst
 
     def _get_scope(self, scope=None):
@@ -281,4 +315,3 @@ class HasObjective(HasObjectives):
             return super(HasObjective, self).eval_objectives()[0]
         else:
             self.parent.raise_exception("no objective specified", Exception)
-

@@ -2,7 +2,11 @@
 Testing the file wrapping utilities.
 """
 
-import unittest, os
+import os
+import tempfile
+import shutil
+
+import unittest
 
 from numpy import array, isnan, isinf
 
@@ -15,31 +19,36 @@ class TestCase(unittest.TestCase):
     def setUp(self):
         self.templatename = 'template.dat'
         self.filename = 'filename.dat'
+        self.startdir = os.getcwd()
+        self.tempdir = tempfile.mkdtemp(prefix='omdao-')
+        os.chdir(self.tempdir)
 
     def tearDown(self):
-        if os.path.exists(self.filename):
-            os.remove(self.filename)
-        if os.path.exists(self.templatename):
-            os.remove(self.templatename)
-    
+        os.chdir(self.startdir)
+        if not os.environ.get('OPENMDAO_KEEPDIRS', False):
+            try:
+                shutil.rmtree(self.tempdir)
+            except OSError:
+                pass
+
     def test_templated_input(self):
-        
+
         template = "Junk\n" + \
                    "Anchor\n" + \
                    " A 1, 2 34, Test 1e65\n" + \
                    " B 4 Stuff\n" + \
                    "Anchor\n" + \
                    " C 77 False Inf 333.444\n"
-        
+
         outfile = open(self.templatename, 'w')
         outfile.write(template)
         outfile.close()
-        
+
         gen = InputFileGenerator()
         gen.set_template_file(self.templatename)
         gen.set_generated_file(self.filename)
         gen.set_delimiters(', ')
-        
+
         gen.mark_anchor('Anchor')
         gen.transfer_var('CC', 2, 0)
         gen.transfer_var(3.0, 1, 3)
@@ -53,22 +62,22 @@ class TestCase(unittest.TestCase):
         gen.clearline(-5)
         gen.mark_anchor('Anchor', -1)
         gen.transfer_var('8.7', 1, 5)
-        
+
         gen.generate()
-        
+
         infile = open(self.filename, 'r')
         result = infile.read()
         infile.close()
-        
+
         answer = "\n" + \
                    "Anchor\n" + \
                    " A 1, 3.0 34, Test 1.3e-37\n" + \
                    " B 55 Stuff\n" + \
                    "Anchor\n" + \
                    " C 77 False NaN 8.7\n"
-        
+
         self.assertEqual(answer, result)
-        
+
         # Test some errors
         try:
             gen.mark_anchor('C 77', 3.14)
@@ -76,7 +85,7 @@ class TestCase(unittest.TestCase):
             msg = "The value for occurrence must be an integer"
             self.assertEqual(str(err), msg)
         else:
-            self.fail('ValueError expected')        
+            self.fail('ValueError expected')
 
         try:
             gen.mark_anchor('C 77', 0)
@@ -84,19 +93,19 @@ class TestCase(unittest.TestCase):
             msg = "0 is not valid for an anchor occurrence."
             self.assertEqual(str(err), msg)
         else:
-            self.fail('ValueError expected')  
-            
+            self.fail('ValueError expected')
+
         try:
             gen.mark_anchor('ZZZ')
         except RuntimeError, err:
             msg = "Could not find pattern ZZZ in template file template.dat"
             self.assertEqual(str(err), msg)
         else:
-            self.fail('RuntimeError expected')  
-            
-            
+            self.fail('RuntimeError expected')
+
+
     def test_templated_input_same_anchors(self):
-        
+
         template = "CQUAD4 1 3.456\n" + \
                    "CQUAD4 2 4.123\n" + \
                    "CQUAD4 3 7.222\n" + \
@@ -105,7 +114,7 @@ class TestCase(unittest.TestCase):
         outfile = open(self.templatename, 'w')
         outfile.write(template)
         outfile.close()
-        
+
         gen = InputFileGenerator()
         gen.set_template_file(self.templatename)
         gen.set_generated_file(self.filename)
@@ -119,11 +128,11 @@ class TestCase(unittest.TestCase):
         gen.transfer_var('z', 0, 2)
 
         gen.generate()
-        
+
         infile = open(self.filename, 'r')
         result = infile.read()
         infile.close()
-        
+
         answer =   "CQUAD4 x 3.456\n" + \
                    "CQUAD4 2 y\n" + \
                    "CQUAD4 3 7.222\n" + \
@@ -134,64 +143,64 @@ class TestCase(unittest.TestCase):
 
 
     def test_templated_input_arrays(self):
-        
+
         template = "Anchor\n" + \
                    "0 0 0 0 0\n"
-        
+
         outfile = open(self.templatename, 'w')
         outfile.write(template)
         outfile.close()
-        
+
         gen = InputFileGenerator()
         gen.set_template_file(self.templatename)
         gen.set_generated_file(self.filename)
-        
+
         gen.mark_anchor('Anchor')
         gen.transfer_array(array([1, 2, 3, 4.75, 5.0]), 1, 3, 5, sep=' ')
-        
+
         gen.generate()
-        
+
         infile = open(self.filename, 'r')
         result = infile.read()
         infile.close()
-        
+
         answer = "Anchor\n" + \
                    "0 0 1.0 2.0 3.0 4.75 5.0\n"
-    
+
         self.assertEqual(answer, result)
 
     def test_templated_input_2Darrays(self):
-        
+
         template = "Anchor\n" + \
                    "0 0 0 0 0\n" + \
                    "0 0 0 0 0\n"
-        
+
         outfile = open(self.templatename, 'w')
         outfile.write(template)
         outfile.close()
-        
+
         gen = InputFileGenerator()
         gen.set_template_file(self.templatename)
         gen.set_generated_file(self.filename)
-        
+
         gen.mark_anchor('Anchor')
         var = array([[1, 2, 3, 4, 5], [6, 7, 8, 9, 10]])
         gen.transfer_2Darray(var, 1, 2, 1, 5)
-        
+
         gen.generate()
-        
+
         infile = open(self.filename, 'r')
         result = infile.read()
         infile.close()
-        
+
         answer = "Anchor\n" + \
                    "1 2 3 4 5\n" + \
                    "6 7 8 9 10\n"
-    
+
         self.assertEqual(answer, result)
 
     def test_output_parse(self):
-        
+
         data = "Junk\n" + \
                    "Anchor\n" + \
                    " A 1, 2 34, Test 1e65\n" + \
@@ -200,15 +209,15 @@ class TestCase(unittest.TestCase):
                    " C 77 False NaN 333.444\n" + \
                    " 1,2,3,4,5\n" + \
                    " Inf 1.#QNAN -1.#IND\n"
-        
+
         outfile = open(self.filename, 'w')
         outfile.write(data)
         outfile.close()
-        
+
         gen = FileParser()
         gen.set_file(self.filename)
         gen.set_delimiters(' ')
-        
+
         gen.mark_anchor('Anchor')
         val = gen.transfer_var(1, 1)
         self.assertEqual(val, 'A')
@@ -243,7 +252,7 @@ class TestCase(unittest.TestCase):
             msg = "The value for occurrence must be an integer"
             self.assertEqual(str(err), msg)
         else:
-            self.fail('ValueError expected')        
+            self.fail('ValueError expected')
 
         try:
             gen.mark_anchor('C 77', 0)
@@ -251,35 +260,35 @@ class TestCase(unittest.TestCase):
             msg = "0 is not valid for an anchor occurrence."
             self.assertEqual(str(err), msg)
         else:
-            self.fail('ValueError expected')  
-            
+            self.fail('ValueError expected')
+
         try:
             gen.mark_anchor('ZZZ')
         except RuntimeError, err:
             msg = "Could not find pattern ZZZ in output file filename.dat"
             self.assertEqual(str(err), msg)
         else:
-            self.fail('RuntimeError expected')  
+            self.fail('RuntimeError expected')
 
     def test_output_parse_same_anchors(self):
-        
+
         data = "CQUAD4 1 3.456\n" + \
                "CQUAD4 2 4.123\n" + \
                "CQUAD4 3 7.222\n" + \
                "CQUAD4 4\n"
-        
+
         outfile = open(self.filename, 'w')
         outfile.write(data)
         outfile.close()
-        
+
         gen = FileParser()
         gen.set_file(self.filename)
         gen.set_delimiters(' ')
-        
+
         gen.mark_anchor('CQUAD4')
         val = gen.transfer_var(0, 3)
         self.assertEqual(val, 3.456)
-        
+
         gen.mark_anchor('CQUAD4')
         val = gen.transfer_var(0, 3)
         self.assertEqual(val, 4.123)
@@ -289,7 +298,7 @@ class TestCase(unittest.TestCase):
         self.assertEqual(val, 4)
 
         gen.reset_anchor()
-        
+
         gen.mark_anchor('CQUAD4', -1)
         val = gen.transfer_var(0, 2)
         self.assertEqual(val, 4)
@@ -301,22 +310,22 @@ class TestCase(unittest.TestCase):
         gen.mark_anchor('CQUAD4', -2)
         val = gen.transfer_var(0, 3)
         self.assertEqual(val, 4.123)
-        
+
     def test_output_parse_keyvar(self):
-        
+
         data = "Anchor\n" + \
                " Key1 1 2 3.7 Test 1e65\n" + \
                " Key1 3 4 3.2 ibg 0.0003\n" + \
                " Key1 5 6 6.7 Tst xxx\n"
-        
+
         outfile = open(self.filename, 'w')
         outfile.write(data)
         outfile.close()
-        
+
         gen = FileParser()
         gen.set_file(self.filename)
         gen.set_delimiters(' ')
-        
+
         gen.mark_anchor('Anchor')
         val = gen.transfer_keyvar('Key1', 3)
         self.assertEqual(val, 3.7)
@@ -324,14 +333,14 @@ class TestCase(unittest.TestCase):
         self.assertEqual(val, 'ibg')
         val = gen.transfer_keyvar('Key1', 4, -2, -1)
         self.assertEqual(val, 'Test')
-        
+
         try:
             gen.transfer_keyvar('Key1', 4, 0)
         except ValueError, err:
             msg = "The value for occurrence must be a nonzero integer"
             self.assertEqual(str(err), msg)
         else:
-            self.fail('ValueError expected')  
+            self.fail('ValueError expected')
 
         try:
             gen.transfer_keyvar('Key1', 4, -3.4)
@@ -339,24 +348,24 @@ class TestCase(unittest.TestCase):
             msg = "The value for occurrence must be a nonzero integer"
             self.assertEqual(str(err), msg)
         else:
-            self.fail('ValueError expected')  
+            self.fail('ValueError expected')
 
 
     def test_output_parse_array(self):
-        
+
         data = "Anchor\n" + \
                "10 20 30 40 50 60 70 80\n" + \
                "11 21 31 41 51 61 71 81\n" + \
                "Key a b c d e\n"
-        
+
         outfile = open(self.filename, 'w')
         outfile.write(data)
         outfile.close()
-        
+
         gen = FileParser()
         gen.set_file(self.filename)
         gen.set_delimiters(' ')
-        
+
         gen.mark_anchor('Anchor')
         val = gen.transfer_array(1, 1, 1, 8)
         self.assertEqual(val[0], 10)
@@ -369,7 +378,7 @@ class TestCase(unittest.TestCase):
         self.assertEqual(val[4], 'e')
         val = gen.transfer_array(0, 2, fieldend=6)
         self.assertEqual(val[4], 'e')
-        
+
         # Now, let's try column delimiters
         gen.reset_anchor()
         gen.mark_anchor('Anchor')
@@ -389,11 +398,11 @@ class TestCase(unittest.TestCase):
             msg = "fieldend is missing, currently required"
             self.assertEqual(str(err), msg)
         else:
-            self.fail('ValueError expected')  
+            self.fail('ValueError expected')
 
 
     def test_output_parse_2Darray(self):
-        
+
         data = '''
         Anchor
             FREQ  DELTA  -8.5  -8.5  -8.5  -8.5  -8.5  -8.5  -8.5  -8.5  -8.5  -8.5  -8.5  -8.5  -8.5  -8.5  -8.5  -8.5  -8.5
@@ -423,14 +432,14 @@ class TestCase(unittest.TestCase):
            8000.   1.0   85.3  89.5  90.4  89.6  87.6  84.4  80.2  75.2  69.2  62.3  54.5  45.8  36.1  25.3  13.2  -0.6 -17.7
           10000.   1.0   84.2  88.2  89.0  88.1  85.9  82.5  78.3  73.0  66.9  59.9  51.9  43.1  33.2  22.3  10.1  -3.9 -21.1
         '''
-          
+
         outfile = open(self.filename, 'w')
         outfile.write(data)
         outfile.close()
-        
+
         gen = FileParser()
         gen.set_file(self.filename)
-        
+
         # whitespace delim; with end field
         gen.set_delimiters(' \t')
         gen.mark_anchor('Anchor')
@@ -441,14 +450,14 @@ class TestCase(unittest.TestCase):
         self.assertEqual(val[23, 17], -21.1)
         self.assertEqual(val.shape[0], 24)
         self.assertEqual(val.shape[1], 18)
-          
+
         # whitespace delim; no end field
         val = gen.transfer_2Darray(3, 2, 26)
         self.assertEqual(val[0, 1], 30.0)
         self.assertEqual(val[23, 17], -21.1)
         self.assertEqual(val.shape[0], 24)
         self.assertEqual(val.shape[1], 18)
-        
+
         # column delim; with end field
         gen.set_delimiters('columns')
         val = gen.transfer_2Darray(3, 19, 26, 125)
@@ -458,7 +467,7 @@ class TestCase(unittest.TestCase):
         self.assertEqual(val[23, 17], -21.1)
         self.assertEqual(val.shape[0], 24)
         self.assertEqual(val.shape[1], 18)
-          
+
         # column delim; no end field
         val = gen.transfer_2Darray(3, 19, 26)
         self.assertEqual(val[0, 1], 30.0)
@@ -467,12 +476,12 @@ class TestCase(unittest.TestCase):
         self.assertEqual(val[23, 17], -21.1)
         self.assertEqual(val.shape[0], 24)
         self.assertEqual(val.shape[1], 18)
-        
+
         # make sure single line works
         gen.set_delimiters(' \t')
         val = gen.transfer_2Darray(5, 3, 5, 5)
         self.assertEqual(val[0, 2], 49.1)
-        
+
         # Small block read
         val = gen.transfer_2Darray(7, 3, 9, 6)
         self.assertEqual(val[0, 0], 53.6)
@@ -485,15 +494,15 @@ class TestCase(unittest.TestCase):
             msg = "fieldend must be greater than fieldstart"
             self.assertEqual(str(err), msg)
         else:
-            self.fail('ValueError expected')  
-            
+            self.fail('ValueError expected')
+
         try:
             gen.transfer_2Darray(9, 2, 8, 4)
         except ValueError, err:
             msg = "rowend must be greater than rowstart"
             self.assertEqual(str(err), msg)
         else:
-            self.fail('ValueError expected')  
+            self.fail('ValueError expected')
 
     def test_comment_char(self):
 
@@ -513,7 +522,7 @@ class TestCase(unittest.TestCase):
                    " C 77 False NaN 333.444\n" + \
                    " 1,2,3,4,5\n" + \
                    " Inf 1.#QNAN -1.#IND\n"
-        
+
         outfile = open(self.filename, 'w')
         outfile.write(data)
         outfile.close()
@@ -525,7 +534,7 @@ class TestCase(unittest.TestCase):
         gen.mark_anchor('Anchor')
         val = gen.transfer_var(1, 1)
         self.assertEqual(val, 'A')
-            
+
         # Test end of line comments also
         gen = FileParser(full_line_comment_char="C", end_of_line_comment_char="$")
         gen.set_file(self.filename)
@@ -533,27 +542,27 @@ class TestCase(unittest.TestCase):
         gen.mark_anchor('Anchor')
         val = gen.transfer_var(1, 1)
         self.assertEqual(val, 'A')
-        
+
     def test_more_delims(self):
-        
+
         data = "anchor,1.0,2.0\n" + \
                "abc=123.456\n" + \
                "c=1,2,Word,6\n" + \
                "d=C:/abc/def,a+b*c^2,(%#%),!true\n" + \
                "a^33 1.#QNAN^#$%^"
-        
+
         outfile = open(self.filename, 'w')
         outfile.write(data)
         outfile.close()
-        
+
         op = FileParser()
         op.set_file(self.filename)
-        
+
         olddelims = op.delimiter
         op.set_delimiters(' \t,=')
-        
+
         op.mark_anchor('anchor')
-        
+
         val = op.transfer_var(0, 1)
         self.assertEqual(val, 'anchor')
         val = op.transfer_var(0, 2)
@@ -574,7 +583,7 @@ class TestCase(unittest.TestCase):
         self.assertEqual(val, '(%#%)')
         val = op.transfer_var(3, 5)
         self.assertEqual(val, '!true')
-        
+
         op.set_delimiters(' \t^')
         val = op.transfer_var(4, 1)
         self.assertEqual(val, 'a')
@@ -584,13 +593,12 @@ class TestCase(unittest.TestCase):
         self.assertEqual(isnan(val), True)
         val = op.transfer_var(4, 4)
         self.assertEqual(val, '#$%')
-        
 
-            
+
+
 if __name__ == '__main__':
     import nose
     import sys
     sys.argv.append('--cover-package=openmdao')
     sys.argv.append('--cover-erase')
     nose.runmodule()
-

@@ -13,25 +13,28 @@ additional :ref:`system requirements <developer-requirements>` on certain platfo
 
 OpenMDAO requires that the following software be installed at the system level on all platforms:
 
-- Python (2.7.x)
+- Python (2.7.5 or higher)
 
-  - In general, OpenMDAO supports the specified versions of Python found at ``python.org``.  Alternative Python
-    builds, such as Enthought, ActiveState Python, or Python(x,y) are not officially supported at this time,
-    though some may work with OpenMDAO.    
+  - In general, OpenMDAO supports the specified versions of Python found at ``python.org``.
 
-  - OpenMDAO does not support Python 3.x or any Python versions below 2.7. Having the incorrect Python
+  - Two alternative Python builds that are supported by the team are :ref:`Anaconda <Anaconda-Installation>` and Python(x,y).
+
+  - Enthought, ActiveState Python, and other Python distributions are not supported, though some
+    of these distributions may work with OpenMDAO.
+
+  - OpenMDAO does not support Python 3.x or any Python versions below 2.7.5 Having the incorrect Python
     installation in the PATH and/or not having the OpenMDAO-approved Python version in the PATH will only
     lead to problems.
 
-  
-- NumPy (version 1.6 or higher) 
+  - OpenMDAO does not yet support any 64-bit distributions of Python on Windows.  You can install a 32-bit distribution
+    on Windows and have success.
+
+
+- NumPy (version 1.6 or higher)
 
 - SciPy (version .11 or higher)
 
 - Matplotlib
-
-- For the GUI: Chrome Web Browser (version 20 or higher). Note: Things should work in recent versions of Firefox, but 
-  we're not currently testing with that browser. Things **will not** work properly in Internet Explorer. 
 
 
 **Platform-Specific Requirements**
@@ -40,7 +43,7 @@ We recommend that you read the entire section relating to your desired platform 
 
 **Linux:**
 
-Our current OpenMDAO distribution for Linux is a source distribution, so to 
+Our current OpenMDAO distribution for Linux is a source distribution, so to
 use it, you must have compilers (C and Fortran) on your system.
 
 - On **Fedora**, the names of the needed RPM packages are:
@@ -67,28 +70,66 @@ use it, you must have compilers (C and Fortran) on your system.
 
   - gfortran
 
-**Windows**: 
 
-- `Python 2.7.x <https://www.python.org/download/releases/>`_
+.. note::
 
-- `NumPy <http://sourceforge.net/projects/numpy/files/NumPy/>`_ 
+   For our Ubuntu Pangolin users, be aware that Numpy and SciPy versions that you
+   attempt to ``sudo apt-get install`` may report back as being the latest
+   available version but will still be beneath OpenMDAO's threshold. The
+   system is showing you the latest version available on the servers that support
+   Pangolin, but the version will not meet the minimum requirements needed
+   by OpenMDAO. According to the Unbuntu Software Center: "Canonical does not
+   provide updates for Scientific tools for Python. Some updates may be provided
+   by the Ubuntu community."
 
-- `SciPy <http://sourceforge.net/projects/scipy/files/>`_
+   Fortunately, you can circumvent this problem in a few easy steps:
 
-- `Matplotlib <http://matplotlib.org/downloads.html>`_
+   1. Download the packages from SourceForge.net
+
+      - `SciPy <http://sourceforge.net/projects/scipy/files/scipy/>`__
+
+      - `Numpy <http://sourceforge.net/projects/numpy/files/NumPy/>`__
+
+   2. ``sudo python setup.py install`` from each package. At this point, you're close, but Numpy
+      and SciPy aren't importable by Python yet, because the Python installer restricts default
+      access rights. To get the right permissions on the packages, continue to step three.
+
+   3. Change permissions inside the distribution with these commands.
+
+      ::
+
+	cd /usr/local/lib/python2.7/dist-packages
+	sudo find scipy -type d -exec chmod o=rx {} \;
+	sudo find scipy -type f -exec chmod o=r {} \;
+	sudo find numpy -type d -exec chmod o=rx {} \;
+	sudo find numpy -type f -exec chmod o=r {} \;
+
+    **Please note**: Some users have reported that this method of installation may somehow uninstall
+    Matplotlib. In the event that occurs, you may have to install `Matplotlib
+    <http://sourceforge.net/projects/matplotlib/files/>`__ in the same fashion as the packages above.
 
 
-.. note:: 
+**Windows**:
 
-  Numpy and SciPy have one-click installers. You should use those unless you have a very good
-  reason not to. For Python 2.7.x you want a SciPy version such as
-  ``scipy-0.11.0-win32-superpack-python2.7.exe``. The  version number might be different than the
-  one here, but make sure you get something with ``superpack`` and ``.exe`` in the name. 
+- `Python 2.7.5+ <https://www.python.org/download/releases/>`_
 
-  If you go to the Numpy link above, you might see: "Looking for the 
-  latest version? Download numpy-1.7.0.zip." You **DON'T** want to get that one. 
-  It's a source distribution, not the installer. The same goes for SciPy. Click through 
-  to the latest version and get the ``.exe`` file. 
+- `NumPy <http://sourceforge.net/projects/numpy/files/NumPy/>`__
+
+- `SciPy <http://sourceforge.net/projects/scipy/files/>`__
+
+- `Matplotlib <http://matplotlib.org/downloads.html>`__
+
+.. note::
+
+   Numpy and SciPy have one-click installers. You should use those unless you have a very good
+   reason not to. For Python 2.7.x you want a SciPy version such as
+   ``scipy-0.11.0-win32-superpack-python2.7.exe``. The  version number might be different than the
+   one here, but make sure you get something with ``superpack`` and ``.exe`` in the name.
+
+   If you go to the Numpy link above, you might see: "Looking for the
+   latest version? Download numpy-1.7.0.zip." You **DON'T** want to get that one.
+   It's a source distribution, not the installer. The same goes for SciPy. Click through
+   to the latest version and get the ``.exe`` file.
 
 Not required, but highly recommended:
 
@@ -99,24 +140,18 @@ public/private key pairs to be stored securely.
 
 **Mac OS X**:
 
-- Python -- Install a new version (2.7.x) from ``python.org`` because the built-in version has a
+- Python -- Install a new version (2.7.5+) from ``python.org`` because the built-in version has a
   distutils bug that will cause some of the OpenMDAO tests to fail.
-- `NumPy <http://sourceforge.net/projects/numpy/files/NumPy/>`_ 
+- `NumPy <http://sourceforge.net/projects/numpy/files/NumPy/>`_
 - `SciPy <http://sourceforge.net/projects/scipy/files/>`_
 - `Matplotlib <http://matplotlib.org/downloads.html>`_
 
-.. note:: 
+.. note::
 
-   We provide pre-compiled binaries for all Intel OS X Macs, for Snow Leopard or higher.  However,
+   We provide pre-compiled binaries for all Intel OS X Macs, for Lion or higher.  However,
    if you you're running an older version of OS X or a PowerPC architecture, then  you'll need to
    set up some compilers on your system to get OpenMDAO to install. This should  be a rare
    situation, but if you happen to run into it, go to our developer docs for the details about
    which compilers you need. Get the compilers set up the way we suggest :ref:`here
    <developer-requirements>`, but then come back and follow the release installation
    instructions from the next section of these docs.
-
-
-
-
-
-

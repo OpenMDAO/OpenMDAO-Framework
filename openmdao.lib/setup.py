@@ -1,4 +1,4 @@
-# pylint: disable-msg=F0401
+# pylint: disable=F0401
 
 import os
 import sys
@@ -24,7 +24,7 @@ Component, Driver, Variable and other plugins for OpenMDAO
         'License :: OSI Approved',
         'Natural Language :: English',
         'Operating System :: OS Independent',
-        'Programming Language :: Python :: 2.6',
+        'Programming Language :: Python :: 2.7',
         'Topic :: Scientific/Engineering',
       ],
       keywords='optimization multidisciplinary multi-disciplinary analysis',
@@ -32,10 +32,13 @@ Component, Driver, Variable and other plugins for OpenMDAO
       author_email='',
       url='http://openmdao.org',
       license='Apache License, Version 2.0',
-      namespace_packages=["openmdao"],
+      namespace_packages=['openmdao'],
       packages=find_packages('src'),
       package_dir={'': 'src'},
-      package_data={'openmdao.lib': ['components/test/*.inp',
+      package_data={'openmdao.lib': ['casehandlers/test/*.bson',
+                                     'casehandlers/test/*.json',
+                                     'casehandlers/test/*.csv',
+                                     'components/test/*.inp',
                                      'datatypes/domain/test/grid.in',
                                      'datatypes/domain/test/q.save',
                                      'datatypes/domain/test/lpc-test.*']},
@@ -46,13 +49,12 @@ Component, Driver, Variable and other plugins for OpenMDAO
           'setuptools',
           'openmdao.main',
           'Pyevolve==0.6',
-          'pytz>=2011',  # To avoid problems with 2010o vs. 2010b in bson req.
-          'bson',
-          'ordereddict',
-          'conmin==1.0.1',
-          'newsumt==1.1.0',
-          'cobyla==1.0.1',
-          'slsqp==1.0.1',
+          'pytz>=2014.4',
+          'bson==0.3.3',
+          'conmin==1.0.2',
+          'newsumt==1.1.1',
+          'cobyla==1.0.2',
+          'slsqp==1.0.2',
           'numpy',
           'scipy>=0.11.0',
           ],
@@ -84,13 +86,18 @@ Component, Driver, Variable and other plugins for OpenMDAO
       openmdao.lib.components.mux.DeMux = openmdao.lib.components.mux:DeMux
       openmdao.lib.components.broadcaster.Broadcaster = openmdao.lib.components.broadcaster:Broadcaster
       openmdao.lib.components.pareto_filter.ParetoFilter = openmdao.lib.components.pareto_filter:ParetoFilter
-      openmdao.lib.components.geomcomp.GeomComponent = openmdao.lib.components.geomcomp:GeomComponent
       openmdao.lib.components.linear_distribution.LinearDistribution = openmdao.lib.components.linear_distribution:LinearDistribution
       openmdao.lib.components.sleep_comp.SleepComponent = openmdao.lib.components.sleep_comp:SleepComponent
+      openmdao.lib.components.linear_system.LinearSystem = openmdao.lib.componnets.linear_system:LinearSystem
+      openmdao.lib.geometry.stl_group.STLGroup = openmdao.lib.components.stl_group:STLGroup
+      openmdao.lib.geometry.box.BoxParametricGeometry = openmdao.lib.components.box:BoxParametricGeometry
+      openmdao.lib.components.multi_metamodel.MultiFiMetaModel = openmdao.lib.components.multi_metamodel:MultiFiMetaModel
 
       [openmdao.surrogatemodel]
       openmdao.lib.surrogatemodels.kriging_surrogate.KrigingSurrogate = openmdao.lib.surrogatemodels.kriging_surrogate:KrigingSurrogate
       openmdao.lib.surrogatemodels.kriging_surrogate.FloatKrigingSurrogate = openmdao.lib.surrogatemodels.kriging_surrogate:FloatKrigingSurrogate
+      openmdao.lib.surrogatemodels.multifi_cokriging_surrogate.MultiFiCoKrigingSurrogate = openmdao.lib.surrogatemodels.multifi_cokriging_surrogate:MultiFiCoKrigingSurrogate
+      openmdao.lib.surrogatemodels.multifi_cokriging_surrogate.FloatMultiFiCoKrigingSurrogate = openmdao.lib.surrogatemodels.multifi_cokriging_surrogate:FloatMultiFiCoKrigingSurrogate
       openmdao.lib.surrogatemodels.logistic_regression.LogisticRegression = openmdao.lib.surrogatemodels.logistic_regression:LogisticRegression
       openmdao.lib.surrogatemodels.response_surface.ResponseSurface = openmdao.lib.surrogatemodels.response_surface:ResponseSurface
 

@@ -46,7 +46,15 @@ def get_rev_info():
 
 def _get_dirnames():
     bindir = os.path.dirname(sys.executable)
-    branchdir = os.path.dirname(os.path.dirname(bindir))
+    branchdir = os.path.dirname(__file__)
+    branchdir = os.path.normpath(os.path.join( \
+        branchdir,
+        os.path.pardir,
+        os.path.pardir,
+        os.path.pardir,
+        os.path.pardir
+    ))
+    
     docdir = os.path.join(branchdir, 'docs')
     return (branchdir, docdir, bindir)
 
@@ -133,11 +141,10 @@ def _pkg_sphinx_info(startdir, pkg, outfile, show_undoc=False,
 
     #excluding traits now since they need to be sorted separately
     #also excluding gui-related files, in case of non-gui build
+    # Also do not want to build docs for pymongo bson code. Even if we wanted to
+	#  if fails because the doctests need the full pymongo to pass
     _names = list(_get_resource_files(dist,
-                                    ['*__init__.py', '*setup.py', '*datatypes*.py',
-                                     '*/main/zmq*.py', '*/main/tornado*.py',
-                                     '*/gui/*/views.py', '*/gui/*/models.py',
-                                     '*/gui/*/urls.py', '*/gui/*/admin.py'],
+                                    ['*__init__.py', '*setup.py', '*datatypes*.py', '*/lib/casehandlers/pymongo_bson/*'],
                                     ['*.py']))
     names = []
     for n in _names:
@@ -242,7 +249,7 @@ def build_docs(parser=None, options=None, args=None):
             except:
                 version = "?-?-?"
                 shtitle = "OpenMDAO Documentation (unknown revision)"
-
+    
     branchdir, docdir, bindir = _get_dirnames()
 
     startdir = os.getcwd()

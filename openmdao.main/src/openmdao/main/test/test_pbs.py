@@ -7,8 +7,10 @@ import os.path
 import pkg_resources
 import shutil
 import sys
+import tempfile
 import unittest
 
+from openmdao.main.api import SimulationRoot
 from openmdao.main.mp_support import is_instance
 from openmdao.main.pbs import PBS_Allocator, PBS_Server
 from openmdao.main.resource import HOME_DIRECTORY, WORKING_DIRECTORY
@@ -23,6 +25,11 @@ class TestCase(unittest.TestCase):
                     pkg_resources.resource_filename('openmdao.main', 'test'))
 
     def setUp(self):
+        self.tempdir = tempfile.mkdtemp(prefix='test_pbs-')
+        self.startdir = os.getcwd()
+        os.chdir(self.tempdir)
+        SimulationRoot.chroot(self.tempdir)
+
         # Force use of fake 'qsub'.
         self.orig_qsub = list(PBS_Server._QSUB)
         PBS_Server._QSUB[:] = \
@@ -30,15 +37,13 @@ class TestCase(unittest.TestCase):
 
     def tearDown(self):
         PBS_Server._QSUB[:] = self.orig_qsub
-        for name in ('TestJob.qsub', 'TestJob-qsub.bat', 'qsub.out',
-                     'Zbogus-job-(_&^.qsub', 'Zbogus-job-(_&^-qsub.bat',
-                     'python.qsub', 'python-qsub.bat',
-                     'echo.qsub', 'echo-qsub.bat',
-                     'echo.in', 'echo.out', 'echo.err'):
-            if os.path.exists(name):
-                os.remove(name)
-        for name in glob.glob('PBS_TestServer*'):
-            shutil.rmtree(name, onerror=onerror)
+        os.chdir(self.startdir)
+        SimulationRoot.chroot(self.startdir)
+        if not os.environ.get('OPENMDAO_KEEPDIRS', False):
+            try:
+                shutil.rmtree(self.tempdir)
+            except OSError:
+                pass
 
     def test_allocator(self):
         logging.debug('')
@@ -178,7 +183,7 @@ class TestCase(unittest.TestCase):
         logging.debug(beginning)
         self.assertTrue(script.startswith(beginning))
 
-# Skip varification of location-dependent working directory.
+# Skip verification of location-dependent working directory.
 
         generated_echo = '"%s"' % echo if ' ' in echo else echo
         self.assertTrue(script.endswith("""\

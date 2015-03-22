@@ -120,7 +120,7 @@ class SLSPQdriverTestCase(unittest.TestCase):
         self.assertEqual(self.top.comp.x[1],
                          end_case.get_input('comp.x[1]'))
         self.assertEqual(self.top.comp.result,
-                         end_case.get_output('_pseudo_0'))
+                         end_case.get_output('_pseudo_0.out0'))
 
     def test_max_iter(self):
         self.top.driver.add_objective('comp.result')
@@ -159,7 +159,7 @@ class SLSPQdriverTestCase(unittest.TestCase):
         self.assertEqual(self.top.comp.x[1],
                          end_case.get_input('comp.x')[1])
         self.assertEqual(self.top.comp.result,
-                         end_case.get_output('_pseudo_0'))
+                         end_case.get_output('_pseudo_0.out0'))
 
     def test_reconfig(self):
         # Test that ArrayParameters can be configured at run() time.
@@ -168,37 +168,6 @@ class SLSPQdriverTestCase(unittest.TestCase):
 
             x = Array([0, 0], iotype="in", dtype=float)
             y = Array([0, 0], iotype="out", dtype=float)
-
-            def execute(self):
-                self.y = self.x**2
-
-        class MyAssembly(Assembly):
-
-            def configure(self):
-                self.add('comp1', MyComp())
-                self.add('comp2', MyComp())
-                driver = self.add('driver', SLSQPdriver())
-                driver.add_parameter('comp1.x', low=-10, high=10)
-                driver.add_parameter('comp2.x', low=-10, high=10)
-                driver.add_objective('comp1.y[0] + comp2.y[1]')
-
-        asm = set_as_top(MyAssembly())
-        asm.comp1.x = [1, 2, 3]
-        asm.comp2.x = [2.781828, 3.14159]
-        asm.run()
-
-        assert_rel_error(self, asm.comp1.x, [0, 2, 3], 1e-6)
-        assert_rel_error(self, asm.comp1.y, [0, 4, 9], 1e-6)
-        assert_rel_error(self, asm.comp2.x, [2.781828, 0], 1e-6)
-        assert_rel_error(self, asm.comp2.y, [7.738567, 0], 1e-6)
-
-    def test_empty_reconfig(self):
-        # Test that ArrayParameters can be configured at run() time.
-
-        class MyComp(Component):
-
-            x = Array(iotype="in")
-            y = Array(iotype="out")
 
             def execute(self):
                 self.y = self.x**2

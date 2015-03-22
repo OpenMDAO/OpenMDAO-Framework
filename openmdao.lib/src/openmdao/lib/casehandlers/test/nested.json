@@ -1,6 +1,8 @@
 {
-"simulation_info": {
-    "OpenMDAO_Version": "0.9.6", 
+"__length_1": 33716
+, "simulation_info": {
+    "OpenMDAO_Version": "0.12.0", 
+    "comp_graph": "{\"directed\": true, \"graph\": [], \"nodes\": [{\"comp\": true, \"pseudo\": \"constraint\", \"id\": \"_pseudo_1\"}, {\"comp\": true, \"pseudo\": \"objective\", \"id\": \"_pseudo_0\"}, {\"comp\": true, \"id\": \"comp1\"}, {\"comp\": true, \"driver\": true, \"id\": \"driver\"}, {\"comp\": true, \"id\": \"asm2\"}], \"links\": [{\"source\": 0, \"target\": 3}, {\"source\": 1, \"target\": 3}, {\"source\": 2, \"target\": 0}, {\"source\": 2, \"target\": 4}, {\"source\": 3, \"target\": 2}, {\"source\": 4, \"target\": 1}], \"multigraph\": false}", 
     "constants": {
         "asm2.asm3.comp1.directory": "", 
         "asm2.asm3.comp1.force_fd": false, 
@@ -9,25 +11,28 @@
         "asm2.asm3.driver.accuracy": 1e-06, 
         "asm2.asm3.driver.directory": "", 
         "asm2.asm3.driver.force_fd": false, 
+        "asm2.asm3.driver.gradient_options.atol": 1e-09, 
         "asm2.asm3.driver.gradient_options.derivative_direction": "auto", 
         "asm2.asm3.driver.gradient_options.directional_fd": false, 
-        "asm2.asm3.driver.gradient_options.fd_blocks": [], 
         "asm2.asm3.driver.gradient_options.fd_form": "forward", 
         "asm2.asm3.driver.gradient_options.fd_step": 1e-06, 
         "asm2.asm3.driver.gradient_options.fd_step_type": "absolute", 
         "asm2.asm3.driver.gradient_options.force_fd": false, 
-        "asm2.asm3.driver.gradient_options.gmres_maxiter": 100, 
-        "asm2.asm3.driver.gradient_options.gmres_tolerance": 1e-09, 
+        "asm2.asm3.driver.gradient_options.iprint": 0, 
+        "asm2.asm3.driver.gradient_options.lin_solver": "scipy_gmres", 
+        "asm2.asm3.driver.gradient_options.maxiter": 100, 
+        "asm2.asm3.driver.gradient_options.rtol": 1e-09, 
         "asm2.asm3.driver.iout": 6, 
         "asm2.asm3.driver.iprint": 0, 
         "asm2.asm3.driver.maxiter": 50, 
         "asm2.asm3.driver.output_filename": "slsqp.out", 
-        "asm2.asm3.excludes": [], 
         "asm2.asm3.force_fd": false, 
-        "asm2.asm3.includes": [
+        "asm2.asm3.missing_deriv_policy": "assume_zero", 
+        "asm2.asm3.recording_options.excludes": [], 
+        "asm2.asm3.recording_options.includes": [
             "*"
         ], 
-        "asm2.asm3.missing_deriv_policy": "assume_zero", 
+        "asm2.asm3.recording_options.save_problem_formulation": true, 
         "asm2.comp1.directory": "", 
         "asm2.comp1.force_fd": false, 
         "asm2.comp1.missing_deriv_policy": "error", 
@@ -35,25 +40,28 @@
         "asm2.driver.accuracy": 1e-06, 
         "asm2.driver.directory": "", 
         "asm2.driver.force_fd": false, 
+        "asm2.driver.gradient_options.atol": 1e-09, 
         "asm2.driver.gradient_options.derivative_direction": "auto", 
         "asm2.driver.gradient_options.directional_fd": false, 
-        "asm2.driver.gradient_options.fd_blocks": [], 
         "asm2.driver.gradient_options.fd_form": "forward", 
         "asm2.driver.gradient_options.fd_step": 1e-06, 
         "asm2.driver.gradient_options.fd_step_type": "absolute", 
         "asm2.driver.gradient_options.force_fd": false, 
-        "asm2.driver.gradient_options.gmres_maxiter": 100, 
-        "asm2.driver.gradient_options.gmres_tolerance": 1e-09, 
+        "asm2.driver.gradient_options.iprint": 0, 
+        "asm2.driver.gradient_options.lin_solver": "scipy_gmres", 
+        "asm2.driver.gradient_options.maxiter": 100, 
+        "asm2.driver.gradient_options.rtol": 1e-09, 
         "asm2.driver.iout": 6, 
         "asm2.driver.iprint": 0, 
         "asm2.driver.maxiter": 50, 
         "asm2.driver.output_filename": "slsqp.out", 
-        "asm2.excludes": [], 
         "asm2.force_fd": false, 
-        "asm2.includes": [
+        "asm2.missing_deriv_policy": "assume_zero", 
+        "asm2.recording_options.excludes": [], 
+        "asm2.recording_options.includes": [
             "*"
         ], 
-        "asm2.missing_deriv_policy": "assume_zero", 
+        "asm2.recording_options.save_problem_formulation": true, 
         "comp1.directory": "", 
         "comp1.force_fd": false, 
         "comp1.missing_deriv_policy": "error", 
@@ -62,25 +70,28 @@
         "driver.accuracy": 1e-06, 
         "driver.directory": "", 
         "driver.force_fd": false, 
+        "driver.gradient_options.atol": 1e-09, 
         "driver.gradient_options.derivative_direction": "auto", 
         "driver.gradient_options.directional_fd": false, 
-        "driver.gradient_options.fd_blocks": [], 
         "driver.gradient_options.fd_form": "forward", 
         "driver.gradient_options.fd_step": 1e-06, 
         "driver.gradient_options.fd_step_type": "absolute", 
         "driver.gradient_options.force_fd": false, 
-        "driver.gradient_options.gmres_maxiter": 100, 
-        "driver.gradient_options.gmres_tolerance": 1e-09, 
+        "driver.gradient_options.iprint": 0, 
+        "driver.gradient_options.lin_solver": "scipy_gmres", 
+        "driver.gradient_options.maxiter": 100, 
+        "driver.gradient_options.rtol": 1e-09, 
         "driver.iout": 6, 
         "driver.iprint": 0, 
         "driver.maxiter": 50, 
         "driver.output_filename": "slsqp.out", 
-        "excludes": [], 
         "force_fd": false, 
-        "includes": [
+        "missing_deriv_policy": "assume_zero", 
+        "recording_options.excludes": [], 
+        "recording_options.includes": [
             "*"
         ], 
-        "missing_deriv_policy": "assume_zero"
+        "recording_options.save_problem_formulation": true
     }, 
     "expressions": {
         "asm2.asm3.comp1.z": {
@@ -108,18 +119,45 @@
             "pcomp_name": "_pseudo_1"
         }
     }, 
-    "uuid": "76952d46-f0af-11e3-b712-005056000100", 
+    "graph": "{\"directed\": true, \"graph\": [[\"title\", \"unknown\"]], \"nodes\": [{\"short\": \"in0\", \"color_idx\": 0, \"title\": \"{}\", \"full\": \"_pseudo_1.in0\", \"var\": true, \"iotype\": \"in\", \"id\": \"_pseudo_1.in0\"}, {\"short\": \"output_filename\", \"color_idx\": 3, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"full\": \"driver.output_filename\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.output_filename\"}, {\"short\": \"comp1\", \"color_idx\": 2, \"title\": \"{}\", \"comp\": true, \"full\": \"comp1\", \"id\": \"comp1\"}, {\"short\": \"in0\", \"color_idx\": 1, \"title\": \"{}\", \"full\": \"_pseudo_0.in0\", \"var\": true, \"iotype\": \"in\", \"id\": \"_pseudo_0.in0\"}, {\"short\": \"iprint\", \"color_idx\": 3, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"full\": \"driver.iprint\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.iprint\"}, {\"short\": \"z\", \"color_idx\": 2, \"title\": \"{}\", \"full\": \"comp1.z\", \"var\": true, \"iotype\": \"out\", \"id\": \"comp1.z\"}, {\"short\": \"y\", \"color_idx\": 2, \"title\": \"{}\", \"full\": \"comp1.y\", \"var\": true, \"iotype\": \"in\", \"id\": \"comp1.y\"}, {\"short\": \"x\", \"color_idx\": 2, \"title\": \"{}\", \"full\": \"comp1.x\", \"var\": true, \"iotype\": \"in\", \"id\": \"comp1.x\"}, {\"short\": \"accuracy\", \"color_idx\": 3, \"title\": \"{}\", \"full\": \"driver.accuracy\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.accuracy\"}, {\"short\": \"error_code\", \"color_idx\": 3, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"full\": \"driver.error_code\", \"var\": true, \"iotype\": \"out\", \"id\": \"driver.error_code\"}, {\"short\": \"driver\", \"color_idx\": 3, \"title\": \"{'driver': True}\", \"comp\": true, \"driver\": true, \"full\": \"driver\", \"id\": \"driver\"}, {\"short\": \"iout\", \"color_idx\": 3, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"full\": \"driver.iout\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.iout\"}, {\"short\": \"out0\", \"color_idx\": 0, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"full\": \"_pseudo_1.out0\", \"var\": true, \"iotype\": \"out\", \"id\": \"_pseudo_1.out0\"}, {\"short\": \"_pseudo_1\", \"color_idx\": 0, \"title\": \"{}\", \"comp\": true, \"pseudo\": \"constraint\", \"full\": \"_pseudo_1\", \"id\": \"_pseudo_1\"}, {\"short\": \"_pseudo_0\", \"color_idx\": 1, \"title\": \"{}\", \"comp\": true, \"pseudo\": \"objective\", \"full\": \"_pseudo_0\", \"id\": \"_pseudo_0\"}, {\"short\": \"out0\", \"color_idx\": 1, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"full\": \"_pseudo_0.out0\", \"var\": true, \"iotype\": \"out\", \"id\": \"_pseudo_0.out0\"}, {\"short\": \"asm2\", \"color_idx\": 4, \"title\": \"{}\", \"comp\": true, \"full\": \"asm2\", \"id\": \"asm2\"}, {\"short\": \"maxiter\", \"color_idx\": 3, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"full\": \"driver.maxiter\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.maxiter\"}, {\"short\": \"x\", \"color_idx\": 4, \"title\": \"{}\", \"full\": \"asm2.x\", \"var\": true, \"iotype\": \"in\", \"id\": \"asm2.x\"}, {\"short\": \"z\", \"color_idx\": 4, \"title\": \"{}\", \"full\": \"asm2.z\", \"var\": true, \"iotype\": \"out\", \"id\": \"asm2.z\"}], \"links\": [{\"source\": 0, \"target\": 13}, {\"source\": 1, \"target\": 10}, {\"drv_conn\": \"driver\", \"target\": 10, \"source\": 12}, {\"source\": 2, \"target\": 5}, {\"source\": 3, \"target\": 14}, {\"source\": 4, \"target\": 10}, {\"source\": 5, \"target\": 0, \"conn\": true}, {\"source\": 5, \"target\": 18, \"conn\": true}, {\"source\": 6, \"target\": 2}, {\"source\": 7, \"target\": 2}, {\"drv_conn\": \"driver\", \"target\": 10, \"source\": 15}, {\"source\": 8, \"target\": 10}, {\"drv_conn\": \"driver\", \"target\": 6, \"source\": 10}, {\"source\": 10, \"target\": 9}, {\"source\": 11, \"target\": 10}, {\"source\": 13, \"target\": 12}, {\"source\": 14, \"target\": 15}, {\"source\": 16, \"target\": 19}, {\"source\": 17, \"target\": 10}, {\"source\": 18, \"target\": 16}, {\"source\": 19, \"target\": 3, \"conn\": true}], \"multigraph\": false}", 
+    "name": "", 
+    "uuid": "5bb465ee-bb77-11e4-9fe6-3c970e57723f", 
     "variable_metadata": {
+        "asm2.asm3.comp1.derivative_exec_count": {
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "exclude_high": false, 
+            "exclude_low": false, 
+            "high": 9223372036854775807, 
+            "iotype": "out", 
+            "low": -9223372036854775807, 
+            "vartypename": "Int"
+        }, 
         "asm2.asm3.comp1.directory": {
             "deriv_ignore": true, 
             "iotype": "in", 
             "vartypename": "Str"
+        }, 
+        "asm2.asm3.comp1.exec_count": {
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "exclude_high": false, 
+            "exclude_low": false, 
+            "high": 9223372036854775807, 
+            "iotype": "out", 
+            "low": -9223372036854775807, 
+            "vartypename": "Int"
         }, 
         "asm2.asm3.comp1.force_fd": {
             "assumed_default": false, 
             "deriv_ignore": true, 
             "iotype": "in", 
             "vartypename": "Bool"
+        }, 
+        "asm2.asm3.comp1.itername": {
+            "deriv_ignore": true, 
+            "iotype": "out", 
+            "vartypename": "Str"
         }, 
         "asm2.asm3.comp1.missing_deriv_policy": {
             "assumed_default": false, 
@@ -147,6 +185,16 @@
             "target": "comp1.z", 
             "vartypename": "Float"
         }, 
+        "asm2.asm3.derivative_exec_count": {
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "exclude_high": false, 
+            "exclude_low": false, 
+            "high": 9223372036854775807, 
+            "iotype": "out", 
+            "low": -9223372036854775807, 
+            "vartypename": "Int"
+        }, 
         "asm2.asm3.directory": {
             "deriv_ignore": true, 
             "iotype": "in", 
@@ -170,6 +218,13 @@
             "iotype": "in", 
             "vartypename": "Bool"
         }, 
+        "asm2.asm3.driver.gradient_options.atol": {
+            "assumed_default": false, 
+            "high": null, 
+            "iotype": "in", 
+            "low": null, 
+            "vartypename": "Float"
+        }, 
         "asm2.asm3.driver.gradient_options.derivative_direction": {
             "assumed_default": false, 
             "iotype": "in", 
@@ -184,11 +239,6 @@
             "assumed_default": false, 
             "iotype": "in", 
             "vartypename": "Bool"
-        }, 
-        "asm2.asm3.driver.gradient_options.fd_blocks": {
-            "copy": "deep", 
-            "iotype": "in", 
-            "vartypename": "List"
         }, 
         "asm2.asm3.driver.gradient_options.fd_form": {
             "assumed_default": false, 
@@ -223,7 +273,26 @@
             "iotype": "in", 
             "vartypename": "Bool"
         }, 
-        "asm2.asm3.driver.gradient_options.gmres_maxiter": {
+        "asm2.asm3.driver.gradient_options.iprint": {
+            "assumed_default": false, 
+            "iotype": "in", 
+            "values": [
+                0, 
+                1
+            ], 
+            "vartypename": "Enum"
+        }, 
+        "asm2.asm3.driver.gradient_options.lin_solver": {
+            "assumed_default": false, 
+            "iotype": "in", 
+            "values": [
+                "scipy_gmres", 
+                "petsc_ksp", 
+                "linear_gs"
+            ], 
+            "vartypename": "Enum"
+        }, 
+        "asm2.asm3.driver.gradient_options.maxiter": {
             "assumed_default": false, 
             "exclude_high": false, 
             "exclude_low": false, 
@@ -232,7 +301,7 @@
             "low": -9223372036854775807, 
             "vartypename": "Int"
         }, 
-        "asm2.asm3.driver.gradient_options.gmres_tolerance": {
+        "asm2.asm3.driver.gradient_options.rtol": {
             "assumed_default": false, 
             "high": null, 
             "iotype": "in", 
@@ -272,10 +341,15 @@
             "iotype": "in", 
             "vartypename": "Str"
         }, 
-        "asm2.asm3.excludes": {
-            "copy": "deep", 
-            "iotype": "in", 
-            "vartypename": "List"
+        "asm2.asm3.exec_count": {
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "exclude_high": false, 
+            "exclude_low": false, 
+            "high": 9223372036854775807, 
+            "iotype": "out", 
+            "low": -9223372036854775807, 
+            "vartypename": "Int"
         }, 
         "asm2.asm3.force_fd": {
             "assumed_default": false, 
@@ -283,10 +357,10 @@
             "iotype": "in", 
             "vartypename": "Bool"
         }, 
-        "asm2.asm3.includes": {
-            "copy": "deep", 
-            "iotype": "in", 
-            "vartypename": "List"
+        "asm2.asm3.itername": {
+            "deriv_ignore": true, 
+            "iotype": "out", 
+            "vartypename": "Str"
         }, 
         "asm2.asm3.missing_deriv_policy": {
             "assumed_default": false, 
@@ -298,6 +372,21 @@
             ], 
             "vartypename": "Enum"
         }, 
+        "asm2.asm3.recording_options.excludes": {
+            "copy": "deep", 
+            "iotype": "in", 
+            "vartypename": "List"
+        }, 
+        "asm2.asm3.recording_options.includes": {
+            "copy": "deep", 
+            "iotype": "in", 
+            "vartypename": "List"
+        }, 
+        "asm2.asm3.recording_options.save_problem_formulation": {
+            "assumed_default": false, 
+            "iotype": "in", 
+            "vartypename": "Bool"
+        }, 
         "asm2.asm3.z": {
             "assumed_default": false, 
             "default_value": 0.0, 
@@ -307,16 +396,41 @@
             "target": "asm3.z", 
             "vartypename": "Float"
         }, 
+        "asm2.comp1.derivative_exec_count": {
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "exclude_high": false, 
+            "exclude_low": false, 
+            "high": 9223372036854775807, 
+            "iotype": "out", 
+            "low": -9223372036854775807, 
+            "vartypename": "Int"
+        }, 
         "asm2.comp1.directory": {
             "deriv_ignore": true, 
             "iotype": "in", 
             "vartypename": "Str"
+        }, 
+        "asm2.comp1.exec_count": {
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "exclude_high": false, 
+            "exclude_low": false, 
+            "high": 9223372036854775807, 
+            "iotype": "out", 
+            "low": -9223372036854775807, 
+            "vartypename": "Int"
         }, 
         "asm2.comp1.force_fd": {
             "assumed_default": false, 
             "deriv_ignore": true, 
             "iotype": "in", 
             "vartypename": "Bool"
+        }, 
+        "asm2.comp1.itername": {
+            "deriv_ignore": true, 
+            "iotype": "out", 
+            "vartypename": "Str"
         }, 
         "asm2.comp1.missing_deriv_policy": {
             "assumed_default": false, 
@@ -342,6 +456,16 @@
             "low": null, 
             "vartypename": "Float"
         }, 
+        "asm2.derivative_exec_count": {
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "exclude_high": false, 
+            "exclude_low": false, 
+            "high": 9223372036854775807, 
+            "iotype": "out", 
+            "low": -9223372036854775807, 
+            "vartypename": "Int"
+        }, 
         "asm2.directory": {
             "deriv_ignore": true, 
             "iotype": "in", 
@@ -365,6 +489,13 @@
             "iotype": "in", 
             "vartypename": "Bool"
         }, 
+        "asm2.driver.gradient_options.atol": {
+            "assumed_default": false, 
+            "high": null, 
+            "iotype": "in", 
+            "low": null, 
+            "vartypename": "Float"
+        }, 
         "asm2.driver.gradient_options.derivative_direction": {
             "assumed_default": false, 
             "iotype": "in", 
@@ -379,11 +510,6 @@
             "assumed_default": false, 
             "iotype": "in", 
             "vartypename": "Bool"
-        }, 
-        "asm2.driver.gradient_options.fd_blocks": {
-            "copy": "deep", 
-            "iotype": "in", 
-            "vartypename": "List"
         }, 
         "asm2.driver.gradient_options.fd_form": {
             "assumed_default": false, 
@@ -418,7 +544,26 @@
             "iotype": "in", 
             "vartypename": "Bool"
         }, 
-        "asm2.driver.gradient_options.gmres_maxiter": {
+        "asm2.driver.gradient_options.iprint": {
+            "assumed_default": false, 
+            "iotype": "in", 
+            "values": [
+                0, 
+                1
+            ], 
+            "vartypename": "Enum"
+        }, 
+        "asm2.driver.gradient_options.lin_solver": {
+            "assumed_default": false, 
+            "iotype": "in", 
+            "values": [
+                "scipy_gmres", 
+                "petsc_ksp", 
+                "linear_gs"
+            ], 
+            "vartypename": "Enum"
+        }, 
+        "asm2.driver.gradient_options.maxiter": {
             "assumed_default": false, 
             "exclude_high": false, 
             "exclude_low": false, 
@@ -427,7 +572,7 @@
             "low": -9223372036854775807, 
             "vartypename": "Int"
         }, 
-        "asm2.driver.gradient_options.gmres_tolerance": {
+        "asm2.driver.gradient_options.rtol": {
             "assumed_default": false, 
             "high": null, 
             "iotype": "in", 
@@ -467,10 +612,15 @@
             "iotype": "in", 
             "vartypename": "Str"
         }, 
-        "asm2.excludes": {
-            "copy": "deep", 
-            "iotype": "in", 
-            "vartypename": "List"
+        "asm2.exec_count": {
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "exclude_high": false, 
+            "exclude_low": false, 
+            "high": 9223372036854775807, 
+            "iotype": "out", 
+            "low": -9223372036854775807, 
+            "vartypename": "Int"
         }, 
         "asm2.force_fd": {
             "assumed_default": false, 
@@ -478,10 +628,10 @@
             "iotype": "in", 
             "vartypename": "Bool"
         }, 
-        "asm2.includes": {
-            "copy": "deep", 
-            "iotype": "in", 
-            "vartypename": "List"
+        "asm2.itername": {
+            "deriv_ignore": true, 
+            "iotype": "out", 
+            "vartypename": "Str"
         }, 
         "asm2.missing_deriv_policy": {
             "assumed_default": false, 
@@ -493,6 +643,21 @@
             ], 
             "vartypename": "Enum"
         }, 
+        "asm2.recording_options.excludes": {
+            "copy": "deep", 
+            "iotype": "in", 
+            "vartypename": "List"
+        }, 
+        "asm2.recording_options.includes": {
+            "copy": "deep", 
+            "iotype": "in", 
+            "vartypename": "List"
+        }, 
+        "asm2.recording_options.save_problem_formulation": {
+            "assumed_default": false, 
+            "iotype": "in", 
+            "vartypename": "Bool"
+        }, 
         "asm2.z": {
             "assumed_default": false, 
             "high": null, 
@@ -501,16 +666,41 @@
             "target": "asm3.z", 
             "vartypename": "Float"
         }, 
+        "comp1.derivative_exec_count": {
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "exclude_high": false, 
+            "exclude_low": false, 
+            "high": 9223372036854775807, 
+            "iotype": "out", 
+            "low": -9223372036854775807, 
+            "vartypename": "Int"
+        }, 
         "comp1.directory": {
             "deriv_ignore": true, 
             "iotype": "in", 
             "vartypename": "Str"
+        }, 
+        "comp1.exec_count": {
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "exclude_high": false, 
+            "exclude_low": false, 
+            "high": 9223372036854775807, 
+            "iotype": "out", 
+            "low": -9223372036854775807, 
+            "vartypename": "Int"
         }, 
         "comp1.force_fd": {
             "assumed_default": false, 
             "deriv_ignore": true, 
             "iotype": "in", 
             "vartypename": "Bool"
+        }, 
+        "comp1.itername": {
+            "deriv_ignore": true, 
+            "iotype": "out", 
+            "vartypename": "Str"
         }, 
         "comp1.missing_deriv_policy": {
             "assumed_default": false, 
@@ -566,6 +756,13 @@
             "iotype": "in", 
             "vartypename": "Bool"
         }, 
+        "driver.gradient_options.atol": {
+            "assumed_default": false, 
+            "high": null, 
+            "iotype": "in", 
+            "low": null, 
+            "vartypename": "Float"
+        }, 
         "driver.gradient_options.derivative_direction": {
             "assumed_default": false, 
             "iotype": "in", 
@@ -580,11 +777,6 @@
             "assumed_default": false, 
             "iotype": "in", 
             "vartypename": "Bool"
-        }, 
-        "driver.gradient_options.fd_blocks": {
-            "copy": "deep", 
-            "iotype": "in", 
-            "vartypename": "List"
         }, 
         "driver.gradient_options.fd_form": {
             "assumed_default": false, 
@@ -619,7 +811,26 @@
             "iotype": "in", 
             "vartypename": "Bool"
         }, 
-        "driver.gradient_options.gmres_maxiter": {
+        "driver.gradient_options.iprint": {
+            "assumed_default": false, 
+            "iotype": "in", 
+            "values": [
+                0, 
+                1
+            ], 
+            "vartypename": "Enum"
+        }, 
+        "driver.gradient_options.lin_solver": {
+            "assumed_default": false, 
+            "iotype": "in", 
+            "values": [
+                "scipy_gmres", 
+                "petsc_ksp", 
+                "linear_gs"
+            ], 
+            "vartypename": "Enum"
+        }, 
+        "driver.gradient_options.maxiter": {
             "assumed_default": false, 
             "exclude_high": false, 
             "exclude_low": false, 
@@ -628,7 +839,7 @@
             "low": -9223372036854775807, 
             "vartypename": "Int"
         }, 
-        "driver.gradient_options.gmres_tolerance": {
+        "driver.gradient_options.rtol": {
             "assumed_default": false, 
             "high": null, 
             "iotype": "in", 
@@ -668,21 +879,11 @@
             "iotype": "in", 
             "vartypename": "Str"
         }, 
-        "excludes": {
-            "copy": "deep", 
-            "iotype": "in", 
-            "vartypename": "List"
-        }, 
         "force_fd": {
             "assumed_default": false, 
             "deriv_ignore": true, 
             "iotype": "in", 
             "vartypename": "Bool"
-        }, 
-        "includes": {
-            "copy": "deep", 
-            "iotype": "in", 
-            "vartypename": "List"
         }, 
         "missing_deriv_policy": {
             "assumed_default": false, 
@@ -693,11 +894,27 @@
                 "assume_zero"
             ], 
             "vartypename": "Enum"
+        }, 
+        "recording_options.excludes": {
+            "copy": "deep", 
+            "iotype": "in", 
+            "vartypename": "List"
+        }, 
+        "recording_options.includes": {
+            "copy": "deep", 
+            "iotype": "in", 
+            "vartypename": "List"
+        }, 
+        "recording_options.save_problem_formulation": {
+            "assumed_default": false, 
+            "iotype": "in", 
+            "vartypename": "Bool"
         }
     }
 }
+, "__length_2": 491
 , "driver_info_1": {
-    "_id": 78582512, 
+    "_id": 139770967220976, 
     "eq_constraints": [], 
     "ineq_constraints": [
         "comp1.z >= 0"
@@ -708,10 +925,21 @@
     ], 
     "parameters": [
         "comp1.y"
+    ], 
+    "recording": [
+        "comp1.y", 
+        "_pseudo_0.out0", 
+        "_pseudo_1.out0", 
+        "comp1.z", 
+        "comp1.derivative_exec_count", 
+        "comp1.itername", 
+        "comp1.exec_count", 
+        "driver.workflow.itername"
     ]
 }
+, "__length_3": 597
 , "driver_info_2": {
-    "_id": 78581840, 
+    "_id": 139770967221456, 
     "eq_constraints": [], 
     "ineq_constraints": [
         "comp1.z >= 0"
@@ -722,10 +950,25 @@
     ], 
     "parameters": [
         "comp1.y"
+    ], 
+    "recording": [
+        "comp1.y", 
+        "_pseudo_0.out0", 
+        "_pseudo_1.out0", 
+        "comp1.z", 
+        "asm3.z", 
+        "comp1.derivative_exec_count", 
+        "comp1.itername", 
+        "comp1.exec_count", 
+        "asm3.itername", 
+        "asm3.derivative_exec_count", 
+        "asm3.exec_count", 
+        "driver.workflow.itername"
     ]
 }
+, "__length_4": 592
 , "driver_info_3": {
-    "_id": 76991664, 
+    "_id": 139770967221936, 
     "eq_constraints": [], 
     "ineq_constraints": [
         "comp1.z >= 0"
@@ -736,222 +979,812 @@
     ], 
     "parameters": [
         "comp1.y"
+    ], 
+    "recording": [
+        "comp1.y", 
+        "_pseudo_0.out0", 
+        "_pseudo_1.out0", 
+        "comp1.z", 
+        "asm2.z", 
+        "comp1.derivative_exec_count", 
+        "comp1.itername", 
+        "comp1.exec_count", 
+        "asm2.derivative_exec_count", 
+        "asm2.exec_count", 
+        "asm2.itername", 
+        "driver.workflow.itername"
     ]
 }
+, "__length_5": 636
 , "iteration_case_1": {
-    "_driver_id": 78582512, 
-    "_id": "7696bb14-f0af-11e3-8040-005056000100", 
-    "_parent_id": "76967fc0-f0af-11e3-803f-005056000100", 
+    "_driver_id": 139770967220976, 
+    "_id": "5bb53fb3-bb77-11e4-800d-3c970e57723f", 
+    "_parent_id": "5bb5218a-bb77-11e4-800c-3c970e57723f", 
     "data": {
-        "_pseudo_0": 0.0, 
-        "_pseudo_1": -0.0, 
-        "comp1.y": 0.0, 
-        "comp1.z": 0.0, 
-        "driver.workflow.itername": "1-asm2.1-asm3.1"
+        "asm2.asm3._pseudo_0.out0": 0.0, 
+        "asm2.asm3._pseudo_1.out0": -0.0, 
+        "asm2.asm3.comp1.derivative_exec_count": 0, 
+        "asm2.asm3.comp1.exec_count": 1, 
+        "asm2.asm3.comp1.itername": "1-asm2.1-asm3.1-comp1", 
+        "asm2.asm3.comp1.y": 0.0, 
+        "asm2.asm3.comp1.z": 0.0, 
+        "asm2.asm3.driver.workflow.itername": "1-asm2.1-asm3.1"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1402412215.079431
+    "timestamp": 1424708204.207118
 }
+, "__length_6": 635
 , "iteration_case_2": {
-    "_driver_id": 78582512, 
-    "_id": "76970bf3-f0af-11e3-8041-005056000100", 
-    "_parent_id": "76967fc0-f0af-11e3-803f-005056000100", 
+    "_driver_id": 139770967220976, 
+    "_id": "5bb5667d-bb77-11e4-800e-3c970e57723f", 
+    "_parent_id": "5bb5218a-bb77-11e4-800c-3c970e57723f", 
     "data": {
-        "_pseudo_0": 0.0, 
-        "_pseudo_1": -0, 
-        "comp1.y": 0.0, 
-        "comp1.z": 0.0, 
-        "driver.workflow.itername": "1-asm2.1-asm3.2"
+        "asm2.asm3._pseudo_0.out0": 0.0, 
+        "asm2.asm3._pseudo_1.out0": -0.0, 
+        "asm2.asm3.comp1.derivative_exec_count": 0, 
+        "asm2.asm3.comp1.exec_count": 2, 
+        "asm2.asm3.comp1.itername": "1-asm2.1-asm3.2-comp1", 
+        "asm2.asm3.comp1.y": 0.0, 
+        "asm2.asm3.comp1.z": 0.0, 
+        "asm2.asm3.driver.workflow.itername": "1-asm2.1-asm3.2"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1402412215.08026
+    "timestamp": 1424708204.20791
 }
+, "__length_7": 742
 , "iteration_case_3": {
-    "_driver_id": 78581840, 
-    "_id": "76967fc0-f0af-11e3-803f-005056000100", 
-    "_parent_id": "76965f0f-f0af-11e3-803e-005056000100", 
+    "_driver_id": 139770967221456, 
+    "_id": "5bb5218a-bb77-11e4-800c-3c970e57723f", 
+    "_parent_id": "5bb4ffd7-bb77-11e4-800b-3c970e57723f", 
     "data": {
-        "_pseudo_0": 0.0, 
-        "_pseudo_1": -0.0, 
-        "asm3.z": 0.0, 
-        "comp1.y": 0.0, 
-        "comp1.z": 0.0, 
-        "driver.workflow.itername": "1-asm2.1"
+        "asm2._pseudo_0.out0": 0.0, 
+        "asm2._pseudo_1.out0": -0.0, 
+        "asm2.asm3.derivative_exec_count": 0, 
+        "asm2.asm3.exec_count": 1, 
+        "asm2.asm3.itername": "1-asm2.1-asm3", 
+        "asm2.asm3.z": 0.0, 
+        "asm2.comp1.derivative_exec_count": 0, 
+        "asm2.comp1.exec_count": 1, 
+        "asm2.comp1.itername": "1-asm2.1-comp1", 
+        "asm2.comp1.y": 0.0, 
+        "asm2.comp1.z": 0.0, 
+        "asm2.driver.workflow.itername": "1-asm2.1"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1402412215.085268
+    "timestamp": 1424708204.210698
 }
+, "__length_8": 636
 , "iteration_case_4": {
-    "_driver_id": 78582512, 
-    "_id": "7697f1b5-f0af-11e3-8043-005056000100", 
-    "_parent_id": "7697e519-f0af-11e3-8042-005056000100", 
+    "_driver_id": 139770967220976, 
+    "_id": "5bb601cf-bb77-11e4-8010-3c970e57723f", 
+    "_parent_id": "5bb5ee28-bb77-11e4-800f-3c970e57723f", 
     "data": {
-        "_pseudo_0": 0.0, 
-        "_pseudo_1": -0, 
-        "comp1.y": 0.0, 
-        "comp1.z": 0.0, 
-        "driver.workflow.itername": "1-asm2.2-asm3.1"
+        "asm2.asm3._pseudo_0.out0": 0.0, 
+        "asm2.asm3._pseudo_1.out0": -0.0, 
+        "asm2.asm3.comp1.derivative_exec_count": 0, 
+        "asm2.asm3.comp1.exec_count": 5, 
+        "asm2.asm3.comp1.itername": "1-asm2.2-asm3.1-comp1", 
+        "asm2.asm3.comp1.y": 0.0, 
+        "asm2.asm3.comp1.z": 0.0, 
+        "asm2.asm3.driver.workflow.itername": "1-asm2.2-asm3.1"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1402412215.086129
+    "timestamp": 1424708204.211889
 }
+, "__length_9": 634
 , "iteration_case_5": {
-    "_driver_id": 78582512, 
-    "_id": "76980533-f0af-11e3-8044-005056000100", 
-    "_parent_id": "7697e519-f0af-11e3-8042-005056000100", 
+    "_driver_id": 139770967220976, 
+    "_id": "5bb61ad7-bb77-11e4-8011-3c970e57723f", 
+    "_parent_id": "5bb5ee28-bb77-11e4-800f-3c970e57723f", 
     "data": {
-        "_pseudo_0": 0.0, 
-        "_pseudo_1": -0, 
-        "comp1.y": 0.0, 
-        "comp1.z": 0.0, 
-        "driver.workflow.itername": "1-asm2.2-asm3.2"
+        "asm2.asm3._pseudo_0.out0": 0.0, 
+        "asm2.asm3._pseudo_1.out0": -0.0, 
+        "asm2.asm3.comp1.derivative_exec_count": 0, 
+        "asm2.asm3.comp1.exec_count": 6, 
+        "asm2.asm3.comp1.itername": "1-asm2.2-asm3.2-comp1", 
+        "asm2.asm3.comp1.y": 0.0, 
+        "asm2.asm3.comp1.z": 0.0, 
+        "asm2.asm3.driver.workflow.itername": "1-asm2.2-asm3.2"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1402412215.086633
+    "timestamp": 1424708204.2126
 }
+, "__length_10": 742
 , "iteration_case_6": {
-    "_driver_id": 78581840, 
-    "_id": "7697e519-f0af-11e3-8042-005056000100", 
-    "_parent_id": "76965f0f-f0af-11e3-803e-005056000100", 
+    "_driver_id": 139770967221456, 
+    "_id": "5bb5ee28-bb77-11e4-800f-3c970e57723f", 
+    "_parent_id": "5bb4ffd7-bb77-11e4-800b-3c970e57723f", 
     "data": {
-        "_pseudo_0": 0.0, 
-        "_pseudo_1": -0, 
-        "asm3.z": 0.0, 
-        "comp1.y": 0.0, 
-        "comp1.z": 0.0, 
-        "driver.workflow.itername": "1-asm2.2"
+        "asm2._pseudo_0.out0": 0.0, 
+        "asm2._pseudo_1.out0": -0.0, 
+        "asm2.asm3.derivative_exec_count": 0, 
+        "asm2.asm3.exec_count": 2, 
+        "asm2.asm3.itername": "1-asm2.2-asm3", 
+        "asm2.asm3.z": 0.0, 
+        "asm2.comp1.derivative_exec_count": 0, 
+        "asm2.comp1.exec_count": 2, 
+        "asm2.comp1.itername": "1-asm2.2-comp1", 
+        "asm2.comp1.y": 0.0, 
+        "asm2.comp1.z": 0.0, 
+        "asm2.driver.workflow.itername": "1-asm2.2"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1402412215.087986
+    "timestamp": 1424708204.214399
 }
+, "__length_11": 683
 , "iteration_case_7": {
-    "_driver_id": 76991664, 
-    "_id": "76965f0f-f0af-11e3-803e-005056000100", 
-    "_parent_id": "76952d46-f0af-11e3-b712-005056000100", 
+    "_driver_id": 139770967220976, 
+    "_id": "5bb6956b-bb77-11e4-8012-3c970e57723f", 
+    "_parent_id": "5bb465ee-bb77-11e4-9fe6-3c970e57723f", 
     "data": {
-        "_pseudo_0": 0.0, 
-        "_pseudo_1": -0.0, 
+        "asm2.asm3._pseudo_0.out0": 9.9999999999999995e-07, 
+        "asm2.asm3._pseudo_1.out0": -9.9999999999999995e-07, 
+        "asm2.asm3.comp1.derivative_exec_count": 0, 
+        "asm2.asm3.comp1.exec_count": 9, 
+        "asm2.asm3.comp1.itername": "fd--asm3.1-comp1", 
+        "asm2.asm3.comp1.y": 0.0, 
+        "asm2.asm3.comp1.z": 9.9999999999999995e-07, 
+        "asm2.asm3.driver.workflow.itername": "fd--asm3.1"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1424708204.215671
+}
+, "__length_12": 684
+, "iteration_case_8": {
+    "_driver_id": 139770967220976, 
+    "_id": "5bb6ae1c-bb77-11e4-8013-3c970e57723f", 
+    "_parent_id": "5bb465ee-bb77-11e4-9fe6-3c970e57723f", 
+    "data": {
+        "asm2.asm3._pseudo_0.out0": 9.9999999999999995e-07, 
+        "asm2.asm3._pseudo_1.out0": -9.9999999999999995e-07, 
+        "asm2.asm3.comp1.derivative_exec_count": 0, 
+        "asm2.asm3.comp1.exec_count": 10, 
+        "asm2.asm3.comp1.itername": "fd--asm3.2-comp1", 
+        "asm2.asm3.comp1.y": 0.0, 
+        "asm2.asm3.comp1.z": 9.9999999999999995e-07, 
+        "asm2.asm3.driver.workflow.itername": "fd--asm3.2"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1424708204.216266
+}
+, "__length_13": 704
+, "iteration_case_9": {
+    "_driver_id": 139770967220976, 
+    "_id": "5bb6f23d-bb77-11e4-8014-3c970e57723f", 
+    "_parent_id": "5bb465ee-bb77-11e4-9fe6-3c970e57723f", 
+    "data": {
+        "asm2.asm3._pseudo_0.out0": 1.9328889515693188e-16, 
+        "asm2.asm3._pseudo_1.out0": -1.9328889515693188e-16, 
+        "asm2.asm3.comp1.derivative_exec_count": 0, 
+        "asm2.asm3.comp1.exec_count": 13, 
+        "asm2.asm3.comp1.itername": "fd--asm3.3-comp1", 
+        "asm2.asm3.comp1.y": -9.9999999980671106e-07, 
+        "asm2.asm3.comp1.z": 1.9328889515693188e-16, 
+        "asm2.asm3.driver.workflow.itername": "fd--asm3.3"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1424708204.218027
+}
+, "__length_14": 684
+, "iteration_case_10": {
+    "_driver_id": 139770967220976, 
+    "_id": "5bb71a6e-bb77-11e4-8015-3c970e57723f", 
+    "_parent_id": "5bb465ee-bb77-11e4-9fe6-3c970e57723f", 
+    "data": {
+        "asm2.asm3._pseudo_0.out0": 9.9999999999999995e-07, 
+        "asm2.asm3._pseudo_1.out0": -9.9999999999999995e-07, 
+        "asm2.asm3.comp1.derivative_exec_count": 0, 
+        "asm2.asm3.comp1.exec_count": 14, 
+        "asm2.asm3.comp1.itername": "fd--asm3.1-comp1", 
+        "asm2.asm3.comp1.y": 0.0, 
+        "asm2.asm3.comp1.z": 9.9999999999999995e-07, 
+        "asm2.asm3.driver.workflow.itername": "fd--asm3.1"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1424708204.219034
+}
+, "__length_15": 684
+, "iteration_case_11": {
+    "_driver_id": 139770967220976, 
+    "_id": "5bb73257-bb77-11e4-8016-3c970e57723f", 
+    "_parent_id": "5bb465ee-bb77-11e4-9fe6-3c970e57723f", 
+    "data": {
+        "asm2.asm3._pseudo_0.out0": 9.9999999999999995e-07, 
+        "asm2.asm3._pseudo_1.out0": -9.9999999999999995e-07, 
+        "asm2.asm3.comp1.derivative_exec_count": 0, 
+        "asm2.asm3.comp1.exec_count": 15, 
+        "asm2.asm3.comp1.itername": "fd--asm3.2-comp1", 
+        "asm2.asm3.comp1.y": 0.0, 
+        "asm2.asm3.comp1.z": 9.9999999999999995e-07, 
+        "asm2.asm3.driver.workflow.itername": "fd--asm3.2"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1424708204.219656
+}
+, "__length_16": 704
+, "iteration_case_12": {
+    "_driver_id": 139770967220976, 
+    "_id": "5bb77805-bb77-11e4-8017-3c970e57723f", 
+    "_parent_id": "5bb465ee-bb77-11e4-9fe6-3c970e57723f", 
+    "data": {
+        "asm2.asm3._pseudo_0.out0": 1.9328889515693188e-16, 
+        "asm2.asm3._pseudo_1.out0": -1.9328889515693188e-16, 
+        "asm2.asm3.comp1.derivative_exec_count": 0, 
+        "asm2.asm3.comp1.exec_count": 18, 
+        "asm2.asm3.comp1.itername": "fd--asm3.3-comp1", 
+        "asm2.asm3.comp1.y": -9.9999999980671106e-07, 
+        "asm2.asm3.comp1.z": 1.9328889515693188e-16, 
+        "asm2.asm3.driver.workflow.itername": "fd--asm3.3"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1424708204.221532
+}
+, "__length_17": 661
+, "iteration_case_13": {
+    "_driver_id": 139770967221936, 
+    "_id": "5bb4ffd7-bb77-11e4-800b-3c970e57723f", 
+    "_parent_id": "5bb465ee-bb77-11e4-9fe6-3c970e57723f", 
+    "data": {
+        "_pseudo_0.out0": 0.0, 
+        "_pseudo_1.out0": -0.0, 
+        "asm2.derivative_exec_count": 0, 
+        "asm2.exec_count": 1, 
+        "asm2.itername": "1-asm2", 
         "asm2.z": 0.0, 
+        "comp1.derivative_exec_count": 0, 
+        "comp1.exec_count": 1, 
+        "comp1.itername": "1-comp1", 
         "comp1.y": 0.0, 
         "comp1.z": 0.0, 
         "driver.workflow.itername": "1"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1402412215.094863
+    "timestamp": 1424708204.223773
 }
-, "iteration_case_8": {
-    "_driver_id": 78582512, 
-    "_id": "76997161-f0af-11e3-8047-005056000100", 
-    "_parent_id": "76996640-f0af-11e3-8046-005056000100", 
-    "data": {
-        "_pseudo_0": 0.0, 
-        "_pseudo_1": -0, 
-        "comp1.y": 0.0, 
-        "comp1.z": 0.0, 
-        "driver.workflow.itername": "2-asm2.1-asm3.1"
-    }, 
-    "error_message": "", 
-    "error_status": null, 
-    "timestamp": 1402412215.096002
-}
-, "iteration_case_9": {
-    "_driver_id": 78582512, 
-    "_id": "769986ab-f0af-11e3-8048-005056000100", 
-    "_parent_id": "76996640-f0af-11e3-8046-005056000100", 
-    "data": {
-        "_pseudo_0": 0.0, 
-        "_pseudo_1": -0, 
-        "comp1.y": 0.0, 
-        "comp1.z": 0.0, 
-        "driver.workflow.itername": "2-asm2.1-asm3.2"
-    }, 
-    "error_message": "", 
-    "error_status": null, 
-    "timestamp": 1402412215.09649
-}
-, "iteration_case_10": {
-    "_driver_id": 78581840, 
-    "_id": "76996640-f0af-11e3-8046-005056000100", 
-    "_parent_id": "76995c40-f0af-11e3-8045-005056000100", 
-    "data": {
-        "_pseudo_0": 0.0, 
-        "_pseudo_1": -0, 
-        "asm3.z": 0.0, 
-        "comp1.y": 0.0, 
-        "comp1.z": 0.0, 
-        "driver.workflow.itername": "2-asm2.1"
-    }, 
-    "error_message": "", 
-    "error_status": null, 
-    "timestamp": 1402412215.099528
-}
-, "iteration_case_11": {
-    "_driver_id": 78582512, 
-    "_id": "769a1e14-f0af-11e3-804a-005056000100", 
-    "_parent_id": "769a10e8-f0af-11e3-8049-005056000100", 
-    "data": {
-        "_pseudo_0": 0.0, 
-        "_pseudo_1": -0, 
-        "comp1.y": 0.0, 
-        "comp1.z": 0.0, 
-        "driver.workflow.itername": "2-asm2.2-asm3.1"
-    }, 
-    "error_message": "", 
-    "error_status": null, 
-    "timestamp": 1402412215.100367
-}
-, "iteration_case_12": {
-    "_driver_id": 78582512, 
-    "_id": "769a31d7-f0af-11e3-804b-005056000100", 
-    "_parent_id": "769a10e8-f0af-11e3-8049-005056000100", 
-    "data": {
-        "_pseudo_0": 0.0, 
-        "_pseudo_1": -0, 
-        "comp1.y": 0.0, 
-        "comp1.z": 0.0, 
-        "driver.workflow.itername": "2-asm2.2-asm3.2"
-    }, 
-    "error_message": "", 
-    "error_status": null, 
-    "timestamp": 1402412215.100869
-}
-, "iteration_case_13": {
-    "_driver_id": 78581840, 
-    "_id": "769a10e8-f0af-11e3-8049-005056000100", 
-    "_parent_id": "76995c40-f0af-11e3-8045-005056000100", 
-    "data": {
-        "_pseudo_0": 0.0, 
-        "_pseudo_1": -0, 
-        "asm3.z": 0.0, 
-        "comp1.y": 0.0, 
-        "comp1.z": 0.0, 
-        "driver.workflow.itername": "2-asm2.2"
-    }, 
-    "error_message": "", 
-    "error_status": null, 
-    "timestamp": 1402412215.102197
-}
+, "__length_18": 637
 , "iteration_case_14": {
-    "_driver_id": 76991664, 
-    "_id": "76995c40-f0af-11e3-8045-005056000100", 
-    "_parent_id": "76952d46-f0af-11e3-b712-005056000100", 
+    "_driver_id": 139770967220976, 
+    "_id": "5bb80e68-bb77-11e4-801a-3c970e57723f", 
+    "_parent_id": "5bb7fd00-bb77-11e4-8019-3c970e57723f", 
     "data": {
-        "_pseudo_0": 0.0, 
-        "_pseudo_1": -0, 
+        "asm2.asm3._pseudo_0.out0": 0.0, 
+        "asm2.asm3._pseudo_1.out0": -0.0, 
+        "asm2.asm3.comp1.derivative_exec_count": 0, 
+        "asm2.asm3.comp1.exec_count": 19, 
+        "asm2.asm3.comp1.itername": "2-asm2.1-asm3.1-comp1", 
+        "asm2.asm3.comp1.y": 0.0, 
+        "asm2.asm3.comp1.z": 0.0, 
+        "asm2.asm3.driver.workflow.itername": "2-asm2.1-asm3.1"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1424708204.225311
+}
+, "__length_19": 637
+, "iteration_case_15": {
+    "_driver_id": 139770967220976, 
+    "_id": "5bb8270f-bb77-11e4-801b-3c970e57723f", 
+    "_parent_id": "5bb7fd00-bb77-11e4-8019-3c970e57723f", 
+    "data": {
+        "asm2.asm3._pseudo_0.out0": 0.0, 
+        "asm2.asm3._pseudo_1.out0": -0.0, 
+        "asm2.asm3.comp1.derivative_exec_count": 0, 
+        "asm2.asm3.comp1.exec_count": 20, 
+        "asm2.asm3.comp1.itername": "2-asm2.1-asm3.2-comp1", 
+        "asm2.asm3.comp1.y": 0.0, 
+        "asm2.asm3.comp1.z": 0.0, 
+        "asm2.asm3.driver.workflow.itername": "2-asm2.1-asm3.2"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1424708204.225928
+}
+, "__length_20": 742
+, "iteration_case_16": {
+    "_driver_id": 139770967221456, 
+    "_id": "5bb7fd00-bb77-11e4-8019-3c970e57723f", 
+    "_parent_id": "5bb7ec59-bb77-11e4-8018-3c970e57723f", 
+    "data": {
+        "asm2._pseudo_0.out0": 0.0, 
+        "asm2._pseudo_1.out0": -0.0, 
+        "asm2.asm3.derivative_exec_count": 0, 
+        "asm2.asm3.exec_count": 5, 
+        "asm2.asm3.itername": "2-asm2.1-asm3", 
+        "asm2.asm3.z": 0.0, 
+        "asm2.comp1.derivative_exec_count": 0, 
+        "asm2.comp1.exec_count": 5, 
+        "asm2.comp1.itername": "2-asm2.1-comp1", 
+        "asm2.comp1.y": 0.0, 
+        "asm2.comp1.z": 0.0, 
+        "asm2.driver.workflow.itername": "2-asm2.1"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1424708204.227674
+}
+, "__length_21": 635
+, "iteration_case_17": {
+    "_driver_id": 139770967220976, 
+    "_id": "5bb89402-bb77-11e4-801d-3c970e57723f", 
+    "_parent_id": "5bb8832b-bb77-11e4-801c-3c970e57723f", 
+    "data": {
+        "asm2.asm3._pseudo_0.out0": 0.0, 
+        "asm2.asm3._pseudo_1.out0": -0.0, 
+        "asm2.asm3.comp1.derivative_exec_count": 0, 
+        "asm2.asm3.comp1.exec_count": 23, 
+        "asm2.asm3.comp1.itername": "2-asm2.2-asm3.1-comp1", 
+        "asm2.asm3.comp1.y": 0.0, 
+        "asm2.asm3.comp1.z": 0.0, 
+        "asm2.asm3.driver.workflow.itername": "2-asm2.2-asm3.1"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1424708204.2287
+}
+, "__length_22": 637
+, "iteration_case_18": {
+    "_driver_id": 139770967220976, 
+    "_id": "5bb8aa8c-bb77-11e4-801e-3c970e57723f", 
+    "_parent_id": "5bb8832b-bb77-11e4-801c-3c970e57723f", 
+    "data": {
+        "asm2.asm3._pseudo_0.out0": 0.0, 
+        "asm2.asm3._pseudo_1.out0": -0.0, 
+        "asm2.asm3.comp1.derivative_exec_count": 0, 
+        "asm2.asm3.comp1.exec_count": 24, 
+        "asm2.asm3.comp1.itername": "2-asm2.2-asm3.2-comp1", 
+        "asm2.asm3.comp1.y": 0.0, 
+        "asm2.asm3.comp1.z": 0.0, 
+        "asm2.asm3.driver.workflow.itername": "2-asm2.2-asm3.2"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1424708204.229281
+}
+, "__length_23": 741
+, "iteration_case_19": {
+    "_driver_id": 139770967221456, 
+    "_id": "5bb8832b-bb77-11e4-801c-3c970e57723f", 
+    "_parent_id": "5bb7ec59-bb77-11e4-8018-3c970e57723f", 
+    "data": {
+        "asm2._pseudo_0.out0": 0.0, 
+        "asm2._pseudo_1.out0": -0.0, 
+        "asm2.asm3.derivative_exec_count": 0, 
+        "asm2.asm3.exec_count": 6, 
+        "asm2.asm3.itername": "2-asm2.2-asm3", 
+        "asm2.asm3.z": 0.0, 
+        "asm2.comp1.derivative_exec_count": 0, 
+        "asm2.comp1.exec_count": 6, 
+        "asm2.comp1.itername": "2-asm2.2-comp1", 
+        "asm2.comp1.y": 0.0, 
+        "asm2.comp1.z": 0.0, 
+        "asm2.driver.workflow.itername": "2-asm2.2"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1424708204.23092
+}
+, "__length_24": 684
+, "iteration_case_20": {
+    "_driver_id": 139770967220976, 
+    "_id": "5bb91254-bb77-11e4-801f-3c970e57723f", 
+    "_parent_id": "5bb465ee-bb77-11e4-9fe6-3c970e57723f", 
+    "data": {
+        "asm2.asm3._pseudo_0.out0": 9.9999999999999995e-07, 
+        "asm2.asm3._pseudo_1.out0": -9.9999999999999995e-07, 
+        "asm2.asm3.comp1.derivative_exec_count": 0, 
+        "asm2.asm3.comp1.exec_count": 27, 
+        "asm2.asm3.comp1.itername": "fd--asm3.1-comp1", 
+        "asm2.asm3.comp1.y": 0.0, 
+        "asm2.asm3.comp1.z": 9.9999999999999995e-07, 
+        "asm2.asm3.driver.workflow.itername": "fd--asm3.1"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1424708204.231937
+}
+, "__length_25": 684
+, "iteration_case_21": {
+    "_driver_id": 139770967220976, 
+    "_id": "5bb9291c-bb77-11e4-8020-3c970e57723f", 
+    "_parent_id": "5bb465ee-bb77-11e4-9fe6-3c970e57723f", 
+    "data": {
+        "asm2.asm3._pseudo_0.out0": 9.9999999999999995e-07, 
+        "asm2.asm3._pseudo_1.out0": -9.9999999999999995e-07, 
+        "asm2.asm3.comp1.derivative_exec_count": 0, 
+        "asm2.asm3.comp1.exec_count": 28, 
+        "asm2.asm3.comp1.itername": "fd--asm3.2-comp1", 
+        "asm2.asm3.comp1.y": 0.0, 
+        "asm2.asm3.comp1.z": 9.9999999999999995e-07, 
+        "asm2.asm3.driver.workflow.itername": "fd--asm3.2"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1424708204.232521
+}
+, "__length_26": 704
+, "iteration_case_22": {
+    "_driver_id": 139770967220976, 
+    "_id": "5bb96ce3-bb77-11e4-8021-3c970e57723f", 
+    "_parent_id": "5bb465ee-bb77-11e4-9fe6-3c970e57723f", 
+    "data": {
+        "asm2.asm3._pseudo_0.out0": 1.9328889515693188e-16, 
+        "asm2.asm3._pseudo_1.out0": -1.9328889515693188e-16, 
+        "asm2.asm3.comp1.derivative_exec_count": 0, 
+        "asm2.asm3.comp1.exec_count": 31, 
+        "asm2.asm3.comp1.itername": "fd--asm3.3-comp1", 
+        "asm2.asm3.comp1.y": -9.9999999980671106e-07, 
+        "asm2.asm3.comp1.z": 1.9328889515693188e-16, 
+        "asm2.asm3.driver.workflow.itername": "fd--asm3.3"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1424708204.234268
+}
+, "__length_27": 684
+, "iteration_case_23": {
+    "_driver_id": 139770967220976, 
+    "_id": "5bb997ee-bb77-11e4-8022-3c970e57723f", 
+    "_parent_id": "5bb465ee-bb77-11e4-9fe6-3c970e57723f", 
+    "data": {
+        "asm2.asm3._pseudo_0.out0": 9.9999999999999995e-07, 
+        "asm2.asm3._pseudo_1.out0": -9.9999999999999995e-07, 
+        "asm2.asm3.comp1.derivative_exec_count": 0, 
+        "asm2.asm3.comp1.exec_count": 32, 
+        "asm2.asm3.comp1.itername": "fd--asm3.1-comp1", 
+        "asm2.asm3.comp1.y": 0.0, 
+        "asm2.asm3.comp1.z": 9.9999999999999995e-07, 
+        "asm2.asm3.driver.workflow.itername": "fd--asm3.1"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1424708204.235398
+}
+, "__length_28": 684
+, "iteration_case_24": {
+    "_driver_id": 139770967220976, 
+    "_id": "5bb9b045-bb77-11e4-8023-3c970e57723f", 
+    "_parent_id": "5bb465ee-bb77-11e4-9fe6-3c970e57723f", 
+    "data": {
+        "asm2.asm3._pseudo_0.out0": 9.9999999999999995e-07, 
+        "asm2.asm3._pseudo_1.out0": -9.9999999999999995e-07, 
+        "asm2.asm3.comp1.derivative_exec_count": 0, 
+        "asm2.asm3.comp1.exec_count": 33, 
+        "asm2.asm3.comp1.itername": "fd--asm3.2-comp1", 
+        "asm2.asm3.comp1.y": 0.0, 
+        "asm2.asm3.comp1.z": 9.9999999999999995e-07, 
+        "asm2.asm3.driver.workflow.itername": "fd--asm3.2"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1424708204.235982
+}
+, "__length_29": 704
+, "iteration_case_25": {
+    "_driver_id": 139770967220976, 
+    "_id": "5bb9f3b8-bb77-11e4-8024-3c970e57723f", 
+    "_parent_id": "5bb465ee-bb77-11e4-9fe6-3c970e57723f", 
+    "data": {
+        "asm2.asm3._pseudo_0.out0": 1.9328889515693188e-16, 
+        "asm2.asm3._pseudo_1.out0": -1.9328889515693188e-16, 
+        "asm2.asm3.comp1.derivative_exec_count": 0, 
+        "asm2.asm3.comp1.exec_count": 36, 
+        "asm2.asm3.comp1.itername": "fd--asm3.3-comp1", 
+        "asm2.asm3.comp1.y": -9.9999999980671106e-07, 
+        "asm2.asm3.comp1.z": 1.9328889515693188e-16, 
+        "asm2.asm3.driver.workflow.itername": "fd--asm3.3"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1424708204.237717
+}
+, "__length_30": 661
+, "iteration_case_26": {
+    "_driver_id": 139770967221936, 
+    "_id": "5bb7ec59-bb77-11e4-8018-3c970e57723f", 
+    "_parent_id": "5bb465ee-bb77-11e4-9fe6-3c970e57723f", 
+    "data": {
+        "_pseudo_0.out0": 0.0, 
+        "_pseudo_1.out0": -0.0, 
+        "asm2.derivative_exec_count": 0, 
+        "asm2.exec_count": 2, 
+        "asm2.itername": "2-asm2", 
         "asm2.z": 0.0, 
+        "comp1.derivative_exec_count": 0, 
+        "comp1.exec_count": 2, 
+        "comp1.itername": "2-comp1", 
         "comp1.y": 0.0, 
         "comp1.z": 0.0, 
         "driver.workflow.itername": "2"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1402412215.105533
+    "timestamp": 1424708204.239281
+}
+, "__length_31": 698
+, "iteration_case_27": {
+    "_driver_id": 139770967220976, 
+    "_id": "5bba72a3-bb77-11e4-8026-3c970e57723f", 
+    "_parent_id": "5bba60ca-bb77-11e4-8025-3c970e57723f", 
+    "data": {
+        "asm2.asm3._pseudo_0.out0": 9.9999999999999995e-07, 
+        "asm2.asm3._pseudo_1.out0": -9.9999999999999995e-07, 
+        "asm2.asm3.comp1.derivative_exec_count": 0, 
+        "asm2.asm3.comp1.exec_count": 37, 
+        "asm2.asm3.comp1.itername": "fd--asm2.1-asm3.1-comp1", 
+        "asm2.asm3.comp1.y": 0.0, 
+        "asm2.asm3.comp1.z": 9.9999999999999995e-07, 
+        "asm2.asm3.driver.workflow.itername": "fd--asm2.1-asm3.1"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1424708204.240998
+}
+, "__length_32": 698
+, "iteration_case_28": {
+    "_driver_id": 139770967220976, 
+    "_id": "5bba8c9e-bb77-11e4-8027-3c970e57723f", 
+    "_parent_id": "5bba60ca-bb77-11e4-8025-3c970e57723f", 
+    "data": {
+        "asm2.asm3._pseudo_0.out0": 9.9999999999999995e-07, 
+        "asm2.asm3._pseudo_1.out0": -9.9999999999999995e-07, 
+        "asm2.asm3.comp1.derivative_exec_count": 0, 
+        "asm2.asm3.comp1.exec_count": 38, 
+        "asm2.asm3.comp1.itername": "fd--asm2.1-asm3.2-comp1", 
+        "asm2.asm3.comp1.y": 0.0, 
+        "asm2.asm3.comp1.z": 9.9999999999999995e-07, 
+        "asm2.asm3.driver.workflow.itername": "fd--asm2.1-asm3.2"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1424708204.241634
+}
+, "__length_33": 718
+, "iteration_case_29": {
+    "_driver_id": 139770967220976, 
+    "_id": "5bbad605-bb77-11e4-8028-3c970e57723f", 
+    "_parent_id": "5bba60ca-bb77-11e4-8025-3c970e57723f", 
+    "data": {
+        "asm2.asm3._pseudo_0.out0": 1.9328889515693188e-16, 
+        "asm2.asm3._pseudo_1.out0": -1.9328889515693188e-16, 
+        "asm2.asm3.comp1.derivative_exec_count": 0, 
+        "asm2.asm3.comp1.exec_count": 41, 
+        "asm2.asm3.comp1.itername": "fd--asm2.1-asm3.3-comp1", 
+        "asm2.asm3.comp1.y": -9.9999999980671106e-07, 
+        "asm2.asm3.comp1.z": 1.9328889515693188e-16, 
+        "asm2.asm3.driver.workflow.itername": "fd--asm2.1-asm3.3"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1424708204.243554
+}
+, "__length_34": 824
+, "iteration_case_30": {
+    "_driver_id": 139770967221456, 
+    "_id": "5bba60ca-bb77-11e4-8025-3c970e57723f", 
+    "_parent_id": "5bb465ee-bb77-11e4-9fe6-3c970e57723f", 
+    "data": {
+        "asm2._pseudo_0.out0": 1.9328889515693188e-16, 
+        "asm2._pseudo_1.out0": -9.9999999999999995e-07, 
+        "asm2.asm3.derivative_exec_count": 0, 
+        "asm2.asm3.exec_count": 9, 
+        "asm2.asm3.itername": "fd--asm2.1-asm3", 
+        "asm2.asm3.z": 1.9328889515693188e-16, 
+        "asm2.comp1.derivative_exec_count": 0, 
+        "asm2.comp1.exec_count": 9, 
+        "asm2.comp1.itername": "fd--asm2.1-comp1", 
+        "asm2.comp1.y": 0.0, 
+        "asm2.comp1.z": 9.9999999999999995e-07, 
+        "asm2.driver.workflow.itername": "fd--asm2.1"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1424708204.244036
+}
+, "__length_35": 698
+, "iteration_case_31": {
+    "_driver_id": 139770967220976, 
+    "_id": "5bbb1394-bb77-11e4-802a-3c970e57723f", 
+    "_parent_id": "5bbb02a1-bb77-11e4-8029-3c970e57723f", 
+    "data": {
+        "asm2.asm3._pseudo_0.out0": 9.9999999999999995e-07, 
+        "asm2.asm3._pseudo_1.out0": -9.9999999999999995e-07, 
+        "asm2.asm3.comp1.derivative_exec_count": 0, 
+        "asm2.asm3.comp1.exec_count": 42, 
+        "asm2.asm3.comp1.itername": "fd--asm2.2-asm3.1-comp1", 
+        "asm2.asm3.comp1.y": 0.0, 
+        "asm2.asm3.comp1.z": 9.9999999999999995e-07, 
+        "asm2.asm3.driver.workflow.itername": "fd--asm2.2-asm3.1"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1424708204.245069
+}
+, "__length_36": 698
+, "iteration_case_32": {
+    "_driver_id": 139770967220976, 
+    "_id": "5bbb2a14-bb77-11e4-802b-3c970e57723f", 
+    "_parent_id": "5bbb02a1-bb77-11e4-8029-3c970e57723f", 
+    "data": {
+        "asm2.asm3._pseudo_0.out0": 9.9999999999999995e-07, 
+        "asm2.asm3._pseudo_1.out0": -9.9999999999999995e-07, 
+        "asm2.asm3.comp1.derivative_exec_count": 0, 
+        "asm2.asm3.comp1.exec_count": 43, 
+        "asm2.asm3.comp1.itername": "fd--asm2.2-asm3.2-comp1", 
+        "asm2.asm3.comp1.y": 0.0, 
+        "asm2.asm3.comp1.z": 9.9999999999999995e-07, 
+        "asm2.asm3.driver.workflow.itername": "fd--asm2.2-asm3.2"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1424708204.245649
+}
+, "__length_37": 718
+, "iteration_case_33": {
+    "_driver_id": 139770967220976, 
+    "_id": "5bbb6dc7-bb77-11e4-802c-3c970e57723f", 
+    "_parent_id": "5bbb02a1-bb77-11e4-8029-3c970e57723f", 
+    "data": {
+        "asm2.asm3._pseudo_0.out0": 1.9328889515693188e-16, 
+        "asm2.asm3._pseudo_1.out0": -1.9328889515693188e-16, 
+        "asm2.asm3.comp1.derivative_exec_count": 0, 
+        "asm2.asm3.comp1.exec_count": 46, 
+        "asm2.asm3.comp1.itername": "fd--asm2.2-asm3.3-comp1", 
+        "asm2.asm3.comp1.y": -9.9999999980671106e-07, 
+        "asm2.asm3.comp1.z": 1.9328889515693188e-16, 
+        "asm2.asm3.driver.workflow.itername": "fd--asm2.2-asm3.3"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1424708204.247441
+}
+, "__length_38": 826
+, "iteration_case_34": {
+    "_driver_id": 139770967221456, 
+    "_id": "5bbb02a1-bb77-11e4-8029-3c970e57723f", 
+    "_parent_id": "5bb465ee-bb77-11e4-9fe6-3c970e57723f", 
+    "data": {
+        "asm2._pseudo_0.out0": 1.9328889515693188e-16, 
+        "asm2._pseudo_1.out0": -9.9999999999999995e-07, 
+        "asm2.asm3.derivative_exec_count": 0, 
+        "asm2.asm3.exec_count": 10, 
+        "asm2.asm3.itername": "fd--asm2.2-asm3", 
+        "asm2.asm3.z": 1.9328889515693188e-16, 
+        "asm2.comp1.derivative_exec_count": 0, 
+        "asm2.comp1.exec_count": 10, 
+        "asm2.comp1.itername": "fd--asm2.2-comp1", 
+        "asm2.comp1.y": 0.0, 
+        "asm2.comp1.z": 9.9999999999999995e-07, 
+        "asm2.driver.workflow.itername": "fd--asm2.2"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1424708204.247879
+}
+, "__length_39": 684
+, "iteration_case_35": {
+    "_driver_id": 139770967220976, 
+    "_id": "5bbba6eb-bb77-11e4-802d-3c970e57723f", 
+    "_parent_id": "5bb465ee-bb77-11e4-9fe6-3c970e57723f", 
+    "data": {
+        "asm2.asm3._pseudo_0.out0": 1.9999999999999999e-06, 
+        "asm2.asm3._pseudo_1.out0": -1.9999999999999999e-06, 
+        "asm2.asm3.comp1.derivative_exec_count": 0, 
+        "asm2.asm3.comp1.exec_count": 47, 
+        "asm2.asm3.comp1.itername": "fd--asm3.1-comp1", 
+        "asm2.asm3.comp1.y": 0.0, 
+        "asm2.asm3.comp1.z": 1.9999999999999999e-06, 
+        "asm2.asm3.driver.workflow.itername": "fd--asm3.1"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1424708204.248846
+}
+, "__length_40": 684
+, "iteration_case_36": {
+    "_driver_id": 139770967220976, 
+    "_id": "5bbbbd8a-bb77-11e4-802e-3c970e57723f", 
+    "_parent_id": "5bb465ee-bb77-11e4-9fe6-3c970e57723f", 
+    "data": {
+        "asm2.asm3._pseudo_0.out0": 1.9999999999999999e-06, 
+        "asm2.asm3._pseudo_1.out0": -1.9999999999999999e-06, 
+        "asm2.asm3.comp1.derivative_exec_count": 0, 
+        "asm2.asm3.comp1.exec_count": 48, 
+        "asm2.asm3.comp1.itername": "fd--asm3.2-comp1", 
+        "asm2.asm3.comp1.y": 0.0, 
+        "asm2.asm3.comp1.z": 1.9999999999999999e-06, 
+        "asm2.asm3.driver.workflow.itername": "fd--asm3.2"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1424708204.249425
+}
+, "__length_41": 704
+, "iteration_case_37": {
+    "_driver_id": 139770967220976, 
+    "_id": "5bbc0130-bb77-11e4-802f-3c970e57723f", 
+    "_parent_id": "5bb465ee-bb77-11e4-9fe6-3c970e57723f", 
+    "data": {
+        "asm2.asm3._pseudo_0.out0": 2.7555591136782173e-16, 
+        "asm2.asm3._pseudo_1.out0": -2.7555591136782173e-16, 
+        "asm2.asm3.comp1.derivative_exec_count": 0, 
+        "asm2.asm3.comp1.exec_count": 51, 
+        "asm2.asm3.comp1.itername": "fd--asm3.3-comp1", 
+        "asm2.asm3.comp1.y": -1.9999999997244444e-06, 
+        "asm2.asm3.comp1.z": 2.7555591136782173e-16, 
+        "asm2.asm3.driver.workflow.itername": "fd--asm3.3"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1424708204.251172
+}
+, "__length_42": 684
+, "iteration_case_38": {
+    "_driver_id": 139770967220976, 
+    "_id": "5bbc5717-bb77-11e4-8030-3c970e57723f", 
+    "_parent_id": "5bb465ee-bb77-11e4-9fe6-3c970e57723f", 
+    "data": {
+        "asm2.asm3._pseudo_0.out0": 1.9999999999999999e-06, 
+        "asm2.asm3._pseudo_1.out0": -1.9999999999999999e-06, 
+        "asm2.asm3.comp1.derivative_exec_count": 0, 
+        "asm2.asm3.comp1.exec_count": 54, 
+        "asm2.asm3.comp1.itername": "fd--asm3.1-comp1", 
+        "asm2.asm3.comp1.y": 0.0, 
+        "asm2.asm3.comp1.z": 1.9999999999999999e-06, 
+        "asm2.asm3.driver.workflow.itername": "fd--asm3.1"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1424708204.253358
+}
+, "__length_43": 684
+, "iteration_case_39": {
+    "_driver_id": 139770967220976, 
+    "_id": "5bbc6de8-bb77-11e4-8031-3c970e57723f", 
+    "_parent_id": "5bb465ee-bb77-11e4-9fe6-3c970e57723f", 
+    "data": {
+        "asm2.asm3._pseudo_0.out0": 1.9999999999999999e-06, 
+        "asm2.asm3._pseudo_1.out0": -1.9999999999999999e-06, 
+        "asm2.asm3.comp1.derivative_exec_count": 0, 
+        "asm2.asm3.comp1.exec_count": 55, 
+        "asm2.asm3.comp1.itername": "fd--asm3.2-comp1", 
+        "asm2.asm3.comp1.y": 0.0, 
+        "asm2.asm3.comp1.z": 1.9999999999999999e-06, 
+        "asm2.asm3.driver.workflow.itername": "fd--asm3.2"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1424708204.253945
+}
+, "__length_44": 704
+, "iteration_case_40": {
+    "_driver_id": 139770967220976, 
+    "_id": "5bbcb2f8-bb77-11e4-8032-3c970e57723f", 
+    "_parent_id": "5bb465ee-bb77-11e4-9fe6-3c970e57723f", 
+    "data": {
+        "asm2.asm3._pseudo_0.out0": 2.7555591136782173e-16, 
+        "asm2.asm3._pseudo_1.out0": -2.7555591136782173e-16, 
+        "asm2.asm3.comp1.derivative_exec_count": 0, 
+        "asm2.asm3.comp1.exec_count": 58, 
+        "asm2.asm3.comp1.itername": "fd--asm3.3-comp1", 
+        "asm2.asm3.comp1.y": -1.9999999997244444e-06, 
+        "asm2.asm3.comp1.z": 2.7555591136782173e-16, 
+        "asm2.asm3.driver.workflow.itername": "fd--asm3.3"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1424708204.255723
 }
 }

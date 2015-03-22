@@ -139,8 +139,6 @@ def test_branch(parser, options, args=None):
         sys.exit(-1)
 
     testargs  = '-v ' if options.verbose else ''
-    testargs += '--gui ' if options.gui else ''
-    testargs += '--skip-gui ' if options.skip_gui else ''
     testargs += options.testargs
 
     funct_kwargs = {'keep': options.keep,

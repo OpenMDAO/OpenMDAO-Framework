@@ -18,9 +18,9 @@ class ParetoFilter(Component):
     """
 
     # pylint: disable-msg=E1101
-    params = VarTree(VariableTree(), iotype='in')
+    params = VarTree(VariableTree(), iotype='in', noflat=True)
 
-    responses = VarTree(VariableTree(), iotype='in')
+    responses = VarTree(VariableTree(), iotype='in', noflat=True)
 
     constraints = VarTree(
         VariableTree(), iotype='in',
@@ -72,17 +72,17 @@ class ParetoFilter(Component):
         input_tree = self.get('params')
         self._param_data = []
         for name in params:
-            input_tree.add(name, List([], desc='ParetoFilter input'))
+            input_tree.add(name, List([], desc='ParetoFilter input', noflat=True))
 
         output_tree = self.get('responses')
         self._response_data = {}
         for name in responses:
-            output_tree.add(name, List([], desc='ParetoFilter response'))
+            output_tree.add(name, List([], desc='ParetoFilter response', noflat=True))
 
         constraint_tree = self.get('constraints')
         self._constraint_data= []
         for name in constraints:
-            constraint_tree.add(name, List([], desc='ParetoFilter constraint'))
+            constraint_tree.add(name, List([], desc='ParetoFilter constraint', noflat=True))
 
         self._param_names = params
         self._response_names = responses

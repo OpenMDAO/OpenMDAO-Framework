@@ -73,6 +73,7 @@ class OptRosenSuzukiComponent(Component):
                      2*x[3]**2 - x[3] - 10)
         self.g[2] = (2*x[0]**2 + 2*x[0] + x[1]**2 - x[1] +
                      x[2]**2 - x[3] - 5)
+        #print self.x, self.g
 
 
 class RosenSuzuki2D(Component):
@@ -171,7 +172,7 @@ class CONMINdriverTestCase(unittest.TestCase):
         self.assertEqual(self.top.comp.x[1],
                          end_case.get_input('comp.x[1]'))
         self.assertEqual(10*self.top.comp.result,
-                         end_case.get_output('_pseudo_0'))
+                         end_case.get_output('_pseudo_0.out0'))
 
     def test_opt1_a(self):
         # Run with scalar parameters, 1D constraint, and OpenMDAO gradient.
@@ -310,13 +311,25 @@ class CONMINdriverTestCase(unittest.TestCase):
         map(self.top.driver.add_parameter,
             ['comp.x[0]', 'comp.x[1]', 'comp.x[2]', 'comp.x[3]'])
 
-        map(self.top.driver.add_constraint, ['comp.x[1] + 3.0*comp.x[2] > 3.0',
-                                             'comp.x[2] + comp.x[3] > 13.0',
-                                             'comp.x[1] - 0.73*comp.x[3]*comp.x[2] > -12.0'])
-        self.top.driver.cons_is_linear = [1, 1, 0]
+        self.top.driver.add_constraint('comp.x[1] + 3.0*comp.x[2] > 3.0', linear=True)
+        self.top.driver.add_constraint('comp.x[2] + comp.x[3] > 13.0', linear=True)
+        self.top.driver.add_constraint('comp.x[1] - 0.73*comp.x[3]*comp.x[2] > -12.0', linear=False)
         self.top.driver.itmax = 1
 
         self.top.run()
+        self.assertEqual(self.top.driver._cons_is_linear[0], 1, 1e-6)
+        self.assertEqual(self.top.driver._cons_is_linear[1], 1, 1e-6)
+        self.assertEqual(self.top.driver._cons_is_linear[2], 0, 1e-6)
+
+        lcons = self.top.driver.get_constraints(linear=True)
+        self.assertTrue(len(lcons) == 2)
+        self.assertTrue('comp.x[2]+comp.x[3]>13.0' in lcons)
+        self.assertTrue('comp.x[1]-0.73*comp.x[3]*comp.x[2]>-12.0' not in lcons)
+
+        lcons = self.top.driver.get_constraints(linear=False)
+        self.assertTrue(len(lcons) == 1)
+        self.assertTrue('comp.x[2]+comp.x[3]>13.0' not in lcons)
+        self.assertTrue('comp.x[1]-0.73*comp.x[3]*comp.x[2]>-12.0' in lcons)
 
     def test_max_iteration(self):
 
@@ -472,8 +485,9 @@ class TestCase1D(unittest.TestCase):
         self.top.run()
 
         # pylint: disable=E1101
-        assert_rel_error(self, self.top.comp.opt_objective,
-                         self.top.driver.eval_objective(), 0.01)
+        assert_rel_error(self, self.top.driver.eval_objective(),
+                         self.top.comp.opt_objective,
+                         0.01)
         assert_rel_error(self, 1 + self.top.comp.opt_design_vars[0],
                          1 + self.top.comp.x[0], 0.05)
         assert_rel_error(self, self.top.comp.opt_design_vars[1],

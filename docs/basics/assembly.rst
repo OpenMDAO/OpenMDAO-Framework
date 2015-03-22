@@ -324,8 +324,7 @@ the same name, iotype, default value, units, description, and range characterist
 original variable on the component that you're passing through. If you would like to present a different interface
 external to the assembly (perhaps you would like different units), then a passthrough
 cannot be used. Instead, the desired variables must be manually created and
-connected. You can find a more detailed example of this in the :ref:`complex tutorial
-<A-More-Complex-Tutorial-Problem>`. Most of the time passthroughs are sufficient.
+connected. Most of the time passthroughs are sufficient.
 
 Next we'll move on to our tutorial for setting up a basic optimization, still using the same Paraboloid component 
 that we built for this one. 

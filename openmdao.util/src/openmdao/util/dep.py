@@ -12,7 +12,7 @@ import cPickle
 import networkx as nx
 
 from openmdao.util.fileutil import find_files, get_module_path, find_module
-from openmdao.util.log import logger
+#from openmdao.util.log import logger
 
 # This is a dict containing all of the entry point groups that OpenMDAO uses to
 # identify plugins, and their corresponding Interfaces.
@@ -28,7 +28,6 @@ plugin_groups = { 'openmdao.container': ['IContainer'],
                   'openmdao.architecture': ['IArchitecture'],
                   'openmdao.optproblem': ['IOptProblem','IAssembly',
                                           'IComponent','IContainer'],
-                  'openmdao.parametric_geometry': ['IParametricGeometry'],
                   }
 
 iface_set = set()
@@ -40,6 +39,8 @@ def _to_str(node):
     """Take groups of Name nodes or a Str node and convert to a string."""
     if isinstance(node, ast.Name):
         return node.id
+    if not hasattr(node, 'value'):
+      return None
     val = node.value
     parts = [node.attr]
     while True:
@@ -141,12 +142,12 @@ class PythonSourceFileAnalyser(ast.NodeVisitor):
         """This executes every time a class definition is parsed."""
         fullname = '.'.join([self.modpath, node.name])
         self.localnames[node.name] = fullname
-        bases = [_to_str(b) for b in node.bases]
+        bases = [_to_str(b) for b in node.bases if b is not None]
 
         bvisitor = _ClassBodyVisitor()
         bvisitor.visit(node)
 
-        bases = [self.localnames.get(b, b) for b in bases]
+        bases = [self.localnames.get(b, b) for b in bases if b is not None]
 
         self.classes[fullname] = ClassInfo(fullname, self.fname, bases,
                                            bvisitor.metadata,
@@ -332,7 +333,7 @@ class PythonSourceTreeAnalyser(object):
                 self.fileinfo[pyfile] = info
                 return info[0]
 
-        logger.info("analyzing %s", pyfile)
+        #logger.debug("analyzing %s", pyfile)
 
         myvisitor = PythonSourceFileAnalyser(pyfile, self)
         self.modinfo[get_module_path(pyfile)] = myvisitor

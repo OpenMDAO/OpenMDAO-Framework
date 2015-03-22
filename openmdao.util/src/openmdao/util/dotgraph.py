@@ -4,19 +4,23 @@ import sys
 import webbrowser
 
 import networkx as nx
-from openmdao.main.interfaces import IDriver
-from openmdao.main.depgraph import DependencyGraph, is_var_node
+from openmdao.main.interfaces import IDriver, IAssembly
+from openmdao.main.depgraph import DependencyGraph
 from openmdao.main.problem_formulation import ArchitectureAssembly
+from openmdao.main.systems import AssemblySystem, SerialSystem, ParallelSystem, \
+                                  VarSystem, SolverSystem, \
+                                  FiniteDiffDriverSystem, TransparentDriverSystem, OpaqueSystem
+from openmdao.util.graph import base_var
 
 _cluster_count = 0
 
 def write_driver_cluster(f, G, driver, indent, counts, alledges, excludes=()):
-    global _cluster_count, IDriver
+    global _cluster_count
     show = driver.name not in excludes
     comps = list(driver.workflow)
     subG = G.subgraph([c.name for c in comps])
     tab = ' '*indent
-    
+
     if show:
         f.write('%ssubgraph cluster%s {\n' % (tab, _cluster_count))
         _cluster_count += 1
@@ -36,7 +40,7 @@ def write_driver_cluster(f, G, driver, indent, counts, alledges, excludes=()):
 
         subG = G.subgraph([c.name for c in comps])
         edges = subG.edges()
-        
+
         # now remove subdrivers
         subG.remove_nodes_from([c.name for c in comps if IDriver.providedBy(c)])
 
@@ -65,16 +69,23 @@ def write_nodes(f, G, indent, counts, parent):
             data['style'] = 'filled'
             data['fillcolor'] = 'gray'
 
-        write_node(f, G, node, indent)
+        write_node(f, G.node[node], node, indent)
 
-def write_node(f, G, node, indent):
-    data = G.node[node]
-    assigns = ['%s=%s' % (k,v) for k,v in data.items()]
+_meta_excludes = set([
+    'inputs',
+    'outputs',
+    'system',
+])
+
+def write_node(f, meta, node, indent):
+    assigns = ['%s=%s' % (k,v) for k,v in meta.items()
+                    if k not in _meta_excludes]
     f.write('%s"%s" [%s];\n' % (' '*indent, node, ','.join(assigns)))
-    
+
 def _get_comp_counts(drv, counts):
-    for comp in drv.workflow:
-        counts[comp.name] += 1
+    for cname in drv._ordering:
+        comp = getattr(drv.parent, cname)
+        counts[cname] += 1
         if IDriver.providedBy(comp):
             _get_comp_counts(comp, counts)
 
@@ -98,8 +109,8 @@ def write_workflow_dot(G, dotfile, scope=None, excludes=()):
 
         if scope and isinstance(scope, ArchitectureAssembly):
             for pcomp in scope.list_pseudocomps():
-                write_node(f, G, pcomp, indent)
-            
+                write_node(f, G.node[pcomp], pcomp, indent)
+
         alledges = set()
         write_driver_cluster(f, G, driver, indent, counts, alledges, excludes=excludes)
 
@@ -128,24 +139,122 @@ def _update_graph_metadata(G, scope):
                 for pcomp in driver.list_pseudocomps():
                     conns.append((pcomp, node))
                 if hasattr(driver, 'list_param_targets'):
-                    conns.extend([(node, p) for p in driver.list_param_targets()])
+                    conns.extend([(node, p) for p in driver.list_param_targets() if p in G])
         elif 'comp' in data:
             data['shape'] = 'box'
-        else: # var node
-            parts = node.split('.', 1)
-            if len(parts) > 1 and not is_var_node(G, parts[0]):
-                data['label'] = parts[1]
-            base = G.base_var(node)
-            if G.node[base].get('iotype') == 'state':
-                data['shape'] = 'doubleoctagon'
+        elif 'var' in data or 'basevar' in data: # var node
+            try:
+                parts = node.split('.', 1)
+            except AttributeError:
+                pass
             else:
-                data['shape'] = 'ellipse'
+                if hasattr(G, 'base_var'):
+                    base = base_var(G, node)
+                    if G.node[base].get('iotype') == 'state':
+                        data['shape'] = 'doubleoctagon'
+                    else:
+                        data['shape'] = 'ellipse'
+                else:
+                    data['shape'] = 'ellipse'
         data['margin'] = '0.0'
 
     G.add_edges_from(conns, style='dotted')
 
-def plot_graph(G, fmt='pdf', outfile=None, pseudos=True, workflow=False, scope=None,
-               excludes=()):
+def _map_systems(system, dct):
+    """in our dotfile, all graph nodes must have unique names,
+    but not all openmdao systems have unique names, so just
+    create a map where every system is mapped to a unique
+    name.
+    """
+    if len(dct) == 0:
+        dct[id(system)] = "%s!0" % system.name
+    for s in _get_subsystems(system):
+        dct[id(s)] = "%s!%d" % (s.name, len(dct))
+        _map_systems(s, dct)
+    return dct
+
+def write_system_dot(system, dotfile):
+    # first, create a mapping of unique names to each system
+
+    sysmap = _map_systems(system, {})
+
+    with open(dotfile, 'w') as f:
+        indent = 3
+
+        f.write("strict digraph {\n")
+
+        meta = {
+            'shape': _dot_shape(system),
+            'label': '"' + system.name + '"'
+        }
+        write_node(f, meta, sysmap[id(system)], indent)
+
+        _sys_dot(system, indent, f, sysmap)
+
+        f.write("}\n")
+
+def _dot_shape(system):
+    if isinstance(system, AssemblySystem):
+        return "box3d"
+    elif isinstance(system, FiniteDiffDriverSystem):
+        return "invhouse"
+    elif isinstance(system, TransparentDriverSystem):
+        return "invhouse"
+    elif isinstance(system, SolverSystem):
+        return "house"
+    elif isinstance(system, SerialSystem):
+        return "rectangle"
+    elif isinstance(system, ParallelSystem):
+        return "parallelogram"
+    elif isinstance(system, VarSystem):
+        return "ellipse"
+
+    return "box"
+
+def _get_subsystems(system):
+    """Returns immediate subsystems, even for opaque systems."""
+    if isinstance(system, OpaqueSystem):
+        return [system._inner_system]
+    elif isinstance(system, AssemblySystem):
+        return [system._comp._system]
+    else:
+        return system.subsystems()
+
+def _sys_dot(system, indent, f, sysmap):
+
+    for i, s in enumerate(_get_subsystems(system)):
+        meta = {
+            'shape': _dot_shape(s),
+            'label': '"' + s.name + '"'
+        }
+        write_node(f, meta, sysmap[id(s)], indent)
+        f.write('%s"%s" -> "%s" [label="%d"];\n' %
+                        (' '*indent, sysmap[id(system)], sysmap[id(s)], i))
+        _sys_dot(s, indent+3, f, sysmap)
+
+def plot_system_tree(system, outfile=None, fmt='pdf'):
+    if outfile is None:
+        outfile = 'system_graph.'+fmt
+
+    dotfile = os.path.splitext(outfile)[0]+'.dot'
+
+    write_system_dot(system, dotfile)
+
+    os.system("dot -T%s -o %s %s" % (fmt, outfile, dotfile))
+
+    if sys.platform == 'darwin':
+        os.system('open %s' % outfile)
+    else:
+        webbrowser.get().open(outfile)
+
+    try:
+        os.remove(dotfile)
+    except:
+        pass
+
+
+def plot_graph(G, outfile=None, fmt='pdf', pseudos=True, workflow=False, scope=None,
+               excludes=(), prune=False):
     """Create a plot of the given graph"""
 
     G = G.subgraph(G.nodes_iter())
@@ -160,7 +269,8 @@ def plot_graph(G, fmt='pdf', outfile=None, pseudos=True, workflow=False, scope=N
                     if hasattr(comp, 'list_param_targets'):
                         for target in comp.list_param_targets():
                             G.node[target]['param'] = True
-            G.prune_unconnected_vars()
+            if prune:
+                G.prune_unconnected_vars()
 
     if not pseudos:
         nodes = [n for n in G.nodes() if '_pseudo_' in n]
@@ -185,42 +295,66 @@ def plot_graph(G, fmt='pdf', outfile=None, pseudos=True, workflow=False, scope=N
     else:
         webbrowser.get().open(outfile)
 
-    #os.remove(dotfile)
+    os.remove(dotfile)
 
-def plot_graphs(obj, recurse=True, fmt='pdf', pseudos=False, workflow=False):
-    from openmdao.main.assembly import Assembly
-    from openmdao.main.driver import Driver
+def _driver_plots(obj, recurse=True, fmt='pdf', pseudos=True,
+                  workflow=False, sysdone=False, prefix=''):
+    # driver graph
+    try:
+        plot_graph(obj.get_reduced_graph(), fmt=fmt,
+                   outfile=prefix+obj.get_pathname()+'_reduced'+'.'+fmt, pseudos=pseudos)
+    except Exception as err:
+        print "Can't plot reduced graph of '%s': %s" % (obj.get_pathname(), str(err))
 
-    print "plot_graphs for %s" % obj.name
+    # workflow graph
+    try:
+        plot_graph(obj.workflow._reduced_graph, fmt=fmt,
+                   outfile=prefix+obj.get_pathname()+'_wflow_reduced'+'.'+fmt, pseudos=pseudos)
+    except Exception as err:
+        print "Can't plot reduced graph of '%s' workflow: %s" % (obj.get_pathname(), str(err))
 
-    if isinstance(obj, Assembly):
-        if obj.name == '':
-            obj.name = 'top'
+    if recurse:
+        for comp in obj.workflow:
+            if IAssembly.providedBy(comp):
+                plot_graphs(comp, recurse, fmt=fmt, pseudos=pseudos,
+                            workflow=workflow, sysdone=True, prefix=prefix)
+            elif IDriver.providedBy(comp):
+                _driver_plots(comp, recurse, fmt=fmt, pseudos=pseudos,
+                              workflow=workflow, sysdone=True, prefix=prefix)
+
+def plot_graphs(obj, recurse=True, fmt='pdf', pseudos=True,
+                workflow=False, sysdone=False, prefix=''):
+    if IAssembly.providedBy(obj):
+        name = 'top' if obj.get_pathname()=='' else obj.get_pathname()
+
         try:
-            plot_graph(obj._depgraph, fmt=fmt, outfile=obj.name+'_depgraph'+'.'+fmt, pseudos=pseudos)
+            plot_graph(obj._depgraph.get_pruned(), fmt=fmt,
+                       outfile=prefix+name+'_depgraph'+'.'+fmt, pseudos=pseudos)
         except Exception as err:
-            print "Can't plot depgraph of '%s': %s" % (obj.name, str(err))
+            print "Can't plot depgraph of '%s': %s" % (name, str(err))
         try:
-            plot_graph(obj._depgraph.component_graph(),
-                       fmt=fmt, outfile=obj.name+'_compgraph'+'.'+fmt,
+            plot_graph(obj._reduced_graph, fmt=fmt,
+                       outfile=prefix+name+'_reduced'+'.'+fmt, pseudos=pseudos)
+        except Exception as err:
+            print "Can't plot reduced graph of '%s': %s" % (name, str(err))
+
+        if not sysdone:
+            try:
+                plot_system_tree(obj._system, fmt=fmt,
+                           outfile=prefix+name+'_system_tree'+'.'+fmt)
+            except Exception as err:
+                print "Can't plot system graph of '%s': %s" % (name, str(err))
+
+        try:
+            plot_graph(obj._reduced_graph.component_graph(),
+                       fmt=fmt, outfile=prefix+name+'_compgraph'+'.'+fmt,
                        pseudos=pseudos, workflow=workflow, scope=obj)
         except Exception as err:
-            print "Can't plot component_graph of '%s': %s" % (obj.name, str(err))
-        if recurse:
-            plot_graphs(obj.driver, recurse, fmt=fmt, pseudos=pseudos, workflow=workflow)
-    elif isinstance(obj, Driver):
-        try:
-            plot_graph(obj.workflow.derivative_graph(),
-                       fmt=fmt, outfile=obj.name+"_derivgraph"+'.'+fmt,
-                       pseudos=pseudos, workflow=workflow, scope=obj.parent)
-        except Exception as err:
-            print "Can't plot deriv graph of '%s': %s" % (obj.name, str(err))
+            print "Can't plot component_graph of '%s': %s" % (name, str(err))
 
-        if recurse:
-            for comp in obj.iteration_set():
-                if isinstance(comp, Assembly) or isinstance(comp, Driver):
-                    plot_graphs(comp, recurse, fmt=fmt, pseudos=pseudos, workflow=workflow)
-
+        _driver_plots(obj._top_driver, recurse=recurse, fmt=fmt,
+                      pseudos=pseudos, workflow=workflow, sysdone=True,
+                      prefix=prefix)
 
 
 def main():

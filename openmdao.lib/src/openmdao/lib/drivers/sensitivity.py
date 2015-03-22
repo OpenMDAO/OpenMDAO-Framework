@@ -27,7 +27,6 @@ class SensitivityDriver(Driver):
     inputs (Parameters) to all outputs (Objectives and Constraints).
 
     SensitivityDriver includes requires OpenMDAO to calculate a gradient.
-    Fake Finite Difference is supported.
     """
 
     implements(IHasParameters, IHasObjectives, IHasConstraints)
@@ -56,10 +55,9 @@ class SensitivityDriver(Driver):
     def execute(self):
         """Calculate the gradient of the workflow."""
 
+
         # Inital run to make sure the workflow executes
         self.run_iteration()
-
-        self._check()
 
         inputs = self.list_param_group_targets()
         obj = self.list_objective_targets()
@@ -77,10 +75,32 @@ class SensitivityDriver(Driver):
         self.x = self.eval_parameters(self.parent)
 
         # Finally, calculate gradient
-        J = self.workflow.calc_gradient(inputs, obj + con)
+        J = self._calc_gradient(inputs, obj + con)
 
         self.dF = J[:nobj, :]
         self.dG = J[nobj:nobj+ncon, :]
+
+    def size_variables(self):
+        """ Size up our outputs."""
+        super(SensitivityDriver, self).size_variables()
+        self._check()
+
+        n_param = len(self.eval_parameters())
+
+        n_obj = 0
+        for obj in self.list_objective_targets():
+            n_obj += len(self.parent.get_flattened_value(obj))
+
+        n_con = 0
+        for con in self.list_constraint_targets():
+            n_con += len(self.parent.get_flattened_value(con))
+
+        self.x = zeros((n_param))
+        self.F = zeros((n_obj))
+        self.G = zeros((n_con))
+
+        self.dF = zeros((n_obj, n_param))
+        self.dG = zeros((n_con, n_param))
 
     def _check(self):
         """Make sure we aren't missing inputs or outputs."""
@@ -93,3 +113,5 @@ class SensitivityDriver(Driver):
             msg = "Missing outputs for gradient calculation"
             self.raise_exception(msg, ValueError)
 
+    def requires_derivs(self):
+        return True

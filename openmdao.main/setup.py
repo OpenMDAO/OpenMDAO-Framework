@@ -46,16 +46,16 @@ setup(name='openmdao.main',
       test_suite='nose.collector',
       zip_safe=False,
       install_requires=[
-          'argparse',
           'decorator',
           'mock',
           'networkx',
           'openmdao.units',
           'openmdao.util',
-          'pycrypto',
+          'pycrypto==2.3',
           'pyparsing',
+          'requests',
           'setuptools',
-          'Sphinx',
+          'Sphinx==1.2.2',
           'Traits==4.3.0',
           'zope.interface',
       ],
@@ -65,10 +65,9 @@ setup(name='openmdao.main',
       entry_points="""
       [console_scripts]
       idle=idlelib.PyShell:main
-      openmdao_docs=openmdao.util.view_docs:view_docs
       plugin=openmdao.main.plugin:plugin
       openmdao=openmdao.main.cli:openmdao
-      
+
       [openmdao.component]
       openmdao.main.assembly.Assembly = openmdao.main.assembly:Assembly
       openmdao.main.component_with_derivatives.ComponentWithDerivatives = openmdao.main.component_with_derivatives:ComponentWithDerivatives
@@ -95,6 +94,5 @@ setup(name='openmdao.main',
       openmdao.main.datatypes.uncertaindist.UncertainDistVar = openmdao.main.datatypes.uncertaindist:UncertainDistVar
       openmdao.main.datatypes.vtree.VarTree = openmdao.main.datatypes.vtree:VarTree
       openmdao.main.datatypes.array.Array = openmdao.main.datatypes.array:Array
-      
       """,
       )

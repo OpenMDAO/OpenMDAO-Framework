@@ -1,4 +1,4 @@
-import ordereddict
+from collections import OrderedDict
 
 from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.assembly import Assembly
@@ -63,7 +63,7 @@ class HasCouplingVars(object):
 
     def __init__(self, parent):
         self._parent = parent
-        self._couples = ordereddict.OrderedDict()
+        self._couples = OrderedDict()
 
     def add_coupling_var(self, indep_dep, name=None, start=None):
         """Adds a new coupling var to the assembly.
@@ -150,7 +150,7 @@ class HasCouplingVars(object):
                 couple.indep.set(couple.start, self._parent.get_expr_scope())
 
     def mimic(self, target):
-        self._couples = ordereddict.OrderedDict()
+        self._couples = OrderedDict()
         for key, val in target._couples.items():
             self._couples[key] = val.copy()
 
@@ -187,19 +187,31 @@ class ArchitectureAssembly(Assembly):
         self.init_parameters()
         self.init_coupling_vars()
 
-    def check_config(self, strict=False):
-        """Checks the configuration of the assembly to make sure it's compatible
-        with the architecture. Then initializes all the values in the
-        parameters and coupling vars and configures the architecture if it
-        hasn't been done already.
-        """
-        super(ArchitectureAssembly, self).check_config(strict=strict)
+    def configure_recording(self, recording_options=None):
+        self.check_config()
+        super(ArchitectureAssembly, self).configure_recording(recording_options)
+
+    def setup_init(self):
         if self.architecture is not None:
-            self.architecture.check_config(strict=strict)
+            self.architecture.check_config(strict=False)
             if not self.architecture.configured:
                 self.architecture.configure()
                 self.architecture.configured = True
+        super(ArchitectureAssembly, self).setup_init()
 
+    # def check_config(self, strict=False):
+    #     """Checks the configuration of the assembly to make sure it's compatible
+    #     with the architecture. Then initializes all the values in the
+    #     parameters and coupling vars and configures the architecture if it
+    #     hasn't been done already.
+    #     """
+    #     super(ArchitectureAssembly, self).check_config(strict=strict)
+    #     if self.architecture is not None:
+    #         self.architecture.check_config(strict=strict)
+    #         if not self.architecture.configured:
+    #             self.architecture.configure()
+    #             self.architecture.configured = True
+    #
     def get_local_des_vars_by_comp(self):
         """Return a dictionary of component names/list of parameters for
         all single-target parameters."""
@@ -308,6 +320,7 @@ class ArchitectureAssembly(Assembly):
                     pcomps.extend(delegate.list_pseudocomps())
         return pcomps
 
+
 class OptProblem(ArchitectureAssembly):
     """Class for specifying test problems for optimization
     algorithms and architectures."""
@@ -350,6 +363,7 @@ class OptProblem(ArchitectureAssembly):
 
         try:
             for k, v in self.get_objectives().iteritems():
+                v.activate(self)
                 sol = self.solution[k]
                 error[k] = v.evaluate()-sol
         except KeyError:

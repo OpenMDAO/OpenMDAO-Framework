@@ -1,0 +1,15 @@
+package:
+    name: openmdao.examples
+    version: dev
+    
+requirements:
+    run:
+        - python
+        - setuptools
+        - numpy
+        - openmdao.examples.bar3simulation
+        - openmdao.examples.expected_improvement
+        - openmdao.examples.mdao
+        - openmdao.examples.metamodel_tutorial
+        - openmdao.examples.nozzle_geometry_doe
+        - openmdao.examples.simple

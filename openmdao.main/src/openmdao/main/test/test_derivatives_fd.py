@@ -8,6 +8,7 @@ import numpy as np
 
 from openmdao.main.api import Component, VariableTree, Driver, Assembly, set_as_top
 from openmdao.main.datatypes.api import Float, Array
+from openmdao.main.depgraph import simple_node_iter
 from openmdao.main.test.test_derivatives import SimpleDriver, ArrayComp2D
 from openmdao.test.execcomp import ExecCompWithDerivatives, ExecComp
 from openmdao.util.testutil import assert_rel_error
@@ -87,8 +88,8 @@ class TestFiniteDifference(unittest.TestCase):
 
         model.run()
 
-        J = model.driver.workflow.calc_gradient(inputs=['comp.x1', 'comp.x2', 'comp.x3', 'comp.x4'],
-                                                outputs=['comp.y'])
+        J = model.driver.calc_gradient(inputs=['comp.x1', 'comp.x2', 'comp.x3', 'comp.x4'],
+                                       outputs=['comp.y'])
 
         assert_rel_error(self, J[0, 0], 4.0, 0.0001)
         assert_rel_error(self, J[0, 1], 4.2, 0.0001)
@@ -100,14 +101,14 @@ class TestFiniteDifference(unittest.TestCase):
         model.add('driver', SimpleDriver())
         model.driver.workflow.add(['comp'])
         model.driver.add_parameter('comp.x1', low=-100, high=100, fd_step=.1)
-        J = model.driver.workflow.calc_gradient(outputs=['comp.y'])
+        J = model.driver.calc_gradient(outputs=['comp.y'])
 
         assert_rel_error(self, J[0, 0], 4.2, 0.0001)
 
         # Parameter groups
 
         model.driver.add_parameter(['comp.x2', 'comp.x3'], low=-100, high=100, fd_step=.001)
-        J = model.driver.workflow.calc_gradient(outputs=['comp.y'])
+        J = model.driver.calc_gradient(outputs=['comp.y'])
 
         assert_rel_error(self, J[0, 1], 8.004, 0.0001)
 
@@ -117,8 +118,7 @@ class TestFiniteDifference(unittest.TestCase):
 
 
         model.run()
-        model.driver.workflow.config_changed()
-        J = model.driver.workflow.calc_gradient(inputs=['comp.x4'], mode='fd')
+        J = model.driver.calc_gradient(inputs=['comp.x4'], mode='fd')
         assert_rel_error(self, J[0, 0], 1.006, 0.0001)
 
 
@@ -131,8 +131,8 @@ class TestFiniteDifference(unittest.TestCase):
 
         model.run()
 
-        J = model.driver.workflow.calc_gradient(inputs=['comp.x1', 'comp.x2'],
-                                                outputs=['comp.y'])
+        J = model.driver.calc_gradient(inputs=['comp.x1', 'comp.x2'],
+                                       outputs=['comp.y'])
 
         assert_rel_error(self, J[0, 0], 4.0, 0.0001)
         # Central gets this right even with a bad step
@@ -141,21 +141,20 @@ class TestFiniteDifference(unittest.TestCase):
     def test_fd_step_type_relative(self):
 
         model = set_as_top(Assembly())
+        model.add('driver', SimpleDriver())
         model.add('comp', MyComp())
         model.driver.workflow.add(['comp'])
         model.comp.x1 = 1e12
         model.run()
 
-        J = model.driver.workflow.calc_gradient(inputs=['comp.x1'],
-                                                outputs=['comp.y'])
+        J = model.driver.calc_gradient(inputs=['comp.x1'],
+                                       outputs=['comp.y'])
 
         assert_rel_error(self, J[0, 0], 0.0, 0.0001)
 
         model.driver.gradient_options.fd_step_type = 'relative'
-        model.run()
-        model.driver.workflow.config_changed()
-        J = model.driver.workflow.calc_gradient(inputs=['comp.x1'],
-                                                outputs=['comp.y'])
+        J = model.driver.calc_gradient(inputs=['comp.x1'],
+                                       outputs=['comp.y'])
 
         assert_rel_error(self, J[0, 0], 4.0e12, 0.0001)
 
@@ -166,25 +165,22 @@ class TestFiniteDifference(unittest.TestCase):
         model.driver.workflow.add(['comp'])
 
         model.run()
-        model.driver.workflow.config_changed()
-        J = model.driver.workflow.calc_gradient(inputs=['comp.x5'],
-                                                outputs=['comp.y'])
+        J = model.driver.calc_gradient(inputs=['comp.x5'],
+                                       outputs=['comp.y'])
         assert_rel_error(self, J[0, 0], 4.2, 0.0001)
 
 
         model.driver.gradient_options.fd_step_type = 'bounds_scaled'
         model.run()
-        model.driver.workflow.config_changed()
-        J = model.driver.workflow.calc_gradient(inputs=['comp.x6'],
-                                                outputs=['comp.y'])
+        J = model.driver.calc_gradient(inputs=['comp.x6'],
+                                       outputs=['comp.y'])
         assert_rel_error(self, J[0, 0], 4.2, 0.0001)
 
 
         model.run()
-        model.driver.workflow.config_changed()
         try:
-            J = model.driver.workflow.calc_gradient(inputs=['comp.x7'],
-                                                    outputs=['comp.y'])
+            J = model.driver.calc_gradient(inputs=['comp.x7'],
+                                           outputs=['comp.y'])
         except RuntimeError as err:
             self.assertEqual(str(err),
                "For variable 'comp.x7', a finite "
@@ -201,7 +197,7 @@ class TestFiniteDifference(unittest.TestCase):
         model.driver.gradient_options.fd_step_type = 'bounds_scaled'
         model.driver.add_parameter('comp.x2', low=0.0, high=1000.0,
                                    fd_step=.0001)
-        J = model.driver.workflow.calc_gradient(outputs=['comp.y'])
+        J = model.driver.calc_gradient(outputs=['comp.y'])
         assert_rel_error(self, J[0, 0], 4.2, 0.0001)
 
     def test_force_fd(self):
@@ -214,16 +210,15 @@ class TestFiniteDifference(unittest.TestCase):
         model.x2 = 1.0
         model.run()
 
-        J = model.driver.workflow.calc_gradient(inputs=['comp.x1', 'comp.x2'],
-                                                outputs=['comp.y'])
+        J = model.driver.calc_gradient(inputs=['comp.x1', 'comp.x2'],
+                                       outputs=['comp.y'])
         self.assertEqual(model.comp.exec_count, 1)
         self.assertEqual(model.comp.derivative_exec_count, 1)
 
         # Component-wise force FD
         model.comp.force_fd = True
-        model.driver.workflow.config_changed()
-        J = model.driver.workflow.calc_gradient(inputs=['comp.x1', 'comp.x2'],
-                                                outputs=['comp.y'])
+        J = model.driver.calc_gradient(inputs=['comp.x1', 'comp.x2'],
+                                       outputs=['comp.y'])
         self.assertEqual(model.comp.exec_count, 3)
         self.assertEqual(model.comp.derivative_exec_count, 1)
 
@@ -238,9 +233,8 @@ class TestFiniteDifference(unittest.TestCase):
         model.comp.force_fd = False
         model.driver.gradient_options.force_fd = True
         old_count = model.comp.exec_count
-        model.driver.workflow.config_changed()
-        J = model.driver.workflow.calc_gradient(inputs=['comp.x1', 'comp.x2'],
-                                                outputs=['comp.y'])
+        J = model.driver.calc_gradient(inputs=['comp.x1', 'comp.x2'],
+                                       outputs=['comp.y'])
         self.assertEqual(model.comp.exec_count - old_count, 2)
         self.assertEqual(model.comp.derivative_exec_count, 1)
 
@@ -265,35 +259,30 @@ class TestFiniteDifference(unittest.TestCase):
 
         top.run()
 
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
-                                              outputs=['comp5.y'],
-                                              mode='forward')
+        J = top.driver.calc_gradient(inputs=['comp1.x'],
+                                     outputs=['comp5.y'],
+                                     mode='forward')
 
-        pa1 = top.driver.workflow._derivative_graph.node['~0']['pa_object']
-        self.assertTrue('comp1' not in pa1.comps)
-        self.assertTrue('comp2' in pa1.comps)
-        self.assertTrue('comp3' in pa1.comps)
-        self.assertTrue('comp4' in pa1.comps)
-        self.assertTrue('comp5' not in pa1.comps)
-        self.assertTrue(pa1.comps == pa1.itercomps)
+        self.assertTrue(len(top.driver.workflow._system.subsystems()) == 4)
+        comp_list = simple_node_iter(top.driver.workflow._system.subsystems()[2]._nodes)
+        self.assertTrue(len(comp_list) == 3)
+        self.assertTrue('comp2' in comp_list)
+        self.assertTrue('comp3' in comp_list)
+        self.assertTrue('comp4' in comp_list)
 
         top.replace('comp4', ExecCompWithDerivatives(['y=2.0*x + 3.0*x2'],
                     ['dy_dx = 2.0', 'dy_dx2 = 3.0']))
 
         top.run()
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
-                                              outputs=['comp5.y'],
-                                              mode='forward')
+        J = top.driver.calc_gradient(inputs=['comp1.x'],
+                                     outputs=['comp5.y'],
+                                     mode='forward')
 
-        pa1 = top.driver.workflow._derivative_graph.node['~0']['pa_object']
-        self.assertTrue('comp1' not in pa1.comps)
-        self.assertTrue('comp2' in pa1.comps)
-        self.assertTrue('comp3' not in pa1.comps)
-        self.assertTrue('comp4' not in pa1.comps)
-        self.assertTrue('comp5' not in pa1.comps)
-        self.assertTrue(pa1.comps == pa1.itercomps)
+        self.assertTrue(len(top.driver.workflow._system.subsystems()) == 6)
+        comp_list = simple_node_iter(top.driver.workflow._system.subsystems()[2]._nodes)
+        self.assertTrue(len(comp_list) == 1)
+        self.assertTrue('comp2' in comp_list)
 
     def test_smart_low_high_array_param(self):
 
@@ -304,7 +293,7 @@ class TestFiniteDifference(unittest.TestCase):
         driver.add_parameter('paraboloid.x', low=[-100, -99], high=[100, 99])
         driver.workflow.add('paraboloid')
         top.run()
-        J = top.driver.workflow.calc_gradient()
+        J = top.driver.calc_gradient()
 
     def test_smart_low_high(self):
 
@@ -321,12 +310,12 @@ class TestFiniteDifference(unittest.TestCase):
 
         top.comp.x1 = -0.95
         top.run()
-        J = top.driver.workflow.calc_gradient()
+        J = top.driver.calc_gradient()
         assert_rel_error(self, J[0, 0], -3.6, 0.001)
 
         top.comp.x1 = 0.95
         top.run()
-        J = top.driver.workflow.calc_gradient()
+        J = top.driver.calc_gradient()
         assert_rel_error(self, J[0, 0], 3.6, 0.001)
 
     def test_PA_slices(self):
@@ -340,15 +329,68 @@ class TestFiniteDifference(unittest.TestCase):
 
         top.driver.add_parameter('comp.x', low=-100, high=100)
         top.driver.add_constraint('comp.y[0][-1] < 1.0')
-        top.driver.add_constraint('sum(comp.y) < 4.0')
+        top.driver.add_constraint('numpy.sum(comp.y) < 4.0')
 
         top.run()
-        J = top.driver.workflow.calc_gradient(mode='forward')
-
+        J = top.driver.calc_gradient(mode='forward')
+        print J
         assert_rel_error(self, J[0, 0], 4.0, 0.001)
         assert_rel_error(self, J[0, 1], 2.0, 0.001)
         assert_rel_error(self, J[0, 2], 6.0, 0.001)
         assert_rel_error(self, J[0, 3], 5.0, 0.001)
+
+    def test_broadcast_input_to_opaque_system(self):
+
+        # This test replicates a bug when finite differencing a boundary variable that
+        # broadcasts to multiple places.
+
+        top = set_as_top(Assembly())
+        top.add('comp1', ExecComp(['y=7.0*x1']))
+        top.add('comp2', ExecComp(['y=5.0*x1 + 2.0*x2']))
+        top.add('driver', SimpleDriver())
+        top.driver.workflow.add(['comp1', 'comp2'])
+
+        top.add('x1', Float(3.0, iotype='in'))
+        top.connect('comp1.y', 'comp2.x2')
+        top.connect('x1', 'comp1.x1')
+        top.connect('x1', 'comp2.x1')
+
+        top.run()
+
+        J = top.driver.calc_gradient(inputs=['x1'],
+                                     outputs=['comp2.y'],
+                                     mode='forward')
+
+        assert_rel_error(self, J[0, 0], 19.0, .001)
+
+    def test_branch_output_in_opaque_system(self):
+
+        # This test replicates a bug where an interior output was missing in
+        # an opaque system.
+
+        top = set_as_top(Assembly())
+        top.add('nest', Assembly())
+        top.nest.add('comp1', ExecComp(['y=7.0*x1']))
+        top.nest.add('comp2', ExecComp(['y=5.0*x1 + 2.0*x2']))
+        top.driver.workflow.add(['nest'])
+        top.nest.driver.workflow.add(['comp1', 'comp2'])
+
+        top.nest.add('x1', Float(3.0, iotype='in'))
+        top.nest.add('y2', Float(3.0, iotype='out'))
+        top.nest.connect('comp1.y', 'comp2.x2')
+        top.nest.connect('x1', 'comp1.x1')
+        top.nest.connect('x1', 'comp2.x1')
+        top.nest.create_passthrough('comp1.y')
+        top.nest.connect('comp2.y', 'y2')
+
+        top.run()
+
+        J = top.driver.calc_gradient(inputs=['nest.x1'],
+                                     outputs=['nest.y', 'nest.y2'],
+                                     mode='forward')
+
+        assert_rel_error(self, J[0, 0], 7.0, .001)
+        assert_rel_error(self, J[1, 0], 19.0, .001)
 
 if __name__ == '__main__':
     import nose

@@ -7,12 +7,10 @@ import unittest
 
 import numpy as np
 
-from openmdao.lib.components.geomcomp import GeomComponent
-from openmdao.lib.geometry.box import BoxParametricGeometry
-from openmdao.main.api import Component, Assembly, set_as_top
+from openmdao.main.api import Component, Assembly, set_as_top, Workflow
 from openmdao.main.datatypes.api import Float, Str, Int
-from openmdao.main.interfaces import IParametricGeometry, implements, \
-                                     IStaticGeometry
+from openmdao.main.depgraph import simple_node_iter
+from openmdao.main.test.simpledriver import SimpleDriver
 from openmdao.main.variable import Variable
 from openmdao.util.testutil import assert_rel_error
 
@@ -32,13 +30,24 @@ class DataObject(object):
     def get(self):
         return self.x, self.y, self.z
 
+    def get_flattened_size(self):
+        return 3
+
+    def get_flattened_value(self):
+        return np.array([self.x, self.y, self.z])
+
+    def set_flattened_value(self, val):
+        self.x = val[0]
+        self.y = val[1]
+        self.z = val[2]
+
 class Comp_Send(Component):
     '''Passes a data object as output.'''
 
     p1 = Float(0.0, iotype='in')
     p2 = Float(0.0, iotype='in')
 
-    data = Variable(DataObject(), iotype='out', data_shape=(3, ))
+    data = Variable(DataObject(), iotype='out')
     dummy = Float(1.0, iotype='out')
 
     def execute(self):
@@ -85,7 +94,7 @@ class Comp_Send(Component):
 class Comp_Receive(Component):
     '''Takes a data object as input.'''
 
-    data = Variable(iotype='in')
+    data = Variable(DataObject(), iotype='in')
 
     q1 = Float(0.0, iotype='out')
     q2 = Float(0.0, iotype='out')
@@ -170,19 +179,14 @@ class TestcaseDerivObj(unittest.TestCase):
         outputs = self.outputs
         top = self.top
 
-        J = top.driver.workflow.calc_gradient(inputs, outputs, mode='fd')
+        J = top.driver.calc_gradient(inputs, outputs, mode='fd')
         self._check_J(J)
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs, outputs, mode='forward')
+        J = top.driver.calc_gradient(inputs, outputs, mode='forward')
         self._check_J(J)
 
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs, outputs, mode='adjoint')
+        J = top.driver.calc_gradient(inputs, outputs, mode='adjoint')
         self._check_J(J)
-
-        edges = top.driver.workflow._edges
-        self.assertTrue(edges['c1.data'] == ['c2.data'])
 
     def _check_J(self, J):
         assert_rel_error(self, J[0, 0], -6.0, .00001)
@@ -204,49 +208,6 @@ class TestcaseDerivObj(unittest.TestCase):
         self.top.replace('c2', Comp_Receive_ApplyDeriv())
         self.top.run()
         self._check_derivs()
-
-
-class GeoWithDerivatives(BoxParametricGeometry):
-    '''Adds derivative functions to the famous box geometry.'''
-
-    implements(IParametricGeometry, IStaticGeometry)
-
-    def apply_deriv(self, arg, result):
-        pass
-
-    def apply_derivT(self, arg, result):
-        pass
-
-    def provideJ(self):
-        pass
-
-class Testcase_geom_deriv(unittest.TestCase):
-    """ Test a simple object that passes a geometry. """
-
-    def setUp(self):
-        """ Called before each test. """
-        pass
-
-    def tearDown(self):
-        """ Called after each test. """
-        pass
-
-    def test_basic_delegation(self):
-
-        top = Assembly()
-        top.add('geo', GeomComponent())
-
-        # Function not there before we slot
-        self.assertTrue(not hasattr(top.geo, 'apply_deriv'))
-        self.assertTrue(not hasattr(top.geo, 'apply_derivT'))
-        self.assertTrue(not hasattr(top.geo, 'provideJ'))
-
-        top.geo.add('parametric_geometry', GeoWithDerivatives())
-
-        # Now they should be there.
-        self.assertTrue(hasattr(top.geo, 'apply_deriv'))
-        self.assertTrue(hasattr(top.geo, 'apply_derivT'))
-        self.assertTrue(hasattr(top.geo, 'provideJ'))
 
 
 class ND_Send(Component):
@@ -294,6 +255,7 @@ class TestcaseNonDiff(unittest.TestCase):
     def test_non_diff(self):
         # Test grouping comps with non-differentiable connections.
         model = set_as_top(Assembly())
+        model.add('driver', SimpleDriver())
         model.add('comp1', ND_Send())
         model.add('comp2', ND_Receive())
         model.connect('comp1.y', 'comp2.x')
@@ -303,22 +265,18 @@ class TestcaseNonDiff(unittest.TestCase):
 
         inputs = ['comp1.x']
         outputs = ['comp2.y']
-        J = model.driver.workflow.calc_gradient(inputs, outputs, mode='forward')
+        J = model.driver.calc_gradient(inputs, outputs, mode='forward')
 
         self.assertAlmostEqual(J[0, 0], 2.5)
-        meta = model.driver.workflow._derivative_graph.node['~0']
-        self.assertTrue('comp1' in meta['pa_object'].comps)
-        self.assertTrue('comp2' in meta['pa_object'].comps)
+        msystem = model.driver.workflow._system
+        self.assertTrue(len(msystem.subsystems()) == 2)
+        self.assertTrue(len(msystem.subsystems()[1]._inner_system.subsystems()) == 3)
+        self.assertTrue(msystem.subsystems()[1]._inner_system.subsystems()[1].name == 'comp1')
+        self.assertTrue(msystem.subsystems()[1]._inner_system.subsystems()[2].name == 'comp2')
 
-        model.run()
-        model.driver.workflow.config_changed()
-        J = model.driver.workflow.calc_gradient(inputs, outputs, mode='fd')
+        J = model.driver.calc_gradient(inputs, outputs, mode='fd')
 
-        self.assertAlmostEqual(J[0, 0], 2.5)
-        meta = model.driver.workflow._derivative_graph.node['~0']
-        self.assertTrue('comp1' in meta['pa_object'].comps)
-        self.assertTrue('comp2' in meta['pa_object'].comps)
-
+    def test_non_diff_subassy(self):
         # What about subassys?
 
         model = set_as_top(Assembly())
@@ -336,12 +294,9 @@ class TestcaseNonDiff(unittest.TestCase):
 
         inputs = ['comp1.x']
         outputs = ['sub.y']
-        J = model.driver.workflow.calc_gradient(inputs, outputs, mode='forward')
+        J = model.driver.calc_gradient(inputs, outputs, mode='forward')
 
         self.assertAlmostEqual(J[0, 0], 2.5)
-        meta = model.driver.workflow._derivative_graph.node['~0']
-        self.assertTrue('comp1' in meta['pa_object'].comps)
-        self.assertTrue('sub' in meta['pa_object'].comps)
 
 if __name__ == '__main__':
     import nose

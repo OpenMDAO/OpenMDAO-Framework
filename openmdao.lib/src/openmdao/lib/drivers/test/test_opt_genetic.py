@@ -207,7 +207,7 @@ class TestCase(unittest.TestCase):
             self.top.driver.add_parameter('comp.y')
         except ValueError as err:
             self.assertEqual(str(err),
-                             "driver: 'comp.y' is already a Parameter target")
+                             "driver: ['comp.y'] are already Parameter targets")
         else:
             self.fail('RuntimeError expected')
 

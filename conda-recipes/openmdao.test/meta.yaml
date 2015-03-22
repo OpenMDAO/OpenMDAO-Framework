@@ -1,0 +1,39 @@
+{% set pkg_version = environ['PKG_VERSION'] %}
+{% set remote = "https://github.com/OpenMDAO/OpenMDAO-Framework.git" %}
+
+{% if pkg_version == "dev" %}
+{% set source="git_url: {}\n  git_branch: {}".format(remote, pkg_version) %}
+{% else %}
+{% set source="  git_url: {}\n  git_branch: {}".format(remote, pkg_version) %}
+{% endif %}
+
+package:
+ name: openmdao.test
+ version: !!str {{ pkg_version }}
+
+source:
+{{ source }}
+
+requirements:
+  build:
+    - python
+    - setuptools
+
+  run:
+    - python
+    - setuptools
+    - openmdao.main
+    - nose
+
+build:
+  preserve_egg_dir: True
+  entry_points:
+    - openmdao.test.execcomp.ExecComp = openmdao.test.execcomp:ExecComp
+    - nosetimerplugin = openmdao.test.nosetimer:TestTimer
+    - nosesummaryplugin = openmdao.test.testing:TestFailureSummary
+    - noseearlyplugin = openmdao.test.early_report:EarlyTestInfo
+
+about:
+  home:  http://openmdao.org
+  license:  Apache 2.0
+  summary:  "Open-source Multidisciplinary Design, Analysis and Optimazation framework in Python."

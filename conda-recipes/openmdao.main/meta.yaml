@@ -1,0 +1,72 @@
+{% set pkg_version = environ['PKG_VERSION'] %}
+{% set remote = "https://github.com/OpenMDAO/OpenMDAO-Framework.git" %}
+
+{% if pkg_version == "dev" %}
+{% set source="git_url: {}\n  git_branch: {}".format(remote, pkg_version) %}
+{% else %}
+{% set source="  git_url: {}\n  git_branch: {}".format(remote, pkg_version) %}
+{% endif %}
+
+package:
+ name: openmdao.main
+ version: !!str {{ pkg_version }}
+
+source:
+{{ source }}
+
+requirements:
+  build:
+    - python
+    - setuptools
+
+  run:
+    - numpy >=1.7.1
+    - python
+    - decorator
+    - mock
+    - networkx
+    - openmdao.units
+    - openmdao.util
+    - pip
+    - pycrypto
+    - pyparsing
+    - requests
+    - setuptools
+    - sphinx
+    - traits ==4.3.0
+    - zope.interface
+
+build:
+  preserve_egg_dir: yes
+  entry_points:
+    - idle = idlelib.PyShell:main
+    - plugin = openmdao.main.plugin:plugin
+    - openmdao = openmdao.main.cli:openmdao
+    - openmdao.main.assembly.Assembly = openmdao.main.assembly:Assembly
+    - openmdao.main.component_with_derivatives.ComponentWithDerivatives = openmdao.main.component_with_derivatives:ComponentWithDerivatives
+    - openmdao.main.driver_uses_derivatives.DriverUsesDerivatives = openmdao.main.driver_uses_derivatives:DriverUsesDerivatives
+    - openmdao.main.problem_formulation.ArchitectureAssembly = openmdao.main.problem_formulation:ArchitectureAssembly
+    - openmdao.main.implicitcomp.ImplicitComponent = openmdao.main.implicitcomp:ImplicitComponent
+    - openmdao.main.datatypes.any.Any = openmdao.main.datatypes.any:Any
+    - openmdao.main.datatypes.bool.Bool = openmdao.main.datatypes.bool:Bool
+    - openmdao.main.datatypes.complex.Complex = openmdao.main.datatypes.complex:Complex
+    - openmdao.main.datatypes.dict.Dict = openmdao.main.datatypes.dict:Dict
+    - openmdao.main.datatypes.enum.Enum = openmdao.main.datatypes.enum:Enum
+    - openmdao.main.datatypes.event.Event = openmdao.main.datatypes.event:Event
+    - openmdao.main.datatypes.file.File = openmdao.main.datatypes.file:File
+    - openmdao.main.datatypes.float.Float = openmdao.main.datatypes.float:Float
+    - openmdao.main.datatypes.geom.Geom = openmdao.main.datatypes.geom:Geom
+    - openmdao.main.datatypes.instance.Base = openmdao.main.datatypes.instance:Base
+    - openmdao.main.datatypes.instance.Instance = openmdao.main.datatypes.instance:Instance
+    - openmdao.main.datatypes.int.Int = openmdao.main.datatypes.int:Int
+    - openmdao.main.datatypes.list.List = openmdao.main.datatypes.list:List
+    - openmdao.main.datatypes.slot.Slot = openmdao.main.datatypes.slot:Slot
+    - openmdao.main.datatypes.str.Str = openmdao.main.datatypes.str:Str
+    - openmdao.main.datatypes.uncertaindist.UncertainDistVar = openmdao.main.datatypes.uncertaindist:UncertainDistVar
+    - openmdao.main.datatypes.vtree.VarTree = openmdao.main.datatypes.vtree:VarTree
+    - openmdao.main.datatypes.array.Array = openmdao.main.datatypes.array:Array
+
+about:
+  home:  http://openmdao.org
+  license:  Apache 2.0
+  summary:  "Open-source Multidisciplinary Design, Analysis and Optimazation framework in Python."

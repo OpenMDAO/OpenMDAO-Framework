@@ -3,7 +3,13 @@ DB (Python's sqlite.)
 """
 
 import sys
-import sqlite3
+
+try:
+    import sqlite3
+except ImportError:
+    import logging
+    logging.error('No sqlite3 support for DBCaseIterator or DBCaseRecorder')
+
 import time
 from cPickle import dumps, loads, HIGHEST_PROTOCOL, UnpicklingError
 from optparse import OptionParser
@@ -13,6 +19,9 @@ from traits.trait_handlers import TraitListObject, TraitDictObject
 # pylint: disable=E0611,F0401
 from openmdao.main.interfaces import implements, ICaseRecorder, ICaseIterator
 from openmdao.main.case import Case
+
+from openmdao.lib.casehandlers.util import driver_map
+
 
 _casetable_attrs = set(['id', 'uuid', 'parent', 'msg', 'model_id', 'timeEnter'])
 _vartable_attrs = set(['var_id', 'name', 'case_id', 'sense', 'value'])
@@ -116,35 +125,6 @@ class DBCaseIterator(object):
                 yield Case(inputs=inputs, outputs=outputs, exc=exc,
                            case_uuid=text_id, parent_uuid=parent)
 
-    def get_attributes(self, io_only=True):
-        """ We need a custom get_attributes because we aren't using Traits to
-        manage our changeable settings. This is unfortunate and should be
-        changed to something that automates this somehow."""
-
-        attrs = {}
-        attrs['type'] = type(self).__name__
-        variables = []
-
-        attr = {}
-        attr['name'] = "dbfile"
-        attr['type'] = type(self.dbfile).__name__
-        attr['value'] = str(self.dbfile)
-        attr['connected'] = ''
-        attr['desc'] = 'Name of the database file to be iterated. Default ' \
-                       'is ":memory:", which reads the database from memory.'
-        variables.append(attr)
-
-        attr = {}
-        attr['name'] = "selectors"
-        attr['type'] = type(self.selectors).__name__
-        attr['value'] = str(self.selectors)
-        attr['connected'] = ''
-        attr['desc'] = 'String of additional SQL queries to apply to the case selection.'
-        variables.append(attr)
-
-        attrs["Inputs"] = variables
-        return attrs
-
 
 class DBCaseRecorder(object):
     """Records Cases to a relational DB (sqlite). Values other than floats,
@@ -202,14 +182,7 @@ class DBCaseRecorder(object):
 
     def register(self, driver, inputs, outputs):
         """Register names for later record call from `driver`."""
-        if hasattr(driver, 'parent'):
-            prefix = driver.parent.get_pathname()
-            if prefix:
-                prefix += '.'
-        else:
-            prefix = ''
-        self._cfg_map[driver] = ([prefix+name for name in inputs],
-                                 [prefix+name for name in outputs])
+        self._cfg_map[driver] = driver_map(driver, inputs, outputs)
 
     def record_constants(self, constants):
         """Record constant data - currently ignored."""
@@ -273,28 +246,6 @@ class DBCaseRecorder(object):
     def get_iterator(self):
         """Return a DBCaseIterator that points to our current DB."""
         return DBCaseIterator(dbfile=self._dbfile, connection=self._connection)
-
-    def get_attributes(self, io_only=True):
-        """ We need a custom get_attributes because we aren't using Traits to
-        manage our changeable settings. This is unfortunate and should be
-        changed to something that automates this somehow."""
-
-        attrs = {}
-        attrs['type'] = type(self).__name__
-        variables = []
-
-        attr = {}
-        attr['name'] = "dbfile"
-        attr['id'] = attr['name']
-        attr['type'] = type(self.dbfile).__name__
-        attr['value'] = str(self.dbfile)
-        attr['connected'] = ''
-        attr['desc'] = 'Name of the database file to be recorded. Default ' \
-                       'is ":memory:", which writes the database to memory.'
-        variables.append(attr)
-
-        attrs["Inputs"] = variables
-        return attrs
 
 
 """

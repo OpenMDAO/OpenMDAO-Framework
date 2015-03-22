@@ -36,7 +36,7 @@ setup(name='openmdao.util',
       zip_safe=False,
       install_requires=[
           'setuptools',
-          'pycrypto',
+          'pycrypto==2.3',
           'pyparsing',
           'Traits==4.3.0',
           #'PyYAML==3.09',
@@ -54,4 +54,3 @@ setup(name='openmdao.util',
       combine_paths=openmdao.util.lib:combine_paths
       """
       )
-

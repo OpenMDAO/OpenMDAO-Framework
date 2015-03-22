@@ -11,7 +11,8 @@ import __builtin__
 from openmdao.main.printexpr import _get_attr_node, _get_long_name, \
                                     transform_expression, ExprPrinter, \
                                     print_node
-from openmdao.main.index import INDEX, ATTR, CALL, SLICE, EXTSLICE
+from openmdao.main.array_helpers import flattened_value
+from openmdao.main.printexpr import transform_expression
 
 def _import_functs(mod, dct, names=None):
     if names is None:
@@ -54,21 +55,22 @@ else:
 
 
 from numpy import ndarray, ndindex, zeros, complex, imag, issubdtype
-
+from openmdao.main.interfaces import IComponent
+from openmdao.main.mp_support import has_interface
 
 _Missing = object()
 
-def is_in_process(scope, vname):
-    """Return True if the object referenced by vname is accessible
-    within scope via getattr from this process.
+def find_dotted(scope, vname):
+    """Return the object corresponding to the given name in the given
+    scope. Returns _Missing if object is not found.
     """
     vname = vname.split('[', 1)[0]
     obj = scope
     for name in vname.split('.'):
         obj = getattr(obj, name, _Missing)
         if obj is _Missing:
-            return False
-    return True
+            return obj
+    return obj
 
 def in_expr_locals(scope, name):
     """Return True if the given (dotted) name refers to something in our
@@ -106,7 +108,7 @@ class ExprVarScanner(ast.NodeVisitor):
         if long_name:
             self.varnames.add(long_name)
 
-    def get_names(self, scope):
+    def get_var_names(self, scope):
         """Returns a tuple of the form (local_vars, external_vars)."""
         local_vars = []
         extern_vars = []
@@ -114,7 +116,7 @@ class ExprVarScanner(ast.NodeVisitor):
         for v in self.varnames:
             if in_expr_locals(scope, v):
                 continue
-            if is_in_process(scope, v):
+            if find_dotted(scope, v) is not _Missing:
                 local_vars.append(v)
             else:
                 extern_vars.append(v)
@@ -159,7 +161,7 @@ class ExprTransformer(ast.NodeTransformer):
             return node
 
         names = ['scope']
-        self.expreval.var_names.add(name)
+        self.expreval.var_names.add(name.split('[',1)[0].split('(',1)[0])
 
         args = [ast.Str(s=name)]
         if self.rhs and len(self._stack) == 0:
@@ -171,9 +173,6 @@ class ExprTransformer(ast.NodeTransformer):
         names.append(fname)
 
         called_obj = _get_attr_node(names)
-        if subs:
-            args.append(ast.List(elts=subs, ctx=ast.Load()))
-
         return ast.copy_location(ast.Call(func=called_obj, args=args,
                                           ctx=node.ctx, keywords=keywords), node)
 
@@ -184,97 +183,12 @@ class ExprTransformer(ast.NodeTransformer):
         long_name = _get_long_name(node)
         if long_name is None:
             # this Attribute contains more than just names/attrs
-            if subs is None:
-                subs = []
-            subs[0:0] = [ast.Tuple(elts=[ast.Num(n=ATTR), ast.Str(s=node.attr)],
-                                   ctx=ast.Load())]
-            newnode = self.visit(node.value, subs)
-            if newnode is node.value:
-                return node
-            return newnode
+            long_name = print_node(node)
         return self._name_to_node(node, long_name, subs)
 
-    def _get_slice_vals(self, node):
-        lower = ast.Name(id='None', ctx=ast.Load()) if node.lower is None else self.visit(node.lower)
-        upper = ast.Name(id='None', ctx=ast.Load()) if node.upper is None else self.visit(node.upper)
-        step = ast.Name(id='None', ctx=ast.Load()) if node.step is None else self.visit(node.step)
-        return ast.Tuple(elts=[lower, upper, step], ctx=ast.Load())
-
     def visit_Subscript(self, node, subs=None):
-        self._stack.append(node)
-        if subs is None:
-            subs = []
-        if isinstance(node.slice, ast.Index):
-            subs[0:0] = [ast.Tuple(elts=[ast.Num(n=INDEX), self.visit(node.slice.value)],
-                                   ctx=ast.Load())]
-        elif isinstance(node.slice, ast.Slice):
-            subs[0:0] = [ast.Tuple(elts=[ast.Num(n=SLICE), self._get_slice_vals(node.slice)],
-                                   ctx=ast.Load())]
-        elif isinstance(node.slice, ast.ExtSlice):
-            elts = [ast.Num(n=EXTSLICE)]
-            for val in node.slice.dims:
-                if isinstance(val, ast.Slice):
-                    elts.append(self._get_slice_vals(val))
-                else:
-                    elts.append(self.visit(val.value))
-            subs[0:0] = [ast.Tuple(elts=elts, ctx=ast.Load())]
-        else:
-            raise ValueError("unknown Subscript child node: %s"
-                             % node.slice.__class__.__name__)
-        self._stack.pop()
-
-        newnode = self.visit(node.value, subs)
-        if newnode is node.value:
-            return node
-        elif isinstance(newnode, ast.Attribute):
-            node.value = newnode
-            node.slice = self.generic_visit(node.slice)
-            return node
-        return newnode
-
-    def visit_Call(self, node, subs=None):
-        name = _get_long_name(node.func)
-        if name is not None:
-            if in_expr_locals(self.expreval.scope, name) or '.' not in name:
-                return self.generic_visit(node)
-
-        if subs is None:
-            subs = []
-
-        self._stack.append(node)
-
-        call_list = []
-
-        if hasattr(node, 'kwargs') and node.kwargs:
-            if isinstance(node.kwargs, ast.Name):
-                raise SyntaxError("Can't translate '**%s'" % node.kwargs.id)
-            else:
-                raise SyntaxError("Can't translate '**' arguments")
-
-        if hasattr(node, 'starargs') and node.starargs:
-            if isinstance(node.starargs, ast.Name):
-                raise SyntaxError("Can't translate '**%s'" % node.starargs.id)
-            else:
-                raise SyntaxError("Can't translate '*' arguments")
-
-        if hasattr(node, 'keywords'):
-            elts = [ast.Tuple(elts=[ast.Str(kw.arg), self.visit(kw.value)],
-                              ctx=ast.Load()) for kw in node.keywords]
-            if len(call_list) > 0 or len(elts) > 0:
-                call_list.append(ast.List(elts=elts, ctx=ast.Load()))
-
-        if len(node.args) > 0 or len(call_list) > 0:
-            call_list.append(ast.List(elts=[self.visit(arg) for arg in node.args],
-                                      ctx=ast.Load()))
-
-        self._stack.pop()
-
-        # call_list is reversed here because we built it backwards in order
-        # to make it a little easier to leave off unnecessary empty stuff
-        subs[0:0] = [ast.Tuple(elts=[ast.Num(n=CALL)]+call_list[::-1],
-                               ctx=ast.Load())]
-
-        return self.visit(node.func, subs)
+        if not self._stack:
+            return self._name_to_node(node, print_node(node))
 
     def visit_Module(self, node, subs=None):
         # Make sure there is only one statement or expression
@@ -576,19 +490,7 @@ class ExprEvaluator(object):
         # compile the transformed AST
         ast.fix_missing_locations(new_ast)
         mode = 'exec' if isinstance(new_ast, ast.Module) else 'eval'
-        return (new_ast, compile(new_ast, '<string>', mode))
-
-    def _parse_set(self):
-        self._pre_parse()
-        if not self._allow_set:
-            raise ValueError("expression '%s' can't be set to a value"
-                             % self.text)
-        root = ast.parse("%s=_local_setter_" % self.text, mode='exec')
-        ## transform into a 'set' call to set the specified variable
-        assign_ast = ExprTransformer(self, getter=self.getter).visit(root)
-        ast.fix_missing_locations(assign_ast)
-        code = compile(assign_ast, '<string>', 'exec')
-        return (assign_ast, code)
+        return (new_ast, compile(new_ast, self.text, mode))
 
     def _parse(self):
         self.var_names = set()
@@ -634,6 +536,14 @@ class ExprEvaluator(object):
             return self._examiner.refs.copy()
         else:
             return self._examiner.refs
+
+    def ordered_refs(self):
+        """Returns a list of all variables referenced, in order from
+        left to right.
+        """
+        text = self.text
+        tups = [(text.index(r),r) for r in self.refs()]
+        return [t[1] for t in sorted(tups)]
 
     def _finite_difference(self, grad_code, var_dict, target_var, stepsize, index=None):
         """ Perform central difference
@@ -739,13 +649,6 @@ class ExprEvaluator(object):
         gradient = {}
         for var in wrt:
 
-            # A "fake" boundary connection in an assembly has a special
-            # format. All expression derivatives from inside the assembly are
-            # handled outside the assembly.
-            if var[0:4] == '@bin':
-                gradient[var] = 1.0
-                continue
-
             # Don't take derivative with respect to a variable that is not in
             # the expression
             if var not in inputs:
@@ -794,19 +697,13 @@ class ExprEvaluator(object):
 
         return gradient
 
-    def set(self, val, scope=None, force=False):
+    def set(self, val, scope=None):
         """Set the value of the referenced object to the specified value."""
-        scope = self._get_updated_scope(scope)
+        if not self.is_valid_assignee():
+            raise ValueError("expression '%s' can't be set to a value"
+                             % self.text)
 
-        # self.assignment_code is a compiled version of an assignment
-        # statement of the form 'somevar = _local_setter_', so we set
-        # _local_setter_ here and the exec call will pull it out of the
-        # locals dict.
-        _local_setter_ = val
-        _local_force_ = force
-        if self._assignment_code is None:
-            _, self._assignment_code = self._parse_set()
-        exec(self._assignment_code, _expr_dict, locals())
+        self._get_updated_scope(scope).set(self.text, val)
 
     def get_metadata(self, metaname=None, scope=None):
         """Return the specified piece of metadata if metaname is provided.
@@ -837,17 +734,22 @@ class ExprEvaluator(object):
 
         return metadata
 
-
-    def get_referenced_varpaths(self, copy=True):
-        """Return a set of pathnames relative to *scope.parent* and based on
-        the names of Variables referenced in our expression string.
+    def get_referenced_varpaths(self, copy=True, refs=False):
+        """Return a set of pathnames relative to *scope* and
+        based on the names of Variables referenced in our expression
+        string.  If refs is True, return full references that may
+        include not only the var name but also an array index, e.g.,
+        'x[3]' instead of just 'x'.
         """
         if self._code is None:
             self._parse()
-        if copy:
-            return self.var_names.copy()
+        if refs:
+            return self.refs(copy)
         else:
-            return self.var_names
+            if copy:
+                return self.var_names.copy()
+            else:
+                return self.var_names
 
     def get_referenced_compnames(self):
         """Return a set of Component names based on the pathnames of
@@ -859,7 +761,7 @@ class ExprEvaluator(object):
         nameset = set()
         for name in self.var_names:
             parts = name.split('.', 1)
-            if len(parts) > 1:
+            if len(parts) > 1 and has_interface(getattr(self.scope, parts[0]), IComponent):
                 nameset.add(parts[0])
         return nameset
 
@@ -880,32 +782,18 @@ class ExprEvaluator(object):
             return self.var_names.copy()
         return []
 
-    def scope_transform(self, scope, new_scope, parent=None):
-        """Return a transformed version of our text string where the attribute
-        names are changed based on a change in scope to the given object.
+    def name_changed(self, old, new):
+        """Given an old component name and a new one, change the names of
+        any variables in this expression that refer to variables belonging
+        to the old component.  Return a transformed expression string.
         """
-        if self._code is None:
-            self._parse()
+        mapping = { old: new }
 
-        oldname = scope.name + '.' if scope.name else ''
-        newname = new_scope.name + '.' if new_scope.name else ''
-        if scope is new_scope.parent or scope is parent:
-            oldname = 'parent.'
-        elif new_scope is scope.parent or new_scope is parent:
-            newname = 'parent.'
+        text = transform_expression(self.text, mapping)
+        if self.text != text:
+            self.text = text
 
-        mapping = {}
-        for var in self.get_referenced_varpaths(copy=False):
-            if var.startswith(newname):
-                mapping[var] = var[len(newname):]
-            else:
-                mapping[var] = oldname+var
-
-        try:
-            return transform_expression(self.text, mapping)
-        except SyntaxError as err:
-            raise SyntaxError("failed to transform expression '%s': %s"
-                              % (self.text, str(err)))
+        return text
 
     def __eq__(self, other):
         if isinstance(other, self.__class__):
@@ -953,46 +841,3 @@ class ConnectedExprEvaluator(ExprEvaluator):
         if super(ConnectedExprEvaluator, self).refers_to(name):
             return True
         return name in self.refs(copy=False)
-
-if __name__ == '__main__':
-    import sys
-    from openmdao.main.container import build_container_hierarchy
-
-    txt = ''.join(sys.argv[1:])
-    root = ast.parse(txt, mode='exec')
-    print 'original:\n %s' % txt
-
-    print '\noriginal AST dump:'
-    print ast.dump(root, annotate_fields=True)
-
-    print '\nprinted AST:'
-    ep = ExprPrinter()
-    ep.visit(root)
-    print ep.get_text()
-
-    top = build_container_hierarchy({
-        'a': {
-            'b': { 'c': 1, 'd': 2 }
-            },
-        'x': {
-            'y': { 'z': 3.14 }
-            }
-        })
-
-    expreval = ExprEvaluator(txt, scope=top)
-    root = ExprTransformer(expreval).visit(root)
-    print '\ntransformed AST dump:'
-    print ast.dump(root, annotate_fields=True)
-
-    print '\nprinted transformed AST:'
-    ep = ExprPrinter()
-    ep.visit(root)
-    print ep.get_text()
-
-    print '\nvars referenced: %s' % expreval.get_referenced_varpaths(copy=False)
-
-    print '\nattempting to compile the transformed AST...'
-    ast.fix_missing_locations(root)
-    code = compile(root, '<string>', 'exec')
-
-

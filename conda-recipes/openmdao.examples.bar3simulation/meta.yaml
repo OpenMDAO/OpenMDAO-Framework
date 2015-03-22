@@ -1,0 +1,31 @@
+package:
+  name: openmdao.examples.bar3simulation
+  version: !!str {{ pkg_version }}
+
+source:
+    path: ../../examples/openmdao.examples.bar3simulation
+
+build:
+    preserve_egg_dir: True
+    
+requirements:
+  build:
+    - python
+    - numpy ==1.7.1
+    - setuptools
+    - libpython # [win]
+    - openmdao.main
+    - openmdao.lib
+
+  run:
+    - python
+    - numpy >=1.7.1
+    - setuptools
+    - libpython # [win]
+    - openmdao.main
+    - openmdao.lib
+
+about:
+  home:  http://openmdao.org
+  license:  Apache 2.0
+  summary:  "Open-source Multidisciplinary Design, Analysis and Optimazation framework in Python."

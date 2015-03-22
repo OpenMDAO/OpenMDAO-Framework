@@ -7,8 +7,10 @@ import os.path
 import pkg_resources
 import shutil
 import sys
+import tempfile
 import unittest
 
+from openmdao.main.api import SimulationRoot
 from openmdao.main.resource import HOME_DIRECTORY, WORKING_DIRECTORY
 from openmdao.main.grid_engine import GridEngineAllocator, GridEngineServer
 from openmdao.main.mp_support import is_instance
@@ -22,6 +24,11 @@ class TestCase(unittest.TestCase):
         pkg_resources.resource_filename('openmdao.main', 'test'))
 
     def setUp(self):
+        self.tempdir = tempfile.mkdtemp(prefix='test_ge-')
+        self.startdir = os.getcwd()
+        os.chdir(self.tempdir)
+        SimulationRoot.chroot(self.tempdir)
+
         # Force use of fake 'qsub'.
         self.orig_qsub = list(GridEngineServer._QSUB)
         GridEngineServer._QSUB[:] = \
@@ -35,11 +42,13 @@ class TestCase(unittest.TestCase):
     def tearDown(self):
         GridEngineServer._QSUB[:] = self.orig_qsub
         GridEngineAllocator._QHOST[:] = self.orig_qhost
-        for name in ('echo.in', 'echo.out', 'echo.err', 'qsub.out'):
-            if os.path.exists(name):
-                os.remove(name)
-        for name in glob.glob('GridEngineTestServer*'):
-            shutil.rmtree(name, onerror=onerror)
+        os.chdir(self.startdir)
+        SimulationRoot.chroot(self.startdir)
+        if not os.environ.get('OPENMDAO_KEEPDIRS', False):
+            try:
+                shutil.rmtree(self.tempdir)
+            except OSError:
+                pass
 
     def test_allocator(self):
         logging.debug('')
@@ -157,11 +166,11 @@ class TestCase(unittest.TestCase):
             lines = inp.readlines()
         actual = ''.join(lines)
         expected = """\
--V -sync yes -b yes -wd . -h -r yes -M user1@host1,user2@host2 -N TestJob -i echo.in -o echo.out -j yes -ar res-1234 -q debug_q -p 42 -a 201202081642.00 -A CFD-R-US -m be -pe ompi 256-512 -l h_cpu=0:0:1 -l h_rt=0:0:2 -ac name=value echo hello world
+-V -sync yes -b yes -cwd -h -r yes -M user1@host1,user2@host2 -N TestJob -i echo.in -o echo.out -j yes -ar res-1234 -q debug_q -p 42 -a 201202081642.00 -A CFD-R-US -m be -pe ompi 256-512 -l h_cpu=0:0:1 -l h_rt=0:0:2 -ac name=value echo hello world
 -V
 -sync arg yes
 -b arg yes
--wd arg .
+-cwd
 -h
 -r arg yes
 -M arg user1@host1,user2@host2

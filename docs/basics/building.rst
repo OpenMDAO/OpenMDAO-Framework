@@ -33,14 +33,14 @@ to Python's syntax will result in an exception.  OpenMDAO checks for
 compliance when a variable or Component instance is created:
 
     >>> from openmdao.main.api import Assembly
-    >>> from openmdao.examples.enginedesign.chassis import Chassis
+    >>> from openmdao.examples.simple.paraboloid import Paraboloid
     >>> top = Assembly()
-    >>> top.add('chassis1',Chassis())
-    <openmdao.examples.enginedesign.chassis.Chassis object at ...
-    >>> top.add('the chassis',Chassis())
+    >>> top.add('parab', Paraboloid())
+    <openmdao.examples.simple.paraboloid.Paraboloid object at ...
+    >>> top.add('the parab', Paraboloid())
     Traceback (most recent call last):
     ...
-    NameError: name 'the chassis' contains illegal characters
+    NameError: name 'the parab' contains illegal characters
 
 In the OpenMDAO source and examples, we've tried to follow the `PEP 8
 <http://legacy.python.org/dev/peps/pep-0008/>`_ standard, which specifies a naming

@@ -4,6 +4,8 @@ Test Plot3D operations on :class:`DomainObj` objects.
 
 import logging
 import os.path
+import tempfile
+import shutil
 import unittest
 
 from openmdao.lib.datatypes.domain import read_plot3d_q, write_plot3d_q, \
@@ -19,12 +21,19 @@ from openmdao.util.testutil import assert_raises
 class TestCase(unittest.TestCase):
     """ Test Plot3D operations on :class:`DomainObj` objects. """
 
+    def setUp(self):
+        self.startdir = os.getcwd()
+        self.tempdir = tempfile.mkdtemp(prefix='test_plot3d-')
+        os.chdir(self.tempdir)
+
     def tearDown(self):
         """ Clean up generated files. """
-        for path in ('be-binary.xyz', 'be-binary.q', 'be-binary.f',
-                     'unformatted.xyz', 'unformatted.q', 'unformatted.f'):
-            if os.path.exists(path):
-                os.remove(path)
+        os.chdir(self.startdir)
+        if not os.environ.get('OPENMDAO_KEEPDIRS', False):
+            try:
+                shutil.rmtree(self.tempdir)
+            except OSError:
+                pass
 
     def test_q_3d(self):
         logging.debug('')
@@ -203,4 +212,3 @@ if __name__ == '__main__':
     sys.argv.append('--cover-package=openmdao.lib.datatypes.domain')
     sys.argv.append('--cover-erase')
     nose.runmodule()
-

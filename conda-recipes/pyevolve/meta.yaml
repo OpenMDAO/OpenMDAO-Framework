@@ -1,0 +1,13 @@
+package:
+    name: pyevolve
+    version: !!str 0.6
+
+source:
+    git_url: https://github.com/perone/Pyevolve.git
+
+requirements:
+    build:
+        - python
+
+    run:
+        - python

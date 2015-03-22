@@ -1,13 +1,9 @@
 import pprint
-from ordereddict import OrderedDict
+from collections import OrderedDict
 
 _missing = object()
 
 import networkx as nx
-try:
-    import matplotlib.pyplot as plt
-except ImportError:
-    plt = None
 from io import BytesIO
 
 
@@ -15,14 +11,18 @@ def graph_to_svg(g):
     """ return the SVG of a matplotlib figure generated from a graph
         ref: http://pig-in-the-python.blogspot.com/2012/09/
     """
-    if not plt:
+    try:
+        import matplotlib.pyplot as plt
+    except (ImportError, RuntimeError):
         return None
+
     fig = plt.figure(figsize=(8, 8))
     ax = fig.add_subplot(111)
     nx.draw_shell(g, ax=ax)
     output = BytesIO()
     fig.savefig(output, format='svg')
     plt.close(fig)
+
     return output.getvalue()
 
 
@@ -108,9 +108,10 @@ def flatten_list_of_iters(lst):
                 ret.extend(entry)
         return ret
 
+# FIXME: move this somewhere else...
 def list_deriv_vars(comp):
     """A wrapper around the call to list_deriv_vars on the given
-    Component that checks the return value to make sure it's a 
+    Component that checks the return value to make sure it's a
     tuple.
     """
     tup = orig_tup = comp.list_deriv_vars()
@@ -132,3 +133,35 @@ def list_deriv_vars(comp):
         tup1 = (tup1,)
 
     return (tup0, tup1)
+
+def base_var(g, node):
+    """Returns the name of the variable node that is the 'base' for
+    the given node name.  For example, for the node A.b[4], the
+    base variable is A.b.  For the node d.x.y, the base variable
+    is d if d is a boundary variable node, or d.x otherwise.
+    """
+    if node in g:
+        base = g.node[node].get('basevar')
+        if base:
+            return base
+        elif 'var' in g.node[node]:
+            return node
+
+    parts = node.split('[', 1)[0].split('.')
+
+    base = parts[0]
+    if base in g:
+        data = g.node[base]
+        if 'var' in data and not data.get('basevar'):
+            return base
+
+    return '.'.join(parts[:2])
+
+def fix_single_tuple(x):
+    """For scalar x, return x. For 1 element tuple, return x[0].
+    For multi-element tuple, return x.
+    """
+    if isinstance(x, tuple):
+        if len(x) == 1:
+            return x[0]
+    return x

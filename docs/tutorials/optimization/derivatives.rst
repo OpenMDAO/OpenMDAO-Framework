@@ -211,7 +211,7 @@ tolerance and its maximum iteration count to be controlled by the user.
 
         from openmdao.examples.simple.optimization_constrained import OptimizationConstrained
         model = OptimizationConstrained()
-        model.driver.gradient_options.gmres_tolerance = 1.0e-9
+        model.driver.gradient_options.atol = 1.0e-9
         model.driver.gradient_options.maxiter = 100
 
 

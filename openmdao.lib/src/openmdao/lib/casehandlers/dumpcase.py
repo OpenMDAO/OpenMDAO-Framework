@@ -6,6 +6,8 @@ import time
 from openmdao.main.interfaces import implements, ICaseRecorder
 from openmdao.main.exceptions import traceback_str
 
+from openmdao.lib.casehandlers.util import driver_map
+
 
 class DumpCaseRecorder(object):
     """Dumps cases in a "pretty" form to `out`, which may be a string or a
@@ -34,11 +36,7 @@ class DumpCaseRecorder(object):
 
     def register(self, driver, inputs, outputs):
         """Register names for later record call from `driver`."""
-        prefix = driver.parent.get_pathname()
-        if prefix:
-            prefix += '.'
-        self._cfg_map[driver] = ([prefix+name for name in inputs],
-                                 [prefix+name for name in outputs])
+        self._cfg_map[driver] = driver_map(driver, inputs, outputs)
 
     def record_constants(self, constants):
         """Record constant data."""
@@ -87,16 +85,6 @@ class DumpCaseRecorder(object):
                 # Closing a StringIO deletes its contents.
                 self.out.close()
             self.out = None
-
-    def get_attributes(self, io_only=True):
-        """ We need a custom get_attributes because we aren't using Traits to
-        manage our changeable settings. This is unfortunate and should be
-        changed to something that automates this somehow."""
-
-        attrs = {}
-        attrs['type'] = type(self).__name__
-
-        return attrs
 
     def get_iterator(self):
         """Doesn't really make sense to have a case iterator for dump files, so

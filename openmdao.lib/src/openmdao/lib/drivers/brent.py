@@ -4,8 +4,8 @@ Solver based on scipy.optimize.brentq
 
 from scipy.optimize import brentq
 
+# pylint: disable-msg=E0611,F0401
 from openmdao.main.driver import Driver
-from openmdao.main.cyclicflow import CyclicWorkflow
 from openmdao.main.interfaces import IHasParameters, IHasEqConstraints, \
                                      ISolver, implements
 from openmdao.main.hasparameters import HasParameters
@@ -21,8 +21,11 @@ class Brent(Driver):
 
     implements(IHasParameters, IHasEqConstraints, ISolver)
 
-    lower_bound = Float(0., iotype="in", desc="lower bound for the root search")
-    upper_bound = Float(100., iotype="in", desc="upper bound for the root search")
+    # pylint: disable-msg=E1101
+    lower_bound = Float(0., iotype="in", 
+                        desc="lower bound for the root search")
+    upper_bound = Float(100., iotype="in", 
+                        desc="upper bound for the root search")
 
 
     xtol = Float(0.0, iotype="in",
@@ -55,12 +58,11 @@ class Brent(Driver):
 
     def __init__(self):
         super(Brent, self).__init__()
-        self.workflow = CyclicWorkflow()
-        self.xstar = self._param = None
+        self.xstar = None
 
     def _eval(self, x):
         """Callback function for evaluating f(x)"""
-        self._param.set(x)
+        self.set_parameters([x])
         self.run_iteration()
         return self.eval_eq_constraints(self.parent)[0]
 
@@ -109,7 +111,7 @@ class Brent(Driver):
 
 
         # Propagate solution back into the model
-        self._param.set(xstar)
+        self.set_parameters([xstar])
         self.run_iteration()
   
         if self.iprint == 1:
@@ -121,14 +123,13 @@ class Brent(Driver):
 
         super(Brent, self).check_config(strict=strict)
 
-        params = self.get_parameters().values()
-        if len(params) != 1:
+        nparam = len(self.get_parameters())
+        if nparam != 1:
             self.raise_exception("Brent driver must have 1 parameter, "
-                                 "but instead it has %d" % len(params))
+                                 "but instead it has %d" % nparam)
 
-        constraints = self.get_eq_constraints()
-        if len(constraints) != 1:
+        ncnst = len(self.get_eq_constraints())
+        if ncnst != 1:
             self.raise_exception("Brent driver must have 1 equality constraint, "
-                                 "but instead it has %d" % len(constraints))
-        self._param = params[0]
+                                 "but instead it has %d" % ncnst)
 

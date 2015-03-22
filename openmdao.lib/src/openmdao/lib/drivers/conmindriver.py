@@ -198,9 +198,6 @@ class CONMINdriver(Driver):
     # CONMIN has quite a few parameters to give the user control over aspects
     # of the solution.
 
-    cons_is_linear = Array(zeros(0, 'i'), dtype=numpy_int, iotype='in',
-        desc='Array designating whether each constraint is linear.')
-
     iprint = Enum(0, [0, 1, 2, 3, 4, 5, 101], iotype='in', desc='Print '
                     'information during CONMIN solution. Higher values are '
                     'more verbose. 0 suppresses all output.')
@@ -379,19 +376,13 @@ class CONMINdriver(Driver):
         if self.cnmn1.info == 1:
 
             # Note. CONMIN is driving the finite difference estimation of the
-            # gradient. However, we still take advantage of a component's
-            # user-defined gradients via Fake Finite Difference.
-            # TODO - Fake Finite Difference has been disabled for now.
+            # gradient.
             if self.cnmn1.igoto == 3:
 
                 # update the parameters in the model
                 self.set_parameters(self.design_vals[:-2])
-
-                # Run model under Fake Finite Difference
-                #self.calc_derivatives(first=True, savebase=True)
-                #self.ffd_order = 1
                 super(CONMINdriver, self).run_iteration()
-                #self.ffd_order = 0
+
             else:
                 # update the parameters in the model
                 self.set_parameters(self.design_vals[:-2])
@@ -421,7 +412,7 @@ class CONMINdriver(Driver):
             obj = self.list_objective_targets()
             con = self.list_ineq_constraint_targets()
 
-            J = self.workflow.calc_gradient(inputs, obj + con)
+            J = self._calc_gradient(inputs, obj + con)
 
             nobj = len(obj)
             self.d_obj[:-2] = J[0:nobj, :].ravel()
@@ -490,18 +481,12 @@ class CONMINdriver(Driver):
         self.g2 = zeros(length, 'd')
 
         # if constraint i is known to be a linear function of design vars,
-        # the user can set cons_is_linear[i] to 1, otherwise set it to 0. This
-        # is not essential and is for efficiency only.
+        # the user can declare it as a linear constraint. This is not
+        # essential and is for efficiency only.
         self._cons_is_linear = zeros(length, 'i')
-        if len(self.cons_is_linear) > 0:
-            if len(self.cons_is_linear) != self.total_ineq_constraints():
-                self.raise_exception('size of cons_is_linear (%d) does not'
-                                     ' match number of constraints (%d)' %
-                                     (len(self.cons_is_linear),
-                                      self.total_ineq_constraints()), ValueError)
-            else:
-                for i, val in enumerate(self.cons_is_linear):
-                    self._cons_is_linear[i] = val
+        for i, constraint in enumerate(self.get_constraints().values()):
+            linear_flag = 1 if constraint.linear else 0
+            self._cons_is_linear[i] = linear_flag
 
         self.cnmn1.ndv = num_dvs
         self.cnmn1.ncon = self.total_ineq_constraints()
@@ -580,3 +565,6 @@ class CONMINdriver(Driver):
         for name, value in consav.__dict__.items():
             setattr(consav, name, type(value)(getattr(conmin.consav, name)))
 
+    def requires_derivs(self):
+        if self.conmin_diff is False:
+            return True

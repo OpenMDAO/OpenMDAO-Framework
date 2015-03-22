@@ -1,25 +1,86 @@
 import bson
 import json
-import os.path
+import os
+import tempfile
 import re
+import shutil
 import sys
 import unittest
+import copy
 
 from struct import unpack
 from cStringIO import StringIO
 
-from openmdao.main.api import Assembly, Case, set_as_top
-from openmdao.main.datatypes.api import Instance
+from openmdao.main import __version__
+from openmdao.main.api import Assembly, Component, Case, VariableTree, set_as_top
+from openmdao.main.datatypes.api import Array, Instance, List, VarTree
 from openmdao.test.execcomp import ExecComp
-from openmdao.lib.casehandlers.api import JSONCaseRecorder, BSONCaseRecorder
+from openmdao.lib.casehandlers.api import JSONCaseRecorder, BSONCaseRecorder, verify_json, CaseDataset
+
 from openmdao.lib.drivers.api import SensitivityDriver, CaseIteratorDriver, \
                                      SLSQPdriver
 from openmdao.util.testutil import assert_raises
 
 
 class TExecComp(ExecComp):
-
     data = Instance(iotype='in', desc='Used to check bad JSON data')
+
+
+class Loads(VariableTree):
+    Fx = Array()
+    Fy = Array()
+    Fz = Array()
+
+
+class LoadsArray(VariableTree):
+    loads = List(Loads)
+
+
+class LoadsComp(Component):
+    loads_in  = VarTree(LoadsArray(), iotype='in')
+    loads_out = VarTree(LoadsArray(), iotype='out')
+
+    def execute(self):
+        self.loads_out = self.loads_in
+
+class ComplexClass:
+    def __init__(self, realpart, imagpart):
+        self.r = realpart
+        self.i = imagpart
+
+class ClassWithNestedObjects:
+    def __init__(self, cx1, cx2):
+        self.cx1 = cx1
+        self.cx2 = cx2
+
+class CompWithNestedPythonObjects(Component):
+
+    cx_nested_in = Instance(ClassWithNestedObjects(ComplexClass(1.0,2.0),ComplexClass(3.0,4.0)),
+            iotype="in", desc="nested complex number")
+    cx_nested_out = Instance(ClassWithNestedObjects(ComplexClass(5.0,6.0),ComplexClass(7.0,8.0)),
+            iotype="out", desc="nested complex number")
+
+    def execute(self):
+        self.cx_nested_out = copy.deepcopy(self.cx_nested_in)
+
+
+class TestCaseForNestedObjects(unittest.TestCase):
+
+    def setUp(self):
+        self.top = set_as_top(Assembly())
+        self.top.add('comp1', CompWithNestedPythonObjects())
+        self.top.driver.workflow.add(['comp1'])
+
+    def tearDown(self):
+        self.top = None
+
+    def test_jsonrecorder_with_nest_object(self):
+        # make sure bug 87740468 is fixed
+        sout = StringIO()
+        self.top.recorders = [JSONCaseRecorder(sout)]
+
+        self.top.run()
+        self.assertTrue(isinstance(self.top.comp1.cx_nested_in.cx1, ComplexClass)) # should NOT be a dict
 
 
 class TestCase(unittest.TestCase):
@@ -36,23 +97,44 @@ class TestCase(unittest.TestCase):
         outputs = ['comp1.z', 'comp2.z']
         cases = []
         for i in range(10):
+            i = float(i)
             inputs = [('comp1.x', i), ('comp1.y', i*2)]
             cases.append(Case(inputs=inputs, outputs=outputs))
 
         Case.set_vartree_inputs(driver, cases)
         driver.add_responses(outputs)
 
+        self.tempdir = tempfile.mkdtemp(prefix='test_jsonrecorder-')
+
     def tearDown(self):
+        try:
+            shutil.rmtree(self.tempdir)
+        except OSError:
+            pass
         self.top = None
+
+    def test_jsonrecorder_norun(self):
+        # test ability to get model data from case recorder
+        #    without calling run()
+
+        sout = StringIO()
+        self.top.recorders = [JSONCaseRecorder(sout)]
+        self.top.record_configuration()
+
+        if os.environ.get('REGEN_JSON_FILES'):
+            with open('jsonrecorder_norun.new', 'w') as out:
+                out.write(sout.getvalue())
+        verify_json(self, sout, 'jsonrecorder_norun.json')
 
     def test_jsonrecorder(self):
         sout = StringIO()
         self.top.recorders = [JSONCaseRecorder(sout)]
         self.top.run()
 
-#        with open('jsonrecorder.new', 'w') as out:
-#            out.write(sout.getvalue())
-        self.verify(sout, 'jsonrecorder.json')
+        if os.environ.get('REGEN_JSON_FILES'):
+            with open('jsonrecorder.new', 'w') as out:
+                out.write(sout.getvalue())
+        verify_json(self, sout, 'jsonrecorder.json')
 
     def test_multiple_objectives(self):
         sout = StringIO()
@@ -65,9 +147,10 @@ class TestCase(unittest.TestCase):
         self.top.recorders = [JSONCaseRecorder(sout)]
         self.top.run()
 
-#        with open('multiobj.new', 'w') as out:
-#            out.write(sout.getvalue())
-        self.verify(sout, 'multiobj.json')
+        if os.environ.get('REGEN_JSON_FILES'):
+            with open('multiobj.new', 'w') as out:
+                out.write(sout.getvalue())
+        verify_json(self, sout, 'multiobj.json')
 
     def test_nested(self):
         asm3 = Assembly()
@@ -106,47 +189,10 @@ class TestCase(unittest.TestCase):
         asm1.recorders = [JSONCaseRecorder(sout)]
         asm1.run()
 
-#        with open('nested.new', 'w') as out:
-#            out.write(sout.getvalue())
-        self.verify(sout, 'nested.json')
-
-    def verify(self, sout, filename):
-        lines = sout.getvalue().split('\n')
-
-        directory = os.path.dirname(__file__)
-        path = os.path.join(directory, filename)
-        with open(path, 'r') as inp:
-            expected = inp.read().split('\n')
-
-        for i in range(len(expected)):
-            expect = expected[i]
-            if expect.startswith('    "_driver_id":'):
-                self.assertTrue(lines[i].startswith('    "_driver_id":'))
-            elif expect.startswith('    "_id":'):
-                self.assertTrue(lines[i].startswith('    "_id":'))
-            elif expect.startswith('    "_parent_id":'):
-                self.assertTrue(lines[i].startswith('    "_parent_id":'))
-            elif expect.startswith('    "uuid":'):
-                self.assertTrue(lines[i].startswith('    "uuid":'))
-            elif expect.startswith('    "timestamp":'):
-                self.assertTrue(lines[i].startswith('    "timestamp":'))
-            elif expect.startswith('            "pcomp_name":'):
-                self.assertTrue(lines[i].startswith('            "pcomp_name":'))
-            elif expect.startswith('            "high":'):
-                value = re.match('.*:([^,]*),', lines[i]).group(1)
-                if value != ' null':
-                    self.assertEqual(int(value), sys.maxint)
-            elif expect.startswith('            "low":'):
-                value = re.match('.*:([^,]*),', lines[i]).group(1)
-                if value not in (' null', ' 0'):
-                    self.assertEqual(int(value), -sys.maxint)
-            elif expect.startswith('        "_pseudo_1":'):
-                expect = float(re.match('.*:([^,]*),', expect).group(1))
-                value = float(re.match('.*:([^,]*),', lines[i]).group(1))
-                # Multiple representations of zero...
-                self.assertEqual(value, expect)
-            else:
-                self.assertEqual(lines[i], expect)
+        if os.environ.get('REGEN_JSON_FILES'):
+            with open('nested.new', 'w') as out:
+               out.write(sout.getvalue())
+        verify_json(self, sout, 'nested.json')
 
     def test_close(self):
         sout = StringIO()
@@ -180,7 +226,10 @@ class TestCase(unittest.TestCase):
         keys = sorted(obj.keys())
         self.assertEqual(keys, sorted(json_run['simulation_info'].keys()))
         for key in keys:
-            if key not in ('uuid',):
+            # graph sometimes serializes with nodes in differant order
+            # between json and bson. The graphs are still equivalent, but the
+            # assertion below will fail
+            if key not in ('uuid', 'graph',):
                 self.assertEqual(obj[key], json_run['simulation_info'][key])
 
         driver_count = 1
@@ -210,7 +259,37 @@ class TestCase(unittest.TestCase):
 
             data = inp.read(4)
 
+    def test_vtree(self):
+        top = Assembly()
+        sub = top.add('sub', Assembly())
+        sub.add('comp', LoadsComp())
+        sub.driver.workflow.add('comp')
+        sub.create_passthrough('comp.loads_in')
+        sub.create_passthrough('comp.loads_out')
+        top.driver.workflow.add('sub')
+
+
+        jsonfile = os.path.join(self.tempdir, 'test_vtree.json')
+        old_json_file = os.path.join(os.path.dirname(__file__), 'vtree.json')
+        top.recorders = [JSONCaseRecorder(jsonfile)]
+
+        loads = Loads()
+        loads.Fx = [1, 2, 3]
+        loads.Fy = [4, 5, 6]
+        loads.Fz = [7, 8, 9]
+        arr = LoadsArray()
+        arr.loads = [loads]
+        top.sub.loads_in = arr
+
+        top.run()
+
+        cdsnew = CaseDataset(jsonfile, 'json')
+        cdsold = CaseDataset(old_json_file, 'json')
+
+
+        cdsold.data.vars('sub.comp.loads_out').fetch()[0][0]['loads'][0]['Fx'] == cdsnew.data.vars('sub.comp.loads_out').fetch()[0][0]['loads'][0]['Fx']
+        cdsold.data.vars('sub.comp.loads_out').fetch()[1][0]['loads'][0]['Fz'] == cdsnew.data.vars('sub.comp.loads_out').fetch()[1][0]['loads'][0]['Fz']
+
 
 if __name__ == '__main__':
     unittest.main()
-
