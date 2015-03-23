@@ -859,6 +859,7 @@ class System(object):
         if options is not None:
             self.set_options(self.mode, options)
         self.initialize_gradient_solver()
+        print self.name, self.mode
 
         """ Solve Jacobian, df |-> du [fwd] or du |-> df [rev] """
         self.rhs_buf[:] = self.rhs_vec.array[:]

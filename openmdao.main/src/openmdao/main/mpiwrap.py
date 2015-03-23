@@ -103,6 +103,24 @@ else:
     PETSc = PETSc()
 
 
+def get_norm(vec, order=None):
+    """Either do a distributed norm or a local numpy
+    norm depending on whether we're running under MPI.
+
+    vec: VecWrapper
+        Returns the norm of this vector
+
+    order: int, float, string (see numpy.linalg.norm)
+        Order of the norm (ignored in MPI)
+    """
+
+    if MPI:
+        vec.petsc_vec.assemble()
+        return vec.petsc_vec.norm()
+    else:
+        return numpy.linalg.norm(vec.array, ord=order)
+
+
 class MPI_info(object):
     def __init__(self):
         self.requested_cpus = 1
@@ -125,23 +143,6 @@ class MPI_info(object):
                 return -1
         return 0
 
-
-def get_norm(vec, order=None):
-    """Either do a distributed norm or a local numpy
-    norm depending on whether we're running under MPI.
-
-    vec: VecWrapper
-        Returns the norm of this vector
-
-    order: int, float, string (see numpy.linalg.norm)
-        Order of the norm (ignored in MPI)
-    """
-
-    if MPI:
-        vec.petsc_vec.assemble()
-        return vec.petsc_vec.norm()
-    else:
-        return numpy.linalg.norm(vec.array, ord=order)
 
 # npnorm = numpy.linalg.norm
 # def norm(a, order=None):
