@@ -1123,11 +1123,21 @@ class Driver(Component):
         for cname in self._ordering:
             getattr(self.parent, cname).size_variables()
 
+    @rbac(('owner', 'user'))
+    def is_differentiable(self):
+        """Return True if analytical derivatives can be
+        computed for this Component.
+        """
+        if self.force_fd:
+            return False
+
+        return ISolver.providedBy(self) or self.__class__ == Driver
 
 def _flattened_names(name, val, names=None):
     """ Return list of names for values in `val`.
     Note that this expands arrays into an entry for each index!.
     """
+    from numpy import ndarray
     if names is None:
         names = []
     if isinstance(val, float):

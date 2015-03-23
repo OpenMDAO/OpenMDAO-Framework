@@ -21,7 +21,7 @@ from openmdao.main.array_helpers import flattened_value
 from openmdao.main.container import Container
 from openmdao.main.derivatives import applyJ, applyJT
 from openmdao.main.interfaces import implements, obj_has_interface, \
-                                     IAssembly, IComponent, IDriver, ISolver
+                                     IAssembly, IComponent, IDriver
 from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, \
                                          HasIneqConstraints
 from openmdao.main.hasobjective import HasObjective, HasObjectives
@@ -242,7 +242,7 @@ class Component(Container):
         if self.force_fd:
             return False
 
-        return ISolver.providedBy(self) or hasattr(self, 'provideJ')
+        return hasattr(self, 'provideJ')
 
     @rbac(('owner', 'user'))
     def get_req_default(self, self_required=None):
