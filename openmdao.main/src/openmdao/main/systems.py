@@ -859,7 +859,6 @@ class System(object):
         if options is not None:
             self.set_options(self.mode, options)
         self.initialize_gradient_solver()
-        print self.name, self.mode
 
         """ Solve Jacobian, df |-> du [fwd] or du |-> df [rev] """
         self.rhs_buf[:] = self.rhs_vec.array[:]
@@ -1340,6 +1339,7 @@ class AssemblySystem(SimpleSystem):
         # If we can, use the new Jacobian-free method
         if self.options.lin_solver != 'scipy_gmres':
             self._nest_lin_solve = True
+            inner_system.ln_solver = None
             inner_system.set_options(self.mode, options)
             inner_system.initialize_gradient_solver()
             inner_system.linearize()
@@ -1363,7 +1363,6 @@ class AssemblySystem(SimpleSystem):
         inner = self._comp._system
         fvec = self.vec['df']
         mode = self.mode
-        inner.set_options(mode, self._comp.driver.gradient_options)
         requested_ins = [item for item in self.list_inputs() \
                          if self.scope.name2collapsed.get(item) in variables]
         requested_outs = [item for item in self.list_outputs() \
