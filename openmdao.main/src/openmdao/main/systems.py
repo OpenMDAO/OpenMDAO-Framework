@@ -1337,9 +1337,9 @@ class AssemblySystem(SimpleSystem):
         options = self._comp.driver.gradient_options
 
         # If we can, use the new Jacobian-free method
-        if self.options.lin_solver != 'scipy_gmres':
+        if self.options.lin_solver == 'petsc_ksp':
             self._nest_lin_solve = True
-            inner_system.ln_solver = None
+            #inner_system.ln_solver = None
             inner_system.set_options(self.mode, options)
             inner_system.initialize_gradient_solver()
             inner_system.linearize()
