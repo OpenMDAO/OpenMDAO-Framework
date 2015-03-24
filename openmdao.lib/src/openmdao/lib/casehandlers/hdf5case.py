@@ -142,7 +142,7 @@ def write_groups_to_hdf5( group, name, value ):
                 print 'write_groups_to_hdf5 dataset strlist', filename, rank,  group.name, name
                 # dt = h5py.special_dtype(vlen=bytes)
                 # group.create_dataset(name, (len(value),), dtype=dt)
-                group.create_dataset(name, (len(value),),str_dtype ) # TODO use variable length strings ?
+                group.create_dataset(name, (len(value),),str_dtype ) # TODO check to make sure it fits
         else:
             print 'write_groups_to_hdf5 dataset unknownlist', filename, rank,  group.name, name
             group.create_dataset(name,(0,)) # TODO How do we handle empty lists? Do not know type
@@ -194,6 +194,9 @@ def get_rank():
 
 
 
+import logging
+
+logger = logging.getLogger()
 
 
 
@@ -210,7 +213,7 @@ class HDF5CaseRecorder(object):
 
     implements(ICaseRecorder)
 
-    def __init__(self, out='cases.hdf5', indent=4, sort_keys=True):
+    def __init__(self, out='cases.hdf5', indent=4, sort_keys=True): # TODO need an option for the size of the strings
         self._cfg_map = {}
         self._uuid = None
         self._cases = None
@@ -228,8 +231,10 @@ class HDF5CaseRecorder(object):
 
 
         if MPI:
+            logging.getLogger().info("MPI")
             self.hdf5_main_file_object = h5py.File(out, "w", driver='mpio', comm=MPI.COMM_WORLD) # Has to be since all drivers will create links to their files
         else:
+            logging.getLogger().info("not MPI")
             self.hdf5_main_file_object = h5py.File(out, "w")
 
 

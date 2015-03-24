@@ -14,8 +14,7 @@ import numpy as np
 
 from openmdao.main.api import Assembly, Component, VariableTree, set_as_top
 from openmdao.main.datatypes.api import Array, Float, VarTree
-from openmdao.lib.casehandlers.api import CaseDataset, \
-                                          JSONCaseRecorder, BSONCaseRecorder, HDF5CaseRecorder
+from openmdao.lib.casehandlers.api import CaseDatasetHDF5, HDF5CaseRecorder
 from openmdao.lib.drivers.api import FixedPointIterator, SLSQPdriver
 from openmdao.lib.optproblems import sellar
 from openmdao.util.testutil import assert_rel_error
@@ -114,18 +113,17 @@ def create_files():
     """ Create/update test data files. """
     prob = set_as_top(SellarMDF())
     #prob.name = "top"
-    prob.recorders = [JSONCaseRecorder('sellar_json.new'),
-                      BSONCaseRecorder('sellar_bson.new'),
-                      ]
+    prob.recorders = [ HDF5CaseRecorder('sellar_hdf5.new')]
     prob.run()
+
 
 
 class TestCase(unittest.TestCase):
 
     def setUp(self):
-        create_files()  # Uncomment to create 'sellar.new'
-        path = os.path.join(os.path.dirname(__file__), 'sellar.json')
-        self.cds = CaseDataset(path, 'json')
+        #create_files()  # Uncomment to create 'sellar.new'
+        path = os.path.join(os.path.dirname(__file__), 'sellar.hdf5')
+        self.cds = CaseDatasetHDF5(path, 'hdf5')
         self.startdir = os.getcwd()
         self.tempdir = tempfile.mkdtemp(prefix='test_query-')
         os.chdir(self.tempdir)
@@ -142,23 +140,36 @@ class TestCase(unittest.TestCase):
 
     def test_query(self):
         # Full dataset.
-        vnames = self.cds.data.var_names().fetch()
-        expected = ['_driver_id', '_id', '_parent_id', u'_pseudo_0', u'_pseudo_0.out0', u'_pseudo_1', u'_pseudo_1.out0', u'_pseudo_2', u'_pseudo_2.out0', u'driver.workflow.itername', 'error_message', 'error_status', u'half.derivative_exec_count', u'half.exec_count', u'half.itername', u'half.z2a', u'half.z2b', u'sub._pseudo_0', u'sub._pseudo_0.out0', u'sub.derivative_exec_count', u'sub.dis1.derivative_exec_count', u'sub.dis1.exec_count', u'sub.dis1.itername', u'sub.dis1.y1', u'sub.dis1.y2', u'sub.dis2.derivative_exec_count', u'sub.dis2.exec_count', u'sub.dis2.itername', u'sub.dis2.y2', u'sub.driver.workflow.itername', u'sub.exec_count', u'sub.globals.z1', u'sub.itername', u'sub.states', u'sub.states.y[0]', u'sub.states.y[1]', u'sub.x1', 'timestamp']
+        #vnames = self.cds.data.var_names().fetch()
+        expected = ['_driver_id', '_driver_name', '_id', '_itername', '_parent_id', '_pseudo_0.out0', '_pseudo_1.out0', '_pseudo_2.out0', 'driver.workflow.itername', 'error_message', 'error_status', 'half.derivative_exec_count', 'half.exec_count', 'half.itername', 'half.z2a', 'half.z2b', 'sub._pseudo_0.out0', 'sub.derivative_exec_count', 'sub.dis1.derivative_exec_count', 'sub.dis1.exec_count', 'sub.dis1.itername', 'sub.dis1.y1', 'sub.dis1.y2', 'sub.dis2.derivative_exec_count', 'sub.dis2.exec_count', 'sub.dis2.itername', 'sub.dis2.y2', 'sub.driver.workflow.itername', 'sub.exec_count', 'sub.globals.z1', 'sub.itername', 'sub.states', 'sub.states.y[0]', 'sub.states.y[1]', 'sub.x1', 'timestamp']
+        #self.assertEqual(vnames, expected)
 
-        self.assertEqual(vnames, expected)
+        #cases = self.cds.data.fetch()
+        #self.assertEqual(len(cases), 74)
+        #self.assertEqual(len(cases[0]), len(expected))
 
-        cases = self.cds.data.fetch()
-        self.assertEqual(len(cases), 242)
-        self.assertEqual(len(cases[0]), len(expected))
 
-        # Specific variables.
+        #print "iternames"
+        #print self.cds.data.vars('_itername').fetch()
+
+
+
+        ## Specific variables.
         names = ['half.z2a', 'sub.globals.z1', 'sub.x1']
-        vnames = self.cds.data.vars(names).var_names().fetch()
-        self.assertEqual(vnames, names)
+        #vnames = self.cds.data.vars(names).var_names().fetch()
+        #self.assertEqual(vnames, names)
 
-        cases = self.cds.data.vars(names).fetch()
-        self.assertEqual(len(cases), 242)
-        self.assertEqual(len(cases[0]), len(names))
+        #cases = self.cds.data.vars(names).fetch()
+        #self.assertEqual(len(cases), 74)
+        #self.assertEqual(len(cases[0]), len(names))
+
+        #print cases[-1]
+        
+        vnames = self.cds.data.case('3-sub.5').var_names().fetch()
+        
+        print vnames
+        cases = self.cds.data.vars(names).case('3-sub.5').fetch()
+        
 
         iteration_case_242 = {
             "half.z2a": -9.1082956132942171e-13,

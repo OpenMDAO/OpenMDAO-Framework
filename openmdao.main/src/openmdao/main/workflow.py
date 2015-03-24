@@ -399,19 +399,7 @@ class Workflow(object):
             while top.parent is not None:
                 top = top.parent
             for recorder in top.recorders:
-                #recorder.register(driver, inputs, outputs,inputs_all_processes=inputs_all_processes,outputs_all_processes=outputs_all_processes)
-                from pprint import pprint
-                # with open('insouts%d' % MPI.COMM_WORLD.rank, 'wt') as out:
-                #     pprint(inputs+outputs, stream=out)
-                print 'drivername and prefix', driver.name, prefix
-                with open('insouts%s' % driver.name, 'wt') as out:
-                    pprint(inputs+outputs, stream=out)
                 recorder.register(driver, inputs, outputs)
-
-        #import pdb; pdb.set_trace()
-
-        # print 'check', self._system.mpi.rank, self._system.is_variable_local('_pseudo_0.out0')
-        # print 'check', self._system.mpi.rank, self._system.is_variable_local('_pseudo_1.out0')
 
         return (set(prefix+name for name in inputs), dict())
 
