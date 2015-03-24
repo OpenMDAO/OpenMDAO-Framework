@@ -80,9 +80,9 @@ class SensitivityDriver(Driver):
         self.dF = J[:nobj, :]
         self.dG = J[nobj:nobj+ncon, :]
 
-    def size_variables(self):
+    def init_var_sizes(self):
         """ Size up our outputs."""
-        super(SensitivityDriver, self).size_variables()
+        super(SensitivityDriver, self).init_var_sizes()
         self._check()
 
         n_param = len(self.eval_parameters())

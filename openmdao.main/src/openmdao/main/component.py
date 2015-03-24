@@ -1382,6 +1382,10 @@ class Component(Container):
         return ()
 
     @rbac(('owner', 'user'))
+    def setup_communicators(self, comm):
+        self.mpi.comm = comm
+
+    @rbac(('owner', 'user'))
     def get_full_nodeset(self):
         """Return the node in the depgraph
         belonging to this component.
@@ -1397,7 +1401,7 @@ class Component(Container):
         self._provideJ_bounds = None
 
     @rbac(('owner', 'user'))
-    def size_variables(self):
+    def init_var_sizes(self):
         pass
 
     @rbac(('owner', 'user'))
