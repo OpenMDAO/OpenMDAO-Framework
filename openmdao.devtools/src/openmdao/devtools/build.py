@@ -1,9 +1,13 @@
 import argparse
+import glob
 import json
 import os
+import shlex
 import shutil
 import subprocess
 import sys
+import tarfile
+import tempfile
 
 def create_env(name, pkgs, channel=None, yes=False):
     cmd = 'conda create --name {name}'.format(name=name)
@@ -79,6 +83,42 @@ def python_develop(env, pkg_path):
 def main():
     args = parser.parse_args()
     args.func(args)
+
+def build_bundle(args):
+    version = args.version
+    temp_dir = tempfile.mkdtemp()
+    start_dir = os.getcwd()
+
+    try:
+        os.putenv('CONDA_ENVS_PATH', temp_dir)
+
+        # 1. Install OpenMDAO to a temporary conda environment
+        # 2. Grab all packages
+        # 3. Make tar file
+        create_env(
+            'openmdao-bundle',
+            ['openmdao=={version}'.format(version=version)],
+            channel='http://conda.binstar.org/openmdao',
+            yes=True
+        )
+
+        os.chdir('{envs_path}/.pkgs'.format(envs_path=temp_dir))
+        pkgs = glob.glob('*.tar.bz2')
+        out = tarfile.open('openmdao.tar', mode='w')
+
+        with tarfile.open('openmdao.tar', mode='w') as tar:
+            for pkg in pkgs:
+                tar.add(pkg, recursive=False)
+
+        shutil.move(
+            'openmdao.tar',
+            '{start_dir}/openmdao.tar'.format(start_dir=start_dir)
+        )
+
+    finally:
+        os.chdir(start_dir)
+        os.unsetenv('CONDA_ENVS_PATH')
+        shutil.rmtree(temp_dir)
 
 def build_dev(args):
     env_name = args.env
@@ -188,6 +228,25 @@ dev_parser = sub_parsers.add_parser('dev', help='help for building dev version')
 dev_parser.add_argument('--env', type=str, default='openmdao-dev', help='name of environment')
 dev_parser.add_argument('--force', default=False, action='store_true', help="force environment to be rebuilt if it already exists")
 dev_parser.set_defaults(func=build_dev)
+
+try:
+    import openmdao.main.releaseinfo
+    version = openmdao.main.releaseinfo.__version__
+except ImportError as error:
+    cmd = 'python -c "import releaseinfo; print releaseinfo.__version__"'
+    cwd = os.path.join(
+        root,
+        'openmdao.main',
+        'src',
+        'openmdao',
+        'main'
+    )
+
+    version = subprocess.check_output(shlex.split(cmd), cwd=cwd)
+
+bundle_parser = sub_parsers.add_parser('bundle', help='build conda package that includes OpenMDAO and all dependencies')
+bundle_parser.add_argument('-v', '--version', type=str, default=version, help="version of OpenMDAO to bundle")
+bundle_parser.set_defaults(func=build_bundle)
 
 
 if __name__ == "__main__":
