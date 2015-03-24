@@ -86,7 +86,6 @@ def create_petsc_vec(comm, arr):
 def _import_petsc():
     import petsc4py
     #petsc4py.init(['-start_in_debugger']) # add petsc init args here
-    #petsc4py.init(['-on_error_attach_debugger'])
     from petsc4py import PETSc
     return PETSc
 

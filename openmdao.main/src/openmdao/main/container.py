@@ -964,10 +964,12 @@ class Container(SafeHasTraits):
             return
         elif isinstance(val, ndarray):
             try:
+                newshape = value.shape
                 self.set(path, value.reshape(val.shape))
             except Exception as err:
-                self.reraise_exception("ERROR setting flattened value for '%s.%s'"
-                                       % (self.get_pathname(), path), sys.exc_info())
+                self.reraise_exception("ERROR setting value '%s.%s' shape: %s to shape %s"
+                                       % (self.get_pathname(), path, val.shape, newshape),
+                                          sys.exc_info())
             return
 
         # now get the non-indexed value and the index

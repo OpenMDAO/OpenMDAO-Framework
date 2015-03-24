@@ -378,9 +378,6 @@ class InputVecWrapper(VecWrapperBase):
 
             self._add_subview(scope, name)
 
-        # if self.name.endswith('.p'):
-        #     print "P for %s: %s" % (system.name, self.keys())
-
     def _map_resids_to_states(self, system):
         pass
 
@@ -459,7 +456,6 @@ class DataTransfer(object):
 
         try:
             var_idxs, input_idxs = merge_idxs(var_idxs, input_idxs)
-            #print "ORIG INDXS: %s --> %s" % (var_idxs, input_idxs)
         except Exception as err:
             raise RuntimeError("ERROR creating scatter for system %s in scope %s: %s" %
                                 (system.name, str(system.scope), str(err)))

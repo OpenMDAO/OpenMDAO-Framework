@@ -221,11 +221,19 @@ class DistribGatherComp(Component):
 
     def get_distrib_idxs(self):
         """ component declares the local sizes and sets initial values
-        for all distributed inputs and outputs"""
+        for all distributed inputs and outputs. Returns a dict of
+        index arrays keyed to variable names.
+        """
 
         comm = self.mpi.comm
+        rank = comm.rank
+
         start, end, self.sizes, self.offsets = evenly_distrib_idxs(comm, self.arr_size)
-        return {} # just use full size of whatever source we're connected to
+
+        #need to re-initialize the variable to have the correct local size
+        self.invec = np.ones(self.sizes[comm.rank], dtype=float)
+
+        return { 'invec': make_idx_array(start, end) }
 
     def get_req_cpus(self):
         return 2
@@ -238,7 +246,7 @@ class NonDistribGatherComp(Component):
         self.add_trait('outvec', Array(np.ones(0, float), iotype='out'))
 
     def execute(self):
-        self.outvec[:] = self.invec
+        self.outvec = self.invec[:]
 
 
 class MPITests(MPITestCase):

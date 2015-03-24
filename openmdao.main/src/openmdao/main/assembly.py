@@ -1133,6 +1133,12 @@ class Assembly(Component):
         for node, data in self._reduced_graph.nodes_iter(data=True):
             if 'comp' not in data:
                 src = node[0]
+                scomp = src.split('.', 1)[0] if '.' in src else None
+                dist_src = False
+                ssys = None
+                if scomp and scomp in self._reduced_graph:
+                    ssys = self._reduced_graph.node[scomp]['system']
+
                 sval, idx = get_val_and_index(self, src)
                 if isinstance(sval, ndarray):
                     dests = node[1]
@@ -1143,7 +1149,9 @@ class Assembly(Component):
                                 dsys = self._reduced_graph.node[dcomp]['system']
                                 # don't overwrite inputs if they have distrib_idxs declared, because those
                                 # determine the size
-                                if dsys._comp and dsys.distrib_idxs and dest.split('[')[0].split('.',1)[1] in dsys.distrib_idxs:
+                                if dsys.is_distrib_var(node):
+                                    continue
+                                elif ssys and ssys.is_distrib_var(node):
                                     continue
                             dval, didx = get_val_and_index(self, dest)
                             if isinstance(dval, ndarray):

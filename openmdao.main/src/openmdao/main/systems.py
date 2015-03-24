@@ -129,6 +129,16 @@ class System(object):
         """
         return True
 
+    def is_distrib_var(self, node):
+        """Return True if the given node contains a var that
+        is a distributed input or output to this System.
+        """
+        for sub in self.simple_subsystems():
+            if sub.is_distrib_var(node):
+                return True
+
+        return False
+
     def pre_run(self):
         """ Runs at assembly execution"""
         pass
@@ -157,7 +167,7 @@ class System(object):
         to_idx_array = make_idx_array(start, end)
 
         app_idxs = []
-        for ivar in xrange(len(self.vector_vars)):
+        for ivar, v in enumerate(self.vector_vars):
             start = numpy.sum(self.local_var_sizes[:, :ivar]) + \
                         numpy.sum(self.local_var_sizes[:rank, ivar])
             end = start + self.local_var_sizes[rank, ivar]
@@ -435,7 +445,7 @@ class System(object):
             if name not in self.flat_vars:
                 self.noflat_vars[name] = info
 
-    def get_src_indices(self, name):
+    def get_src_idxs(self, name):
         """Return the index array corresponding to the given source name."""
         if name in self.vector_vars:
             return make_idx_array(0, self.scope._var_meta[name]['size'])
@@ -443,7 +453,7 @@ class System(object):
             return self.scope._var_meta[name].get('flat_idx')
 
     def get_distrib_idxs(self, name):
-        return self.get_src_indices(name)
+        return self.get_src_idxs(name)
 
     def setup_sizes(self):
         """Given a dict of variables, set the sizes for
@@ -482,6 +492,14 @@ class System(object):
             comm.Allgather(ours[0,:], self.local_var_sizes)
 
         self.local_var_sizes[rank, :] = ours[0, :]
+
+        # if we're a distrib comp, get full distrib size
+        # so that downstream non-distrib comps can automagically gather
+        # the full distributed vec to their input
+        if hasattr(self, 'distrib_idxs') and self.distrib_idxs:
+           for src_idx,v in enumerate(self.vector_vars.keys()):
+               distrib_size = numpy.sum(self.local_var_sizes[:, src_idx])
+               self.scope._var_meta[v]['distrib_size'] = distrib_size
 
         # create a (1 x nproc) vector for the sizes of all of our
         # local inputs
@@ -958,6 +976,19 @@ class SimpleSystem(System):
 
         return True
 
+    def is_distrib_var(self, node):
+        """Return True if the given node contains a var that
+        is a distributed input or output to this System.
+        """
+        if self._comp and self.distrib_idxs:
+            for name in simple_node_iter(node):
+                parts = name.split('.', 1)
+                if parts[0] == self._comp.name and len(parts) > 1:
+                    if parts[1].split('[')[0] in self.distrib_idxs:
+                        return True
+
+        return False
+
     def _all_comp_nodes(self, local=False):
         return simple_node_iter(self._nodes)
 
@@ -987,7 +1018,6 @@ class SimpleSystem(System):
         """These indices are actually the indices in the *source*
         vector that get scattered to a particular input.
         """
-        raise RuntimeError('blah')
         me = self.name.strip('@')
         for n in name[1]:
             destbase = n.split('[')[0]
@@ -1001,20 +1031,25 @@ class SimpleSystem(System):
                 return make_idx_array(0, self.scope._var_meta[name]['size'])
             return super(SimpleSystem, self).get_distrib_idxs(name)
         else:
-            # find the name of the input var corresponding to our comp
-
+            distrib_size = self.scope._var_meta[name].get('distrib_size')
             if hasattr(self._comp, 'get_distrib_idxs'):
                 # get input indices for full variable
                 full_idxs = self.distrib_idxs.get(
                                      n.split('[', 1)[0].split('.',1)[1])
                 if full_idxs is None:
-                    full_idxs = self.get_src_indices(name)
+                    # if full_idxs is None, that means that this particular variable is not
+                    # distributed even though the component does have other distributed vars
+                    if self._comp and distrib_size is not None:
+                        full_idxs = make_idx_array(0, distrib_size)
+                    else:
+                        full_idxs = self.get_src_idxs(name)
                 else:
                     full_idxs = to_idx_array(full_idxs)
+
                 # if input is a subvar, we have to take a subset of the
                 # input indices
                 if '[' in n:
-                    src_idxs = self.get_src_indices(name)
+                    src_idxs = self.get_src_idxs(name)
                     info = self.scope._get_var_info(n)
                     sub_idxs = info['flat_idx']
                     assert(len(src_idxs) == len(sub_idxs))
@@ -1022,7 +1057,11 @@ class SimpleSystem(System):
                                            if j in full_idxs], dtype=idx_arr_type)
                 return full_idxs
             else:
-                return make_idx_array(0, self.scope._var_meta[name]['size'])
+                if self._comp and distrib_size is not None:
+                    sz = distrib_size
+                else:
+                    sz = self.scope._var_meta[name]['size']
+                return make_idx_array(0, sz)
 
     def _create_var_dicts(self, resid_state_map):
         varmeta = self.scope._var_meta
@@ -1448,6 +1487,7 @@ class CompoundSystem(System):
 
     def _get_scatter_idxs(self, node, noflats, arg_idxs, dest_start, destsys):
         varkeys = self.vector_vars.keys()
+        varmeta = self.scope._var_meta
 
         if node in noflats:
             return (None, None, node)
@@ -1465,7 +1505,15 @@ class CompoundSystem(System):
                         make_idx_array(0, len(arg_idxs))
 
             if sizes[self.mpi.rank, isrc]:
-                src_idxs += numpy.sum(sizes[:self.mpi.rank, isrc])
+                dist_dest = destsys.is_distrib_var(node)
+                if dist_dest:
+                    # don't offset because we already have distrib arg_idxs
+                    pass
+                elif 'distrib_size' in varmeta[node] and not dist_dest:
+                    # don't add offset because we want the whole distrib value.
+                    pass
+                else:
+                    src_idxs += numpy.sum(sizes[:self.mpi.rank, isrc])
                 sidxs = [src_idxs]
                 didxs = [dest_idxs]
                 if isinstance(destsys, ParallelSystem):
