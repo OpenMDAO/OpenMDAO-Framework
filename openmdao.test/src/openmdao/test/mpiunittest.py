@@ -105,11 +105,14 @@ else:
 
         return status
 
-    def run_test(testspec, parent, method):
+    def run_test(testspec, parent, method, nocap=False):
         start_time = time.time()
 
         errstream = StringIO()
-        outstream = StringIO()
+        if nocap:
+            outstream = sys.stdout
+        else:
+            outstream = StringIO()
 
         setup = getattr(parent, 'setUp', None)
         teardown = getattr(parent, 'tearDown', None)
@@ -156,23 +159,30 @@ else:
             args = sys.argv[1:]
 
         mod = __import__('__main__')
-        #options = _get_parser().parse_args(args)
+
+        if '-s' in args:
+            nocap = True
+        else:
+            nocap = False
 
         tests = [n for n in args if not n.startswith('-')]
+        options = [n for n in args if n.startswith('-')]
+
         if tests:
             for test in tests:
                 tcase, _, method = test.partition('.')
                 if method:
                     parent = getattr(mod, tcase)(methodName=method)
                     if hasattr(parent, 'N_PROCS') and not under_mpirun():
-                        retcode = run_in_sub(getattr(mod, tcase), mod.__file__+':'+test)
+                        retcode = run_in_sub(getattr(mod, tcase), test, options)
+                        continue
                 else:
                     raise NotImplentedError("module test functions not supported")
                     parent = mod
                     method = tcase
 
                 result = run_test("%s:%s" % (mod.__file__, test),
-                                  parent, method)
+                                  parent, method, nocap=nocap)
 
                 if under_mpirun():
                     results = MPI.COMM_WORLD.gather(result, root=0)
@@ -195,17 +205,15 @@ else:
                         if n.startswith('test_'):
                             testspec = k+'.'+n
                             if not hasattr(v, 'N_PROCS'):
-                                print run_test(testspec, v(methodName=n), n)
+                                print run_test(testspec, v(methodName=n), n, nocap=nocap)
                             else:
-                                retcode = run_in_sub(v, testspec)
-        #         # TODO:
-        #         # elif k.startswith('test_') and it's a method:
-        #         #     run module test function
+                                retcode = run_in_sub(v, testspec, options)
 
-def run_in_sub(testcase, testspec):
+
+def run_in_sub(testcase, testspec, options):
     mod = __import__('__main__')
 
-    cmd = "mpirun -n %d %s %s %s" % \
+    cmd = "mpirun -n %d %s %s %s %s" % \
                (testcase.N_PROCS, sys.executable,
-                mod.__file__, testspec)
+                mod.__file__, testspec, ' '.join(options))
     return subprocess.call(cmd, shell=True)
