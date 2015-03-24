@@ -43,7 +43,7 @@ from openmdao.main.depgraph import DependencyGraph, all_comps, \
                                    list_driver_connections, \
                                    simple_node_iter, \
                                    is_boundary_node
-from openmdao.main.systems import SerialSystem, _create_simple_sys
+from openmdao.main.systems import SerialSystem, _create_simple_sys, OpaqueSystem
 from openmdao.main.vecwrapper import petsc_idxs
 
 from openmdao.util.graph import list_deriv_vars, base_var, fix_single_tuple
@@ -1124,6 +1124,8 @@ class Assembly(Component):
             loc_comps.extend([s.name for s in system.simple_subsystems()
                                     if s._comp is not None])
             sys_stack.extend(system.local_subsystems())
+            if isinstance(system, OpaqueSystem):
+                sys_stack.append(system._inner_system)
 
         loc_comps = set(loc_comps)
         loc_comps.add(None)
