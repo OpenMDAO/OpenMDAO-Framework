@@ -21,7 +21,7 @@ from openmdao.util.testutil import assert_rel_error
 def take_nth(rank, size, seq):
     """Return an iterator over the sequence that returns every
     nth element of seq based on the given rank within a group of
-    the given size.  For example, if size = 2, an rank of 0 returns
+    the given size.  For example, if size = 2, a rank of 0 returns
     even indexed elements and a rank of 1 returns odd indexed elements.
     """
     assert(rank < size)
@@ -46,13 +46,6 @@ class InOutArrayComp(Component):
     def execute(self):
         time.sleep(self.delay)
         self.outvec = self.invec * 2.
-
-    def dump(self, comm):
-        print "%d: %s.a = %s" % (comm.rank, self.name, self.a)
-        print "%d: %s.b = %s" % (comm.rank, self.name, self.b)
-        print "%d: %s.c = %s" % (comm.rank, self.name, self.c)
-        print "%d: %s.d = %s" % (comm.rank, self.name, self.d)
-
 
 class DistribCompSimple(Component):
     """Uses 2 procs but takes full input vars"""
@@ -123,6 +116,60 @@ class DistribInputComp(Component):
     def get_req_cpus(self):
         return 2
 
+
+class DistribOverlappingInputComp(Component):
+    """Uses 2 procs and takes input var slices"""
+    def __init__(self, arr_size=11):
+        super(DistribOverlappingInputComp, self).__init__()
+        self.arr_size = arr_size
+        self.add_trait('invec', Array(np.ones(arr_size, float), iotype='in'))
+        self.add_trait('outvec', Array(np.ones(arr_size, float), iotype='out'))
+
+    def execute(self):
+        if self.mpi.comm == MPI.COMM_NULL:
+            return
+
+        for i,val in enumerate(self.invec):
+            self.local_outvec[i] = 2*val
+
+        outs = self.mpi.comm.allgather(self.local_outvec)
+
+        self.outvec = np.zeros(self.arr_size, float)
+        tmpout = np.zeros(self.arr_size, float)
+
+        self.outvec[:8] = outs[0]
+        tmpout[4:11] = outs[1]
+
+        self.outvec += tmpout
+
+    def get_distrib_idxs(self):
+        """ component declares the local sizes and sets initial values
+        for all distributed inputs and outputs"""
+
+        comm = self.mpi.comm
+        rank = comm.rank
+
+        #need to re-initialize the variable to have the correct local size
+        if rank == 0:
+            size = 8
+            start = 0
+            end = 8
+        else:
+            size = 7
+            start = 4
+            end = 11
+
+        self.invec = np.ones(size, dtype=float)
+        self.local_outvec = np.empty(size, dtype=float)
+
+        return {
+            'invec': make_idx_array(start, end),
+            'outvec': make_idx_array(start, end)
+        }
+
+    def get_req_cpus(self):
+        return 2
+
 class DistribInputDistribOutputComp(Component):
     """Uses 2 procs and takes input var slices and has output var slices as well"""
     def __init__(self, arr_size=11):
@@ -177,7 +224,6 @@ class DistribNoncontiguousComp(Component):
         if self.mpi.comm == MPI.COMM_NULL:
             return
 
-        #start = self.offsets[self.mpi.comm.rank]
         for i,val in enumerate(self.invec):
             self.outvec[i] = 2*val
 
@@ -283,7 +329,6 @@ class MPITests(MPITestCase):
 
         self.assertTrue(all(top.C2.outvec==np.array(range(size, 0, -1), float)*4))
 
-
     def test_distrib_idx_in_distrb_idx_out(self):
         # normal comp to distrib comp to distrb gather comp
         size = 11
@@ -329,7 +374,23 @@ class MPITests(MPITestCase):
     def test_overlapping_inputs_idxs(self):
         # distrib comp with distrib_idxs that overlap, i.e. the same
         # entries are distributed to multiple processes
-        self.fail("not implemented")
+        size = 11
+
+        top = set_as_top(Assembly())
+        top.add("C1", InOutArrayComp(size))
+        top.add("C2",DistribOverlappingInputComp(size))
+        top.driver.workflow.add(['C1', 'C2'])
+        top.connect('C1.outvec', 'C2.invec')
+
+        top.C1.invec = np.array(range(size, 0, -1), float)
+
+        top.run()
+
+        self.assertTrue(all(top.C2.outvec[:4]==np.array(range(size, 0, -1), float)[:4]*4))
+        self.assertTrue(all(top.C2.outvec[8:]==np.array(range(size, 0, -1), float)[8:]*4))
+
+        # overlapping part should be double size of the rest
+        self.assertTrue(all(top.C2.outvec[4:8]==np.array(range(size, 0, -1), float)[4:8]*8))
 
     def test_nondistrib_gather(self):
         # regular comp --> distrib comp --> regular comp.  last comp should
