@@ -725,6 +725,9 @@ class System(object):
         """ Sets all user-configurable options for this system and all
         subsystems. """
 
+        for subsystem in self.subsystems():
+            subsystem.set_options(mode, options)
+
         if not self.is_active():
             return
 
@@ -739,9 +742,6 @@ class System(object):
             self.rhs_vec = self.vec['du']
         else:
             raise RuntimeError("invalid mode. must be 'forward' or 'adjoint' but value is '%s'" % mode)
-
-        for subsystem in self.local_subsystems():
-            subsystem.set_options(mode, options)
 
     # ------- derivative stuff -----------
 
@@ -916,6 +916,16 @@ class System(object):
 
         #print 'dx', self.sol_vec.array
         return self.sol_vec
+
+    def is_var_in_parallel_system(self, varname):
+        """ Returns True if a full varnode name is an input under a parallel
+        system."""
+
+        for system in self.all_subsystems():
+            if system.is_var_in_parallel_system(varname):
+                return True
+
+        return False
 
 
 class SimpleSystem(System):
@@ -1116,6 +1126,7 @@ class SimpleSystem(System):
         pass
 
     def run(self, iterbase, case_label='', case_uuid=None):
+
         if self.is_active():
             #print "    runsys", str(self.name)
             graph = self.scope._reduced_graph
@@ -1388,6 +1399,9 @@ class AssemblySystem(SimpleSystem):
         self.options = options
         self.mode = mode
 
+        if not self.is_active():
+            return
+
         if mode in ('forward', 'fd'):
             self.sol_vec = self.vec['du']
             self.rhs_vec = self.vec['df']
@@ -1516,7 +1530,7 @@ class CompoundSystem(System):
                     src_idxs += numpy.sum(sizes[:self.mpi.rank, isrc])
                 sidxs = [src_idxs]
                 didxs = [dest_idxs]
-                if isinstance(destsys, ParallelSystem):
+                if self.is_var_in_parallel_system(node):
                      # for reverse scatter, need to scatter to srcs from other ranks
                     for i in range(self.mpi.size):
                         if i == self.mpi.rank:
@@ -1527,6 +1541,7 @@ class CompoundSystem(System):
                             sidxs.append(offset + numpy.sum(sizes[:i, isrc]) +
                                          arg_idxs)
                             didxs.append(dest_idxs)
+
 
                 src_idxs = numpy.concatenate(sidxs)
                 dest_idxs = numpy.concatenate(didxs)
@@ -1816,7 +1831,12 @@ class SerialSystem(CompoundSystem):
     def setup_communicators(self, comm):
         self._local_subsystems = []
 
-        self.mpi.comm = get_comm_if_active(self, comm)
+        if isinstance(self._parent_system, TransparentDriverSystem) and \
+           self._parent_system._comp.name != 'driver':
+            self.mpi.comm = comm
+        else:
+            self.mpi.comm = get_comm_if_active(self, comm)
+
         if not self.is_active():
             return
 
@@ -1969,6 +1989,18 @@ class ParallelSystem(CompoundSystem):
         for s in self.all_subsystems():
             s.set_ordering(ordering, opaque_map)
 
+    def is_var_in_parallel_system(self, varname):
+        """ Returns True if a full varnode name is an input under a parallel
+        system. """
+
+        if varname in self._in_nodes:
+            return True
+
+        for system in self.all_subsystems():
+            if system.is_var_in_parallel_system(varname):
+                return True
+
+        return False
 
 class OpaqueSystem(SimpleSystem):
     """A system with an external interface like that
@@ -2251,7 +2283,7 @@ class FiniteDiffDriverSystem(DriverSystem):
 
 class TransparentDriverSystem(DriverSystem):
     """A system for an driver that allows derivative calculation across its
-    boundary."""
+    boundary. At present this system will only appear for the Driver base class."""
 
     def _get_resid_state_map(self):
         """ Essentially, this system behaves like a solver system, except it
@@ -2268,6 +2300,16 @@ class TransparentDriverSystem(DriverSystem):
             for key, value in local_resid_map.iteritems():
                 resid_state_map[key] = value
         super(TransparentDriverSystem, self).setup_variables(resid_state_map)
+
+    def setup_communicators(self, comm):
+        """ Special case if Driver is not base driver """
+
+        if self._comp.name == 'driver':
+            super(TransparentDriverSystem, self).setup_communicators(comm)
+        else:
+            self.mpi.comm = comm
+            self._comp.workflow._system.setup_communicators(comm)
+            self._comp.workflow.mpi.comm = comm
 
     def evaluate(self, iterbase, case_label='', case_uuid=None):
         """ Evalutes a component's residuals without invoking its
@@ -2296,12 +2338,13 @@ class TransparentDriverSystem(DriverSystem):
         # see into this subsystem.
         self.clear_dp()
 
-        if self.mode == 'forward':
-            self.scatter('du', 'dp')
-        for subsystem in self.local_subsystems():
-            subsystem.applyJ(variables)
-        if self.mode == 'adjoint':
-            self.scatter('du', 'dp')
+        if self.is_active():
+            if self.mode == 'forward':
+                self.scatter('du', 'dp')
+            for subsystem in self.local_subsystems():
+                subsystem.applyJ(variables)
+            if self.mode == 'adjoint':
+                self.scatter('du', 'dp')
 
     def linearize(self):
         """ Solvers must Linearize all of their subsystems. """

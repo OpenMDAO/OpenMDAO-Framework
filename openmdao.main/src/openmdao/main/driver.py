@@ -1123,6 +1123,15 @@ class Driver(Component):
         for cname in self._ordering:
             getattr(self.parent, cname).init_var_sizes()
 
+    @rbac(('owner', 'user'))
+    def is_differentiable(self):
+        """Return True if analytical derivatives can be
+        computed for this Component.
+        """
+        if self.force_fd:
+            return False
+
+        return ISolver.providedBy(self) or self.__class__ == Driver
 
 def _flattened_names(name, val, names=None):
     """ Return list of names for values in `val`.
