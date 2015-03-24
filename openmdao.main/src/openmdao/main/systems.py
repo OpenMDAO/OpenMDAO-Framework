@@ -866,6 +866,8 @@ class System(object):
             self.sol_vec.array[:] = 0.0
             return self.sol_vec.array
 
+        #print "solving linear sys", self.name
+
         if options is not None:
             self.set_options(self.mode, options)
         self.initialize_gradient_solver()
@@ -1375,6 +1377,7 @@ class AssemblySystem(SimpleSystem):
     def __init__(self, scope, graph, name):
         super(AssemblySystem, self).__init__(scope, graph, name)
         self._provideJ_bounds = None
+        self._nest_lin_solve = False
 
     def setup_variables(self, resid_state_map=None):
         super(AssemblySystem, self).setup_variables(resid_state_map)
@@ -1427,11 +1430,98 @@ class AssemblySystem(SimpleSystem):
         inner_system = self._comp._system
         options = self._comp.driver.gradient_options
 
+        # If we can, use the new Jacobian-free method
+        if self.options.lin_solver == 'petsc_ksp':
+            self._nest_lin_solve = True
+            #inner_system.ln_solver = None
+            inner_system.set_options(self.mode, options)
+            inner_system.initialize_gradient_solver()
+            inner_system.linearize()
+            return
+
         # Calculate and save Jacobian for this assy
         inputs = [item.partition('.')[-1] for item in self.list_inputs()]
         outputs = [item.partition('.')[-1] for item in self.list_outputs()]
         self.J = inner_system.calc_gradient(inputs=inputs, outputs=outputs,
                                             options=options)
+
+    def applyJ(self, variables):
+        """ df = du - dGdp * dp or du = df and dp = -dGdp^T * df """
+
+        # If we are using scipy-gmres, we are stuck with the old method that
+        # calculates a full Jacobian for this assembly.
+        if self._nest_lin_solve is False:
+            super(AssemblySystem, self).applyJ(variables)
+            return
+
+        inner = self._comp._system
+        fvec = self.vec['df']
+        mode = self.mode
+        requested_ins = [item for item in self.list_inputs() \
+                         if self.scope.name2collapsed.get(item) in variables]
+        requested_outs = [item for item in self.list_outputs() \
+                          if self.scope.name2collapsed.get(item) in variables]
+
+        # Clean up any old solves
+        inner.rhs_vec.array[:] = 0.0
+        inner.sol_vec.array[:] = 0.0
+
+        if mode == 'forward':
+
+            # Copy arg to inner scope
+            for name in requested_ins:
+
+                key = name
+                parent = self
+
+                while True:
+                    parent = parent._parent_system
+                    if name in parent.vec['dp']:
+                        val = parent.vec['dp'][name]
+                        break
+
+                _, _, inner_name = name.partition('.')
+                inner.rhs_vec[inner_name] = val
+
+            # Solve inner linear system
+            if len(requested_ins) > 0 and len(requested_outs) > 0:
+                inner.solve_linear()
+
+            # Copy result to outer scope
+            for name in self.list_outputs():
+
+                _, _, inner_name = name.partition('.')
+                fvec[name] = inner.sol_vec[inner_name]
+                fvec[name][:] -= self.vec['du'][name][:]
+
+        else:
+
+            for name in self.list_outputs():
+                val = self.sol_vec[name]
+                _, _, inner_name = name.partition('.')
+                inner.rhs_vec[inner_name] = -val
+
+            # Solve inner linear system
+            if len(requested_ins) > 0:
+                inner.solve_linear()
+
+            # Copy result to outer scope
+            for name in self.list_inputs():
+
+                key = name
+                parent = self
+
+                while True:
+                    parent = parent._parent_system
+                    if name in parent.vec['dp']:
+                        var = parent.vec['dp']
+                        break
+
+                _, _, inner_name = name.partition('.')
+                var[name] = inner.sol_vec[inner_name]
+
+            for var in self.list_outputs():
+                self.vec['du'][var][:] += fvec[var][:]
 
     def set_complex_step(self, complex_step=False):
         """ Toggles complex_step plumbing for this system and all
