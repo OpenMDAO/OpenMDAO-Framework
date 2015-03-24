@@ -5,46 +5,96 @@ import shutil
 import subprocess
 import sys
 
-def env_exists(env_name):
-    envs = subprocess.check_output(['conda', 'env', 'list', '--json'])
-    envs = json.loads(envs)
+def create_env(name, pkgs, channel=None, yes=False):
+    cmd = 'conda create --name {name}'.format(name=name)
 
+    if channel:
+        cmd = '{cmd} --channel {channel}'.format(cmd=cmd, channel=channel)
+
+    if yes:
+        cmd = '{cmd} --yes'.format(cmd=cmd)
+
+    cmd = '{cmd} {pkgs}'.format(cmd=cmd, pkgs=' '.join(pkgs))
+
+    subprocess.check_call(cmd.split(' '))
+
+def list_envs():
+    cmd = 'conda env list --json'
+
+    return json.loads(subprocess.check_output(cmd.split(' ')))
+
+def remove_env(name, yes=False):
+    cmd = 'conda env remove --name {name}'.format(name=name)
+
+    if yes:
+        cmd = '{cmd} --yes'.format(cmd=cmd)
+
+    subprocess.check_call(cmd.split(' '))
+
+def env_exists(env_name, envs):
     for env in envs['envs']:
         if os.path.basename(env) == env_name:
             return True
 
     return False
 
+def get_env_path(env_name, envs):
+    for env in envs['envs']:
+        if os.path.basename(env) == env_name:
+            return env
+
+    return None
+
+def _get_python_path(env):
+    if sys.platform == 'win32':
+        path = '{path}/python'.format(path=env)
+    else:
+        path = '{path}/bin/python'.format(path=env)
+
+    return path
+
+def _get_pip_path(env):
+    if sys.platform == 'win32':
+        path = '{path}/Scripts/pip'.format(path=env)
+    else:
+        path = '{path}/bin/pip'.format(path=env)
+
+    return path
+
+def pip_install(env, pkgs):
+    cmd = '{pip} install {pkgs}'.format(
+        pip=_get_pip_path(env),
+        pkgs=' '.join(pkgs)
+    )
+
+    subprocess.check_call(cmd.split(' '))
+
+def python_develop(env, pkg_path):
+    cmd = '{python_path} setup.py develop --no-deps'.format(
+        python_path=_get_python_path(env)
+    )
+
+    subprocess.check_call(cmd.split(' '), cwd=pkg_path)
+
+def main():
+    args = parser.parse_args()
+    args.func(args)
 
 def build_dev(args):
     env_name = args.env
     force = args.force
 
-    # Install all openmdao dependencies into a conda environment
-    if force and env_exists(env_name):
-        cmd = 'conda remove --name {env_name} --all --yes'
-        cmd = cmd.format(env_name=env_name)
+    # Remove environment if --force is True
+    if force and env_exists(env_name, list_envs()):
+        remove_env(env_name, yes=True)
 
-        subprocess.check_call(cmd.split(' '))
-        
-    cmd = 'conda create --name {env_name} --channel http://conda.binstar.org/openmdao --yes {pkgs}'
-    cmd = cmd.format(pkgs=' '.join(pkgs), env_name=env_name)
-    subprocess.check_call(cmd.split(' '))
+    # Create conda environment
+    create_env(env_name, pkgs, channel='http://conda.binstar.org/openmdao', yes=True)
 
-    envs = subprocess.check_output(['conda', 'env', 'list', '--json'])
-    envs = json.loads(envs)
+    envs = list_envs()
 
-    # Get the path to the python interpreter
-    for env in envs['envs']:
-        if os.path.basename(env) == env_name:
-            if sys.platform == 'win32':
-                python_path = '{path}/python'.format(path=env)
-                pip_path = '{path}/Scripts/pip'.format(path=env)
-            else:
-                python_path = '{path}/bin/python'.format(path=env)
-                pip_path = '{path}/bin/pip'.format(path=env)
-
-    subprocess.check_call([pip_path, 'install', 'virtualenv==1.9.1'])
+    # use pip to install virtualenv because conda can't install version 1.9.1
+    pip_install(get_env_path(env_name, envs), ['virtualenv==1.9.1'])
 
     # Prior steps to correctly build bar3simulation
     pkg_path = openmdao['bar3simulation']
@@ -71,9 +121,12 @@ def build_dev(args):
     except Exception as error:
         print error
 
+    # Install all OpenMDAO packages using `python setup.py develop`
     for pkg_path in openmdao.values():
-        pkg_path = os.path.join(root, pkg_path)
-        subprocess.check_call([python_path, 'setup.py', 'develop', '--no-deps'], cwd=pkg_path)
+        python_develop(
+            get_env_path(env_name, envs),
+            os.path.join(root, pkg_path)
+        )
 
 # Path to root directory
 # Should be ../../../../
@@ -138,5 +191,4 @@ dev_parser.set_defaults(func=build_dev)
 
 
 if __name__ == "__main__":
-    args = parser.parse_args()
-    args.func(args)
+    main()
