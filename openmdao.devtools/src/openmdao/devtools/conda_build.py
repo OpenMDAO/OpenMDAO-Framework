@@ -49,6 +49,10 @@ def get_env_path(env_name, envs):
 
     return None
 
+def build_recipe(recipe):
+    cmd = 'conda build {recipe}'.format(recipe= recipe)
+    subprocess.check_call(shlex.split(cmd))
+
 def _get_python_path(env):
     if sys.platform == 'win32':
         path = '{path}/python'.format(path=env)
@@ -83,6 +87,21 @@ def python_develop(env, pkg_path):
 def main():
     args = parser.parse_args()
     args.func(args)
+
+def build_release(args):
+    conda_recipes_root = os.path.join(
+        root,
+        'conda-recipes'
+    )
+
+    for pkg in openmdao.keys():
+        recipe_path = os.path.join(
+            conda_recipes_root,
+            pkg
+        )
+
+        build_recipe(recipe_path)
+
 
 def build_bundle(args):
     version = args.version
@@ -137,7 +156,7 @@ def build_dev(args):
     pip_install(get_env_path(env_name, envs), ['virtualenv==1.9.1'])
 
     # Prior steps to correctly build bar3simulation
-    pkg_path = openmdao['bar3simulation']
+    pkg_path = openmdao['openmdao.examples.bar3simulation']
     pkg_path = os.path.join(root, pkg_path)
 
     # 1. Forcibly remove the bar3 extension if it exists
@@ -167,6 +186,23 @@ def build_dev(args):
             get_env_path(env_name, envs),
             os.path.join(root, pkg_path)
         )
+
+    msg = "\nTo activate the environment, use the following command:\n\n\t {cmd} {env}\n"
+
+    if sys.platform == 'win-32':
+        print msg.format(cmd='activate', env=env_name)
+
+    else:
+        print msg.format(cmd='source activate', env=env_name)
+
+    msg = "To deactivate the environment, use the following command:\n\n\t {cmd}\n"
+
+    if sys.platform == 'win-32':
+        print msg.format(cmd='deactivate')
+
+    else:
+        print msg.format(cmd='source deactivate')
+        
 
 # Path to root directory
 # Should be ../../../../
@@ -208,18 +244,18 @@ pkgs = [
 ]
 
 openmdao = {
-    'units' : 'openmdao.units',
-    'util' : 'openmdao.util',
-    'test' : 'openmdao.test',
-    'devtools' : 'openmdao.devtools',
-    'main' : 'openmdao.main',
-    'lib' : 'openmdao.lib',
-    'bar3simulation' : 'examples/openmdao.examples.bar3simulation',
-    'expected_improvement' : 'examples/openmdao.examples.expected_improvement',
-    'mdao' : 'examples/openmdao.examples.mdao',
-    'metamodel_tutorial' : 'examples/openmdao.examples.metamodel_tutorial',
-    'nozzle_geometry_doe' : 'examples/openmdao.examples.nozzle_geometry_doe',
-    'simple' : 'examples/openmdao.examples.simple',
+    'openmdao.units' : 'openmdao.units',
+    'openmdao.util' : 'openmdao.util',
+    'openmdao.test' : 'openmdao.test',
+    'openmdao.devtools' : 'openmdao.devtools',
+    'openmdao.main' : 'openmdao.main',
+    'openmdao.lib' : 'openmdao.lib',
+    'openmdao.examples.bar3simulation' : 'examples/openmdao.examples.bar3simulation',
+    'openmdao.examples.expected_improvement' : 'examples/openmdao.examples.expected_improvement',
+    'openmdao.examples.mdao' : 'examples/openmdao.examples.mdao',
+    'openmdao.examples.metamodel_tutorial' : 'examples/openmdao.examples.metamodel_tutorial',
+    'openmdao.examples.nozzle_geometry_doe' : 'examples/openmdao.examples.nozzle_geometry_doe',
+    'openmdao.examples.simple' : 'examples/openmdao.examples.simple',
 }
 
 parser = argparse.ArgumentParser(description="Process some arguments to build.py")
@@ -248,6 +284,8 @@ bundle_parser = sub_parsers.add_parser('bundle', help='build conda package that 
 bundle_parser.add_argument('-v', '--version', type=str, default=version, help="version of OpenMDAO to bundle")
 bundle_parser.set_defaults(func=build_bundle)
 
+release_parser = sub_parsers.add_parser('release', help='build conda release packages for OpenMDAO')
+release_parser.set_defaults(func=build_release)
 
 if __name__ == "__main__":
     main()
