@@ -1936,12 +1936,7 @@ def adjust_options(options, args):
     version = sys.version
     
     if "Analytics" in version or "Anaconda" in version:
-        if sys.platform == 'win32':
-            print 'ERROR: OpenMDAO go scripts cannot be used with Anaconda distributions.\nUse the command below to install the dev version of OpenMDAO:\n\n\tcmd /c conda-openmdao-dev.bat\n'
-
-        else:
-            print 'ERROR: OpenMDAO go scripts cannot be used with Anaconda distributions.\nUse the command below to install the dev version of OpenMDAO:\n\n\tbash conda-openmdao-dev.sh\n'
-
+        ERROR: OpenMDAO go scripts cannot be used with Anaconda distributions.\nFor more instructions on installing the dev version run:\n\n\t python openmdao.devtools/src/openmdao/devtools/conda_build.py dev --help
         sys.exit(-1)
         
     major_version = sys.version_info[:2]
