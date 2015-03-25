@@ -187,6 +187,23 @@ def build_dev(args):
             os.path.join(root, pkg_path)
         )
 
+    msg = "\nTo activate the environment, use the following command:\n\n\t {cmd} {env}\n"
+
+    if sys.platform == 'win-32':
+        print msg.format(cmd='activate', env=env_name)
+
+    else:
+        print msg.format(cmd='source activate', env=env_name)
+
+    msg = "To deactivate the environment, use the following command:\n\n\t {cmd}\n"
+
+    if sys.platform == 'win-32':
+        print msg.format(cmd='deactivate')
+
+    else:
+        print msg.format(cmd='source deactivate')
+        
+
 # Path to root directory
 # Should be ../../../../
 root = os.path.abspath(os.path.dirname(__file__))
