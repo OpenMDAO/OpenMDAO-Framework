@@ -532,13 +532,9 @@ class Component(Container):
                 rank = MPI.COMM_WORLD.rank
             else:  
                 rank = 0
-            print 'before execute',self.get_itername() , rank
             self.execute()
-            print 'before _post_execute',self.get_itername() , rank
             self._post_execute()
-            print 'before _post_run',self.get_itername() , rank
             self._post_run()
-            print 'after _post_run',self.get_itername(), rank
         except Exception:
             info = sys.exc_info()
             print 'Exception', info
