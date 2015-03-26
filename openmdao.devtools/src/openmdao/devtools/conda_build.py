@@ -202,7 +202,7 @@ def build_dev(args):
 
     else:
         print msg.format(cmd='source deactivate')
-        
+
 
 # Path to root directory
 # Should be ../../../../
