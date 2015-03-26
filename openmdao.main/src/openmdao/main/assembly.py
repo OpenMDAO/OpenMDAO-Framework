@@ -43,8 +43,8 @@ from openmdao.main.depgraph import DependencyGraph, all_comps, \
                                    list_driver_connections, \
                                    simple_node_iter, \
                                    is_boundary_node
-from openmdao.main.systems import SerialSystem, _create_simple_sys
-from openmdao.main.vecwrapper import petsc_idxs
+from openmdao.main.systems import SerialSystem, _create_simple_sys, OpaqueSystem
+from openmdao.main.mpiwrap import to_idx_array
 
 from openmdao.util.graph import list_deriv_vars, base_var, fix_single_tuple
 from openmdao.util.log import logger
@@ -1124,6 +1124,8 @@ class Assembly(Component):
             loc_comps.extend([s.name for s in system.simple_subsystems()
                                     if s._comp is not None])
             sys_stack.extend(system.local_subsystems())
+            if isinstance(system, OpaqueSystem):
+                sys_stack.append(system._inner_system)
 
         loc_comps = set(loc_comps)
         loc_comps.add(None)
@@ -1133,12 +1135,26 @@ class Assembly(Component):
         for node, data in self._reduced_graph.nodes_iter(data=True):
             if 'comp' not in data:
                 src = node[0]
+                scomp = src.split('.', 1)[0] if '.' in src else None
+                dist_src = False
+                ssys = None
+                if scomp and scomp in self._reduced_graph:
+                    ssys = self._reduced_graph.node[scomp]['system']
+
                 sval, idx = get_val_and_index(self, src)
                 if isinstance(sval, ndarray):
                     dests = node[1]
                     for dest in dests:
                         dcomp = dest.split('.',1)[0] if '.' in dest else None
                         if dcomp in loc_comps:
+                            if dcomp:
+                                dsys = self._reduced_graph.node[dcomp]['system']
+                                # don't overwrite inputs if they have distrib_idxs declared, because those
+                                # determine the size
+                                if dsys.is_distrib_var(node):
+                                    continue
+                                elif ssys and ssys.is_distrib_var(node):
+                                    continue
                             dval, didx = get_val_and_index(self, dest)
                             if isinstance(dval, ndarray):
                                 if sval.shape != dval.shape:
@@ -1476,7 +1492,7 @@ class Assembly(Component):
 
             if '[' in vname:  # array index into basevar
                 base = vname.split('[',1)[0]
-                flat_idx = petsc_idxs(get_flattened_index(idx,
+                flat_idx = to_idx_array(get_flattened_index(idx,
                                         get_var_shape(base, child),
                                         cvt_to_slice=False))
             else:
@@ -1563,9 +1579,8 @@ class Assembly(Component):
         for comp in self.get_comps():
             comp.setup_init()
 
-    #FIXME: rename this to init_var_sizes()
-    def size_variables(self):
-        self._top_driver.size_variables()
+    def init_var_sizes(self):
+        self._top_driver.init_var_sizes()
 
     def post_setup(self):
         for comp in self.get_comps():
@@ -1598,7 +1613,7 @@ class Assembly(Component):
             self.compute_itersets(None)
             self.compute_ordering(None)
 
-            self.size_variables()
+            self.init_var_sizes()
 
             self.setup_reduced_graph(inputs=inputs, outputs=outputs,
                                      drvname=drvname)
@@ -1606,14 +1621,16 @@ class Assembly(Component):
 
             self.check_config()
 
-            self.collect_metadata()
-
             # if MPI.COMM_WORLD.rank == 0:
             #     from openmdao.util.dotgraph import plot_system_tree, plot_graph
             #     plot_system_tree(self._system,'sys.pdf')
             #     plot_graph(self._reduced_graph, 'red.pdf')
 
+            # communicators are distributed and dist idxs are gathered from comps here
             self.setup_communicators(comm)
+
+            self.collect_metadata()
+
             self.setup_variables()
             self.setup_sizes()
             self.setup_vectors()

@@ -295,10 +295,8 @@ class PETSc_KSP(LinearSolver):
         system.sol_buf = np.zeros((lsize, ))
 
         # Set these in the system
-        #print "KSP: creating sol buf, size %d" % lsize
         system.sol_buf_petsc = PETSc.Vec().createWithArray(system.sol_buf,
                                                      comm=system.mpi.comm)
-        #print "KSP: creating rhs buf, size %d" % lsize
         system.rhs_buf_petsc = PETSc.Vec().createWithArray(system.rhs_buf,
                                                      comm=system.mpi.comm)
 
