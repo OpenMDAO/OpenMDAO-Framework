@@ -165,8 +165,16 @@ def write_groups_to_hdf5( group, name, value ):
         group.create_dataset(name, (), dtype=np.int64)
     elif isinstance(value,str):
         # print 'write_groups_to_hdf5 dataset string', filename, rank,  group.name, name
-        if len(value) > 50:
-            raise ValueError('string will not fit in space allocated for in HDF5 file')
+
+
+
+
+        # if len(value) > 50:
+        #     raise ValueError('string will not fit in space allocated for in HDF5 file')
+
+
+
+            
         dset = group.create_dataset(name, (), dtype=str_dtype)
         # dt = h5py.special_dtype(vlen=bytes)
         # #dset = group.create_dataset(name, (1,), dtype=dt)
