@@ -38,7 +38,6 @@ class InOutArrayComp(Component):
 
     def __init__(self, arr_size=10):
         super(InOutArrayComp, self).__init__()
-        self.mpi.requested_cpus = 2
 
         self.add_trait('invec', Array(np.ones(arr_size, float), iotype='in'))
         self.add_trait('outvec', Array(np.ones(arr_size, float), iotype='out'))
@@ -51,7 +50,6 @@ class DistribCompSimple(Component):
     """Uses 2 procs but takes full input vars"""
     def __init__(self, arr_size=10):
         super(DistribCompSimple, self).__init__()
-        self.mpi.requested_cpus = 2
 
         self.add_trait('invec', Array(np.ones(arr_size, float), iotype='in'))
         self.add_trait('outvec', Array(np.ones(arr_size, float), iotype='out'))
@@ -73,7 +71,7 @@ class DistribCompSimple(Component):
             self.outvec = both[0,:] + both[1,:]
 
     def get_req_cpus(self):
-        return 2
+        return (2, 2)
 
 
 class DistribInputComp(Component):
@@ -114,7 +112,7 @@ class DistribInputComp(Component):
         }
 
     def get_req_cpus(self):
-        return 2
+        return (2, 2)
 
 
 class DistribOverlappingInputComp(Component):
@@ -168,7 +166,7 @@ class DistribOverlappingInputComp(Component):
         }
 
     def get_req_cpus(self):
-        return 2
+        return (2, 2)
 
 class DistribInputDistribOutputComp(Component):
     """Uses 2 procs and takes input var slices and has output var slices as well"""
@@ -208,7 +206,7 @@ class DistribInputDistribOutputComp(Component):
         }
 
     def get_req_cpus(self):
-        return 2
+        return (2, 2)
 
 class DistribNoncontiguousComp(Component):
     """Uses 2 procs and takes non-contiguous input var slices and has output
@@ -247,7 +245,7 @@ class DistribNoncontiguousComp(Component):
         }
 
     def get_req_cpus(self):
-        return 2
+        return (2, 2)
 
 class DistribGatherComp(Component):
     """Uses 2 procs gathers a distrib input into a full output"""
@@ -282,7 +280,7 @@ class DistribGatherComp(Component):
         return { 'invec': make_idx_array(start, end) }
 
     def get_req_cpus(self):
-        return 2
+        return (2, 2)
 
 class NonDistribGatherComp(Component):
     """Uses 2 procs gathers a distrib input into a full output"""

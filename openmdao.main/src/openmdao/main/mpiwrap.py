@@ -104,7 +104,8 @@ else:
 
 class MPI_info(object):
     def __init__(self):
-        self.requested_cpus = 1
+        # min/max requested cpus
+        self.requested_cpus = (1, 1)
 
         # the MPI communicator used by this comp and its children
         self.comm = COMM_NULL

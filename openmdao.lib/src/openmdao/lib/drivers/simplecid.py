@@ -59,7 +59,7 @@ class SimpleCaseIterDriver(Driver):
             # Set inputs.
             for j, path in enumerate(inputs):
                 value = values[j][i]
-                expr = exprs.get(path)
+                #expr = exprs.get(path)
                 self.set_parameter_by_name(path, value)
 
             # Run workflow.

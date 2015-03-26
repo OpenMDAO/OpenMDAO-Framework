@@ -683,7 +683,7 @@ class Workflow(object):
     def get_req_cpus(self):
         """Return requested_cpus"""
         if self._system is None:
-            return 1
+            return (1, 1)
         else:
             return self._system.get_req_cpus()
 
