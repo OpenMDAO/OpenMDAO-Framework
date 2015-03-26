@@ -1717,7 +1717,8 @@ class CompoundSystem(System):
                         src_partial.append(src_idxs)
                         dest_partial.append(dest_idxs)
 
-                        if node in self.vec['u']:
+                        if node in self.vec['u'] or \
+                           (node in self.vec['p'] and self.is_var_in_parallel_system(node)):
                             sidxs = src_idxs
                             didxs = dest_idxs
                         else:
@@ -2063,14 +2064,11 @@ class ParallelSystem(CompoundSystem):
 
         varkeys_list = self.mpi.comm.allgather(names)
 
-        for varkeys in varkeys_list:
+        for rank, varkeys in enumerate(varkeys_list):
             for name in varkeys:
                 self.variables[name] = varmeta[name].copy()
-                self.variables[name]['size'] = 0
-
-        if sub:
-            for name, var in sub.variables.items():
-                self.variables[name] = var
+                if rank != self.mpi.rank:
+                    self.variables[name]['size'] = 0
 
         self._create_var_dicts(resid_state_map)
 
