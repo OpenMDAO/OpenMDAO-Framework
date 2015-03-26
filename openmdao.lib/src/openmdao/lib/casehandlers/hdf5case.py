@@ -28,7 +28,7 @@ from openmdao.main.mpiwrap import MPI
 #from mpi4py import MPI
 
 
-print_metadata_log = False
+# print_metadata_log = False
 
 # The string size for the names of the variables in 
 #   the array of strings and also string variables themselves
@@ -52,20 +52,24 @@ def write_to_hdf5( group, name, value ):
         dict_grp = group[name]
         for k, v in value.items():
             write_to_hdf5( dict_grp, k, v )
-    # elif isinstance( value, VariableTree): TODO
+    elif isinstance( value, VariableTree): #TODO
+        #print "write_to_hdf5 VariableTree"
+        vtree_grp = group[name]
+        for k in value.list_vars():
+            write_to_hdf5( vtree_grp, k, value.get(k) )
     #     pass #print 'create VariableTree', name, MPI.COMM_WORLD.rank
     #     vartree_grp = group.create_group(name)
     #     #QQQQQvartree_grp.attrs['__vartree__'] = True
     #     for k in value.list_vars():
     #         write_to_hdf5( vartree_grp, k, value.get(k) )
     elif isinstance( value, np.ndarray):
-        print 'write_to_hdf5 np.ndarray', rank, filename, name, value.shape
+        # print 'write_to_hdf5 np.ndarray', rank, filename, name, value.shape
         dset = group[name] 
         dset[:] = value[:]
     elif isinstance( value, list):
         if len( value ) > 0:
             if isinstance( value[0], str):
-                print 'write_to_hdf5 str list', rank, filename, name, len ( value )
+                # print 'write_to_hdf5 str list', rank, filename, name, len ( value )
                 dset = group[name] 
                 for i,v in enumerate(value): # TODO there must be a better way
                     dset[i] = value[i]
@@ -73,26 +77,26 @@ def write_to_hdf5( group, name, value ):
             pass #print 'write_to_hdf5 unknown list', rank, name, value
             # TODO How do we handle empty lists? Do not know type
     elif value == None :
-        print 'write_to_hdf5 None', rank, filename,  name
+        # print 'write_to_hdf5 None', rank, filename,  name
         #group.attrs[name] = np.array([]) # TODO really need to write None here
         pass
     elif isinstance( value, (np.float64,float)):
-        print 'write_to_hdf5 np.float64 or float', rank, filename, name, value
+        # print 'write_to_hdf5 np.float64 or float', rank, filename, name, value
         dset = group[name] 
         dset[()] = value
     elif isinstance(value,int):
-        print 'write_to_hdf5 int', rank, filename, name, value
+        # print 'write_to_hdf5 int', rank, filename, name, value
         dset = group[name] 
         #dset[0,] = value
         dset[()] = value
     elif isinstance(value,str):
-        print 'write_to_hdf5 string', rank, filename, name, len( value )
+        # print 'write_to_hdf5 string', rank, filename, name, len( value )
         dset = group[name] 
         #dset[0,] = value
         dset[()] = value
         sys.stdout.flush()
     elif isinstance(value,bool):
-        print 'write_to_hdf5 bool', rank, filename, name, value
+        # print 'write_to_hdf5 bool', rank, filename, name, value
         dset = group[name] 
         #dset[0,] = value
         dset[()] = value
@@ -100,11 +104,11 @@ def write_to_hdf5( group, name, value ):
 
 def write_groups_to_hdf5( group, name, value ):
 
-    global print_metadata_log
+    # global print_metadata_log
 
     global str_dtype
     
-    print 'print_metadata_log', print_metadata_log
+    # print 'print_metadata_log', print_metadata_log
 
     filename = group.file.filename
 
@@ -113,25 +117,27 @@ def write_groups_to_hdf5( group, name, value ):
     else:  
         rank = 0
 
-    
+    # print name, value, type(value)
 
-    if print_metadata_log:
-        print 'write_groups_to_hdf5_metadata', group.name, name, rank
+    # if print_metadata_log:
+    #     print 'write_groups_to_hdf5_metadata', group.name, name, rank
 
     if isinstance(value,dict):
-        print 'write_groups_to_hdf5 group dict', filename, rank,  group.name, name
+        # print 'write_groups_to_hdf5 group dict', filename, rank,  group.name, name
         dict_grp = group.create_group(name)
         #dict_grp.attrs['__dict__'] = True # To indicate that this HDF5 group represents an actual Python dict
         for k, v in value.items():
             write_groups_to_hdf5( dict_grp, k, v )
-    # elif isinstance( value, VariableTree): # TODO
+    elif isinstance( value, VariableTree): # TODO
+        #print "write_groups_to_hdf5 VariableTree", name
+
     #     pass #print 'create VariableTree', name, MPI.COMM_WORLD.rank
-    #     vartree_grp = group.create_group(name)
-    #     #QQQQQvartree_grp.attrs['__vartree__'] = True
-    #     for k in value.list_vars():
-    #         write_to_hdf5( vartree_grp, k, value.get(k) )
+        vartree_grp = group.create_group(name)
+        vartree_grp.attrs['__vartree__'] = True
+        for k in value.list_vars():
+            write_groups_to_hdf5( vartree_grp, k, value.get(k) )
     elif isinstance( value, np.ndarray):
-        print 'write_groups_to_hdf5 dataset np.ndarray', filename, rank,  group.name, name
+        # print 'write_groups_to_hdf5 dataset np.ndarray', filename, rank,  group.name, name
         if group.file.driver == 'mpio': # cannot do compression when writing in parallel
             group.create_dataset(name, data=value)
         else:
@@ -139,32 +145,34 @@ def write_groups_to_hdf5( group, name, value ):
     elif isinstance( value, list):
         if len( value ) > 0:
             if isinstance( value[0], str):
-                print 'write_groups_to_hdf5 dataset strlist', filename, rank,  group.name, name
+                # print 'write_groups_to_hdf5 dataset strlist', filename, rank,  group.name, name
                 # dt = h5py.special_dtype(vlen=bytes)
                 # group.create_dataset(name, (len(value),), dtype=dt)
                 group.create_dataset(name, (len(value),),str_dtype ) # TODO check to make sure it fits
         else:
-            print 'write_groups_to_hdf5 dataset unknownlist', filename, rank,  group.name, name
+            # print 'write_groups_to_hdf5 dataset unknownlist', filename, rank,  group.name, name
             group.create_dataset(name,(0,)) # TODO How do we handle empty lists? Do not know type
     elif value == None : # TODO Need a better way to do this. When using h5diff, we get 'Not comparable' with these values
-        print 'write_groups_to_hdf5 dataset None', filename, rank,  group.name, name
+        # print 'write_groups_to_hdf5 dataset None', filename, rank,  group.name, name
         group.create_dataset(name,(0,)) # TODO: This results in DATATYPE  H5T_IEEE_F32LE  DATASPACE  SIMPLE { ( 0 ) / ( 0 ) }
     elif isinstance( value, (np.float64,float)):
-        print 'write_groups_to_hdf5 dataset np.float64 or float', filename, rank,  group.name, name
+        # print 'write_groups_to_hdf5 dataset np.float64 or float', filename, rank,  group.name, name
         #group.create_dataset(name, (1,), dtype=np.float64)
         group.create_dataset(name, (), dtype=np.float64)
     elif isinstance(value,int):
-        print 'write_groups_to_hdf5 dataset int', filename, rank,  group.name, name
+        # print 'write_groups_to_hdf5 dataset int', filename, rank,  group.name, name
         #group.create_dataset(name, (1,), dtype='i')
         group.create_dataset(name, (), dtype=np.int64)
     elif isinstance(value,str):
-        print 'write_groups_to_hdf5 dataset string', filename, rank,  group.name, name
+        # print 'write_groups_to_hdf5 dataset string', filename, rank,  group.name, name
+        if len(value) > 50:
+            raise ValueError('string will not fit in space allocated for in HDF5 file')
         dset = group.create_dataset(name, (), dtype=str_dtype)
         # dt = h5py.special_dtype(vlen=bytes)
         # #dset = group.create_dataset(name, (1,), dtype=dt)
         # dset = group.create_dataset(name, (), dtype=dt)
     elif isinstance(value,bool):
-        print 'write_groups_to_hdf5 dataset bool', filename, rank,  group.name, name
+        # print 'write_groups_to_hdf5 dataset bool', filename, rank,  group.name, name
         #dset = group.create_dataset(name, (1,), dtype=np.bool)
         dset = group.create_dataset(name, (), dtype=np.bool)
 
@@ -213,12 +221,14 @@ class HDF5CaseRecorder(object):
 
     implements(ICaseRecorder)
 
-    def __init__(self, out='cases.hdf5', indent=4, sort_keys=True): # TODO need an option for the size of the strings
+    def __init__(self, out='cases.hdf5', indent=4, sort_keys=True, max_string_len=50 ): # TODO need an option for the size of the strings
         self._cfg_map = {}
         self._uuid = None
         self._cases = None
 
-        print 'in HDF5CaseRecorder.__init__', get_rank()
+        self.max_string_len = max_string_len
+
+        # print 'in HDF5CaseRecorder.__init__', get_rank()
 
         # not used yet but for getting values of variables
         #     from subcases
@@ -244,7 +254,7 @@ class HDF5CaseRecorder(object):
 
         self.is_variable_local_cache = {} # per driver
 
-        print_metadata_log = False
+        # print_metadata_log = False
 
         if MPI:
             pass #print 'COMM_WORLD', MPI.COMM_WORLD
@@ -263,10 +273,10 @@ class HDF5CaseRecorder(object):
     def register(self, driver, inputs, outputs):
         """ Register names for later record call from `driver`. """
 
-        import pprint
-        print 'in HDF5CaseRecorder.register', driver.name, get_rank()
-        print pprint.pprint( inputs ) 
-        print pprint.pprint( outputs ) 
+        # import pprint
+        # print 'in HDF5CaseRecorder.register', driver.name, get_rank()
+        # print pprint.pprint( inputs ) 
+        # print pprint.pprint( outputs ) 
 
         #import pdb; pdb.set_trace()
         self._cfg_map[driver] = (inputs, outputs)
@@ -320,16 +330,16 @@ class HDF5CaseRecorder(object):
             pass #print 'driver is not parallel', driver.get_pathname()
             self.hdf5_case_record_file_objects[driver] = h5py.File(case_recording_filename, "w")
 
-        print 'exiting HDF5CaseRecorder.register', get_rank()
+        # print 'exiting HDF5CaseRecorder.register', get_rank()
 
 
 
     def record_constants(self, constants):
         """ Record constant data. """
 
-        global print_metadata_log
+        # global print_metadata_log
 
-        print 'in HDF5CaseRecorder.record_constants', get_rank()
+        # print 'in HDF5CaseRecorder.record_constants', get_rank()
 
 
 
@@ -362,8 +372,8 @@ class HDF5CaseRecorder(object):
             write_groups_to_hdf5( expressions_grp, k, v )
             
 
-        print 'starting write_groups_to_hdf5_metadata'
-        print_metadata_log = True
+        # print 'starting write_groups_to_hdf5_metadata'
+        # print_metadata_log = True
         variable_metadata_grp = simulation_info_grp.create_group("variable_metadata")
 
 
@@ -371,8 +381,8 @@ class HDF5CaseRecorder(object):
         for k in sorted(info['variable_metadata']):
             v = info['variable_metadata'][k]
             write_groups_to_hdf5( variable_metadata_grp, k, v )
-        print_metadata_log = False
-        print 'ending write_groups_to_hdf5_metadata'
+        # print_metadata_log = False
+        # print 'ending write_groups_to_hdf5_metadata'
 
 
 
@@ -412,7 +422,7 @@ class HDF5CaseRecorder(object):
         #     for k,v in info.items():
         #         write_to_hdf5( driver_info_group, k, v )
 
-        print 'in record_constants at end', get_rank()
+        # print 'in record_constants at end', get_rank()
 
     def is_variable_local( self, driver, prefix, name ):
         '''Check to see if the given variable is available locally on this process'''
@@ -523,8 +533,6 @@ class HDF5CaseRecorder(object):
             if name == 'error_status' and value == None :
                 from sys import maxint
                 value = maxint
-            if '_id' in name:
-                print 'ids_in_metadata', hdf5_file_object.filename, name, value, get_rank()
             metadata.append( value )
                 
         metadata_dset[()] = np.array([ tuple(metadata), ], dtype = hdf5_file_object['metadatatype'])
@@ -557,8 +565,8 @@ class HDF5CaseRecorder(object):
         Note that a closed recorder will do nothing in :meth:`record`.
         """
 
-        if MPI:
-            print "in close", MPI.COMM_WORLD.rank, get_rank()
+        # if MPI:
+        #     print "in close", MPI.COMM_WORLD.rank, get_rank()
 
         # if MPI:
         #     MPI.COMM_WORLD.Barrier()
@@ -566,7 +574,7 @@ class HDF5CaseRecorder(object):
 
         for hdf5_case_record_file in self.hdf5_case_record_file_objects.values() :
             #print 'whatisin at close', hdf5_case_record_file.filename, hdf5_case_record_file.keys(), get_rank()
-            print 'closing hdf5_case_record_file.filename', hdf5_case_record_file.filename, get_rank()
+            # print 'closing hdf5_case_record_file.filename', hdf5_case_record_file.filename, get_rank()
             hdf5_case_record_file.close()            
 
         # if MPI:
@@ -574,7 +582,7 @@ class HDF5CaseRecorder(object):
 
         if 1 or not MPI or get_rank() == 0 : # only rank 0 process needs to write the primary case recording file
 
-            print "closing hdf5_main_file_object", get_rank()
+            # print "closing hdf5_main_file_object", get_rank()
             sys.stdout.flush()
 
 
@@ -585,13 +593,13 @@ class HDF5CaseRecorder(object):
             for driver_path, filename in self.case_recording_filenames.items():
                 # Create an external link to the root group "/" in the driver specific iteration cases 
                 # B['External'] = h5py.ExternalLink("dset.h5", "/dset")
-                print 'making links to', filename, driver_path, get_rank()
+                # print 'making links to', filename, driver_path, get_rank()
                 sys.stdout.flush()
                 # if filename != 'cases__driver.hdf5':
                 #     continue
                 iteration_case_grp[driver_path] = h5py.ExternalLink(filename, "/") # root should work
             self.hdf5_main_file_object.close()
-            print "closed main hdf5_case_recorder", get_rank()
+            # print "closed main hdf5_case_recorder", get_rank()
 
 
 

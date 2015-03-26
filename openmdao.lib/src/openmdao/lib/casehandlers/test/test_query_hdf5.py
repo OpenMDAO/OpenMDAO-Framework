@@ -121,7 +121,7 @@ def create_files():
 class TestCase(unittest.TestCase):
 
     def setUp(self):
-        #create_files()  # Uncomment to create 'sellar.new'
+        create_files()  # Uncomment to create 'sellar.new'
         path = os.path.join(os.path.dirname(__file__), 'sellar.hdf5')
         self.cds = CaseDatasetHDF5(path, 'hdf5')
         self.startdir = os.getcwd()
@@ -139,45 +139,57 @@ class TestCase(unittest.TestCase):
 
 
     def test_query(self):
-        # Full dataset.
-        #vnames = self.cds.data.var_names().fetch()
-        expected = ['_driver_id', '_driver_name', '_id', '_itername', '_parent_id', '_pseudo_0.out0', '_pseudo_1.out0', '_pseudo_2.out0', 'driver.workflow.itername', 'error_message', 'error_status', 'half.derivative_exec_count', 'half.exec_count', 'half.itername', 'half.z2a', 'half.z2b', 'sub._pseudo_0.out0', 'sub.derivative_exec_count', 'sub.dis1.derivative_exec_count', 'sub.dis1.exec_count', 'sub.dis1.itername', 'sub.dis1.y1', 'sub.dis1.y2', 'sub.dis2.derivative_exec_count', 'sub.dis2.exec_count', 'sub.dis2.itername', 'sub.dis2.y2', 'sub.driver.workflow.itername', 'sub.exec_count', 'sub.globals.z1', 'sub.itername', 'sub.states', 'sub.states.y[0]', 'sub.states.y[1]', 'sub.x1', 'timestamp']
-        #self.assertEqual(vnames, expected)
+        
+        # Check the variable names for the full dataset.
+        vnames = self.cds.data.var_names().fetch()
+        expected = ['_driver_id', '_driver_name', '_id', '_itername', '_parent_id', '_pseudo_0.out0', 
+        '_pseudo_1.out0', '_pseudo_2.out0', 'driver.workflow.itername', 'error_message', 'error_status', 
+        'half.derivative_exec_count', 'half.exec_count', 'half.itername', 'half.z2a', 'half.z2b', 
+        'sub._pseudo_0.out0', 'sub.derivative_exec_count', 'sub.dis1.derivative_exec_count', 'sub.dis1.exec_count',
+         'sub.dis1.itername', 'sub.dis1.y1', 'sub.dis1.y2', 'sub.dis2.derivative_exec_count', 
+         'sub.dis2.exec_count', 'sub.dis2.itername', 'sub.dis2.y2', 'sub.driver.workflow.itername', 
+         'sub.exec_count', 'sub.globals.z1', 'sub.itername', 'sub.states', 'sub.states.y[0]', 
+         'sub.states.y[1]', 'sub.x1', 'timestamp']
+        self.assertEqual(vnames, expected)
 
-        #cases = self.cds.data.fetch()
-        #self.assertEqual(len(cases), 74)
-        #self.assertEqual(len(cases[0]), len(expected))
+        # Check the sizes of the full dataset.
+        cases = self.cds.data.fetch()
+        self.assertEqual(len(cases), 74)
+        self.assertEqual(len(cases[0]), len(expected))
+        
+        # check to see if the driver method works
+        cases = self.cds.data.driver('driver').fetch() # the vartree data is only available in the top level driver cases
+        self.assertEqual(len(cases), 10)
 
-
-        #print "iternames"
-        #print self.cds.data.vars('_itername').fetch()
-
-
-
-        ## Specific variables.
+        # Check to see if vartree reading works
+        cases = self.cds.data.driver('driver').fetch() # the vartree data is only available in the top level driver cases
+        expected = [ 8.18917514,  6.52651228]
+        actual = cases[0]['sub.states']['y']
+        for exp, act in zip( expected, actual):
+            self.assertAlmostEqual(exp, act)
+            
+        # Check to see if vars method works
         names = ['half.z2a', 'sub.globals.z1', 'sub.x1']
-        #vnames = self.cds.data.vars(names).var_names().fetch()
-        #self.assertEqual(vnames, names)
+        vnames = self.cds.data.vars(names).var_names().fetch()
+        self.assertEqual(vnames, names)
 
-        #cases = self.cds.data.vars(names).fetch()
-        #self.assertEqual(len(cases), 74)
-        #self.assertEqual(len(cases[0]), len(names))
+        cases = self.cds.data.vars(names).fetch()
+        self.assertEqual(len(cases), 74)
+        self.assertEqual(len(cases[0]), len(names))
 
-        #print cases[-1]
+        # Check to see if case method works
+        cases = self.cds.data.case('3-sub.5').fetch()
+        self.assertEqual(1, len(cases))
         
-        vnames = self.cds.data.case('3-sub.5').var_names().fetch()
-        
-        print vnames
-        cases = self.cds.data.vars(names).case('3-sub.5').fetch()
-        
+        self.assertAlmostEqual( cases[0]['sub.dis1.y1'], 8.18917513654 )
 
-        iteration_case_242 = {
-            "half.z2a": -9.1082956132942171e-13,
-            "sub.globals.z1": 1.9776387704500034,
-            "sub.x1": 1.7062385906271342e-14
+        iteration_case_3_sub_5_expected = {
+            "sub.dis1.y1": 8.18917513654,
+            "sub.dis1.y2": 6.52651934578,
+            "sub.dis2.y2": 6.52651228123
         }
-        for name, val in zip(names, cases[-1]):
-            self.assertAlmostEqual(val, iteration_case_242[name])
+        for name, exp in iteration_case_3_sub_5_expected.items():
+            self.assertAlmostEqual(exp, cases[0][name])
 
         # Transposed.
         vars = self.cds.data.local().vars(names).by_variable().fetch()
@@ -188,6 +200,10 @@ class TestCase(unittest.TestCase):
         for name in ('sub.globals.z1', 'sub.x1'):
             self.assertEqual(len(vars[name]), 242)
             assert_rel_error(self, vars[name][-1], iteration_case_242[name], 0.001)
+
+
+        # Just a note if you want to see the iternames for the cases
+        #print self.cds.data.vars('_itername').fetch()
 
     def test_parent(self):
         # Full dataset names by specifying a top-level case.
@@ -270,18 +286,6 @@ class TestCase(unittest.TestCase):
         }
         self.verify(vnames, cases[-1], iteration_case_6)
 
-    def verify(self, names, case, expected):
-        for name, value in expected.items():
-            i = names.index(name)
-            if isinstance(value, float):
-                assert_rel_error(self, case[i], value, 0.001)
-            elif isinstance(value, dict):
-                self.verify(value.keys(), case[name], expected[name])
-            elif isinstance(value, np.ndarray) or isinstance(value, list):
-                for i, val in enumerate(value):
-                    assert_rel_error(self, case[name][i], value[i], 0.001)
-            else:
-                self.assertEqual(case[i], value)
 
     def test_driver(self):
         # Dataset of a driver.
@@ -299,78 +303,31 @@ class TestCase(unittest.TestCase):
         self.assertEqual(len(cases), 184)
         self.assertEqual(len(cases[0]), len(expected))
 
-    def test_bson(self):
-        # Simple check of _BSONReader.
-        names = ['half.z2a', 'sub.globals.z1', 'sub.x1']
 
-        path = os.path.join(os.path.dirname(__file__), 'sellar.json')
-        json_cases = CaseDataset(path, 'json').data.vars(names).fetch()
 
-        path = os.path.join(os.path.dirname(__file__), 'sellar.bson')
-        bson_cases = CaseDataset(path, 'bson').data.vars(*names).fetch()
 
-        for json_case, bson_case in zip(json_cases, bson_cases):
-            for json_val, bson_val in zip(json_case, bson_case):
-                if isnan(json_val):
-                    self.assertTrue(isnan(bson_val))
-                else:
-                    self.assertEqual(bson_val, json_val)
+class TestVarTreeCase(unittest.TestCase):
 
-    def test_json(self):
-        # Simple check of _JSONReader.
-        path = os.path.join(os.path.dirname(__file__), 'jsonrecorder.json')
-        cases = CaseDataset(path, 'json').data.fetch()
-        self.assertEqual(len(cases), 10)
+    def setUp(self):
+        path = os.path.join(os.path.dirname(__file__), 'cases__driver_with_vartree.hdf5')
+        self.cds = CaseDatasetHDF5(path, 'hdf5')
+        self.startdir = os.getcwd()
+        self.tempdir = tempfile.mkdtemp(prefix='test_query-')
+        os.chdir(self.tempdir)
 
-        path = os.path.join(os.path.dirname(__file__), 'truncated.json')
-        cases = CaseDataset(path, 'json').data.fetch()
-        self.assertEqual(len(cases), 7)
+    def tearDown(self):
+        self.cds = None
+        os.chdir(self.startdir)
+        if not os.environ.get('OPENMDAO_KEEPDIRS', False):
+            try:
+                shutil.rmtree(self.tempdir)
+            except OSError:
+                pass
 
-    def test_restore(self):
-        # Restore from case, run, verify outputs match expected.
-        top = set_as_top(SellarMDF())
-        #top.name = 'top'
-        top.recorders = [JSONCaseRecorder()]
-        top.run()
-        assert_rel_error(self, top.sub.globals.z1, 1.977639, .0001)
-        assert_rel_error(self, top.half.z2a, 0., .0001)
-        assert_rel_error(self, top.sub.x1, 0., .0001)
-        assert_rel_error(self, top.sub.states.y[0], 3.160004, .0001)
-        assert_rel_error(self, top.sub.states.y[1], 3.755280, .0001)
-        assert_rel_error(self, top.driver.eval_objective(), 3.18339413394, .0001)
 
-        cds = CaseDataset('cases.json', 'json')
-        cases = cds.data.fetch()
-        n_orig = len(cases)  # Typically 142
-
-        top = set_as_top(SellarMDF())
-        top._setup()
-        cds.restore(top, cases[-1]['_id'])
-        top.recorders = [JSONCaseRecorder('cases.restored')]
-        top.run()
-        assert_rel_error(self, top.sub.globals.z1, 1.977639, .0001)
-        assert_rel_error(self, top.half.z2a, 0., .0001)
-        assert_rel_error(self, top.sub.x1, 0., .0001)
-        assert_rel_error(self, top.sub.states.y[0], 3.160000, .0001)
-        assert_rel_error(self, top.sub.states.y[1], 3.755278, .0001)
-        assert_rel_error(self, top.driver.eval_objective(), 3.18339397762, .0001)
-
-        cases = CaseDataset('cases.restored', 'json').data.fetch()
-        # Exact case counts are unreliable, just assure restore was quicker.
-        self.assertTrue(len(cases) < n_orig/4)   # Typically 15
-
-    def test_write(self):
-        # Read in a dataset and write out a selected portion of it.
-        path = os.path.join(os.path.dirname(__file__), 'jsonrecorder.json')
-        cases = CaseDataset(path, 'json').data.fetch()
-        self.assertEqual(len(cases), 10)
-        self.assertEqual(len(cases[0]),19)
-
-        names = ('comp1.x', 'comp1.y', 'comp1.z', 'comp2.z')
-        CaseDataset(path, 'json').data.vars(names).write('cases.reduced')
-        reduced = CaseDataset('cases.reduced', 'json').data.fetch()
-        self.assertEqual(len(reduced), 10)
-        self.assertEqual(len(reduced[0]), 10)
+    def test_query(self):
+        # Full dataset.
+        cases = self.cds.data.fetch()
 
 
 if __name__ == '__main__':
