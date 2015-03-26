@@ -2,15 +2,12 @@
 Test query of case recorder file.
 """
 
-import glob
 import os.path
 import tempfile
 import shutil
 import unittest
 
 from math import isnan
-
-import numpy as np
 
 from openmdao.main.api import Assembly, Component, VariableTree, set_as_top
 from openmdao.main.datatypes.api import Array, Float, VarTree
@@ -121,7 +118,7 @@ def create_files():
 class TestCase(unittest.TestCase):
 
     def setUp(self):
-        create_files()  # Uncomment to create 'sellar.new'
+        #create_files()  # Uncomment to create 'sellar.new'
         path = os.path.join(os.path.dirname(__file__), 'sellar.hdf5')
         self.cds = CaseDatasetHDF5(path, 'hdf5')
         self.startdir = os.getcwd()
@@ -142,6 +139,9 @@ class TestCase(unittest.TestCase):
         
         # Check the variable names for the full dataset.
         vnames = self.cds.data.var_names().fetch()
+        
+        
+        print vnames
         expected = ['_driver_id', '_driver_name', '_id', '_itername', '_parent_id', '_pseudo_0.out0', 
         '_pseudo_1.out0', '_pseudo_2.out0', 'driver.workflow.itername', 'error_message', 'error_status', 
         'half.derivative_exec_count', 'half.exec_count', 'half.itername', 'half.z2a', 'half.z2b', 
@@ -150,6 +150,16 @@ class TestCase(unittest.TestCase):
          'sub.dis2.exec_count', 'sub.dis2.itername', 'sub.dis2.y2', 'sub.driver.workflow.itername', 
          'sub.exec_count', 'sub.globals.z1', 'sub.itername', 'sub.states', 'sub.states.y[0]', 
          'sub.states.y[1]', 'sub.x1', 'timestamp']
+        
+        expected = ['_driver_id', '_driver_name', '_id', '_itername', '_parent_id', '_pseudo_0.out0', 
+                    '_pseudo_1.out0', '_pseudo_2.out0', 'driver.workflow.itername', 'error_message', 
+                    'error_status', 'half.derivative_exec_count', 'half.exec_count', 'half.itername', 
+                    'half.z2a', 'half.z2b', 'sub._pseudo_0.out0', 'sub.derivative_exec_count', 
+                    'sub.dis1.derivative_exec_count', 'sub.dis1.exec_count', 'sub.dis1.itername', 
+                    'sub.dis1.y1', 'sub.dis1.y2', 'sub.dis2.derivative_exec_count', 'sub.dis2.exec_count',
+                    'sub.dis2.itername', 'sub.dis2.y2', 'sub.driver.workflow.itername', 'sub.exec_count', 
+                    'sub.globals.z1', 'sub.itername', 'sub.states', 'sub.states.y[0]', 'sub.states.y[1]', 
+                    'sub.x1', 'timestamp']
         self.assertEqual(vnames, expected)
 
         # Check the sizes of the full dataset.
@@ -158,7 +168,7 @@ class TestCase(unittest.TestCase):
         self.assertEqual(len(cases[0]), len(expected))
         
         # check to see if the driver method works
-        cases = self.cds.data.driver('driver').fetch() # the vartree data is only available in the top level driver cases
+        cases = self.cds.data.driver('driver').fetch() 
         self.assertEqual(len(cases), 10)
 
         # Check to see if vartree reading works
@@ -191,143 +201,24 @@ class TestCase(unittest.TestCase):
         for name, exp in iteration_case_3_sub_5_expected.items():
             self.assertAlmostEqual(exp, cases[0][name])
 
-        # Transposed.
-        vars = self.cds.data.local().vars(names).by_variable().fetch()
-        self.assertEqual(len(vars), len(names))
-        for name in ('half.z2a', 'sub.x1'):
-            self.assertEqual(len(vars[name]), 242)
-            self.assertTrue(not isnan(vars[name][-1]))
-        for name in ('sub.globals.z1', 'sub.x1'):
-            self.assertEqual(len(vars[name]), 242)
-            assert_rel_error(self, vars[name][-1], iteration_case_242[name], 0.001)
+        ## Transposed. TODO
+        #cases = self.cds.data.vars(names).fetch()
+        #vars = self.cds.data.driver('driver').by_variable().fetch()
+        #self.assertEqual(len(vars), len(names))
+        #for name in ('half.z2a', 'sub.x1'):
+            #self.assertEqual(len(vars[name]), 1)
+            #self.assertTrue(not isnan(vars[name][-1]))
+        #for name in ('sub.globals.z1', 'sub.x1'):
+            #self.assertEqual(len(vars[name]), 242)
+            #assert_rel_error(self, vars[name][-1], iteration_case_242[name], 0.001)
 
 
         # Just a note if you want to see the iternames for the cases
         #print self.cds.data.vars('_itername').fetch()
 
-    def test_parent(self):
-        # Full dataset names by specifying a top-level case.
-        parent = 'a00d3f9e-86ba-11e4-8001-20c9d0478eff'  # iteration_case_6
-
-        vnames = self.cds.data.parent_case(parent).var_names().fetch()
-        expected = [u'half.z2a', u'half.z2b', u'sub.dis1.y1',
-                    u'sub.itername', u'_pseudo_1', u'sub.dis1.itername',
-                    u'sub.globals.z1', u'sub.dis1.derivative_exec_count', u'sub.dis1.y2',
-                    u'half.exec_count', u'sub.driver.workflow.itername',
-                    u'sub.states.y[1]', u'sub._pseudo_0.out0',
-                    u'sub.derivative_exec_count', u'half.derivative_exec_count',
-                    'error_status', 'timestamp', u'sub.exec_count', u'sub.states',
-                    u'half.itername', u'sub.dis1.exec_count', u'sub.states.y[0]',
-                    u'sub.dis2.y2', u'_pseudo_1.out0', u'driver.workflow.itername',
-                    u'_pseudo_0', u'_pseudo_2', u'_pseudo_0.out0', u'_pseudo_2.out0',
-                    '_id', u'sub.dis2.derivative_exec_count', 'error_message',
-                    '_driver_id', u'sub.dis2.itername', u'sub.dis2.exec_count',
-                    u'sub.x1', u'sub._pseudo_0', '_parent_id']
-
-        #####self.assertEqual(vnames, expected)
-
-
-        cases = self.cds.data.parent_case(parent).fetch()
-        self.assertEqual(len(cases), 6)
-        self.assertEqual(len(cases[0]), len(expected))
-
-        iteration_case_1 = {
-            "sub._pseudo_0": 10.176871642217915,
-            "sub.dis1.derivative_exec_count": 0,
-            "sub.dis1.exec_count": 1,
-            "sub.dis1.itername": "1-sub.1-dis1",
-            "sub.dis1.y1": 26.8,
-            "sub.dis1.y2": 1.0,
-            "sub.dis2.derivative_exec_count": 0,
-            "sub.dis2.exec_count": 1,
-            "sub.dis2.itername": "1-sub.1-dis2",
-            "sub.dis2.y2": 11.176871642217915,
-            "sub.driver.workflow.itername": "1-sub.1"
-        }
-        self.verify(vnames, cases[0], iteration_case_1)
-
-        iteration_case_6 = {
-            # Data from parent.
-            "_pseudo_0": 26.803946487677322,
-            "_pseudo_1": -21.643929454616536,
-            "_pseudo_2": -13.019645649693533,
-            "driver.workflow.itername": "1",
-            "half.derivative_exec_count": 0,
-            "half.exec_count": 1,
-            "half.itername": "1-half",
-            "half.z2a": 2.0,
-            "half.z2b": 1.0,
-            "sub.derivative_exec_count": 0,
-            "sub.exec_count": 1,
-            "sub.globals.z1": 5.0,
-            "sub.itername": "1-sub",
-            "sub.states": {
-                "y": [
-                    24.803929454616537,
-                    10.980354350306467
-                ]
-            },
-            "sub.states.y[0]": 24.803929454616537,
-            "sub.states.y[1]": 10.980354350306467,
-            "sub.x1": 1.0,
-
-            # Last data from sub.
-            "sub._pseudo_0": 1.6233891457773097e-06,
-            "sub.dis1.derivative_exec_count": 0,
-            "sub.dis1.exec_count": 5,
-            "sub.dis1.itername": "1-sub.5-dis1",
-            "sub.dis1.y1": 24.803929454616537,
-            "sub.dis1.y2": 10.980352726917321,
-            "sub.dis2.derivative_exec_count": 0,
-            "sub.dis2.exec_count": 5,
-            "sub.dis2.itername": "1-sub.5-dis2",
-            "sub.dis2.y2": 10.980354350306467,
-            "sub.driver.workflow.itername": "1-sub.5"
-        }
-        self.verify(vnames, cases[-1], iteration_case_6)
-
-
-    def test_driver(self):
-        # Dataset of a driver.
-        vnames = self.cds.data.driver('sub.driver').var_names().fetch()
-        expected = ['_driver_id', '_id', '_parent_id', 'error_message',
-				'error_status', u'sub._pseudo_0', u'sub._pseudo_0.out0',
-				'sub.dis1.derivative_exec_count', u'sub.dis1.exec_count',
-				u'sub.dis1.itername', u'sub.dis1.y1', u'sub.dis1.y2',
-				'sub.dis2.derivative_exec_count', u'sub.dis2.exec_count',
-				u'sub.dis2.itername', u'sub.dis2.y2',
-				u'sub.driver.workflow.itername', 'timestamp']
-        self.assertEqual(vnames, expected)
-
-        cases = self.cds.data.driver('sub.driver').fetch()
-        self.assertEqual(len(cases), 184)
-        self.assertEqual(len(cases[0]), len(expected))
 
 
 
-
-class TestVarTreeCase(unittest.TestCase):
-
-    def setUp(self):
-        path = os.path.join(os.path.dirname(__file__), 'cases__driver_with_vartree.hdf5')
-        self.cds = CaseDatasetHDF5(path, 'hdf5')
-        self.startdir = os.getcwd()
-        self.tempdir = tempfile.mkdtemp(prefix='test_query-')
-        os.chdir(self.tempdir)
-
-    def tearDown(self):
-        self.cds = None
-        os.chdir(self.startdir)
-        if not os.environ.get('OPENMDAO_KEEPDIRS', False):
-            try:
-                shutil.rmtree(self.tempdir)
-            except OSError:
-                pass
-
-
-    def test_query(self):
-        # Full dataset.
-        cases = self.cds.data.fetch()
 
 
 if __name__ == '__main__':

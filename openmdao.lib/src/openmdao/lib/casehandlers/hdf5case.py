@@ -187,9 +187,11 @@ class HDF5CaseRecorder(object):
         info = self.get_simulation_info(constants)
         simulation_info_grp = self.hdf5_main_file_object.create_group("simulation_info")
       
+        # Can get away with setting the length because all processes participate in the writing of these. 
+        # TODO: Should do that for all of these values. Just doing it for the graphs since they can get really big
+        dset = simulation_info_grp.create_dataset('comp_graph', (), dtype=np.dtype((np.str, len(info['comp_graph']))))
+        dset = simulation_info_grp.create_dataset('graph', (), dtype=np.dtype((np.str, len(info['graph']))))
         write_groups_to_hdf5( simulation_info_grp, 'OpenMDAO_Version', info['OpenMDAO_Version'])
-        write_groups_to_hdf5( simulation_info_grp, 'comp_graph', info['comp_graph'])
-        write_groups_to_hdf5( simulation_info_grp, 'graph', info['graph'])
         write_groups_to_hdf5( simulation_info_grp, 'uuid', info['uuid'])
         write_groups_to_hdf5( simulation_info_grp, 'name', info['name'])
        
@@ -207,6 +209,7 @@ class HDF5CaseRecorder(object):
             v = info['variable_metadata'][k]
             write_groups_to_hdf5( variable_metadata_grp, k, v )
 
+        # TODO: combine the creating of the space with writing the values
         write_to_hdf5( simulation_info_grp, 'OpenMDAO_Version', info['OpenMDAO_Version'])
         write_to_hdf5( simulation_info_grp, 'comp_graph', info['comp_graph'])
         write_to_hdf5( simulation_info_grp, 'graph', info['graph'])

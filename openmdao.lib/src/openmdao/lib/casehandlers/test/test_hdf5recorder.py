@@ -1,48 +1,16 @@
-import bson
-import json
-import os.path
-import tempfile
-import re
-import shutil
-import sys
 import unittest
 
 import h5py
-import numpy as np
 
-from struct import unpack
-from cStringIO import StringIO
 
-from openmdao.main import __version__
-from openmdao.main.api import Assembly, Component, Case, VariableTree, set_as_top
-from openmdao.main.datatypes.api import Array, Instance, List, VarTree, Float, Int, Str
-from openmdao.test.execcomp import ExecComp
-from openmdao.lib.casehandlers.api import HDF5CaseRecorder, CaseDataset, JSONCaseRecorder
+from openmdao.lib.casehandlers.api import HDF5CaseRecorder
 from openmdao.lib.drivers.api import SLSQPdriver
 from openmdao.lib.drivers.api import FixedPointIterator, SLSQPdriver
 from openmdao.lib.optproblems import sellar
-
-from openmdao.examples.simple.paraboloid import Paraboloid
-
-from openmdao.lib.drivers.conmindriver import CONMINdriver
-
-from openmdao.util.testutil import assert_rel_error
-
 from openmdao.lib.drivers.api import SLSQPdriver
-
-from openmdao.lib.drivers.api import SensitivityDriver, CaseIteratorDriver, \
-                                     SLSQPdriver
-from openmdao.util.testutil import assert_raises
-
-
-def get_number_of_iterations( hdf5_driver_group ):
-    num_iterations = 0
-    for key in hdf5_driver_group:
-        if key.startswith( "iteration_case_"):
-            num_iterations += 1
-    return num_iterations
-
-
+from openmdao.main.api import Assembly, Component, VariableTree, set_as_top
+from openmdao.main.datatypes.api import Array, VarTree, Float, Int, Str
+from openmdao.util.testutil import assert_rel_error
 
 class States(VariableTree):
     y = Array([0.0, 0.0])
@@ -164,78 +132,81 @@ class TestSellarMDFCase(unittest.TestCase):
         self.assertEqual( simulation_info['constants/driver.iout'].value, 6 )
         self.assertEqual( simulation_info['constants/missing_deriv_policy'].value, 'assume_zero')
         expected = '{"directed": true, "graph": [], "nodes": [{"comp": true, "id": "sub"}, {"comp": true, "driver": true, "id": "driver"}, {"comp": true, "id": "half"}, {"comp": true, "pseudo": "constraint", "id": "_pseudo_1"}, {"comp": true, "pseudo": "objective", "id": "_pseudo_0"}, {"comp": true, "pseudo": "constraint", "id": "_pseudo_2"}], "links": [{"source": 0, "target": 3}, {"source": 0, "target": 4}, {"source": 0, "target": 5}, {"source": 1, "target": 0}, {"source": 1, "target": 2}, {"source": 2, "target": 0}, {"source": 3, "target": 1}, {"source": 4, "target": 1}, {"source": 5, "target": 1}], "multigraph": false}'
-        # self.assertEqual( simulation_info['comp_graph'].value, expected )
+        self.assertEqual( simulation_info['comp_graph'].value, expected )
 
         # Check some values in the iteration cases section
         driver_grp = hdf5_cases_file['/iteration_cases/driver/']
 
         # How many iterations?
-        num_iterations = get_number_of_iterations(driver_grp)
+        #num_iterations = get_number_of_iterations(driver_grp)
 
-        # compare expected to actual last case for some items
+        # compare expected to actual for case with itername '6' for some items
+        for key in driver_grp:
+            if key.startswith( "iteration_case_"):
+                if driver_grp[key]['metadata']['_itername'][0] == '6':
+                    iteration_case_name = key
 
+        iteration_data = driver_grp['%s/data/' % iteration_case_name ]
         # check a float array
-        actual = driver_grp['iteration_case_%d/data/array_of_floats' % num_iterations].value
-        expected = [  3.18339395e+00,   3.75527804e+00,  -2.02447220e+01,  -8.21709076e-15,  
-            -4.10854538e-15,   1.97763916e+00,   3.16000000e+00,   4.94198070e-15,  -3.51305651e-11]
+        actual = iteration_data['array_of_floats' ].value
+        expected = [  3.20119761e+00,   3.76541140e+00,  -2.02345886e+01,  -8.37056317e-13,  -4.18528158e-13,   
+                      1.98270572e+00,   3.17803953e+00,  -7.07632863e-15,  -1.80395299e-02]
         for exp, act in zip(expected, actual):
             assert_rel_error(self, exp, act, self.tolerance)
 
         # check a string array
-        actual = driver_grp['iteration_case_%d/data/array_of_strs' % num_iterations].value
-        expected = ['1-sub', '1', '1-half']
+        actual = iteration_data['array_of_strs' ].value
+        expected = ['6-sub', '6', '6-half']
         for exp, act in zip(expected, actual):
             self.assertEqual( exp, act )
 
         # check a vartree
-        actual = driver_grp['iteration_case_%d/data/sub.states/y' % num_iterations].value
-        expected = [ 3.16, 3.75527804]
+        actual = iteration_data['sub.states/y' ].value
+        expected = [ 3.17803953,  3.7654114]
         for exp, act in zip(expected, actual):
             assert_rel_error(self, exp, act, self.tolerance)
 
 
+class CompWithStringOutput(Component):
+    n = Int(0, iotype='in')
+    s = Str('', iotype='out')
+
+    def execute(self):
+        self.s = 'q' * self.n
 
 
-# class CompWithStringOutput(Component):
-#     n = Int(0, iotype='in')
-#     s = Str('', iotype='out')
+class StringOutput(Assembly):
+    """ Optimization of the Sellar problem using MDF
+    Disciplines coupled with FixedPointIterator.
+    """
 
-#     def execute(self):
-#         self.s = 'q' * self.n
-
-
-# class StringOutput(Assembly):
-#     """ Optimization of the Sellar problem using MDF
-#     Disciplines coupled with FixedPointIterator.
-#     """
-
-#     def configure(self):
+    def configure(self):
         
-#         comp = self.add('comp', CompWithStringOutput())
-#         self.driver.workflow.add( 'comp' )
+        comp = self.add('comp', CompWithStringOutput())
+        self.driver.workflow.add( 'comp' )
 
 
 
-# class TestSettingStringLengthCase(unittest.TestCase):
+class TestSettingStringLengthCase(unittest.TestCase):
 
-#     def setUp(self):
-#         self.top = set_as_top(StringOutput())
+    def setUp(self):
+        self.top = set_as_top(StringOutput())
 
-#     def tearDown(self):
-#         self.top = None
+    def tearDown(self):
+        self.top = None
 
-#     def test_setting_string_length(self):
-#         hdf5_cases_filename = 'string_output.hdf5'
-#         self.top.comp.n = 90
-#         self.top.recorders = [HDF5CaseRecorder(hdf5_cases_filename)]
+    def test_setting_string_length(self):
+        hdf5_cases_filename = 'string_output.hdf5'
+        self.top.comp.n = 90
+        self.top.recorders = [HDF5CaseRecorder(hdf5_cases_filename)]
 
-#         # Check to see that an error is thrown if a string is too long
-#         try:
-#             self.top.run()
-#         except ValueError, err:
-#             self.assertEqual(str(err), "string will not fit in space allocated for in HDF5 file")
-#         else:
-#             self.fail("expected ValueError with message: string will not fit in space allocated for in HDF5 file")
+        # Check to see that an error is thrown if a string is too long
+        try:
+            self.top.run()
+        except ValueError, err:
+            self.assertEqual(str(err), "string will not fit in space allocated for in HDF5 file")
+        else:
+            self.fail("expected ValueError with message: string will not fit in space allocated for in HDF5 file")
 
 
 if __name__ == '__main__':
