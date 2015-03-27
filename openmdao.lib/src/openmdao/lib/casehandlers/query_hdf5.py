@@ -314,12 +314,13 @@ class QueryHDF5(object):
         Write filtered :class:`CaseDataset` to `out`, a filename or file-like
         object.  Default `format` is the format of the original data file.
         """
-        if format is None:
-            if isinstance(self._dataset._reader, _BSONReader):
-                format = 'bson'
-            else:
-                format = 'json'
-        self._dataset._write(self, out, format)
+        raise NotImplementedError
+        #if format is None:
+            #if isinstance(self._dataset._reader, _BSONReader):
+                #format = 'bson'
+            #else:
+                #format = 'json'
+        #self._dataset._write(self, out, format)
 
     def driver(self, driver_name):
         """ Filter the cases to those recorded by the named driver. """
