@@ -137,6 +137,10 @@ class TestCase(unittest.TestCase):
 
     def test_query(self):
         
+        #cases = self.cds.data.driver('driver').vars(['_itername',]).by_variable().fetch() # TODO. This works here but fails when run later in this method. 
+        # when run here, it messes up later queries
+        
+        
         # Check the variable names for the full dataset.
         vnames = self.cds.data.var_names().fetch()
         
@@ -188,26 +192,29 @@ class TestCase(unittest.TestCase):
         
         # Check to see if the vars and driver method work together
         cases = self.cds.data.driver('driver').vars('sub.x1').fetch() 
-        expected = [[-2.2204460492503131e-15], [1.5833286366705896e-15], [-1.4920636625846083e-15], 
-                    [-7.076328627021676e-15], [-4.4055932092474378e-15], [1.0], [-4.0009363277664916e-15], 
-                    [1.34802409522104e-14], [4.941980752962757e-15], [1.0]]
+        expected = [[1.0], [1.0], [-2.2204460492503131e-15], [1.5833286366705896e-15], 
+                    [-1.4920636625846083e-15], [-7.076328627021676e-15], [-4.4055932092474378e-15], 
+                    [-4.0009363277664916e-15], [1.34802409522104e-14], [4.941980752962757e-15]]
+
         for exp, act in zip( expected, cases):
             self.assertAlmostEqual(exp[0], act[0])
 
         #TODO: the order that this returns is not the correct order
         cases = self.cds.data.driver('driver').vars(['sub.x1', 'half.z2a']).by_variable().fetch() 
-        expected = [[-2.2204460492503131e-15, 1.5833286366705896e-15, -1.4920636625846083e-15, -7.076328627021676e-15, 
-                     -4.4055932092474378e-15, 1.0, -4.0009363277664916e-15, 1.34802409522104e-14, 4.941980752962757e-15, 1.0],
-                    [1.3982923058163501, 0.66069127222525592, -1.1213252548714081e-13, -8.3705631699668261e-13, -2.5667509986838707e-15, 2.0, 1.7620750445643237e-15, -8.9255408786136536e-15, -8.2170907529898209e-15, 2.0]]
+        expected = [[1.0, 1.0, -2.2204460492503131e-15, 1.5833286366705896e-15, -1.4920636625846083e-15, 
+                     -7.076328627021676e-15, -4.4055932092474378e-15, -4.0009363277664916e-15, 
+                     1.34802409522104e-14, 4.941980752962757e-15], [2.0, 2.0, 1.3982923058163501,
+                    0.66069127222525592, -1.1213252548714081e-13, -8.3705631699668261e-13, 
+                    -2.5667509986838707e-15, 1.7620750445643237e-15, -8.9255408786136536e-15, -8.2170907529898209e-15]]
+
         for i in range(2):
             for exp, act in zip( expected[i], cases[i]):
                 self.assertAlmostEqual(exp, act)
 
-        #cases = self.cds.data.driver('driver').vars(['_itername',]).by_variable().fetch() # TODO. This fails here but works at the top of this method
 
         # Check to see if vartree reading works
         cases = self.cds.data.driver('driver').fetch() # the vartree data is only available in the top level driver cases
-        expected = [ 8.18917514,  6.52651228]
+        expected = [ 24.80392945,  10.98035435]
         actual = cases[0]['sub.states']['y']
         for exp, act in zip( expected, actual):
             self.assertAlmostEqual(exp, act)

@@ -497,15 +497,27 @@ class _HDF5Reader(object):
     def cases(self):
         """ Return sequence of 'iteration_case' dictionaries. """
 
-
-        # self._inp['/iteration_cases'].keys() gets you the drivers
-        
-        for driver_name in self._inp['/iteration_cases']:
-            for iteration_case_name in self._inp['/iteration_cases'][driver_name] :
+        iteration_cases_grp = self._inp['/iteration_cases']
+        case_timestamps = {}
+        for driver_name in iteration_cases_grp:
+            for iteration_case_name in iteration_cases_grp[driver_name] :
                 if iteration_case_name.startswith('iteration_case_') :
-                    #info = self.read_from_hdf5( self._inp['/iteration_cases'][driver_name][iteration_case_name] )
-                    info = self.read_iteration_case_from_hdf5( self._inp, driver_name, iteration_case_name )
-                    yield info
+                    timestamp = iteration_cases_grp[driver_name][iteration_case_name]['metadata']['timestamp'][0]
+                    case_timestamps[timestamp] = ( driver_name, iteration_case_name )
+
+        sorted_timestamps = sorted( case_timestamps )
+        for timestamp in sorted_timestamps: 
+            driver_name, iteration_case_name = case_timestamps[ timestamp ]
+            info = self.read_iteration_case_from_hdf5( self._inp, driver_name, iteration_case_name )
+            yield info
+
+
+        # for driver_name in self._inp['/iteration_cases']:
+        #     for iteration_case_name in self._inp['/iteration_cases'][driver_name] :
+        #         if iteration_case_name.startswith('iteration_case_') :
+        #             #info = self.read_from_hdf5( self._inp['/iteration_cases'][driver_name][iteration_case_name] )
+        #             info = self.read_iteration_case_from_hdf5( self._inp, driver_name, iteration_case_name )
+        #             yield info
 
     def _next(self):
         """ Return next dictionary of data. """
