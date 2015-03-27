@@ -140,8 +140,6 @@ class TestCase(unittest.TestCase):
         # Check the variable names for the full dataset.
         vnames = self.cds.data.var_names().fetch()
         
-        
-        print vnames
         expected = ['_driver_id', '_driver_name', '_id', '_itername', '_parent_id', '_pseudo_0.out0', 
         '_pseudo_1.out0', '_pseudo_2.out0', 'driver.workflow.itername', 'error_message', 'error_status', 
         'half.derivative_exec_count', 'half.exec_count', 'half.itername', 'half.z2a', 'half.z2b', 
