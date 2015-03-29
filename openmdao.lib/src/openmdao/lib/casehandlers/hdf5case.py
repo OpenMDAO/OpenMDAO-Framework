@@ -26,6 +26,18 @@ def get_rank():
     return world_rank
 
 
+def create_group(group, name): # TODO remove calls to this
+    pass #print 'create_group', name, group.file.filename, group.file.driver
+    #sys.stdout.flush()
+
+def create_dataset(group, name,*arguments, **keywords): # TODO remove calls to this
+    pass #print 'create_dataset', name, group.file.filename, group.file.driver
+    #sys.stdout.flush()
+
+def dp(s):
+    pass #print s
+    #sys.stdout.flush()
+
 str_dtype = 'S50'  
 
 def write_to_hdf5( group, name, value ):
@@ -76,40 +88,48 @@ def write_groups_to_hdf5( group, name, value ):
     filename = group.file.filename
 
     if isinstance(value,dict):
+        dict_grp = create_group(group, name)
         dict_grp = group.create_group(name)
         for k, v in value.items():
             write_groups_to_hdf5( dict_grp, k, v )
     elif isinstance( value, VariableTree): # TODO
+        vartree_grp = create_group(group, name)
         vartree_grp = group.create_group(name)
         vartree_grp.attrs['__vartree__'] = True # to indicate this is a var tree
         for k in value.list_vars():
             write_groups_to_hdf5( vartree_grp, k, value.get(k) )
     elif isinstance( value, np.ndarray):
         if group.file.driver == 'mpio': # cannot do compression when writing in parallel
-            group.create_dataset(name, data=value)
+            create_dataset(group, name, data=value)
+            if value.shape == (0,) :
+                group.create_dataset(name, data=value, maxshape=(1,)) # h5py does not like completely empty arrays
+            else:
+                group.create_dataset(name, data=value)
         else:
+            create_dataset(group, name, data=value, compression='gzip', chunks=True)
             group.create_dataset(name, data=value, compression='gzip', chunks=True)
     elif isinstance( value, list):
         if len( value ) > 0:
             if isinstance( value[0], str):
+                create_dataset(group, name, (len(value),),str_dtype ) # TODO check to make sure it fits
                 group.create_dataset(name, (len(value),),str_dtype ) # TODO check to make sure it fits
         else:
+            create_dataset(group, name,(0,)) # TODO How do we handle empty lists? Do not know type
             group.create_dataset(name,(0,)) # TODO How do we handle empty lists? Do not know type
     elif value == None : # TODO Need a better way to do this. When using h5diff, we get 'Not comparable' with these values
+        create_dataset(group, name,(0,)) # TODO: This results in DATATYPE  H5T_IEEE_F32LE  DATASPACE  SIMPLE { ( 0 ) / ( 0 ) }
         group.create_dataset(name,(0,)) # TODO: This results in DATATYPE  H5T_IEEE_F32LE  DATASPACE  SIMPLE { ( 0 ) / ( 0 ) }
     elif isinstance( value, (np.float64,float)):
+        create_dataset(group, name, (), dtype=np.float64)
         group.create_dataset(name, (), dtype=np.float64)
     elif isinstance(value,int):
+        create_dataset(group, name, (), dtype=np.int64)
         group.create_dataset(name, (), dtype=np.int64)
     elif isinstance(value,str):
-
-        # num_chars = len(value)
-        # if num_chars < 1:
-        #     num_chars = 1
-
-        # dset = group.create_dataset(name, (), dtype=np.dtype((np.str, num_chars)))
+        dset = create_dataset(group, name, (), dtype=str_dtype)
         dset = group.create_dataset(name, (), dtype=str_dtype)
     elif isinstance(value,bool):
+        dset = create_dataset(group, name, (), dtype=np.bool)
         dset = group.create_dataset(name, (), dtype=np.bool)
 
 
@@ -185,52 +205,63 @@ class HDF5CaseRecorder(object):
         """ Record constant data. """
 
         info = self.get_simulation_info(constants)
+
+        simulation_info_grp = create_group(self.hdf5_main_file_object, "simulation_info")
         simulation_info_grp = self.hdf5_main_file_object.create_group("simulation_info")
       
         # Can get away with setting the length because all processes participate in the writing of these. 
         # TODO: Should do that for all of these values. Just doing it for the graphs since they can get really big
+        dset = create_dataset(simulation_info_grp, 'comp_graph', (), dtype=np.dtype((np.str, len(info['comp_graph']))))
         dset = simulation_info_grp.create_dataset('comp_graph', (), dtype=np.dtype((np.str, len(info['comp_graph']))))
+        dset = create_dataset(simulation_info_grp, 'graph', (), dtype=np.dtype((np.str, len(info['graph']))))
         dset = simulation_info_grp.create_dataset('graph', (), dtype=np.dtype((np.str, len(info['graph']))))
         write_groups_to_hdf5( simulation_info_grp, 'OpenMDAO_Version', info['OpenMDAO_Version'])
         write_groups_to_hdf5( simulation_info_grp, 'uuid', info['uuid'])
         write_groups_to_hdf5( simulation_info_grp, 'name', info['name'])
-       
+
+        #TODO: should only rank 0 write these data? Can rank 0 be the only one to write this file? Do we even need to open it mpio?
+        write_to_hdf5( simulation_info_grp, 'OpenMDAO_Version', info['OpenMDAO_Version'])
+        write_to_hdf5( simulation_info_grp, 'comp_graph', info['comp_graph'])
+        write_to_hdf5( simulation_info_grp, 'graph', info['graph'])
+        write_to_hdf5( simulation_info_grp, 'uuid', info['uuid'])
+        write_to_hdf5( simulation_info_grp, 'name', info['name'])
+
+        # Constants       
+        constants_grp = create_group(simulation_info_grp, "constants")
         constants_grp = simulation_info_grp.create_group("constants")
         for k,v in info['constants'].items():
             write_groups_to_hdf5( constants_grp, k, v )
+            write_to_hdf5( constants_grp, k, v )
 
+       #Expressions
+        expressions_grp = create_group(simulation_info_grp, "expressions")
         expressions_grp = simulation_info_grp.create_group("expressions")
         for k,v in info['expressions'].items():
             write_groups_to_hdf5( expressions_grp, k, v )
+
+        for k,v in info['expressions'].items():
+           write_to_hdf5( expressions_grp, k, v )
             
+        # Variable metadata
+        variable_metadata_grp = create_group(simulation_info_grp, "variable_metadata")
         variable_metadata_grp = simulation_info_grp.create_group("variable_metadata")
 
         for k in sorted(info['variable_metadata']):
             v = info['variable_metadata'][k]
             write_groups_to_hdf5( variable_metadata_grp, k, v )
 
-        # TODO: combine the creating of the space with writing the values
-        write_to_hdf5( simulation_info_grp, 'OpenMDAO_Version', info['OpenMDAO_Version'])
-        write_to_hdf5( simulation_info_grp, 'comp_graph', info['comp_graph'])
-        write_to_hdf5( simulation_info_grp, 'graph', info['graph'])
-        write_to_hdf5( simulation_info_grp, 'uuid', info['uuid'])
-        write_to_hdf5( simulation_info_grp, 'name', info['name'])
-       
-        for k,v in info['constants'].items():
-            write_to_hdf5( constants_grp, k, v )
-
-        for k,v in info['expressions'].items():
-           write_to_hdf5( expressions_grp, k, v )
-            
         for k,v in info['variable_metadata'].items():
             write_to_hdf5( variable_metadata_grp, k, v )
-
+       
+        # Drivers
         for i, info in enumerate(self.get_driver_info()):
             driver_info_name = 'driver_info_%s' % (i+1)
+            driver_info_group = create_group(self.hdf5_main_file_object, driver_info_name)
             driver_info_group = self.hdf5_main_file_object.create_group(driver_info_name)
             for k,v in info.items():
                 write_groups_to_hdf5( driver_info_group, k, v )
                 write_to_hdf5( driver_info_group, k, v ) 
+
 
     def is_variable_local( self, driver, prefix, name ):
         '''Check to see if the given variable is available locally on this process'''
@@ -283,8 +314,11 @@ class HDF5CaseRecorder(object):
                 )
 
         self._count += 1
+        iteration_case_group = create_group(hdf5_file_object, iteration_case_name)
         iteration_case_group = hdf5_file_object.create_group(iteration_case_name)
+        metadata_dset = create_dataset(iteration_case_group, "metadata",(1,), dtype=hdf5_file_object['metadatatype'])
         metadata_dset = iteration_case_group.create_dataset("metadata",(1,), dtype=hdf5_file_object['metadatatype'])
+        data_grp = create_group( iteration_case_group, 'data' )
         data_grp = iteration_case_group.create_group( 'data' )
         for k,v in info.items():
             if k != 'data': # record metadata # TODO get rid of this clause
@@ -305,16 +339,22 @@ class HDF5CaseRecorder(object):
 
         # only add this info once per record file
         if not "/float_names" in hdf5_file_object: 
+            create_dataset(hdf5_file_object, 'float_names', data=np.array( float_names ) ) 
             hdf5_file_object.create_dataset('float_names', data=np.array( float_names ) ) 
         if not "/int_names" in hdf5_file_object: # only add this info once per record file
+            create_dataset(hdf5_file_object, 'int_names', data=np.array( int_names ) ) 
             hdf5_file_object.create_dataset('int_names', data=np.array( int_names ) ) 
         if not "/str_names" in hdf5_file_object: # only add this info once per record file
+            create_dataset(hdf5_file_object, 'str_names', data=np.array( str_names ) ) 
             hdf5_file_object.create_dataset('str_names', data=np.array( str_names ) ) 
 
         # Create the datasets for the int and float and string arrays
+        int_arrays_dset = create_dataset(data_grp, 'array_of_ints', (len(int_names),),dtype=np.int64)
         int_arrays_dset = data_grp.create_dataset('array_of_ints', (len(int_names),),dtype=np.int64)
+        float_arrays_dset = create_dataset(data_grp, 'array_of_floats', (len(float_names),),dtype=np.float64)
         float_arrays_dset = data_grp.create_dataset('array_of_floats', (len(float_names),),dtype=np.float64)
         #str_arrays_dset = data_grp.create_dataset('array_of_strs', (len(str_names),),str_dtype )
+        str_arrays_dset = create_dataset(data_grp, 'array_of_strs', (len(str_names),),str_dtype )
         str_arrays_dset = data_grp.create_dataset('array_of_strs', (len(str_names),),str_dtype )
 
         scope = driver.parent
@@ -323,6 +363,7 @@ class HDF5CaseRecorder(object):
         ##### Write the datasets using only the data available to this process ######
         data_grp = iteration_case_group['data']
 
+        dp( 'determine metadata' )
         metadata = [] 
         for name in [ '_driver_id', '_driver_name', '_id', '_parent_id', '_itername', 'error_message', 'error_status', 'timestamp'] :
             value = info[ name ]
@@ -330,9 +371,11 @@ class HDF5CaseRecorder(object):
                 from sys import maxint
                 value = maxint
             metadata.append( value )
-                
+        
+        dp('set metadata_dset' )
         metadata_dset[()] = np.array([ tuple(metadata), ], dtype = hdf5_file_object['metadatatype'])
 
+        dp('set values in data')
         for name, value in info[ 'data' ].items():
             if self.is_variable_local( driver, prefix, name ): # TODO should cache these. 
                 if isinstance(value,int):
@@ -347,6 +390,9 @@ class HDF5CaseRecorder(object):
                 else:
                     write_to_hdf5( data_grp, name, value )
 
+        dp('exit record')
+
+
     def close(self):
         """
         Closes `out` unless it's ``sys.stdout`` or ``sys.stderr``.
@@ -359,6 +405,7 @@ class HDF5CaseRecorder(object):
         # if 1 or not MPI or get_rank() == 0 : # only rank 0 process needs to write the primary case recording file
 
         # add the individual case recording files to the main hdf5 file
+        iteration_case_grp = create_group(self.hdf5_main_file_object, "iteration_cases")
         iteration_case_grp = self.hdf5_main_file_object.create_group("iteration_cases")
 
         for driver_path, filename in self.case_recording_filenames.items():

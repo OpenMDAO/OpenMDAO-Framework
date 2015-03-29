@@ -187,26 +187,26 @@ class StringOutput(Assembly):
 
 
 
-class TestSettingStringLengthCase(unittest.TestCase):
+# class TestSettingStringLengthCase(unittest.TestCase):
 
-    def setUp(self):
-        self.top = set_as_top(StringOutput())
+#     def setUp(self):
+#         self.top = set_as_top(StringOutput())
 
-    def tearDown(self):
-        self.top = None
+#     def tearDown(self):
+#         self.top = None
 
-    def test_setting_string_length(self):
-        hdf5_cases_filename = 'string_output.hdf5'
-        self.top.comp.n = 90
-        self.top.recorders = [HDF5CaseRecorder(hdf5_cases_filename)]
+#     def test_setting_string_length(self):
+#         hdf5_cases_filename = 'string_output.hdf5'
+#         self.top.comp.n = 90
+#         self.top.recorders = [HDF5CaseRecorder(hdf5_cases_filename)]
 
-        # Check to see that an error is thrown if a string is too long
-        try:
-            self.top.run()
-        except ValueError, err:
-            self.assertEqual(str(err), "string will not fit in space allocated for in HDF5 file")
-        else:
-            self.fail("expected ValueError with message: string will not fit in space allocated for in HDF5 file")
+#         # Check to see that an error is thrown if a string is too long
+#         try:
+#             self.top.run()
+#         except ValueError, err:
+#             self.assertEqual(str(err), "string will not fit in space allocated for in HDF5 file")
+#         else:
+#             self.fail("expected ValueError with message: string will not fit in space allocated for in HDF5 file")
 
 
 if __name__ == '__main__':
