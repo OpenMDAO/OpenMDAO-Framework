@@ -494,13 +494,16 @@ class DataTransfer(object):
                                              system.vec['p'], input_idxs)
 
     def __call__(self, system, srcvec, destvec, complex_step=False):
-
+        """This performs the data transfer via petsc scatter, local get/set,
+        or MPI object send/recv.
+        """
         if self.scatter is None and not self.noflat_vars:
             return
 
         if MPI:
             src = srcvec.petsc_vec
             dest = destvec.petsc_vec
+            size = system.mpi.size
         else:
             src = srcvec.array
             dest = destvec.array
@@ -512,30 +515,45 @@ class DataTransfer(object):
             dest, src = src, dest
 
         if self.scatter:
-            #print "%s for %s\n%s <-- %s" % (destvec.name.rsplit('.', 1)[1],
-            #                                destvec.name.rsplit('.',1)[0],
-            #                                list(self.scatter_conns),
-            #                                src[self.input_idxs if addv else self.var_idxs]); sys.stdout.flush()
-            #print destvec.name
-            #print self.scatter_conns
-            #print srcvec.keys(), '-->'
-            #print '-->', destvec.keys()
-            #print "Before", srcvec.array, destvec.array
-            #print "Before: %s" % str(system.name)
-            #srcvec.dump()
-            #print ''
-            #destvec.dump()
             self.scatter.scatter(src, dest, addv=addv, mode=mode)
-            #print "After", srcvec.array, destvec.array
-            #print "After:"
-            #destvec.dump()
-            #print '.'
-
 
         if destvec.name.endswith('.p') and self.noflat_vars:
             if MPI:
-                raise NotImplementedError("passing of non-flat vars %s has not been implemented yet" %
-                                          self.noflat_vars) # FIXME
+                for isrc, node in enumerate(system.noflat_vars):
+                    if node not in self.noflat_vars:
+                        continue
+                    src = node[0]
+                    actives = [i for i in range(size)
+                                         if system.noflat_isactive[i,isrc]]
+                    inactives = [i for i in range(size) if i not in actives]
+
+                    if inactives:
+                        # if there are some inactive procs and we are the
+                        # lowest rank active proc, send our value to each
+                        # inactive proc
+                        if system.mpi.rank == min(actives):
+                            # grab local scope value
+                            val = system.scope.get_attr_w_copy(src)
+                            for inactive in inactives:
+                                system.mpi.comm.send(val, dest=inactive,
+                                                   tag=isrc)
+                        # if we're one of the inactives, pull value across using MPI
+                        elif system.mpi.rank in inactives:
+                            val = system.mpi.comm.recv(source=min(actives), tag=isrc)
+                        # otherwise just use our local scope value
+                        else:
+                            val = system.scope.get_attr_w_copy(src)
+                    else:
+                        val = system.scope.get_attr_w_copy(src)
+
+                    # do the local set
+                    for dest in node[1]:
+                        if dest != src:
+                            try:
+                                system.scope.set(dest, val)
+                            except Exception:
+                                system.scope.reraise_exception("cannot set '%s' from '%s'" %
+                                                               (dest, src), sys.exc_info())
             else:
                 for src, dests in self.noflat_vars:
                     for dest in dests:

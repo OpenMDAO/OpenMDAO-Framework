@@ -123,6 +123,27 @@ class System(object):
 
         return None
 
+    def is_variable_local(self, name):
+        """Returns True if the variable in name is local to this process,
+        otherwise it returns False. If name can't be found, then an exception
+        is raised."""
+
+        # Regular paths, get the compname
+        cname = name.split('.')[0]
+
+        # If name is a boundary var, then it belongs to our containing
+        # assembly, which must be local.
+        if cname in self.scope.list_vars():
+            return True
+
+        system = self.scope._system.find_system(cname, recurse_subassy=False)
+
+        if system:
+            return system.is_active()
+
+        msg = 'Cannot find a system that contains varpath %s' % name
+        raise RuntimeError(msg)
+
     def is_differentiable(self):
         """Return True if analytical derivatives can be
         computed for this System.
@@ -479,9 +500,17 @@ class System(object):
         # local sizes across all processes in our comm
         self.local_var_sizes = numpy.zeros((size, len(self.vector_vars)), int)
 
+        # create a vec indicating whether a nonflat variable is active
+        # in this rank or not
+        self.noflat_isactive = numpy.zeros((size, len(self.noflat_vars)), int)
+
         ours = numpy.zeros((1, len(self.vector_vars)), int)
         for i, (name, var) in enumerate(self.vector_vars.items()):
             ours[0, i] = var['size']
+
+        our_noflats = numpy.zeros((1, len(self.noflat_vars)), int)
+        for i, name in enumerate(self.noflat_vars.keys()):
+            our_noflats[0, i] = int(self.is_variable_local(name[0]))
 
         # collect local var sizes from all of the processes in our comm
         # these sizes will be the same in all processes except in cases
@@ -490,6 +519,7 @@ class System(object):
         # only have a slice of each of the component's variables.
         if MPI:
             comm.Allgather(ours[0,:], self.local_var_sizes)
+            comm.Allgather(our_noflats[0,:], self.noflat_isactive)
 
         self.local_var_sizes[rank, :] = ours[0, :]
 
@@ -1548,7 +1578,8 @@ class AssemblySystem(SimpleSystem):
         if not recurse_subassy:
             return None
 
-        return self._comp._system.find_system(name, recurse_subassy=recurse_subassy)
+        if self._comp:
+            return self._comp._system.find_system(name, recurse_subassy=recurse_subassy)
 
 
 class CompoundSystem(System):
@@ -1684,8 +1715,6 @@ class CompoundSystem(System):
 
         dest_start = numpy.sum(input_sizes[:rank])
 
-        #print "SCATTERS for %s" % str(self.name)
-        #print "vars:",self.vector_vars.keys()
         for subsystem in self.all_subsystems():
             src_partial = []
             dest_partial = []
@@ -1744,16 +1773,12 @@ class CompoundSystem(System):
                     scatter_conns_full.add(node)
 
             if MPI or scatter_conns or noflat_conns:
-                #print "PARTIAL %s --> %s: %s --> %s" % (self.name, subsystem.name, idx_merge(src_partial),
-                #                                        idx_merge(dest_partial)); sys.stdout.flush()
                 subsystem.scatter_partial = DataTransfer(self, src_partial,
                                                          dest_partial,
                                                          scatter_conns, noflat_conns)
 
             # special partial reverse scatter for adjoint linearGS
             if scatter_conns_rev:
-                #print "PARTIAL rev %s --> %s: %s --> %s" % (self.name, subsystem.name, idx_merge(src_rev_partial),
-                #                                        idx_merge(dest_rev_partial)); sys.stdout.flush()
                 subsystem.scatter_partial_rev = DataTransfer(self, src_rev_partial,
                                                              dest_rev_partial,
                                                              scatter_conns_rev, set())
@@ -1790,27 +1815,6 @@ class CompoundSystem(System):
         to perform a matrix vector product.
         """
         self.dfd_solver.calculate(arg, result)
-
-    def is_variable_local(self, name):
-        """Returns True if the variable in name is local to this process,
-        otherwise it returns False. If name can't be found, then an exception
-        is raised."""
-
-        # Regular paths, get the compname
-        cname = name.split('.')[0]
-
-        # If name is a Variable Tree, then it belongs to our containing
-        # assembly, which must be local.
-        if cname in self.scope.list_vars():
-            return True
-
-        system = self.scope._system.find_system(cname, recurse_subassy=False)
-
-        if system:
-            return system.is_active()
-
-        msg = 'Cannot find a system that contains varpath %s' % name
-        raise RuntimeError(msg)
 
     def find_system(self, name, recurse_subassy=True):
         """ Return system with given name.
