@@ -266,8 +266,8 @@ dev_parser.add_argument('--force', default=False, action='store_true', help="for
 dev_parser.set_defaults(func=build_dev)
 
 try:
-    import openmdao.main.releaseinfo
-    version = openmdao.main.releaseinfo.__version__
+    from openmdao.main.releaseinfo import __version__
+    version = __version__
 except ImportError as error:
     cmd = 'python -c "import releaseinfo; print releaseinfo.__version__"'
     cwd = os.path.join(
