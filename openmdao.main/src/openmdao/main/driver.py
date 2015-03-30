@@ -273,7 +273,6 @@ class Driver(Component):
         # First, have all of our subdrivers (recursively) determine
         # their iteration sets, because we need those to determine
         # our full set.
-        #subdrivers = set()
         subcomps = set()
         for comp in subdrivers:
             cgcopy = cgraph.subgraph(cgraph.nodes_iter())
@@ -323,7 +322,7 @@ class Driver(Component):
 
         old_iter = self._iter_set.copy()
 
-        # remove any drivers that were not explicity specified in our worklow
+        # remove any drivers that were not explicitly specified in our worklow
         self._iter_set = set([c for c in self._iter_set if c not in alldrivers
                                 or c in subnames])
 
@@ -1119,9 +1118,9 @@ class Driver(Component):
                 dgraph.add_driver_input(self.name, vname)
 
     @rbac(('owner', 'user'))
-    def size_variables(self):
+    def init_var_sizes(self):
         for cname in self._ordering:
-            getattr(self.parent, cname).size_variables()
+            getattr(self.parent, cname).init_var_sizes()
 
     @rbac(('owner', 'user'))
     def is_differentiable(self):

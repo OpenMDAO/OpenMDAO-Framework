@@ -8,7 +8,8 @@ import networkx as nx
 from zope.interface import implements
 
 # pylint: disable-msg=E0611,F0401
-from openmdao.main.mpiwrap import MPI, MPI_info, PETSc, get_norm
+from openmdao.main.mpiwrap import MPI, MPI_info, PETSc, get_norm, make_idx_array,\
+                                  to_idx_array, idx_arr_type
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.finite_difference import FiniteDifference, DirectionalFD
 from openmdao.main.linearsolver import ScipyGMRES, PETSc_KSP, LinearGS
@@ -16,8 +17,9 @@ from openmdao.main.mp_support import has_interface
 from openmdao.main.interfaces import IDriver, IAssembly, IImplicitComponent, \
                                      ISolver, IPseudoComp, IComponent, ISystem
 from openmdao.main.vecwrapper import VecWrapper, InputVecWrapper, DataTransfer, \
-                                     idx_merge, petsc_linspace, _filter, _filter_subs, \
-                                     _filter_flat, _filter_ignored
+                                     idx_merge, _filter, _filter_subs, \
+                                     _filter_flat, _filter_ignored, \
+                                     dedup
 from openmdao.main.depgraph import break_cycles, get_node_boundary, gsort, \
                                    collapse_nodes, simple_node_iter
 from openmdao.main.derivatives import applyJ, applyJT
@@ -127,6 +129,16 @@ class System(object):
         """
         return True
 
+    def is_distrib_var(self, node):
+        """Return True if the given node contains a var that
+        is a distributed input or output to this System.
+        """
+        for sub in self.simple_subsystems():
+            if sub.is_distrib_var(node):
+                return True
+
+        return False
+
     def pre_run(self):
         """ Runs at assembly execution"""
         pass
@@ -152,20 +164,20 @@ class System(object):
 
         start = numpy.sum(self.local_var_sizes[:rank])
         end = numpy.sum(self.local_var_sizes[:rank+1])
-        petsc_idxs = petsc_linspace(start, end)
+        to_idx_array = make_idx_array(start, end)
 
         app_idxs = []
-        for ivar in xrange(len(self.vector_vars)):
+        for ivar, v in enumerate(self.vector_vars):
             start = numpy.sum(self.local_var_sizes[:, :ivar]) + \
                         numpy.sum(self.local_var_sizes[:rank, ivar])
             end = start + self.local_var_sizes[rank, ivar]
-            app_idxs.append(petsc_linspace(start, end))
+            app_idxs.append(make_idx_array(start, end))
 
         if app_idxs:
             app_idxs = numpy.concatenate(app_idxs)
 
         app_ind_set = PETSc.IS().createGeneral(app_idxs, comm=self.mpi.comm)
-        petsc_ind_set = PETSc.IS().createGeneral(petsc_idxs, comm=self.mpi.comm)
+        petsc_ind_set = PETSc.IS().createGeneral(to_idx_array, comm=self.mpi.comm)
 
         return PETSc.AO().createBasic(app_ind_set, petsc_ind_set,
                                       comm=self.mpi.comm)
@@ -433,6 +445,16 @@ class System(object):
             if name not in self.flat_vars:
                 self.noflat_vars[name] = info
 
+    def get_src_idxs(self, name):
+        """Return the index array corresponding to the given source name."""
+        if name in self.vector_vars:
+            return make_idx_array(0, self.scope._var_meta[name]['size'])
+        elif '[' in name[0]:
+            return self.scope._var_meta[name].get('flat_idx')
+
+    def get_distrib_idxs(self, name):
+        return self.get_src_idxs(name)
+
     def setup_sizes(self):
         """Given a dict of variables, set the sizes for
         those that are local.
@@ -471,38 +493,28 @@ class System(object):
 
         self.local_var_sizes[rank, :] = ours[0, :]
 
+        # if we're a distrib comp, get full distrib size
+        # so that downstream non-distrib comps can automagically gather
+        # the full distributed vec to their input
+        if hasattr(self, 'distrib_idxs') and self.distrib_idxs:
+           for src_idx,v in enumerate(self.vector_vars.keys()):
+               distrib_size = numpy.sum(self.local_var_sizes[:, src_idx])
+               self.scope._var_meta[v]['distrib_size'] = distrib_size
+
         # create a (1 x nproc) vector for the sizes of all of our
         # local inputs
         self.input_sizes = numpy.zeros(size, int)
 
         insize = numpy.zeros(1, int)
         for arg in _filter_flat(self.scope, self._owned_args):
-            insize[0] += varmeta[arg]['size']
+            idx = self.get_distrib_idxs(arg)
+            assert(idx is not None)
+            insize[0] += len(idx)
 
         if MPI:
             comm.Allgather(insize[0], self.input_sizes)
 
         self.input_sizes[rank] = insize[0]
-
-        # create an arg_idx dict to keep track of indices of
-        # inputs
-        # TODO: determine how we want the user to specify indices
-        #       for distributed inputs...
-        self.arg_idx = OrderedDict()
-        for name in _filter_flat(self.scope, self._owned_args):
-            # FIXME: this needs to use the actual indices for this
-            #        process' version of the arg once we have distributed
-            #        components...
-            if name in self.vector_vars:
-                isrc = self.vector_vars.keys().index(name)
-                idxs = petsc_linspace(0, varmeta[name]['size'])
-            else:
-                base = name[0].split('[', 1)[0]
-                if base == name[0]:
-                    continue
-                idxs = varmeta[name].get('flat_idx')
-
-            self.arg_idx[name] = idxs# + numpy.sum(self.local_var_sizes[:self.mpi.rank, isrc])
 
     def setup_vectors(self, arrays=None, state_resid_map=None):
         """Creates vector wrapper objects to manage local and
@@ -854,6 +866,8 @@ class System(object):
             self.sol_vec.array[:] = 0.0
             return self.sol_vec.array
 
+        #print "solving linear sys", self.name
+
         if options is not None:
             self.set_options(self.mode, options)
         self.initialize_gradient_solver()
@@ -947,6 +961,7 @@ class SimpleSystem(System):
         self._comp = comp
         self.J = None
         self._mapped_resids = {}
+        self.distrib_idxs = {}
 
     def setup_sizes(self):
         super(SimpleSystem, self).setup_sizes()
@@ -973,6 +988,19 @@ class SimpleSystem(System):
 
         return True
 
+    def is_distrib_var(self, node):
+        """Return True if the given node contains a var that
+        is a distributed input or output to this System.
+        """
+        if self._comp and self.distrib_idxs:
+            for name in simple_node_iter(node):
+                parts = name.split('.', 1)
+                if parts[0] == self._comp.name and len(parts) > 1:
+                    if parts[1].split('[')[0] in self.distrib_idxs:
+                        return True
+
+        return False
+
     def _all_comp_nodes(self, local=False):
         return simple_node_iter(self._nodes)
 
@@ -980,7 +1008,72 @@ class SimpleSystem(System):
         yield self
 
     def setup_communicators(self, comm):
+        if self._comp:
+            cpus = self._comp.get_req_cpus()
+            if cpus == 1 or IAssembly.providedBy(self._comp) or IDriver.providedBy(self._comp):
+                pass
+            else:
+                color = [0] * cpus
+                if comm.size > cpus:
+                    color.extend([MPI.UNDEFINED]*(comm.size-cpus))
+
+                comm = comm.Split(color[comm.rank])
+
+            self._comp.setup_communicators(comm)
+
+            if hasattr(self._comp, 'get_distrib_idxs'):
+                self.distrib_idxs = self._comp.get_distrib_idxs()
+
         self.mpi.comm = comm
+
+    def get_distrib_idxs(self, name):
+        """These indices are actually the indices in the *source*
+        vector that get scattered to a particular input.
+        """
+        me = self.name.strip('@')
+        for n in name[1]:
+            destbase = n.split('[')[0]
+            if n.startswith(me+'.') or destbase == me:
+                break
+        else:
+            return None
+
+        if self._comp is None:
+            if n == me:
+                return make_idx_array(0, self.scope._var_meta[name]['size'])
+            return super(SimpleSystem, self).get_distrib_idxs(name)
+        else:
+            distrib_size = self.scope._var_meta[name].get('distrib_size')
+            if hasattr(self._comp, 'get_distrib_idxs'):
+                # get input indices for full variable
+                full_idxs = self.distrib_idxs.get(
+                                     n.split('[', 1)[0].split('.',1)[1])
+                if full_idxs is None:
+                    # if full_idxs is None, that means that this particular variable is not
+                    # distributed even though the component does have other distributed vars
+                    if self._comp and distrib_size is not None:
+                        full_idxs = make_idx_array(0, distrib_size)
+                    else:
+                        full_idxs = self.get_src_idxs(name)
+                else:
+                    full_idxs = to_idx_array(full_idxs)
+
+                # if input is a subvar, we have to take a subset of the
+                # input indices
+                if '[' in n:
+                    src_idxs = self.get_src_idxs(name)
+                    info = self.scope._get_var_info(n)
+                    sub_idxs = info['flat_idx']
+                    assert(len(src_idxs) == len(sub_idxs))
+                    return numpy.array([i for i,j in zip(src_idxs, sub_idxs)
+                                           if j in full_idxs], dtype=idx_arr_type)
+                return full_idxs
+            else:
+                if self._comp and distrib_size is not None:
+                    sz = distrib_size
+                else:
+                    sz = self.scope._var_meta[name]['size']
+                return make_idx_array(0, sz)
 
     def _create_var_dicts(self, resid_state_map):
         varmeta = self.scope._var_meta
@@ -1158,6 +1251,14 @@ class VarSystem(SimpleSystem):
     def linearize(self):
         pass
 
+    def get_distrib_idxs(self, name):
+        return None
+
+
+class OutVarSystem(VarSystem):
+    def get_distrib_idxs(self, name):
+        return SimpleSystem.get_distrib_idxs(self, name)
+
 
 class ParamSystem(VarSystem):
     """System wrapper for Assembly input variables (internal perspective)."""
@@ -1244,7 +1345,6 @@ class EqConstraintSystem(SimpleSystem):
         for _, state_node in resid_state_map.items():
             if state_node == srcnode:
                 self._comp._negate = True
-                #print "NEGATE"
                 break
             elif state_node == destnode:
                 break
@@ -1277,10 +1377,7 @@ class AssemblySystem(SimpleSystem):
     def __init__(self, scope, graph, name):
         super(AssemblySystem, self).__init__(scope, graph, name)
         self._provideJ_bounds = None
-
-    def setup_communicators(self, comm):
-        super(AssemblySystem, self).setup_communicators(comm)
-        self._comp.setup_communicators(comm)
+        self._nest_lin_solve = False
 
     def setup_variables(self, resid_state_map=None):
         super(AssemblySystem, self).setup_variables(resid_state_map)
@@ -1333,11 +1430,98 @@ class AssemblySystem(SimpleSystem):
         inner_system = self._comp._system
         options = self._comp.driver.gradient_options
 
+        # If we can, use the new Jacobian-free method
+        if self.options.lin_solver == 'petsc_ksp':
+            self._nest_lin_solve = True
+            #inner_system.ln_solver = None
+            inner_system.set_options(self.mode, options)
+            inner_system.initialize_gradient_solver()
+            inner_system.linearize()
+            return
+
         # Calculate and save Jacobian for this assy
         inputs = [item.partition('.')[-1] for item in self.list_inputs()]
         outputs = [item.partition('.')[-1] for item in self.list_outputs()]
         self.J = inner_system.calc_gradient(inputs=inputs, outputs=outputs,
                                             options=options)
+
+    def applyJ(self, variables):
+        """ df = du - dGdp * dp or du = df and dp = -dGdp^T * df """
+
+        # If we are using scipy-gmres, we are stuck with the old method that
+        # calculates a full Jacobian for this assembly.
+        if self._nest_lin_solve is False:
+            super(AssemblySystem, self).applyJ(variables)
+            return
+
+        inner = self._comp._system
+        fvec = self.vec['df']
+        mode = self.mode
+        requested_ins = [item for item in self.list_inputs() \
+                         if self.scope.name2collapsed.get(item) in variables]
+        requested_outs = [item for item in self.list_outputs() \
+                          if self.scope.name2collapsed.get(item) in variables]
+
+        # Clean up any old solves
+        inner.rhs_vec.array[:] = 0.0
+        inner.sol_vec.array[:] = 0.0
+
+        if mode == 'forward':
+
+            # Copy arg to inner scope
+            for name in requested_ins:
+
+                key = name
+                parent = self
+
+                while True:
+                    parent = parent._parent_system
+                    if name in parent.vec['dp']:
+                        val = parent.vec['dp'][name]
+                        break
+
+                _, _, inner_name = name.partition('.')
+                inner.rhs_vec[inner_name] = val
+
+            # Solve inner linear system
+            if len(requested_ins) > 0 and len(requested_outs) > 0:
+                inner.solve_linear()
+
+            # Copy result to outer scope
+            for name in self.list_outputs():
+
+                _, _, inner_name = name.partition('.')
+                fvec[name] = inner.sol_vec[inner_name]
+                fvec[name][:] -= self.vec['du'][name][:]
+
+        else:
+
+            for name in self.list_outputs():
+                val = self.sol_vec[name]
+                _, _, inner_name = name.partition('.')
+                inner.rhs_vec[inner_name] = -val
+
+            # Solve inner linear system
+            if len(requested_ins) > 0:
+                inner.solve_linear()
+
+            # Copy result to outer scope
+            for name in self.list_inputs():
+
+                key = name
+                parent = self
+
+                while True:
+                    parent = parent._parent_system
+                    if name in parent.vec['dp']:
+                        var = parent.vec['dp']
+                        break
+
+                _, _, inner_name = name.partition('.')
+                var[name] = inner.sol_vec[inner_name]
+
+            for var in self.list_outputs():
+                self.vec['du'][var][:] += fvec[var][:]
 
     def set_complex_step(self, complex_step=False):
         """ Toggles complex_step plumbing for this system and all
@@ -1397,8 +1581,17 @@ class CompoundSystem(System):
         for s in self.local_subsystems():
             s.pre_run()
 
-    def _get_node_scatter_idxs(self, node, noflats, dest_start, destsys):
+    def get_distrib_idxs(self, name):
+        all_idxs = []
+        for s in self.simple_subsystems():
+            idxs = s.get_distrib_idxs(name)
+            if idxs is not None:
+                all_idxs.extend(idxs)
+        return to_idx_array(dedup(all_idxs))
+
+    def _get_scatter_idxs(self, node, noflats, arg_idxs, dest_start, destsys):
         varkeys = self.vector_vars.keys()
+        varmeta = self.scope._var_meta
 
         if node in noflats:
             return (None, None, node)
@@ -1410,13 +1603,21 @@ class CompoundSystem(System):
             sizes = self.local_var_sizes
             isrc = varkeys.index(node)
             offset = numpy.sum(sizes[:, :isrc])
-            src_idxs = offset + self.arg_idx[node]
+            src_idxs = offset + arg_idxs
 
             dest_idxs = dest_start + self.vec['p']._info[node].start + \
-                        petsc_linspace(0, len(self.arg_idx[node]))
+                        make_idx_array(0, len(arg_idxs))
 
             if sizes[self.mpi.rank, isrc]:
-                src_idxs += numpy.sum(sizes[:self.mpi.rank, isrc])
+                dist_dest = destsys.is_distrib_var(node)
+                if dist_dest:
+                    # don't offset because we already have distrib arg_idxs
+                    pass
+                elif 'distrib_size' in varmeta[node] and not dist_dest:
+                    # don't add offset because we want the whole distrib value.
+                    pass
+                else:
+                    src_idxs += numpy.sum(sizes[:self.mpi.rank, isrc])
                 sidxs = [src_idxs]
                 didxs = [dest_idxs]
                 if self.is_var_in_parallel_system(node):
@@ -1427,7 +1628,8 @@ class CompoundSystem(System):
                         # src is duplicated in rank i, so add it
                         # to the reverse scatter
                         if sizes[i, isrc]:
-                            sidxs.append(offset + numpy.sum(sizes[:i, isrc]) + self.arg_idx[node])
+                            sidxs.append(offset + numpy.sum(sizes[:i, isrc]) +
+                                         arg_idxs)
                             didxs.append(dest_idxs)
 
 
@@ -1450,7 +1652,7 @@ class CompoundSystem(System):
                           self.scope._var_meta[node]['flat_idx']
 
             dest_idxs = dest_start + self.vec['p']._info[node].start + \
-                          petsc_linspace(0, len(self.scope._var_meta[node]['flat_idx']))
+                          make_idx_array(0, len(self.scope._var_meta[node]['flat_idx']))
             return (src_idxs, dest_idxs, None)
 
         return (None, None, None)
@@ -1495,8 +1697,11 @@ class CompoundSystem(System):
                 for node in self.variables:
                     if node not in sub._in_nodes or node in scatter_conns:
                         continue
-                    src_idxs, dest_idxs, nflat = self._get_node_scatter_idxs(node, noflats, dest_start, destsys=subsystem)
-                    if (src_idxs is None) and (dest_idxs is None) and (nflat is None):
+                    arg_idxs = sub.get_distrib_idxs(node)
+                    src_idxs, dest_idxs, nflat = self._get_scatter_idxs(node, noflats,
+                                                                        arg_idxs, dest_start,
+                                                                        destsys=subsystem)
+                    if (arg_idxs is None) and (src_idxs is None) and (dest_idxs is None) and (nflat is None):
                         continue
 
                     if nflat:
@@ -1504,15 +1709,21 @@ class CompoundSystem(System):
                             continue
                         noflat_conns.add(node)
                     else:
+                        if src_idxs is None:
+                            src_idxs = make_idx_array(0, 0)
+                        if dest_idxs is None:
+                            dest_idxs = make_idx_array(0, 0)
+
                         src_partial.append(src_idxs)
                         dest_partial.append(dest_idxs)
 
-                        if node in self.vec['u']:
+                        if node in self.vec['u'] or \
+                           (node in self.vec['p'] and self.is_var_in_parallel_system(node)):
                             sidxs = src_idxs
                             didxs = dest_idxs
                         else:
-                            sidxs = petsc_linspace(0, 0)
-                            didxs = petsc_linspace(0, 0)
+                            sidxs = make_idx_array(0, 0)
+                            didxs = make_idx_array(0, 0)
 
                         src_rev_partial.append(sidxs)
                         dest_rev_partial.append(didxs)
@@ -1775,7 +1986,10 @@ class ParallelSystem(CompoundSystem):
         requested_procs = []
         for system in self.all_subsystems():
             subsystems.append(system)
-            requested_procs.append(system.get_req_cpus())
+            cpus = system.get_req_cpus()
+            if cpus < 1:
+                cpus = 1
+            requested_procs.append(cpus)
 
         assigned_procs = [0]*len(requested_procs)
 
@@ -1790,8 +2004,6 @@ class ParallelSystem(CompoundSystem):
         if requested:
             while assigned < limit:
                 for i, system in enumerate(subsystems):
-                    if requested_procs[i] == 0: # skip and deal with these later
-                        continue
                     if assigned_procs[i] < requested_procs[i]:
                         assigned_procs[i] += 1
                         assigned += 1
@@ -1820,8 +2032,6 @@ class ParallelSystem(CompoundSystem):
 
         for i,sub in enumerate(subsystems):
             if i == rank_color:
-                self._local_subsystems.append(sub)
-            elif requested_procs[i] == 0:  # sub is duplicated everywhere
                 self._local_subsystems.append(sub)
 
         for sub in self.local_subsystems():
@@ -1854,14 +2064,11 @@ class ParallelSystem(CompoundSystem):
 
         varkeys_list = self.mpi.comm.allgather(names)
 
-        for varkeys in varkeys_list:
+        for rank, varkeys in enumerate(varkeys_list):
             for name in varkeys:
                 self.variables[name] = varmeta[name].copy()
-                self.variables[name]['size'] = 0
-
-        if sub:
-            for name, var in sub.variables.items():
-                self.variables[name] = var
+                if rank != self.mpi.rank:
+                    self.variables[name]['size'] = 0
 
         self._create_var_dicts(resid_state_map)
 
@@ -1984,6 +2191,12 @@ class OpaqueSystem(SimpleSystem):
             inner_u = self._inner_system.vec['u']
             inner_u.set_from_scope(self.scope)
 
+    def get_distrib_idxs(self, name):
+        """These indices are actually the indices in the *source*
+        vector that get scattered to a particular input.
+        """
+        return self._inner_system.get_distrib_idxs(name)
+
     def setup_scatters(self):
         self._inner_system.setup_scatters()
 
@@ -2097,10 +2310,6 @@ class DriverSystem(SimpleSystem):
         for s in self.local_subsystems():
             s.pre_run()
 
-    def setup_communicators(self, comm):
-        super(DriverSystem, self).setup_communicators(comm)
-        self._comp.setup_communicators(self.mpi.comm)
-
     def setup_variables(self, resid_state_map=None):
         super(DriverSystem, self).setup_variables(resid_state_map)
         # calculate relevant vars for GMRES mult
@@ -2120,6 +2329,15 @@ class DriverSystem(SimpleSystem):
             # TODO: make this check smarter to avoid doing the prescatter
             #       unless we really have to.
             self._comp.workflow._need_prescatter = True
+
+    def get_distrib_idxs(self, name):
+        """These indices are actually the indices in the *source*
+        vector that get scattered to a particular input.
+        """
+        idx = super(DriverSystem, self).get_distrib_idxs(name)
+        if idx is None:
+            idx = self._comp.workflow._system.get_distrib_idxs(name)
+        return idx
 
     def setup_scatters(self):
         self._comp.setup_scatters()
@@ -2321,7 +2539,7 @@ def _create_simple_sys(scope, graph, name):
     elif graph.node[name].get('comp') == 'invar':
         sub = InVarSystem(scope, graph, name)
     elif graph.node[name].get('comp') == 'outvar':
-        sub = VarSystem(scope, graph, name)
+        sub = OutVarSystem(scope, graph, name)
     elif graph.node[name].get('comp') == 'dumbvar':
         sub = VarSystem(scope, graph, name)
     else:
@@ -2463,6 +2681,9 @@ def get_comm_if_active(obj, comm):
         return comm
 
     req = obj.get_req_cpus()
+    if req == comm.size:
+        return comm
+
     if comm.rank+1 > req:
         color = MPI.UNDEFINED
     else:

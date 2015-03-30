@@ -77,7 +77,6 @@ class PETSc(object):
         raise AttributeError(name)
 
 def create_petsc_vec(comm, arr):
-    #print "create petsc: %s:  (%s)" % (arr, comm==MPI.COMM_NULL or comm==None);sys.stdout.flush()
     if under_mpirun() or PETSc.needs_ksp:
         if PETSc.installed and (MPI is None or comm != MPI.COMM_NULL):
             return PETSc.Vec().createWithArray(arr, comm=comm)
@@ -86,7 +85,7 @@ def create_petsc_vec(comm, arr):
 
 def _import_petsc():
     import petsc4py
-    #petsc4py.init([]) #['-malloc_debug']) # add petsc init args here
+    #petsc4py.init(['-start_in_debugger']) # add petsc init args here
     from petsc4py import PETSc
     return PETSc
 
@@ -143,12 +142,45 @@ def get_norm(vec, order=None):
     else:
         return numpy.linalg.norm(vec.array, ord=order)
 
-# npnorm = numpy.linalg.norm
-# def norm(a, order=None):
-#     '''This little funct for norm replaces a dependency on scipy
-#     '''
-#     return npnorm(numpy.asarray_chkfinite(a), ord=order)
+# dtype needed for index arrays
+idx_arr_type = PETSc.IntType if MPI else 'i'
 
+def make_idx_array(start, end):
+    """ Return an index vector of the right int type for
+    parallel or serial computation.
+    """
+    return numpy.arange(start, end, dtype=idx_arr_type)
+
+def to_idx_array(idxs):
+    """ Return an index vector of the right int type for
+    parallel or serial computation.
+    """
+    return numpy.array(idxs, dtype=idx_arr_type)
+
+def evenly_distrib_idxs(comm, arr_size):
+    """Given an MPI communicator and the size of an array, chop the array up
+    into pieces according to the size of the communicator, keeping the distribution
+    of entries as even as possible. Returns a tuple of
+    (start, end, sizes, offsets), where start and end are for the current rank
+    and sizes and offsets contain values for all ranks.
+    """
+    rank = comm.rank
+
+    base = arr_size / comm.size
+    leftover = arr_size % comm.size
+    sizes = numpy.ones(comm.size, dtype="int") * base
+
+    # evenly distribute the remainder across size-leftover procs,
+    # instead of giving the whole remainder to one proc
+    sizes[:leftover] += 1
+
+    offsets = numpy.zeros(comm.size, dtype="int")
+    offsets[1:] = numpy.cumsum(sizes)[:-1]
+
+    start = offsets[rank]
+    end = start + sizes[rank]
+
+    return start, end, sizes, offsets
 
 
 if os.environ.get('USE_PROC_FILES'):
