@@ -66,13 +66,11 @@ class CaseDataset(object):
             self._reader = _BSONReader(filename)
         elif format == 'json':
             self._reader = _JSONReader(filename)
-        elif format == 'hdf5':
-            self._reader = _HDF5Reader(filename)
         else:
             raise ValueError("dataset format must be 'json' or 'bson'")
 
-        self._query_id = self._parent_id = self._driver_id = self._driver_name = None
-        self._case_ids = self._drivers = self._case_iternames = None
+        self._query_id = self._parent_id = self._driver_id = None
+        self._case_ids = self._drivers = None
 
     @property
     def data(self):
@@ -93,9 +91,8 @@ class CaseDataset(object):
         """ Return data based on `query`. """
         self._setup(query)
 
-        metadata_names = ['_id', '_parent_id', '_driver_id', '_driver_name', '_itername', 'error_status',
+        metadata_names = ['_id', '_parent_id', '_driver_id', 'error_status',
                           'error_message', 'timestamp']
-        
         if query.vnames:
             tmp = []
             for name in metadata_names:
@@ -105,8 +102,7 @@ class CaseDataset(object):
             names = query.vnames
         else:
             if query.driver_name:
-                #driver_info = self._drivers[self._driver_id]
-                driver_info = self._drivers[self._driver_name]
+                driver_info = self._drivers[self._driver_id]
                 prefix = driver_info['prefix']
                 all_names = [prefix+name
                              for name in driver_info['recording']]
@@ -127,14 +123,10 @@ class CaseDataset(object):
         state = {}  # Retains last seen values.
         for case_data in self._reader.cases():
             data = case_data['data']
-            metadata = case_data['metadata']
-            case_id = metadata['_id']
-            case_driver_id = metadata['_driver_id']
-            case_driver_name = metadata['_driver_name']
-            case_itername = metadata['_itername']
+            case_id = case_data['_id']
+            case_driver_id = case_data['_driver_id']
 
-            prefix = self._drivers[case_driver_name]['prefix']
-            #prefix = self._drivers[case_driver_id]['prefix']
+            prefix = self._drivers[case_driver_id]['prefix']
             if prefix:
                 # Make names absolute.
                 pass
@@ -146,18 +138,14 @@ class CaseDataset(object):
             state.update(data)
 
             # Filter on driver.
-            if self._driver_name is not None and \
-               case_driver_name != self._driver_name:
+            if self._driver_id is not None and \
+               case_driver_id != self._driver_id:
                 continue
-            #if self._driver_id is not None and \
-               #case_driver_id != self._driver_id:
-                #continue
 
-            ## Filter on case.
-            #if self._case_ids is None or case_id in self._case_ids:
-            if self._case_iternames is None or case_itername in self._case_iternames:
+            # Filter on case.
+            if self._case_ids is None or case_id in self._case_ids:
                 for name in metadata_names:
-                    data[name] = case_data['metadata'][name]
+                    data[name] = case_data[name]
 
                 row = DictList(names)
                 for name in names:
@@ -165,8 +153,7 @@ class CaseDataset(object):
                         if name in metadata_names:
                             row.append(data[name])
                         else:
-                            driver = self._drivers[case_driver_name]
-                            # driver = self._drivers[case_driver_id]
+                            driver = self._drivers[case_driver_id]
                             lnames = [prefix+rec for rec in driver['recording']]
                             if name in lnames:
                                 row.append(data[name])
@@ -180,8 +167,8 @@ class CaseDataset(object):
                         row.append(nan)
                 rows.append(row)
 
-            #if case_id == self._query_id or case_id == self._parent_id: The order of the recording does not matter now with HDF5
-                #break  # Parent is last case recorded.
+            if case_id == self._query_id or case_id == self._parent_id:
+                break  # Parent is last case recorded.
 
         if self._query_id and not rows:
             raise ValueError('No case with _id %s' % self._query_id)
@@ -298,7 +285,6 @@ class CaseDataset(object):
 
         self._drivers = {}
         self._driver_id = None
-        self._driver_name = None
         for driver_info in self._reader.drivers():
             _id = driver_info['_id']
             name = driver_info['name']
@@ -306,27 +292,12 @@ class CaseDataset(object):
             if prefix:
                 prefix += '.'
             driver_info['prefix'] = prefix
-            self._drivers[driver_info['name'] ] = driver_info
-            if ( driver_info['name'] ) == query.driver_name:
-                self._driver_name = query.driver_name
-                #self._driver_id = _id
-
-        # self._drivers = {}
-        # self._driver_id = None
-        # for driver_info in self._reader.drivers():
-        #     _id = driver_info['_id']
-        #     name = driver_info['name']
-        #     prefix, _, name = name.rpartition('.')
-        #     if prefix:
-        #         prefix += '.'
-        #     driver_info['prefix'] = prefix
-        #     self._drivers[_id] = driver_info
-        #     if driver_info['name'] == query.driver_name:
-        #         self._driver_id = _id
+            self._drivers[_id] = driver_info
+            if driver_info['name'] == query.driver_name:
+                self._driver_id = _id
 
         if query.driver_name:
-            #if self._driver_id is None:
-            if self._driver_name is None:
+            if self._driver_id is None:
                 raise ValueError('No driver named %r' % query.driver_name)
 
         self._case_ids = None
@@ -335,59 +306,48 @@ class CaseDataset(object):
         if query.case_id is not None:
             self._query_id = query.case_id
             self._case_ids = set((self._query_id,))
-            #self._driver_id = None  # Case specified, ignore driver.
-            self._driver_name = None  # Case specified, ignore driver.
-        #elif query.parent_id is not None: # TODO - fix this
-        elif query.parent_itername is not None: # TODO - fix this
+            self._driver_id = None  # Case specified, ignore driver.
+        elif query.parent_id is not None:
             # Parent won't be seen until children are, so we have to pre-screen.
             # Collect tree of cases.
-            
-            self._parent_itername = query.parent_itername
-            self._case_iternames = set((self._parent_itername,))
-            parent_itername_parts = self._parent_itername.split('-')
+            self._parent_id = query.parent_id
+            cases = {}
             for case_data in self._reader.cases():
-                itername = case_data['metadata']['_itername']
-                itername_parts = itername.split('-')
-                if len(parent_itername_parts) + 1 == len(itername_parts) and itername_parts[:-1] == parent_itername_parts:
-                    self._case_iternames.add(itername)
-            
-            #cases = {}
-            #for case_data in self._reader.cases():
-                #_id = case_data['_id']
-                #_driver_id = case_data['_driver_id']
-                #_parent_id = case_data['_parent_id']
+                _id = case_data['_id']
+                _driver_id = case_data['_driver_id']
+                _parent_id = case_data['_parent_id']
 
-                #if _id in cases:
-                    #node = cases[_id]
-                    #node.driver_id = _driver_id
-                    #if node.parent is None:
-                        #if _parent_id in cases:
-                            #node.parent = cases[_parent_id]
-                        #else:
-                            #parent = _CaseNode(_parent_id)
-                            #parent.add_child(node)
-                            #node.parent = parent
-                            #cases[_parent_id] = parent
-                #else:
-                    #if _parent_id in cases:
-                        #parent = cases[_parent_id]
-                    #else:
-                        #parent = _CaseNode(_parent_id)
-                        #cases[_parent_id] = parent
-                    #child = _CaseNode(_id, _driver_id, parent)
-                    #cases[_id] = parent.add_child(child)
+                if _id in cases:
+                    node = cases[_id]
+                    node.driver_id = _driver_id
+                    if node.parent is None:
+                        if _parent_id in cases:
+                            node.parent = cases[_parent_id]
+                        else:
+                            parent = _CaseNode(_parent_id)
+                            parent.add_child(node)
+                            node.parent = parent
+                            cases[_parent_id] = parent
+                else:
+                    if _parent_id in cases:
+                        parent = cases[_parent_id]
+                    else:
+                        parent = _CaseNode(_parent_id)
+                        cases[_parent_id] = parent
+                    child = _CaseNode(_id, _driver_id, parent)
+                    cases[_id] = parent.add_child(child)
 
-                #if _id == self._parent_id:
-                    #break  # Parent is last case recorded.
+                if _id == self._parent_id:
+                    break  # Parent is last case recorded.
 
-            ## Determine subtree of interest.
-            #if self._parent_id in cases:
-                #root = cases[self._parent_id]
-                #self._case_ids = set((self._parent_id,))
-                #for child in root.get_children():
-                    #self._case_ids.add(child.case_id)
-            #else:
-                #raise ValueError('No case with _id %s', self._parent_id)
+            # Determine subtree of interest.
+            if self._parent_id in cases:
+                root = cases[self._parent_id]
+                self._case_ids = set((self._parent_id,))
+                for child in root.get_children():
+                    self._case_ids.add(child.case_id)
+            else:
+                raise ValueError('No case with _id %s', self._parent_id)
 
     def restore(self, assembly, case_id):
         """ Restore case `case_id` into `assembly`. """
@@ -477,7 +437,6 @@ class Query(object):
         self.driver_name = None
         self.case_id = None
         self.parent_id = None
-        self.parent_itername = None
         self.vnames = None
         self.local_only = False
         self.names = False
@@ -513,7 +472,6 @@ class Query(object):
     def parent_case(self, parent_case_id):
         """ Filter the cases to only include this case and its children. """
         self.parent_id = parent_case_id
-        self.parent_itername = parent_case_id
         self.case_id = None
         return self
 
@@ -703,192 +661,6 @@ class _JSONReader(_Reader):
         data = '{\n' + self._inp.read(reclen)
         return json.loads(data,object_hook=object_hook)
         #return loads(data)
-
-
-
-
-
-        
-import h5py
-import numpy as np
-
-
-
-
-class _HDF5Reader(object):
-    """ Reads a :class:`HDF5CaseRecorder` file. """
-
-    def __init__(self, filename):
-
-        self._inp = h5py.File(filename,'r')
-
-        self._simulation_info = self.read_simulation_info()
-        self._state = 'drivers'
-        self._info = None
-
-    @property
-    def simulation_info(self):
-        """ Simulation info dictionary. """
-        return self._simulation_info
-    
-    def read_iteration_case_from_hdf5( self, hdf5file, driver_name, iteration_case_name ) :
-        
-        info = {}
-        
-        driver_grp = self._inp['/iteration_cases'][driver_name] 
-        iteration_grp = self._inp['/iteration_cases'][driver_name][iteration_case_name] 
-        
-        info['metadata'] = self.read_from_hdf5(iteration_grp['metadata'])
-        
-        data_grp = iteration_grp['data']
-        info['data'] = {}
-        
-        # read the names of the floats, ints and strings in the array_of_... arrays
-        float_names = driver_grp['float_names']
-        int_names = driver_grp['int_names']
-        str_names = driver_grp['str_names']
-        for i, name in enumerate(float_names):
-            info['data'][name] = data_grp['array_of_floats'][i]
-        for i, name in enumerate(str_names):
-            info['data'][name] = data_grp['array_of_strs'][i]
-        for i, name in enumerate(int_names):
-            info['data'][name] = data_grp['array_of_ints'][i]
-            
-        for name in data_grp.keys():
-            if name not in ['array_of_ints','array_of_strs', 'array_of_floats']:
-                info['data'][name] = self.read_from_hdf5(data_grp[name])
-            
-        return info
-
-    def read_from_hdf5(self, value ):
-        
-        # If value is an HDF5 Group do
-        if isinstance(value, h5py._hl.group.Group):
-            d = {}
-            group = value
-            # Loop over what is inside that group
-            for name, value in group.attrs.items() :
-                d[ name ] = self.read_from_hdf5( value )
-            for name, value in group.items() :
-                d[ name ] = self.read_from_hdf5( value )
-            return d
-        elif value.dtype.names :    # compound type
-            d = {}
-            for name in value.dtype.names:
-                d[ name ] = value[ name ][0]
-            return d
-        else: # it is just a value so return it 
-            return value[()]
-        
-    def read_simulation_info( self ):
-        sim_info_grp = self._inp['simulation_info'] # the HDF5 simulation_info group
-
-        # This group contains:
-            # attributes
-            # other groups
-            # datasets
-        
-        sim_info = {}
-
-        # Loop over attributes
-        for name, value in sim_info_grp.attrs.items() :
-            sim_info[ name ] = self.read_from_hdf5( value )
-        
-        # Loop over non attributes. e.g. datasets and groups?
-        for name, value in sim_info_grp.items() :
-            sim_info[ name ] = self.read_from_hdf5( value )
-        
-        return sim_info
-    
-        # 
-    
-        # to get at attributes use
-        #    self._inp['simulation_info/expressions'].get('comp.x').attrs.keys()
-        #    self._inp['simulation_info'].attrs.keys()
-
-        
-        # to get at non attributes
-        #  self._inp['simulation_info/expressions'].keys()
-
-
-    def drivers(self):
-        """ Return list of 'driver_info' dictionaries. """
-
-        driver_info = []
-        
-        # Loop over all the groups with names like '/driver_info_nnn'
-        for name in self._inp.keys() :
-            if name.startswith( 'driver_info_'):
-                driver_info.append( self.read_from_hdf5( self._inp[name] ) )
-        
-        #info = self._next()
-        #while info:
-            #if '_driver_id' not in info:
-                #driver_info.append(info)
-            #else:
-                #self._info = info
-                #return driver_info
-            #info = self._next()
-        return driver_info
-
-    def cases(self):
-        """ Return sequence of 'iteration_case' dictionaries. """
-
-
-        # self._inp['/iteration_cases'].keys() gets you the drivers
-        
-        for driver_name in self._inp['/iteration_cases']:
-            for iteration_case_name in self._inp['/iteration_cases'][driver_name] :
-                if iteration_case_name.startswith('iteration_case_') :
-                    #info = self.read_from_hdf5( self._inp['/iteration_cases'][driver_name][iteration_case_name] )
-                    info = self.read_iteration_case_from_hdf5( self._inp, driver_name, iteration_case_name )
-                    yield info
-
-
-        #case_number = 1
-        #case_name = "iteration_case_%d" % case_number
-        #info = self.read_from_hdf5( self._inp[case_name] )
-        #while info:
-            #yield info
-            #case_number += 1
-            #case_name = "iteration_case_%d" % case_number
-            #if case_name in self._inp.keys() :
-                #info = self.read_from_hdf5( self._inp[case_name] )
-            #else:
-                #info = None
-
-                
-
-
-        # if self._state != 'cases' or self._info is None:
-        #     self.drivers()  # Read up to first case.
-        #     if self._state != 'cases':
-        #         return
-
-        # yield self._info  # Read when looking for drivers.
-        # self._info = None
-
-        # info = self._next()
-        # while info:
-        #     yield info
-        #     info = self._next()
-        # self._state = 'eof'
-
-    def _next(self):
-        """ Return next dictionary of data. """
-        pass
-        # data = self._inp.readline()
-        # while '__length_' not in data:
-        #     if not data:
-        #         return None
-        #     data = self._inp.readline()
-
-        # key, _, value = data.partition(':')  # '"__length_1": NNN'
-        # reclen = int(value) - 1
-        # data = self._inp.readline()  # ', "dictname": {'
-        # data = '{\n' + self._inp.read(reclen)
-        # return json.loads(data,object_hook=object_hook)
-        # #return loads(data)
 
 def object_hook(dct, compile_re=True):
     if "$binary" in dct:
