@@ -120,44 +120,6 @@ class SellarMDFwithDerivs(Assembly):
         self.driver.print_convergence = False
 
 
-class MPITests3(MPITestCase):
-
-    N_PROCS = 3
-
-    def test_fan_out_in_noflats(self):
-        size = 5   # array var size
-
-        # a comp feeds 3 parallel comps which feed
-        # another comp
-        top = set_as_top(Assembly())
-        top.add("C1", ABCDArrayComp(size))
-        top.add("C2", ABCDArrayComp(size))
-        top.add("C3", ABCDArrayComp(size))
-        top.add("C4", ABCDArrayComp(size))
-        top.add("C5", ABCDArrayComp(size))
-        top.driver.workflow.add(['C1', 'C2', 'C3', 'C4', 'C5'])
-        top.connect('C1.c', 'C2.a')
-        top.connect('C1.out_string', 'C2.in_string')
-
-        top.connect('C1.d', 'C3.b')
-        top.connect('C1.c', 'C4.a')
-        top.connect('C2.out_string', 'C5.in_string')
-        top.connect('C3.d', 'C5.b')
-        top.connect('C4.c', 'C5.a')
-
-        top.C1.a = np.ones(size, float) * 3.0
-        top.C1.b = np.ones(size, float) * 7.0
-
-        top.C1.in_string = 'foo'
-
-        top.run()
-
-        self.assertTrue(all(top.C5.a==np.ones(size, float)*11.))
-        self.assertTrue(all(top.C5.b==np.ones(size, float)*5.))
-
-        self.assertEqual(top.C5.out_string, 'foo_C1_C2_C5')
-
-
 class MPITests1(MPITestCase):
 
     N_PROCS = 2
@@ -520,6 +482,48 @@ class MPITests2(MPITestCase):
 
             if expected:
                 self.fail("not all expected values were found")
+
+
+class MPITests3(MPITestCase):
+
+    N_PROCS = 3
+
+    def test_fan_out_in_noflats(self):
+        size = 5   # array var size
+
+        # a comp feeds 3 parallel comps which feed
+        # another comp
+        top = set_as_top(Assembly())
+        top.add("C1", ABCDArrayComp(size))
+        top.add("C2", ABCDArrayComp(size))
+        top.add("C3", ABCDArrayComp(size))
+        top.add("C4", ABCDArrayComp(size))
+        top.add("C5", ABCDArrayComp(size))
+        top.driver.workflow.add(['C1', 'C2', 'C3', 'C4', 'C5'])
+        top.connect('C1.c', 'C2.a')
+        top.connect('C1.out_string', 'C2.in_string')
+        top.connect('C1.out_list', 'C4.in_list')
+
+        top.connect('C1.d', 'C3.b')
+        top.connect('C1.c', 'C4.a')
+        top.connect('C2.out_string', 'C5.in_string')
+        top.connect('C3.d', 'C5.b')
+        top.connect('C4.c', 'C5.a')
+        top.connect('C4.out_list', 'C5.in_list')
+
+        top.C1.a = np.ones(size, float) * 3.0
+        top.C1.b = np.ones(size, float) * 7.0
+
+        top.C1.in_string = 'foo'
+        top.C1.in_list = [1, 1, 1]
+
+        top.run()
+
+        self.assertTrue(all(top.C5.a==np.ones(size, float)*11.))
+        self.assertTrue(all(top.C5.b==np.ones(size, float)*5.))
+
+        self.assertEqual(top.C5.out_string, 'foo_C1_C2_C5')
+        self.assertEqual(top.C5.out_list, [1, 1, 1, 1.5, 1.5, 1.5])
 
 
 class TestCaseSerial(TestCase):
