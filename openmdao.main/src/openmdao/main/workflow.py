@@ -599,7 +599,6 @@ class Workflow(object):
 
     def setup_init(self):
         self._system = None
-        #self._reduced_graph = None
 
         self._rec_required = None  # Case recording configuration.
         self._rec_parameters = None

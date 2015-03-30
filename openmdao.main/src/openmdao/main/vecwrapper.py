@@ -3,7 +3,7 @@ from collections import OrderedDict, namedtuple
 import numpy
 from numpy import ndarray, zeros
 
-from openmdao.main.mpiwrap import MPI, create_petsc_vec, PETSc
+from openmdao.main.mpiwrap import MPI, create_petsc_vec, PETSc, make_idx_array, to_idx_array
 from openmdao.main.array_helpers import offset_flat_index, \
                                         get_flat_index_start, get_val_and_index, get_shape, \
                                         get_flattened_index, to_slice, to_indices
@@ -12,6 +12,7 @@ from openmdao.util.typegroups import int_types
 from openmdao.util.graph import base_var
 
 ViewInfo = namedtuple('ViewInfo', 'view, start, idxs, size, hide')
+
 
 class VecWrapperBase(object):
     """A wrapper object for a local vector, a distributed PETSc vector,
@@ -133,7 +134,7 @@ class VecWrapperBase(object):
                 self._add_subview(scope, name)
                 self._add_tuple_members(system, [name])
         _, start, _, size, _ = self._info[name]
-        return petsc_linspace(start, start+size)
+        return make_idx_array(start, start+size)
 
     def set_to_array(self, arr, vnames=None):
         """Pull values for the given set of names out of our array
@@ -344,18 +345,20 @@ class InputVecWrapper(VecWrapperBase):
         name2collapsed = scope.name2collapsed
         flat_ins = _filter_flat(scope, system._owned_args)
         start, end = 0, 0
-        arg_idx = system.arg_idx
 
         #print "%s: %s: %s" % (system.name, type(system), flat_ins)
         for sub in system.simple_subsystems():
             #print "SUB %s: %s  _in_nodes = %s" % (sub.name, type(sub),sub._in_nodes)
             for name in [n for n in system.vector_vars if n in sub._in_nodes]:
                 if name in flat_ins and name not in self._info:
-                    sz = len(arg_idx[name])
+                    arg_idx = sub.get_distrib_idxs(name)
+                    if arg_idx is None:
+                        continue
+                    sz = len(arg_idx) #arg_idx[name])
                     end += sz
                     self._info[name] = ViewInfo(self.array[start:end], start,
                                                 slice(None), end-start, False)
-                    if end-start > self.array[start:end].size:
+                    if end-start != self.array[start:end].size:
                         raise RuntimeError("size mismatch: in system %s view for %s is %s, size=%d" %
                                      (system.name,name, [start,end],self[name].size))
                     start += sz
@@ -374,9 +377,6 @@ class InputVecWrapper(VecWrapperBase):
                 continue
 
             self._add_subview(scope, name)
-
-        # if self.name.endswith('.p'):
-        #     print "P for %s: %s" % (system.name, self.keys())
 
     def _map_resids_to_states(self, system):
         pass
@@ -456,7 +456,6 @@ class DataTransfer(object):
 
         try:
             var_idxs, input_idxs = merge_idxs(var_idxs, input_idxs)
-            #print "ORIG INDXS: %s --> %s" % (var_idxs, input_idxs)
         except Exception as err:
             raise RuntimeError("ERROR creating scatter for system %s in scope %s: %s" %
                                 (system.name, str(system.scope), str(err)))
@@ -557,9 +556,11 @@ class DataTransfer(object):
         stream.write("scatter vars: %s\n" % sorted(self.scatter_conns))
         stream.write(" "*nest)
         stream.write("%s --> %s\n" % (self.var_idxs, self.input_idxs))
+        stream.write(" "*nest)
         stream.write("local array = %s\n" % srcvec.array)
         var_idxs = to_indices(self.var_idxs, zeros(numpy.sum(system.local_var_sizes)))
         input_idxs = self.input_idxs
+        stream.write(" "*nest)
         stream.write("%s --> %s\n" % (var_idxs, input_idxs))
 
         if MPI and system.app_ordering:
@@ -596,7 +597,7 @@ def merge_idxs(src_idxs, dest_idxs):
     dest_idxs = [i for i in dest_idxs if len(i)]
 
     if len(src_idxs) == 0:
-        return petsc_linspace(0, 0), petsc_linspace(0,0)
+        return make_idx_array(0, 0), make_idx_array(0,0)
 
     src_tups = list(enumerate(src_idxs))
 
@@ -619,20 +620,6 @@ def idx_merge(idxs):
                 return idxs
             else:
                 return numpy.concatenate(idxs)
-    return idxs
-
-def petsc_linspace(start, end):
-    """ Return a linspace vector of the right int type for PETSc """
-    if MPI:
-        return numpy.arange(start, end, dtype=PETSc.IntType)
-    else:
-        return numpy.arange(start, end, dtype='i')
-
-def petsc_idxs(idxs):
-    """ Return an index vector of the right int type for PETSc """
-    if MPI:
-        return numpy.array(idxs, dtype=PETSc.IntType)
-
     return idxs
 
 def _filter(scope, lst):
@@ -674,3 +661,8 @@ def _filter_ignored(scope, lst):
 
 def _filter_flat(scope, lst):
     return [n for n in lst if not scope._var_meta[n].get('noflat')]
+
+def dedup(lst):
+    """Remove duplicates from the list while maintaining original order"""
+    seen = set()
+    return [x for x in lst if x not in seen and not seen.add(x)]
