@@ -1,4 +1,7 @@
 import unittest
+import tempfile
+import shutil
+import os
 
 import h5py
 
@@ -106,19 +109,25 @@ class TestSellarMDFCase(unittest.TestCase):
     def setUp(self):
         self.tolerance = 0.001
         self.top = set_as_top(SellarMDF())
+        self.tempdir = tempfile.mkdtemp(prefix='test_hdf5recorder-')
 
     def tearDown(self):
+        try:
+            shutil.rmtree(self.tempdir)
+        except OSError:
+            pass
         self.top = None
 
     def test_sellarMDF_hdf5_recording(self):
 
         hdf5_cases_filename = 'sellarMDF.hdf5'
-        self.top.recorders = [HDF5CaseRecorder(hdf5_cases_filename)]
+        hdf5_cases_filepath = os.path.join(self.tempdir, hdf5_cases_filename)
+        self.top.recorders = [HDF5CaseRecorder(hdf5_cases_filepath)]
         self.top.run()
 
         ### Check to see if the values written make sense ###
         
-        hdf5_cases_file = h5py.File(hdf5_cases_filename,'r')
+        hdf5_cases_file = h5py.File(hdf5_cases_filepath,'r')
 
         # Check some values in the driver section
         driver_info_1 = hdf5_cases_file['/driver_info_1/']
@@ -167,23 +176,23 @@ class TestSellarMDFCase(unittest.TestCase):
             assert_rel_error(self, exp, act, self.tolerance)
 
 
-class CompWithStringOutput(Component):
-    n = Int(0, iotype='in')
-    s = Str('', iotype='out')
+# class CompWithStringOutput(Component):
+#     n = Int(0, iotype='in')
+#     s = Str('', iotype='out')
 
-    def execute(self):
-        self.s = 'q' * self.n
+#     def execute(self):
+#         self.s = 'q' * self.n
 
 
-class StringOutput(Assembly):
-    """ Optimization of the Sellar problem using MDF
-    Disciplines coupled with FixedPointIterator.
-    """
+# class StringOutput(Assembly):
+#     """ Optimization of the Sellar problem using MDF
+#     Disciplines coupled with FixedPointIterator.
+#     """
 
-    def configure(self):
+#     def configure(self):
         
-        comp = self.add('comp', CompWithStringOutput())
-        self.driver.workflow.add( 'comp' )
+#         comp = self.add('comp', CompWithStringOutput())
+#         self.driver.workflow.add( 'comp' )
 
 
 
