@@ -189,7 +189,7 @@ def build_dev(args):
 
     msg = "\nTo activate the environment, use the following command:\n\n\t {cmd} {env}\n"
 
-    if sys.platform == 'win-32':
+    if sys.platform == 'win32':
         print msg.format(cmd='activate', env=env_name)
 
     else:
@@ -197,7 +197,7 @@ def build_dev(args):
 
     msg = "To deactivate the environment, use the following command:\n\n\t {cmd}\n"
 
-    if sys.platform == 'win-32':
+    if sys.platform == 'win32':
         print msg.format(cmd='deactivate')
 
     else:
