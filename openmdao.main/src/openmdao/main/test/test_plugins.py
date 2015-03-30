@@ -199,7 +199,7 @@ class PluginsTestCase(unittest.TestCase):
             try:
                 # the following few lines are to prevent the system level pip
                 # from being used instead of the local virtualenv version.
-                pipexe = 'pip-%d.%d' % (sys.version_info[0], sys.version_info[1])
+                pipexe = 'pip'
                 pipexe = find_in_path(pipexe)
                 if pipexe is None:
                     pipexe = 'pip'
