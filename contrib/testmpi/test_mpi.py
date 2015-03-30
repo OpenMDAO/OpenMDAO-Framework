@@ -124,7 +124,7 @@ class MPITests3(MPITestCase):
 
     N_PROCS = 3
 
-    def test_fan_out_in(self):
+    def test_fan_out_in_noflats(self):
         size = 5   # array var size
 
         # a comp feeds 3 parallel comps which feed
@@ -341,6 +341,40 @@ class MPITests1(MPITestCase):
         self.assertTrue(all(top.C3.b==np.ones(size, float)*4.))
         self.assertTrue(all(top.C3.c==np.ones(size, float)*10.))
         self.assertTrue(all(top.C3.d==np.ones(size, float)*2.))
+
+
+    def test_fan_out_in(self):
+        size = 5   # array var size
+
+        # a comp feeds two parallel comps which feed
+        # another comp
+        top = set_as_top(Assembly())
+        top.add("C1", ABCDArrayComp(size))
+        top.add("C2", ABCDArrayComp(size))
+        top.add("C3", ABCDArrayComp(size))
+        top.add("C4", ABCDArrayComp(size))
+        top.driver.workflow.add(['C1', 'C2', 'C3', 'C4'])
+        top.connect('C1.c', 'C2.a')
+        top.connect('C1.d', 'C3.b')
+        top.connect('C2.c', 'C4.a')
+        top.connect('C3.d', 'C4.b')
+
+        top.C1.a = np.ones(size, float) * 3.0
+        top.C1.b = np.ones(size, float) * 7.0
+
+        top.run()
+
+        with MPIContext():
+            self.assertTrue(all(top.C4.a==np.ones(size, float)*11.))
+            self.assertTrue(all(top.C4.b==np.ones(size, float)*5.))
+
+        # Piggyback testing of the is_variable_local function.
+        system = top.driver.workflow._system
+        self.assertTrue(system.is_variable_local('C1.c') is True)
+
+        # Exclusive or - you either got C2 or C3.
+        self.assertTrue(system.is_variable_local('C2.a') != system.is_variable_local('C3.a'))
+        self.assertTrue(system.is_variable_local('C2.c') != system.is_variable_local('C3.c'))
 
     def test_fan_out_in_force_serial(self):
         size = 5  # array var size
