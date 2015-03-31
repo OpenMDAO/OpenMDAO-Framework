@@ -123,7 +123,7 @@ def create_files():
 class TestCase(unittest.TestCase):
 
     def setUp(self):
-        create_files()  # Uncomment to create 'sellar.new'
+        #create_files()  # Uncomment to create 'sellar.new'
         path = os.path.join(os.path.dirname(__file__), 'sellar.json')
         self.cds = CaseDataset(path, 'json')
         self.startdir = os.getcwd()
