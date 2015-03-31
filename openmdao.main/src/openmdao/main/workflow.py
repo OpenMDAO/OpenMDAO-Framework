@@ -211,9 +211,10 @@ class Workflow(object):
                     name = name[0]
                 path = prefix+name
                 if save_problem_formulation or \
-                   self._check_path(path, includes, excludes):
+                    self._check_path(path, includes, excludes):
                     self._rec_parameters.append(param)
                     inputs.append(name)
+                    #inputs.append(path)
 
         # Objectives
         self._rec_objectives = []
@@ -230,8 +231,10 @@ class Workflow(object):
                     self._rec_objectives.append(key)
                     if key != objective.text:
                         outputs.append(name)
+                        #outputs.append(path)
                     else:
                         outputs.append(name + '.out0')
+                        #outputs.append(path + '.out0')
 
         # Responses
         self._rec_responses = []
@@ -243,6 +246,7 @@ class Workflow(object):
                    self._check_path(path, includes, excludes):
                     self._rec_responses.append(key)
                     outputs.append(name + '.out0')
+                    #outputs.append(path + '.out0')
 
         # Constraints
         self._rec_constraints = []
@@ -254,6 +258,7 @@ class Workflow(object):
                    self._check_path(path, includes, excludes):
                     self._rec_constraints.append(con)
                     outputs.append(name + '.out0')
+                    #outputs.append(path + '.out0')
         if hasattr(driver, 'get_ineq_constraints'):
             for con in driver.get_ineq_constraints().values():
                 name = con.pcomp_name
@@ -262,12 +267,22 @@ class Workflow(object):
                    self._check_path(path, includes, excludes):
                     self._rec_constraints.append(con)
                     outputs.append(name + '.out0')
-                    #outputs.append(path+'.out0')
+                    #outputs.append(path + '.out0')
+                #outputs.append(path+'.out0')
 
         self._rec_outputs = []
         for comp in self:
-            successors = driver._reduced_graph.successors(comp.name)
+            try:
+                successors = driver.get_reduced_graph().successors(comp.name)
+            except:
+                print "Unexpected error:", sys.exc_info()[0]
+                import traceback
+                tb = traceback.format_exc()
+                print tb
+                raise
+
             for output_name, aliases in successors:
+
 
                 # From Bret: it does make sense to skip subdrivers like you said, except for the
                 #      case where a driver has actual outputs of its own.  So you may have to keep
@@ -284,11 +299,12 @@ class Workflow(object):
                             output_name = n
                             break
                 #output_name = prefix + output_name
-                if output_name not in outputs and self._check_path(output_name, includes, excludes) :
-                    outputs.append(output_name)
+                if output_name not in outputs and self._check_path(prefix + output_name, includes, excludes) :
                     self._rec_outputs.append(output_name)
+                    outputs.append(output_name)
+                    #outputs.append(prefix + output_name)
                     #self._rec_all_outputs.append(output_name)
-
+                    
         #####
         # also need get any outputs of comps that are not connected vars
         #   and therefore not in the graph
@@ -308,8 +324,9 @@ class Workflow(object):
                         continue
 
                 #output_name = prefix + output_name
-                if output_name not in outputs and self._check_path(output_name, includes, excludes) :
+                if output_name not in outputs and self._check_path(prefix + output_name, includes, excludes) :
                     outputs.append(output_name)
+                    #outputs.append(prefix + output_name)
                     self._rec_outputs.append(output_name)
 
         # Other outputs.
@@ -349,10 +366,13 @@ class Workflow(object):
         if self._check_path(path, includes, excludes):
             self._rec_outputs.append(name)
             outputs.append(name)
+            #outputs.append(path)
 
         # If recording required, register names in recorders.
         self._rec_required = bool(inputs or outputs)
         if self._rec_required:
+
+
             top = scope
             while top.parent is not None:
                 top = top.parent
@@ -370,6 +390,8 @@ class Workflow(object):
         for pattern in includes:
             if fnmatch(path, pattern):
                 record = True
+
+        # print "_check_path path", path
 
         # if it passes include filter, check exclude filter
         if record:
@@ -389,6 +411,13 @@ class Workflow(object):
 
         inputs = []
         outputs = []
+
+        # print "recording case"
+        # if MPI:
+        #     print 'workflow', self
+        #     print 'workflow comm',self._system.mpi.comm
+        #     print 'workflow rank',self._system.mpi.rank
+
 
         # Parameters.
         for param in self._rec_parameters:

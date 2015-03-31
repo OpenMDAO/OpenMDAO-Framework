@@ -115,7 +115,8 @@ def create_files():
     prob = set_as_top(SellarMDF())
     #prob.name = "top"
     prob.recorders = [JSONCaseRecorder('sellar_json.new'),
-                      BSONCaseRecorder('sellar_bson.new')]
+                      BSONCaseRecorder('sellar_bson.new'),
+                      ]
     prob.run()
 
 

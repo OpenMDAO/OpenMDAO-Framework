@@ -51,6 +51,25 @@ class FixedPointIterator(Driver):
 
     def execute(self):
         """ Executes an iterative solver """
+
+
+        # print 'Executes an iterative solver', 
+        # if MPI:
+        #     print 'driver', self
+        #     #print 'size',self.workflow._system.mpi.size
+        #     print 'dir(comm)',dir(self.workflow._system.mpi.comm)
+        #     print 'comm',self.workflow._system.mpi.comm
+        #     print 'comm.name',self.workflow._system.mpi.comm.name
+        #     print 'comm.group',self.workflow._system.mpi.comm.group
+        #     print 'rank',self.workflow._system.mpi.rank
+        #     print 'requested_cpus',self.workflow._system.mpi.requested_cpus
+        #     #print dir(self.workflow._system.mpi)
+
+        # if MPI:
+        #     print 'MPI not null'
+
+
+
         self.current_iteration = 0
         if MPI:
             self._norm_order = None # norm order not used in MPI

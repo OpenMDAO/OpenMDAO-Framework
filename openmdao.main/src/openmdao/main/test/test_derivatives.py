@@ -2818,6 +2818,13 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         J = top.driver.calc_gradient(mode='forward')
         assert_rel_error(self, J[0, 0], 12.0*2.0, .001)
 
+        # Piggyback testing of the is_variable_local function -- make sure it
+        # pokes through opaque systems.
+        system = top.driver.workflow._system
+        self.assertTrue(system.is_variable_local('comp1.x1') is True)
+        self.assertTrue(system.is_variable_local('comp1.x2') is True)
+
+
     def test_missing_derivs_error(self):
         self.top = set_as_top(Assembly())
 
