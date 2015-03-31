@@ -203,9 +203,6 @@ class Workflow(object):
         inputs = []
         outputs = []
 
-        inputs_all_processes = []
-        outputs_all_processes = []
-
         # Parameters
         self._rec_parameters = []
         if hasattr(driver, 'get_parameters'):
@@ -215,11 +212,9 @@ class Workflow(object):
                 path = prefix+name
                 if save_problem_formulation or \
                     self._check_path(path, includes, excludes):
-                    inputs_all_processes.append(name)
-                    if 1 or self._system.is_variable_local(path):
-                        self._rec_parameters.append(param)
-                        inputs.append(name)
-                        #inputs.append(path)
+                    self._rec_parameters.append(param)
+                    inputs.append(name)
+                    #inputs.append(path)
 
         # Objectives
         self._rec_objectives = []
@@ -235,16 +230,11 @@ class Workflow(object):
                    self._check_path(path, includes, excludes):
                     self._rec_objectives.append(key)
                     if key != objective.text:
-                        outputs_all_processes.append(name)
+                        outputs.append(name)
+                        #outputs.append(path)
                     else:
-                        outputs_all_processes.append(name + '.out0')
-                    if 1 or self._system.is_variable_local(path):
-                        if key != objective.text:
-                            outputs.append(name)
-                            #outputs.append(path)
-                        else:
-                            outputs.append(name + '.out0')
-                            #outputs.append(path + '.out0')
+                        outputs.append(name + '.out0')
+                        #outputs.append(path + '.out0')
 
         # Responses
         self._rec_responses = []
@@ -254,11 +244,9 @@ class Workflow(object):
                 path = prefix+name
                 if save_problem_formulation or \
                    self._check_path(path, includes, excludes):
-                    outputs_all_processes.append(name + '.out0')
-                    if 1 or self._system.is_variable_local(path):
-                        self._rec_responses.append(key)
-                        outputs.append(name + '.out0')
-                        #outputs.append(path + '.out0')
+                    self._rec_responses.append(key)
+                    outputs.append(name + '.out0')
+                    #outputs.append(path + '.out0')
 
         # Constraints
         self._rec_constraints = []
@@ -268,23 +256,19 @@ class Workflow(object):
                 path = prefix+name
                 if save_problem_formulation or \
                    self._check_path(path, includes, excludes):
-                    outputs_all_processes.append(name + '.out0')
-                    if 1 or self._system.is_variable_local(path):
-                        self._rec_constraints.append(con)
-                        outputs.append(name + '.out0')
-                        #outputs.append(path + '.out0')
+                    self._rec_constraints.append(con)
+                    outputs.append(name + '.out0')
+                    #outputs.append(path + '.out0')
         if hasattr(driver, 'get_ineq_constraints'):
             for con in driver.get_ineq_constraints().values():
                 name = con.pcomp_name
                 path = prefix+name
                 if save_problem_formulation or \
                    self._check_path(path, includes, excludes):
-                    outputs_all_processes.append(name + '.out0')
-                    if 1 or self._system.is_variable_local(path):
-                        self._rec_constraints.append(con)
-                        outputs.append(name + '.out0')
-                        #outputs.append(path + '.out0')
-                    #outputs.append(path+'.out0')
+                    self._rec_constraints.append(con)
+                    outputs.append(name + '.out0')
+                    #outputs.append(path + '.out0')
+                #outputs.append(path+'.out0')
 
         self._rec_outputs = []
         for comp in self:
@@ -316,12 +300,10 @@ class Workflow(object):
                             break
                 #output_name = prefix + output_name
                 if output_name not in outputs and self._check_path(prefix + output_name, includes, excludes) :
-                    outputs_all_processes.append(output_name)
-                    if 1 or self._system.is_variable_local(output_name):
-                        self._rec_outputs.append(output_name)
-                        outputs.append(output_name)
-                        #outputs.append(prefix + output_name)
-                        #self._rec_all_outputs.append(output_name)
+                    self._rec_outputs.append(output_name)
+                    outputs.append(output_name)
+                    #outputs.append(prefix + output_name)
+                    #self._rec_all_outputs.append(output_name)
                     
         #####
         # also need get any outputs of comps that are not connected vars
@@ -343,11 +325,9 @@ class Workflow(object):
 
                 #output_name = prefix + output_name
                 if output_name not in outputs and self._check_path(prefix + output_name, includes, excludes) :
-                    outputs_all_processes.append(output_name)
-                    if 1 or self._system.is_variable_local(output_name):
-                        outputs.append(output_name)
-                        #outputs.append(prefix + output_name)
-                        self._rec_outputs.append(output_name)
+                    outputs.append(output_name)
+                    #outputs.append(prefix + output_name)
+                    self._rec_outputs.append(output_name)
 
         # Other outputs.
         #self._rec_outputs = []
@@ -384,11 +364,9 @@ class Workflow(object):
         name = '%s.workflow.itername' % driver.name
         path = prefix+name
         if self._check_path(path, includes, excludes):
-            outputs_all_processes.append(name)
-            if 1 or self._system.is_variable_local(output_name):
-                self._rec_outputs.append(name)
-                outputs.append(name)
-                #outputs.append(path)
+            self._rec_outputs.append(name)
+            outputs.append(name)
+            #outputs.append(path)
 
         # If recording required, register names in recorders.
         self._rec_required = bool(inputs or outputs)
