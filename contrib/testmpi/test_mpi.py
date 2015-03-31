@@ -11,10 +11,10 @@ from openmdao.lib.optproblems import sellar
 from openmdao.main.api import Assembly, Component, set_as_top, Driver
 from openmdao.main.datatypes.api import Float, Array, Str, List
 from openmdao.main.interfaces import implements, ISolver
-from openmdao.main.mpiwrap import MPI
+from openmdao.main.mpiwrap import MPI, MPIContext
 from openmdao.main.test.simpledriver import SimpleDriver
 from openmdao.test.execcomp import ExecComp
-from openmdao.test.mpiunittest import MPITestCase, MPIContext
+from openmdao.test.mpiunittest import MPITestCase
 from openmdao.util.testutil import assert_rel_error
 
 

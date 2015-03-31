@@ -1044,7 +1044,7 @@ class HasParameters(object):
             if param.start is not None:
                 param.set(param.start, self.parent)
 
-    def set_parameter_by_name(self, name, value, case=None, scope=None):
+    def set_parameter_by_name(self, name, value, case=None):
         """Sets a single parameter by its name attribute.
 
         name: str

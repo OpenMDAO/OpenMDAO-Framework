@@ -12,10 +12,11 @@ from openmdao.lib.optproblems import sellar
 from openmdao.main.api import Assembly, Component, set_as_top, Driver
 from openmdao.main.datatypes.api import Float, Array
 from openmdao.main.interfaces import implements, ISolver
-from openmdao.main.mpiwrap import MPI, make_idx_array, to_idx_array, evenly_distrib_idxs
+from openmdao.main.mpiwrap import MPI, make_idx_array, to_idx_array, \
+                                  evenly_distrib_idxs, MPIContext
 from openmdao.main.test.simpledriver import SimpleDriver
 from openmdao.test.execcomp import ExecComp
-from openmdao.test.mpiunittest import MPITestCase, MPIContext
+from openmdao.test.mpiunittest import MPITestCase
 from openmdao.util.testutil import assert_rel_error
 
 def take_nth(rank, size, seq):
@@ -100,7 +101,9 @@ class DistribInputComp(Component):
         comm = self.mpi.comm
         rank = comm.rank
 
-        start, end, self.sizes, self.offsets = evenly_distrib_idxs(comm, self.arr_size)
+        self.sizes, self.offsets = evenly_distrib_idxs(comm.size, self.arr_size)
+        start = self.offsets[rank]
+        end = start + self.sizes[rank]
 
         #need to re-initialize the variable to have the correct local size
         self.invec = np.ones(self.sizes[rank], dtype=float)
@@ -193,7 +196,9 @@ class DistribInputDistribOutputComp(Component):
         comm = self.mpi.comm
         rank = comm.rank
 
-        start, end, sizes, offsets = evenly_distrib_idxs(comm, self.arr_size)
+        sizes, offsets = evenly_distrib_idxs(comm.size, self.arr_size)
+        start = offsets[rank]
+        end = start + sizes[rank]
 
         self.invec = np.ones(sizes[rank], dtype=float)
         self.outvec = np.ones(sizes[rank], dtype=float)
@@ -272,7 +277,10 @@ class DistribGatherComp(Component):
         comm = self.mpi.comm
         rank = comm.rank
 
-        start, end, self.sizes, self.offsets = evenly_distrib_idxs(comm, self.arr_size)
+        self.sizes, self.offsets = evenly_distrib_idxs(comm.size,
+                                                                  self.arr_size)
+        start = self.offsets[rank]
+        end = start + self.sizes[rank]
 
         #need to re-initialize the variable to have the correct local size
         self.invec = np.ones(self.sizes[comm.rank], dtype=float)
