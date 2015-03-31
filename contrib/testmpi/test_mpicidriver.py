@@ -80,24 +80,39 @@ def model_setup(num_inputs, mpi=True):
     driver.add_response("C5.out_list")
 
     # set up inputs
-    a = 3.0
-    b = 7.0
+    a = np.ones(vsize, float) * 3.0
+    b = np.ones(vsize, float) * 7.0
     s = 'abcdefghijklmnopqrstuvwxyz'
-    l = [1, 2, 3]
     avals=[]; bvals=[]; svals=[]; lvals=[]
     for i in range(num_inputs):
-        avals.append(np.ones(vsize, float) * a); a += 1.
-        bvals.append(np.ones(vsize, float) * b); b += 1.
+        avals.append(a); a += 1.
+        bvals.append(b); b += 1.
         svals.append(s[:i])
-        lvals.append(l);
-        l = l + [i+4]
+        lvals.append(range(i+1));
 
     driver.case_inputs.C1.a = avals
     driver.case_inputs.C1.b = bvals
     driver.case_inputs.C1.in_string = svals
     driver.case_inputs.C1.in_list = lvals
 
-    return top
+    # expected results
+    expected = {}
+    for name in driver.get_responses():
+        expected[name] = []
+
+        for i in range(num_inputs):
+            if name == 'C5.c':
+                val = (b + np.ones(vsize,float)) * 2.
+            elif name == 'C5.d':
+                val = a * 2.
+            elif name == 'C5.out_string':
+                val = s[:i]+'_C1_C2_C5'
+            elif name == 'C5.out_list':
+                val = range(i+1)+[1.5,1.5,1.5]
+
+            expected[name].append(val)
+
+    return top, expected
 
 
 # class MPITests1(MPITestCase):
@@ -143,24 +158,36 @@ class MPITests3(MPITestCase):
     N_PROCS = 6
 
     def test_fan_out_in_noflats(self):
-        top = model_setup(100)
+        num_inputs = 6
+        top, expected = model_setup(num_inputs)
         driver = top.driver
         top.run()
 
-        # self.assertTrue(all(top.C5.a==np.ones(vsize, float)*11.))
-        # self.assertTrue(all(top.C5.b==np.ones(vsize, float)*5.))
-        #
-        # self.assertEqual(top.C5.out_string, 'foo_C1_C2_C5')
-        # self.assertEqual(top.C5.out_list, [1, 1, 1, 1.5, 1.5, 1.5])
+        for name, expval in expected.items():
+            val = driver.case_outputs.get(name)
+            for v1, v2 in zip(expval, val):
+                if isinstance(v1, np.ndarray):
+                    self.assertTrue(all(v1==v2))
+                else:
+                    self.assertEqual(v1, v2)
 
 
 class SerialTests(TestCase):
 
     def test_fan_out_in_noflats_serial(self):
-        top = model_setup(100, mpi=False)
+        num_inputs = 6
+        top, expected = model_setup(num_inputs, mpi=False)
         driver = top.driver
         top.run()
-        
+
+        for name, expval in expected.items():
+            val = driver.case_outputs.get(name)
+            for v1, v2 in zip(expval, val):
+                if isinstance(v1, np.ndarray):
+                    self.assertTrue(all(v1==v2))
+                else:
+                    self.assertEqual(v1, v2)
+
 
 if __name__ == '__main__':
     from openmdao.test.mpiunittest import mpirun_tests
