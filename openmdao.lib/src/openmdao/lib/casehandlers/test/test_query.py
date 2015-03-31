@@ -15,7 +15,7 @@ import numpy as np
 from openmdao.main.api import Assembly, Component, VariableTree, set_as_top
 from openmdao.main.datatypes.api import Array, Float, VarTree
 from openmdao.lib.casehandlers.api import CaseDataset, \
-                                          JSONCaseRecorder, BSONCaseRecorder, HDF5CaseRecorder
+                                          JSONCaseRecorder, BSONCaseRecorder
 from openmdao.lib.drivers.api import FixedPointIterator, SLSQPdriver
 from openmdao.lib.optproblems import sellar
 from openmdao.util.testutil import assert_rel_error

@@ -528,16 +528,11 @@ class Component(Container):
 
             from openmdao.main.mpiwrap import MPI
 
-            if MPI:
-                rank = MPI.COMM_WORLD.rank
-            else:  
-                rank = 0
             self.execute()
             self._post_execute()
             self._post_run()
         except Exception:
             info = sys.exc_info()
-            print 'Exception', info
             self._set_exec_state('INVALID')
             raise info[0], info[1], info[2]
         finally:
