@@ -1868,11 +1868,6 @@ class CompoundSystem(System):
         # lowest rank for our comp.
         else:
 
-            if not hasattr(system, 'noflat_var_sizes'):
-                print 'KEN KEN KEN'
-                print system.name, system.is_active()
-                print hasattr(system, 'vec'), system.vec['u'].keys()
-
             flatsizes = system.local_var_sizes[0]
             noflatsizes = system.noflat_var_sizes[0]
 

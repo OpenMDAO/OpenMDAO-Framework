@@ -518,15 +518,8 @@ class Component(Container):
             self._pre_execute()
             self._set_exec_state('RUNNING')
 
-            #print '  execute: %s' % self.get_pathname()
             # Component executes as normal
             self.exec_count += 1
-            if tracing.TRACER is not None and \
-               not obj_has_interface(self, IDriver, IAssembly):
-                tracing.TRACER.debug(self.get_itername())
-                #tracing.TRACER.debug(self.get_itername() + '  ' + self.name)
-
-            from openmdao.main.mpiwrap import MPI
 
             self.execute()
             self._post_execute()
