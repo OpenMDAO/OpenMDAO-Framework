@@ -471,8 +471,6 @@ class _HDF5Reader(object):
         
         return sim_info
     
-        # 
-    
         # to get at attributes use
         #    self._inp['simulation_info/expressions'].get('comp.x').attrs.keys()
         #    self._inp['simulation_info'].attrs.keys()
@@ -512,12 +510,6 @@ class _HDF5Reader(object):
             yield info
 
 
-        # for driver_name in self._inp['/iteration_cases']:
-        #     for iteration_case_name in self._inp['/iteration_cases'][driver_name] :
-        #         if iteration_case_name.startswith('iteration_case_') :
-        #             #info = self.read_from_hdf5( self._inp['/iteration_cases'][driver_name][iteration_case_name] )
-        #             info = self.read_iteration_case_from_hdf5( self._inp, driver_name, iteration_case_name )
-        #             yield info
 
     def _next(self):
         """ Return next dictionary of data. """
