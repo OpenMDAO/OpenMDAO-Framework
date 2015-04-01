@@ -1345,6 +1345,12 @@ class MPITests_2Proc(MPITestCase):
         assert_rel_error(self, 9826.25, top.driver.func_dict['_pseudo_0.out0'], 0.0001)
 
 
+        # Piggyback testing of the is_variable_local function.
+        system = top.driver.workflow._system
+
+        # Exclusive or - you either got sub1 or sub2 on a given process.
+        self.assertTrue(system.is_variable_local('sub1.comp3.y1') != system.is_variable_local('sub2.comp3.y1'))
+
     def test_CADRE_bug1(self):
 
         class AComp(Component):
