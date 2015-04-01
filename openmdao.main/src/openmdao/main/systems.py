@@ -689,7 +689,7 @@ class System(object):
             self._comp._system.dump(nest, stream)
         else:
             if self.scatter_full:
-                self.scatter_full.dump(self, self.vec['u'], self.vec['p'], nest)
+                self.scatter_full.dump(self, self.vec['u'], self.vec['p'], nest, stream)
             partial_subs = [s for s in self.local_subsystems() if s.scatter_partial]
             for sub in self.local_subsystems():
                 if sub in partial_subs:
