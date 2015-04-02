@@ -28,7 +28,9 @@ class MPICaseDriver(Driver):
     def execute(self):
         """ Run each parameter set. """
 
-        if not self.workflow._system.is_active():
+        color = self._color[self.mpi.rank]
+
+        if color == MPI.UNDEFINED or self.mpi.comm == MPI.COMM_NULL:
             return
 
         # Prepare parameters and responses.
@@ -56,11 +58,8 @@ class MPICaseDriver(Driver):
         for path in self.get_responses():
             case_paths[path] = make_legal_path(path)
 
-        print self.case_outputs.C5.list_vars()
-
         sizes, offsets = evenly_distrib_idxs(self._num_parallel_subs,
                                              length)
-        color = self._color
         start = offsets[color]
         end = start + sizes[color]
 
@@ -82,23 +81,24 @@ class MPICaseDriver(Driver):
                 cpath = case_paths[path]
                 self.case_outputs.get(cpath)[i] = self.parent.get(path)
 
-        # Now, collect the results back from all parallel processes
-        for path in self.get_responses():
-            path = case_paths[path]
-            vals = self.case_outputs.get(path)
-            if self._resp_comm != MPI.COMM_NULL:
-                allvals = self._resp_comm.gather(vals, root=0)
+        if self._num_parallel_subs > 1:
+            # Now, collect the results back from all parallel processes
+            for path in self.get_responses():
+                path = case_paths[path]
+                vals = self.case_outputs.get(path)
+                if self._resp_comm != MPI.COMM_NULL:
+                    allvals = self._resp_comm.gather(vals, root=0)
 
-                if self._resp_comm.rank == 0:
-                    for i in range(self._num_parallel_subs):
-                        vals[offsets[i]:offsets[i]+sizes[i]] = allvals[i][offsets[i]:offsets[i]+sizes[i]]
-                    junk = self.mpi.comm.bcast(vals, root=0)
+                    if self._resp_comm.rank == 0:
+                        for i in range(self._num_parallel_subs):
+                            vals[offsets[i]:offsets[i]+sizes[i]] = allvals[i][offsets[i]:offsets[i]+sizes[i]]
+                        junk = self.mpi.comm.bcast(vals, root=0)
+                    else:
+                        vals = self.mpi.comm.bcast(None, root=0)
                 else:
-                    vals = self.mpi.comm.bcast(None, root=0)
-            else:
-                vals = self.mpi.comm.bcast(None, root=0)
+                    vals = self.mpi.comm.bcast(vals, root=0)
 
-            self.case_outputs.set(path, vals)
+                self.case_outputs.set(path, vals)
 
     def setup_communicators(self, comm):
         self.mpi.comm = comm
@@ -108,17 +108,6 @@ class MPICaseDriver(Driver):
         mincpu, maxcpu = self.workflow.get_req_cpus()
         self._num_parallel_subs = size / mincpu
         leftover = size % mincpu
-
-        # if we weren't given enough procs to run parallel workflows,
-        # just run serial
-        if self._num_parallel_subs == 1:
-            self.workflow.setup_communicators(comm)
-            self._color = 0
-            return
-
-        if mincpu > comm.size:
-            raise RuntimeError("subsystem %s requested %d processors but got %s" %
-                               (self.name, mincpu, comm.size))
 
         color = []
         resp_color = []
@@ -133,12 +122,24 @@ class MPICaseDriver(Driver):
             resp_color.extend([MPI.UNDEFINED] * leftover)
 
         sub_comm = comm.Split(color[rank])
-        self._color = color[rank]
+        self._color = color
+
+        # if we weren't given enough procs to run parallel workflows,
+        # just run serial
+        if self._num_parallel_subs == 1:
+            self.workflow.setup_communicators(comm)
+            self._resp_comm = MPI.COMM_NULL
+            return
+
+        if mincpu > comm.size:
+            raise RuntimeError("subsystem %s requested %d processors but got %s" %
+                               (self.name, mincpu, comm.size))
 
         self.workflow.setup_communicators(sub_comm)
 
         # Now set up a special comm for just the MPICaseDrivers that have 0 rank
         # sub_comm.  The responses are duplicated in each proc of the sub_comm,
         # so we just want the first one in order to avoid unnecessary data
-        # passing.
+        # passing. Later we'll broadcast the fully assembled case_outputs
+        # vartree to all procs.
         self._resp_comm = comm.Split(resp_color[rank])

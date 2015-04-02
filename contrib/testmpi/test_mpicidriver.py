@@ -40,7 +40,7 @@ class ABCDArrayComp(Component):
         print "%s.c = %s" % (self.name, self.c)
         print "%s.d = %s" % (self.name, self.d)
 
-def model_setup(num_inputs, mpi=True):
+def model_par3_setup(num_inputs, mpi=True):
     vsize = 5   # array var size
 
     # a comp feeds 3 parallel comps which feed
@@ -153,30 +153,58 @@ def model_setup(num_inputs, mpi=True):
 #         self.assertTrue(system.is_variable_local('C2.c') != system.is_variable_local('C3.c'))
 
 
-class MPITests3(MPITestCase):
+class MPITests9(MPITestCase):
 
-    N_PROCS = 6
+    N_PROCS = 7
 
-    def test_fan_out_in_noflats(self):
-        num_inputs = 6
-        top, expected = model_setup(num_inputs)
+    def test_par3_2divs_1leftover(self):
+        num_inputs = 17
+        top, expected = model_par3_setup(num_inputs)
         driver = top.driver
         top.run()
 
+        self.assertEqual(self.N_PROCS/3, driver._num_parallel_subs)
+
         for name, expval in expected.items():
-            val = driver.case_outputs.get(name)
-            for v1, v2 in zip(expval, val):
-                if isinstance(v1, np.ndarray):
-                    self.assertTrue(all(v1==v2))
+                val = driver.case_outputs.get(name)
+                if driver.workflow._system.mpi.comm != MPI.COMM_NULL:
+                    for v1, v2 in zip(expval, val):
+                        if isinstance(v1, np.ndarray):
+                            self.assertTrue(all(v1==v2))
+                        else:
+                            self.assertEqual(v1, v2)
                 else:
-                    self.assertEqual(v1, v2)
+                    self.assertEqual(val, [])
+
+class MPITests5(MPITestCase):
+
+    N_PROCS = 5
+
+    def test_par3_2leftovers(self):
+        num_inputs = 17
+        top, expected = model_par3_setup(num_inputs)
+        driver = top.driver
+        top.run()
+
+        self.assertEqual(self.N_PROCS/3, driver._num_parallel_subs)
+
+        for name, expval in expected.items():
+                val = driver.case_outputs.get(name)
+                if driver.workflow._system.mpi.comm != MPI.COMM_NULL:
+                    for v1, v2 in zip(expval, val):
+                        if isinstance(v1, np.ndarray):
+                            self.assertTrue(all(v1==v2))
+                        else:
+                            self.assertEqual(v1, v2)
+                else:
+                    self.assertEqual(val, [])
 
 
 class SerialTests(TestCase):
 
     def test_fan_out_in_noflats_serial(self):
         num_inputs = 6
-        top, expected = model_setup(num_inputs, mpi=False)
+        top, expected = model_par3_setup(num_inputs, mpi=False)
         driver = top.driver
         top.run()
 
