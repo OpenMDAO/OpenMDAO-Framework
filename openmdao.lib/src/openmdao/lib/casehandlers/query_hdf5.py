@@ -1,6 +1,5 @@
 from weakref import ref
 
-import h5py
 import numpy as np
 
 from openmdao.main.api import  VariableTree
@@ -74,7 +73,7 @@ class CaseDatasetHDF5(object):
         """ Return data based on `query`. """
         self._setup(query)
 
-        
+
         if query.vnames:
             tmp = []
             for name in self.metadata_names:
@@ -159,9 +158,9 @@ class CaseDatasetHDF5(object):
                         row.append(nan)
                 rows.append(row)
 
-            #if case_id == self._query_id or case_id == self._parent_id: 
+            #if case_id == self._query_id or case_id == self._parent_id:
                 #break  # Parent is last case recorded.
-            if case_itername == self._query_itername or case_itername == self._parent_itername: 
+            if case_itername == self._query_itername or case_itername == self._parent_itername:
                 break  # Parent is last case recorded.
 
         if self._query_id and not rows:
@@ -252,7 +251,7 @@ class CaseDatasetHDF5(object):
                 itername_parts = itername.split('-')
                 if len(parent_itername_parts) + 1 == len(itername_parts) and itername_parts[:-1] == parent_itername_parts:
                     self._case_iternames.add(itername)
-            
+
 
     def restore(self, assembly, case_id):
         """ Restore case `case_id` into `assembly`. """
@@ -332,7 +331,7 @@ class QueryHDF5(object):
         self.case_itername = case_itername
         self.parent_itername = None
         return self
-    
+
     def parent_case(self, parent_case_id):
         """ Filter the cases to only include this case and its children. """
         self.parent_id = parent_case_id
@@ -386,7 +385,7 @@ class _HDF5Reader(object):
     """ Reads a :class:`HDF5CaseRecorder` file. """
 
     def __init__(self, filename):
-
+        import h5py  # import it here to get rid of autodoc warning
         self._inp = h5py.File(filename,'r')
 
         self._simulation_info = self.read_simulation_info()
@@ -397,19 +396,19 @@ class _HDF5Reader(object):
     def simulation_info(self):
         """ Simulation info dictionary. """
         return self._simulation_info
-    
+
     def read_iteration_case_from_hdf5( self, hdf5file, driver_name, iteration_case_name ) :
-        
+
         info = {}
-        
-        driver_grp = self._inp['/iteration_cases'][driver_name] 
-        iteration_grp = self._inp['/iteration_cases'][driver_name][iteration_case_name] 
-        
+
+        driver_grp = self._inp['/iteration_cases'][driver_name]
+        iteration_grp = self._inp['/iteration_cases'][driver_name][iteration_case_name]
+
         info['metadata'] = self.read_from_hdf5(iteration_grp['metadata'])
-        
+
         data_grp = iteration_grp['data']
         info['data'] = {}
-        
+
         # read the names of the floats, ints and strings in the array_of_... arrays
         float_names = driver_grp['float_names']
         int_names = driver_grp['int_names']
@@ -420,7 +419,7 @@ class _HDF5Reader(object):
             info['data'][name] = data_grp['array_of_strs'][i]
         for i, name in enumerate(int_names):
             info['data'][name] = data_grp['array_of_ints'][i]
-            
+
         for name in data_grp.keys():
             if name not in ['array_of_ints','array_of_strs', 'array_of_floats']:
                 if '__vartree__' in data_grp[name].attrs:
@@ -428,11 +427,11 @@ class _HDF5Reader(object):
                     for n, v in data_grp[name].items():
                         info['data'][name][n] = self.read_from_hdf5(data_grp[name][n])
                 info['data'][name] = self.read_from_hdf5(data_grp[name])
-            
+
         return info
 
     def read_from_hdf5(self, value ):
-        
+
         # If value is an HDF5 Group do
         if isinstance(value, h5py._hl.group.Group):
             d = {}
@@ -448,9 +447,9 @@ class _HDF5Reader(object):
             for name in value.dtype.names:
                 d[ name ] = value[ name ][0]
             return d
-        else: # it is just a value so return it 
+        else: # it is just a value so return it
             return value[()]
-        
+
     def read_simulation_info( self ):
         sim_info_grp = self._inp['simulation_info'] # the HDF5 simulation_info group
 
@@ -458,24 +457,24 @@ class _HDF5Reader(object):
             # attributes
             # other groups
             # datasets
-        
+
         sim_info = {}
 
         # Loop over attributes
         for name, value in sim_info_grp.attrs.items() :
             sim_info[ name ] = self.read_from_hdf5( value )
-        
+
         # Loop over non attributes. e.g. datasets and groups?
         for name, value in sim_info_grp.items() :
             sim_info[ name ] = self.read_from_hdf5( value )
-        
+
         return sim_info
-    
+
         # to get at attributes use
         #    self._inp['simulation_info/expressions'].get('comp.x').attrs.keys()
         #    self._inp['simulation_info'].attrs.keys()
 
-        
+
         # to get at non attributes
         #  self._inp['simulation_info/expressions'].keys()
 
@@ -484,12 +483,12 @@ class _HDF5Reader(object):
         """ Return list of 'driver_info' dictionaries. """
 
         driver_info = []
-        
+
         # Loop over all the groups with names like '/driver_info_nnn'
         for name in self._inp.keys() :
             if name.startswith( 'driver_info_'):
                 driver_info.append( self.read_from_hdf5( self._inp[name] ) )
-        
+
         return driver_info
 
     def cases(self):
@@ -504,7 +503,7 @@ class _HDF5Reader(object):
                     case_timestamps[timestamp] = ( driver_name, iteration_case_name )
 
         sorted_timestamps = sorted( case_timestamps )
-        for timestamp in sorted_timestamps: 
+        for timestamp in sorted_timestamps:
             driver_name, iteration_case_name = case_timestamps[ timestamp ]
             info = self.read_iteration_case_from_hdf5( self._inp, driver_name, iteration_case_name )
             yield info
