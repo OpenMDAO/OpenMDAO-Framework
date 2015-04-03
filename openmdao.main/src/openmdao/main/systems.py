@@ -148,7 +148,7 @@ class System(object):
             return self.local_subsystems()
         return self.all_subsystems()
 
-    def local_subsystems(self):
+    def local_subsystems(self, recurse=False):
         return ()
 
     def all_subsystems(self):
@@ -1567,11 +1567,17 @@ class CompoundSystem(System):
         self._ordering = ()
         self._grouped_nodes = subg.nodes()
 
-    def local_subsystems(self):
+    def local_subsystems(self, recurse=False):
         if MPI:
-            return self._local_subsystems
+            it = self._local_subsystems
         else:
-            return self.all_subsystems()
+            it = self.all_subsystems()
+
+        for sub in it:
+            yield sub
+            if recurse:
+                for s in sub.local_subsystems(recurse=True):
+                    yield s
 
     def all_subsystems(self):
         return self._local_subsystems + [data['system'] for node, data in
@@ -1799,95 +1805,110 @@ class CompoundSystem(System):
     def is_variable_local(self, name):
         """Returns True if the variable in name is local to this process and
         our rank is the lowest rank that it appears on. Otherwise it returns
-        False. If name can't be found, then an exception is raised."""
-
-        # Regular paths, get the compname. If it is a connection in our
-        # scope, then the relevant component is the source of the connection.
-        cname, _, vname = name.partition('.')
-        collapsed = self.scope.name2collapsed.get(name)
-
-        if isinstance(collapsed, tuple):
-            src = collapsed[0]
-            target = collapsed[1]
-
-            # If it's a parameter, we want the parameter system instead of the comp.
-            if src in target:
-                cname = src
-            else:
-                cname = src.split('.')[0]
-        else:
-            collapsed = name
-
-        # If name is a Variable Tree, then it belongs to our containing
-        # assembly, which must be local.
-        scope_sys = self.scope._system
-        if cname in self.scope.list_vars():
-            system = self.scope._system
-        else:
-            system = scope_sys.find_system(cname, recurse_subassy=False)
-
-            # Not a parameter, but a response.
-            if system is None:
-                cname = cname.split('.')[0]
-                system = scope_sys.find_system(cname, recurse_subassy=False)
-
-        if not system:
+        False. If name can't be found, then an exception is raised.
+        """
+        scope = self.scope
+        try:
+            if MPI is None:
+                scope.get(name) # make sure var exists
+                return True
+            elif self.is_active():
+                while scope.parent:
+                    scope = scope.parent
+                return self.mpi.rank in scope.print_ranks[name]
+        except:
             msg = 'Cannot find a system that contains varpath %s' % name
             raise RuntimeError(msg)
 
-        if not system.is_active():
-            return False
-
-        # Unfortunately, our configure_recording violates the assembly
-        # boundary, so we need to detect this and recurse.
-        #if isinstance(system, AssemblySystem):
-            #return system._comp._system.is_variable_local(vname)
-
-        # Don't need to figure out ranks if we are not MPI
-        if not MPI:
-            return True
-
-        # Check vector_vars to figure out if we are the lowest rank.
-        varkeys = scope_sys.vector_vars.keys()
-        noflatkeys = scope_sys.noflat_vars.keys()
-        lowest = None
-
-        # First, check the flattenable variables.
-        if collapsed in varkeys:
-            isrc = varkeys.index(collapsed)
-            sizes = scope_sys.local_var_sizes[:, isrc]
-            lowest = numpy.nonzero(sizes)[0][0]
-
-        # Next, check the unflattenable variables.
-        elif collapsed in noflatkeys:
-            isrc = varkeys.index(collapsed)
-            sizes = scope_sys.noflat_var_sizes[:, isrc]
-            lowest = numpy.nonzero(sizes)[0][0]
-
-        # Finally, it must be an unconnected variable Just print these on the
-        # lowest rank for our comp.
-        else:
-
-            flatsizes = system.local_var_sizes[0]
-            noflatsizes = system.noflat_var_sizes[0]
-
-            if len(flatsizes) > 0:
-                lowest = numpy.nonzero(flatsizes)[0][0]
-            elif len(noflatsizes) > 0:
-                lowest = numpy.nonzero(noflatsizes)[0][0]
-            else:
-                # I give up. Free-floating comp. Just print it on 0.
-                lowest = 0
-
-            # If we are only on one process, it is this one.
-            # TODO -- make this work for distributed components
-            if flatsizes.shape[0] == 1 or noflatsizes.shape[0] == 1:
-                lowest = self.mpi.rank
-
-        if lowest == self.mpi.rank:
-            return True
-
         return False
+
+        # # Regular paths, get the compname. If it is a connection in our
+        # # scope, then the relevant component is the source of the connection.
+        # cname, _, vname = name.partition('.')
+        # collapsed = self.scope.name2collapsed.get(name)
+        #
+        # if isinstance(collapsed, tuple):
+        #     src = collapsed[0]
+        #     target = collapsed[1]
+        #
+        #     # If it's a parameter, we want the parameter system instead of the comp.
+        #     if src in target:
+        #         cname = src
+        #     else:
+        #         cname = src.split('.')[0]
+        # else:
+        #     collapsed = name
+        #
+        # # If name is a Variable Tree, then it belongs to our containing
+        # # assembly, which must be local.
+        # scope_sys = self.scope._system
+        # if cname in self.scope.list_vars():
+        #     system = self.scope._system
+        # else:
+        #     system = scope_sys.find_system(cname, recurse_subassy=False)
+        #
+        #     # Not a parameter, but a response.
+        #     if system is None:
+        #         cname = cname.split('.')[0]
+        #         system = scope_sys.find_system(cname, recurse_subassy=False)
+        #
+        # if not system:
+        #     msg = 'Cannot find a system that contains varpath %s' % name
+        #     raise RuntimeError(msg)
+        #
+        # if not system.is_active():
+        #     return False
+        #
+        # # Unfortunately, our configure_recording violates the assembly
+        # # boundary, so we need to detect this and recurse.
+        # #if isinstance(system, AssemblySystem):
+        #     #return system._comp._system.is_variable_local(vname)
+        #
+        # # Don't need to figure out ranks if we are not MPI
+        # if not MPI:
+        #     return True
+        #
+        # # Check vector_vars to figure out if we are the lowest rank.
+        # varkeys = scope_sys.vector_vars.keys()
+        # noflatkeys = scope_sys.noflat_vars.keys()
+        # lowest = None
+        #
+        # # First, check the flattenable variables.
+        # if collapsed in varkeys:
+        #     isrc = varkeys.index(collapsed)
+        #     sizes = scope_sys.local_var_sizes[:, isrc]
+        #     lowest = numpy.nonzero(sizes)[0][0]
+        #
+        # # Next, check the unflattenable variables.
+        # elif collapsed in noflatkeys:
+        #     isrc = varkeys.index(collapsed)
+        #     sizes = scope_sys.noflat_var_sizes[:, isrc]
+        #     lowest = numpy.nonzero(sizes)[0][0]
+        #
+        # # Finally, it must be an unconnected variable Just print these on the
+        # # lowest rank for our comp.
+        # else:
+        #
+        #     flatsizes = system.local_var_sizes[0]
+        #     noflatsizes = system.noflat_var_sizes[0]
+        #
+        #     if len(flatsizes) > 0:
+        #         lowest = numpy.nonzero(flatsizes)[0][0]
+        #     elif len(noflatsizes) > 0:
+        #         lowest = numpy.nonzero(noflatsizes)[0][0]
+        #     else:
+        #         # I give up. Free-floating comp. Just print it on 0.
+        #         lowest = 0
+        #
+        #     # If we are only on one process, it is this one.
+        #     # TODO -- make this work for distributed components
+        #     if flatsizes.shape[0] == 1 or noflatsizes.shape[0] == 1:
+        #         lowest = self.mpi.rank
+        #
+        # if lowest == self.mpi.rank:
+        #     return True
+        #
+        # return False
 
     def find_system(self, name, recurse_subassy=True):
         """ Return system with given name.
@@ -2134,7 +2155,7 @@ class ParallelSystem(CompoundSystem):
                 sub.setup_variables(variables, resid_state_map)
 
         if self.local_subsystems():
-            sub = self.local_subsystems()[0]
+            sub = list(self.local_subsystems())[0]
             names = sub.variables.keys()
         else:
             sub = None
@@ -2241,6 +2262,11 @@ class OpaqueSystem(SimpleSystem):
 
     def inner(self):
         return self._inner_system
+
+    def local_subsystems(self, recurse=False):
+        if recurse:
+            for sub in self._inner_system.local_subsystems(recurse):
+                yield sub
 
     def _all_comp_nodes(self, local=False):
         return self._inner_system._all_comp_nodes(local=local)
@@ -2373,8 +2399,13 @@ class DriverSystem(SimpleSystem):
         super(DriverSystem, self).__init__(scope, graph, driver.name)
         driver._system = self
 
-    def local_subsystems(self):
-        return [s for s in self.all_subsystems() if s.is_active()]
+    def local_subsystems(self, recurse=False):
+        for sub in self.all_subsystems():
+            if sub.is_active():
+                yield sub
+                if recurse:
+                    for s in sub.local_subsystems(recurse=True):
+                        yield s
 
     def all_subsystems(self):
         return (self._comp.workflow._system,)

@@ -3,10 +3,8 @@ import tempfile
 import shutil
 import os
 
-import h5py
+from nose import SkipTest
 
-
-from openmdao.lib.casehandlers.api import HDF5CaseRecorder
 from openmdao.lib.drivers.api import SLSQPdriver
 from openmdao.lib.drivers.api import FixedPointIterator, SLSQPdriver
 from openmdao.lib.optproblems import sellar
@@ -107,6 +105,12 @@ class SellarMDF(Assembly):
 class TestSellarMDFCase(unittest.TestCase):
 
     def setUp(self):
+        try:
+            import h5py
+        except ImportError:
+            raise SkipTest("this test requires h5py")
+        from openmdao.lib.casehandlers.api import HDF5CaseRecorder
+
         self.tolerance = 0.001
         self.top = set_as_top(SellarMDF())
         self.tempdir = tempfile.mkdtemp(prefix='test_hdf5recorder-')
@@ -126,7 +130,7 @@ class TestSellarMDFCase(unittest.TestCase):
         self.top.run()
 
         ### Check to see if the values written make sense ###
-        
+
         hdf5_cases_file = h5py.File(hdf5_cases_filepath,'r')
 
         # Check some values in the driver section
@@ -158,7 +162,7 @@ class TestSellarMDFCase(unittest.TestCase):
         iteration_data = driver_grp['%s/data/' % iteration_case_name ]
         # check a float array
         actual = iteration_data['array_of_floats' ].value
-        expected = [  3.20119761e+00,   3.76541140e+00,  -2.02345886e+01,  -8.37056317e-13,  -4.18528158e-13,   
+        expected = [  3.20119761e+00,   3.76541140e+00,  -2.02345886e+01,  -8.37056317e-13,  -4.18528158e-13,
                       1.98270572e+00,   3.17803953e+00,  -7.07632863e-15,  -1.80395299e-02]
         for exp, act in zip(expected, actual):
             assert_rel_error(self, exp, act, self.tolerance)
@@ -190,7 +194,7 @@ class TestSellarMDFCase(unittest.TestCase):
 #     """
 
 #     def configure(self):
-        
+
 #         comp = self.add('comp', CompWithStringOutput())
 #         self.driver.workflow.add( 'comp' )
 

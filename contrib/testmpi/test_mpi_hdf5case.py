@@ -1,7 +1,6 @@
+from unittest import SkipTest
 import numpy as np
-import h5py
 
-from openmdao.lib.casehandlers.api import HDF5CaseRecorder
 from openmdao.lib.drivers.iterate import FixedPointIterator
 from openmdao.lib.optproblems import sellar
 from openmdao.main.api import Assembly, set_as_top
@@ -77,6 +76,12 @@ class MPITests1(MPITestCase):
     N_PROCS = 2
 
     def setUp(self):
+        try:
+            import h5py
+        except ImportError:
+            raise SkipTest("this test requies h5py")
+        from openmdao.lib.casehandlers.api import HDF5CaseRecorder
+
         self.tolerance = 0.001
 
     def test_sellar_params1(self):
