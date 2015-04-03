@@ -183,6 +183,8 @@ class HDF5CaseRecorder(object):
     def register(self, driver, inputs, outputs):
         """ Register names for later record call from `driver`. """
 
+        import h5py  # do it here to avoid warning from autodoc in Sphinx
+
         self._cfg_map[driver] = (inputs, outputs)
         scope = driver.parent
         prefix = scope.get_pathname()
@@ -273,14 +275,15 @@ class HDF5CaseRecorder(object):
         if name in self.is_variable_local_cache[ driver ]:
             return self.is_variable_local_cache[ driver ][ name ]
 
-        if name.endswith( '.out0'):
-            name_for_local_check = name[:-len('.out0')]
-        else:
-            name_for_local_check = name
         if prefix:
-            name_for_local_check = name_for_local_check[ len(prefix) + 1 : ]
+            name = name[ len(prefix) + 1 : ]
 
-        is_local = driver.workflow._system.is_variable_local( name_for_local_check )
+        if name.endswith('workflow.itername'):
+            dname = name.replace('workflow.itername', 'itername')
+            is_local = driver.workflow._system.is_variable_local( dname )
+        else:
+            is_local = driver.workflow._system.is_variable_local( name )
+
         self.is_variable_local_cache[ driver ][ name ] = is_local # save it away for next time
         return is_local
 
@@ -377,7 +380,10 @@ class HDF5CaseRecorder(object):
 
         dp('set values in data')
         for name, value in info[ 'data' ].items():
-            if self.is_variable_local( driver, prefix, name ): # TODO should cache these.
+
+            print_var = self.is_variable_local( driver, prefix, name )
+
+            if print_var:
                 if isinstance(value,int):
                     idx = int_names.index(name) # where in the index is this value?
                     int_arrays_dset[idx] = value
@@ -398,6 +404,8 @@ class HDF5CaseRecorder(object):
         Closes `out` unless it's ``sys.stdout`` or ``sys.stderr``.
         Note that a closed recorder will do nothing in :meth:`record`.
         """
+
+        import h5py  # do it here to avoid warning from autodoc in Sphinx
 
         for hdf5_case_record_file in self.hdf5_case_record_file_objects.values() :
             hdf5_case_record_file.close()
@@ -542,8 +550,6 @@ class HDF5CaseRecorder(object):
         """ Return case info dictionary. """
         in_names, out_names = self._cfg_map[driver]
 
-        #import pdb; pdb.set_trace()
-
         scope = driver.parent
         prefix = scope.get_pathname()
         if prefix:
@@ -553,16 +559,6 @@ class HDF5CaseRecorder(object):
 
         data = dict(zip(in_names, inputs))
         data.update(zip(out_names, outputs))
-
-        # print 'get_case_info'
-        # import pprint
-        # print pprint.pprint( data )
-
-        #subdriver_last_case_uuids = {}
-        #for subdriver in driver.subdrivers():
-            #subdriver_last_case_uuids[ id(subdriver) ] = self._last_child_case_uuids[ id(subdriver) ]
-        #self._last_child_case_uuids[ id(driver) ] = case_uuid
-
 
         return dict(_id=case_uuid,
                     _parent_id=parent_uuid or self._uuid,

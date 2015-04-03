@@ -88,6 +88,9 @@ class MPITests1(MPITestCase):
 
         global error_tolerance
 
+        from openmdao.lib.casehandlers.api import HDF5CaseRecorder
+        import h5py
+
         top = set_as_top(SellarMDF())
 
         top.connect('C1.y1','C2.y1')
@@ -108,9 +111,9 @@ class MPITests1(MPITestCase):
                 val = top.get(name)
                 assert_rel_error(self, val, expval, self.tolerance)
 
-            # read the HDF5 file that was recorded to  
+            # read the HDF5 file that was recorded to
             hdf5_file = h5py.File(hdf5_filename,'r')
-        
+
             # How many iterations were there?
             num_iterations = 0
             for key in hdf5_file['iteration_cases/driver/']:
@@ -148,6 +151,9 @@ class MPITests1(MPITestCase):
 
     def test_sellar_compare_to_serial_case_recording(self):
 
+        from openmdao.lib.casehandlers.api import HDF5CaseRecorder
+        import h5py
+
         top = set_as_top(SellarMDF())
 
         top.connect('C1.y1','C2.y1')
@@ -162,7 +168,7 @@ class MPITests1(MPITestCase):
 
         if self.comm.rank == 0:
             # Open up and compare the non-metadata values in cases__driver_serial.hdf5 and cases__driver.hdf5
-            parallel_hdf5_cases_file = 'cases__driver.hdf5'
+            parallel_hdf5_cases_file = 'test_sellar_params1_parallel__driver.hdf5'
             serial_hdf5_cases_file = 'cases__driver_serial.hdf5'
             parallel_hdf5_file = h5py.File(parallel_hdf5_cases_file,'r')
             serial_hdf5_file = h5py.File(serial_hdf5_cases_file,'r')

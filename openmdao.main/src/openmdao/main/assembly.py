@@ -1604,7 +1604,7 @@ class Assembly(Component):
         all_locs.update(self.list_inputs())
         all_locs.update(self.list_outputs())
 
-        for s in self._system.local_subsystems(recurse=True):
+        for s in [self._system] + list(self._system.local_subsystems(recurse=True)):
             if isinstance(s, SimpleSystem):
                 try:
                     obj = self.get(s.name)

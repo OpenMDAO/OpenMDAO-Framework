@@ -432,6 +432,8 @@ class _HDF5Reader(object):
 
     def read_from_hdf5(self, value ):
 
+        import h5py  # do it here to avoid warning from autodoc in Sphinx
+
         # If value is an HDF5 Group do
         if isinstance(value, h5py._hl.group.Group):
             d = {}

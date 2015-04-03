@@ -105,12 +105,6 @@ class SellarMDF(Assembly):
 class TestSellarMDFCase(unittest.TestCase):
 
     def setUp(self):
-        try:
-            import h5py
-        except ImportError:
-            raise SkipTest("this test requires h5py")
-        from openmdao.lib.casehandlers.api import HDF5CaseRecorder
-
         self.tolerance = 0.001
         self.top = set_as_top(SellarMDF())
         self.tempdir = tempfile.mkdtemp(prefix='test_hdf5recorder-')
@@ -123,6 +117,12 @@ class TestSellarMDFCase(unittest.TestCase):
         self.top = None
 
     def test_sellarMDF_hdf5_recording(self):
+
+        try:
+            import h5py
+        except ImportError:
+            raise SkipTest("this test requires h5py")
+        from openmdao.lib.casehandlers.api import HDF5CaseRecorder
 
         hdf5_cases_filename = 'sellarMDF.hdf5'
         hdf5_cases_filepath = os.path.join(self.tempdir, hdf5_cases_filename)
