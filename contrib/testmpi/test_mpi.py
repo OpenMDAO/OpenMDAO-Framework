@@ -329,15 +329,15 @@ class MPITests1(MPITestCase):
 
         # Only lowest rank has vars that are on all proceses
         if self.comm.rank == 0:
-            self.assertTrue(system.is_variable_local('C1.c') is True)
-            self.assertTrue(system.is_variable_local('C2.a') is True)
-            self.assertTrue(system.is_variable_local('C3.b') is True)
-            self.assertTrue(system.is_variable_local('C1.exec_count') is True)
+            self.assertTrue(system.is_variable_local('C1.c'))
+            self.assertTrue(system.is_variable_local('C2.a'))
+            self.assertTrue(system.is_variable_local('C3.b'))
+            self.assertTrue(system.is_variable_local('C1.exec_count'))
         else:
-            self.assertTrue(system.is_variable_local('C1.c') is False)
-            self.assertTrue(system.is_variable_local('C2.a') is False)
-            self.assertTrue(system.is_variable_local('C3.b') is False)
-            self.assertTrue(system.is_variable_local('C1.exec_count') is False)
+            self.assertFalse(system.is_variable_local('C1.c'))
+            self.assertFalse(system.is_variable_local('C2.a'))
+            self.assertFalse(system.is_variable_local('C3.b'))
+            self.assertFalse(system.is_variable_local('C1.exec_count'))
 
         # Exclusive or - you either got C2 or C3 on a given process.
         self.assertTrue(system.is_variable_local('C2.c') != system.is_variable_local('C3.d'))
@@ -462,17 +462,15 @@ class MPITests2(MPITestCase):
 
         # Only lowest rank has vars that are on all proceses
         if self.comm.rank == 0:
-            self.assertTrue(system.is_variable_local('_pseudo_0') is True)
-            self.assertTrue(system.is_variable_local('_pseudo_0.out0') is True)
+            self.assertTrue(system.is_variable_local('_pseudo_0.out0'))
 
             # Params on lowest rank
-            self.assertTrue(system.is_variable_local('C1.y2') is True)
-            self.assertTrue(system.is_variable_local('C2.y1') is True)
+            self.assertTrue(system.is_variable_local('C1.y2'))
+            self.assertTrue(system.is_variable_local('C2.y1'))
         else:
-            self.assertTrue(system.is_variable_local('_pseudo_0') is False)
-            self.assertTrue(system.is_variable_local('_pseudo_0.out0') is False)
-            self.assertTrue(system.is_variable_local('C1.y2') is False)
-            self.assertTrue(system.is_variable_local('C2.y1') is False)
+            self.assertFalse(system.is_variable_local('_pseudo_0.out0'))
+            self.assertFalse(system.is_variable_local('C1.y2'))
+            self.assertFalse(system.is_variable_local('C2.y1'))
 
         # Exclusive or - you either got C2 or C3 on a given process.
         self.assertTrue(system.is_variable_local('C1.y1') != system.is_variable_local('C2.y2'))
