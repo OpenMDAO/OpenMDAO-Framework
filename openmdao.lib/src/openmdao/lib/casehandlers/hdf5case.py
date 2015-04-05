@@ -5,16 +5,13 @@ HDF5 Case Recording.
 import sys
 import os
 import time
-from uuid   import uuid1
+from uuid import uuid1
 import numpy as np
-
-import h5py
 
 from openmdao.main.api import VariableTree
 from openmdao.main.interfaces import implements, ICaseRecorder
 from openmdao.main.mpiwrap import MPI
 from openmdao.main.releaseinfo import __version__
-
 
 def get_rank():
     '''for debugging'''
@@ -38,10 +35,10 @@ def dp(s):
     pass #print s
     #sys.stdout.flush()
 
-str_dtype = 'S50'  
+str_dtype = 'S50'
 
 def write_to_hdf5( group, name, value ):
-    
+
     filename = group.file.filename
 
     if isinstance(value,dict):
@@ -53,12 +50,12 @@ def write_to_hdf5( group, name, value ):
         for k in value.list_vars():
             write_to_hdf5( vtree_grp, k, value.get(k) )
     elif isinstance( value, np.ndarray):
-        dset = group[name] 
+        dset = group[name]
         dset[:] = value[:]
     elif isinstance( value, list):
         if len( value ) > 0:
             if isinstance( value[0], str):
-                dset = group[name] 
+                dset = group[name]
                 for i,v in enumerate(value): # TODO there must be a better way
                     dset[i] = value[i]
         else:
@@ -66,25 +63,25 @@ def write_to_hdf5( group, name, value ):
     elif value == None :
         pass # TODO really need to write None here ?
     elif isinstance( value, (np.float64,float)):
-        dset = group[name] 
+        dset = group[name]
         dset[()] = value
     elif isinstance(value,int):
-        dset = group[name] 
+        dset = group[name]
         #dset[0,] = value
         dset[()] = value
     elif isinstance(value,str):
-        dset = group[name] 
+        dset = group[name]
         dset[()] = value
         sys.stdout.flush()
     elif isinstance(value,bool):
-        dset = group[name] 
+        dset = group[name]
         dset[()] = value
 
 
 def write_groups_to_hdf5( group, name, value ):
 
     global str_dtype
-    
+
     filename = group.file.filename
 
     if isinstance(value,dict):
@@ -149,6 +146,9 @@ class HDF5CaseRecorder(object):
     implements(ICaseRecorder)
 
     def __init__(self, filename='model.hdf5', indent=4, sort_keys=True, max_string_len=50 ): # TODO need an option for the size of the strings
+
+        import h5py  # do it here to avoid warning from autodoc in Sphinx
+
         self._cfg_map = {}
         self._uuid = None
         self._cases = None
@@ -183,6 +183,8 @@ class HDF5CaseRecorder(object):
     def register(self, driver, inputs, outputs):
         """ Register names for later record call from `driver`. """
 
+        import h5py  # do it here to avoid warning from autodoc in Sphinx
+
         self._cfg_map[driver] = (inputs, outputs)
         scope = driver.parent
         prefix = scope.get_pathname()
@@ -191,10 +193,10 @@ class HDF5CaseRecorder(object):
 
         self.case_recording_filenames[driver.get_pathname()] = case_recording_filename
 
-        if not driver._system.is_active():   
+        if not driver._system.is_active():
             return # do not want to open file if this driver not active on this process
 
-        if driver.workflow._system.get_req_cpus() > 1: 
+        if driver.workflow._system.get_req_cpus() > 1:
             communicator = driver.workflow._system.mpi.comm # Recommened by Bret. check to see if None, MPI.COMM_NULL
             self.hdf5_case_record_file_objects[driver] = h5py.File(case_recording_filename, "w",driver='mpio', comm=communicator)
         else:
@@ -208,8 +210,8 @@ class HDF5CaseRecorder(object):
 
         simulation_info_grp = create_group(self.hdf5_main_file_object, "simulation_info")
         simulation_info_grp = self.hdf5_main_file_object.create_group("simulation_info")
-      
-        # Can get away with setting the length because all processes participate in the writing of these. 
+
+        # Can get away with setting the length because all processes participate in the writing of these.
         # TODO: Should do that for all of these values. Just doing it for the graphs since they can get really big
         dset = create_dataset(simulation_info_grp, 'comp_graph', (), dtype=np.dtype((np.str, len(info['comp_graph']))))
         dset = simulation_info_grp.create_dataset('comp_graph', (), dtype=np.dtype((np.str, len(info['comp_graph']))))
@@ -226,7 +228,7 @@ class HDF5CaseRecorder(object):
         write_to_hdf5( simulation_info_grp, 'uuid', info['uuid'])
         write_to_hdf5( simulation_info_grp, 'name', info['name'])
 
-        # Constants       
+        # Constants
         constants_grp = create_group(simulation_info_grp, "constants")
         constants_grp = simulation_info_grp.create_group("constants")
         for k,v in info['constants'].items():
@@ -241,7 +243,7 @@ class HDF5CaseRecorder(object):
 
         for k,v in info['expressions'].items():
            write_to_hdf5( expressions_grp, k, v )
-            
+
         # Variable metadata
         variable_metadata_grp = create_group(simulation_info_grp, "variable_metadata")
         variable_metadata_grp = simulation_info_grp.create_group("variable_metadata")
@@ -252,7 +254,7 @@ class HDF5CaseRecorder(object):
 
         for k,v in info['variable_metadata'].items():
             write_to_hdf5( variable_metadata_grp, k, v )
-       
+
         # Drivers
         for i, info in enumerate(self.get_driver_info()):
             driver_info_name = 'driver_info_%s' % (i+1)
@@ -260,7 +262,7 @@ class HDF5CaseRecorder(object):
             driver_info_group = self.hdf5_main_file_object.create_group(driver_info_name)
             for k,v in info.items():
                 write_groups_to_hdf5( driver_info_group, k, v )
-                write_to_hdf5( driver_info_group, k, v ) 
+                write_to_hdf5( driver_info_group, k, v )
 
 
     def is_variable_local( self, driver, prefix, name ):
@@ -273,14 +275,15 @@ class HDF5CaseRecorder(object):
         if name in self.is_variable_local_cache[ driver ]:
             return self.is_variable_local_cache[ driver ][ name ]
 
-        if name.endswith( '.out0'):
-            name_for_local_check = name[:-len('.out0')]
-        else:
-            name_for_local_check = name
         if prefix:
-            name_for_local_check = name_for_local_check[ len(prefix) + 1 : ] 
+            name = name[ len(prefix) + 1 : ]
 
-        is_local = driver.workflow._system.is_variable_local( name_for_local_check )
+        if name.endswith('workflow.itername'):
+            dname = name.replace('workflow.itername', 'itername')
+            is_local = driver.workflow._system.is_variable_local( dname )
+        else:
+            is_local = driver.workflow._system.is_variable_local( name )
+
         self.is_variable_local_cache[ driver ][ name ] = is_local # save it away for next time
         return is_local
 
@@ -303,13 +306,13 @@ class HDF5CaseRecorder(object):
         # From Python and HDF5 Book on Safari Online
         if not "/metadatatype" in hdf5_file_object: # TODO use actual string lengths
             hdf5_file_object['metadatatype'] =  np.dtype([
-                ('_driver_id', 'i8'), 
-                ('_driver_name', np.str_, 40), 
-                ('_id', np.str_, 40), 
-                ('_parent_id', np.str_, 40), 
-                ('_itername', np.str_, 40), 
-                ('error_message', np.str_, 40), 
-                ('error_status', 'i8'), 
+                ('_driver_id', 'i8'),
+                ('_driver_name', np.str_, 40),
+                ('_id', np.str_, 40),
+                ('_parent_id', np.str_, 40),
+                ('_itername', np.str_, 40),
+                ('error_message', np.str_, 40),
+                ('error_status', 'i8'),
                 ('timestamp', 'f8')]
                 )
 
@@ -322,7 +325,7 @@ class HDF5CaseRecorder(object):
         data_grp = iteration_case_group.create_group( 'data' )
         for k,v in info.items():
             if k != 'data': # record metadata # TODO get rid of this clause
-                # write_groups_to_hdf5( iteration_case_group, k, v ) 
+                # write_groups_to_hdf5( iteration_case_group, k, v )
                 pass
             else:
                 max_str_len = 0
@@ -334,19 +337,19 @@ class HDF5CaseRecorder(object):
                     elif isinstance(value, str):
                         str_names.append(name)
                         max_str_len = max( max_str_len, len(value))
-                    else: 
+                    else:
                         write_groups_to_hdf5(data_grp, name, value )
 
         # only add this info once per record file
-        if not "/float_names" in hdf5_file_object: 
-            create_dataset(hdf5_file_object, 'float_names', data=np.array( float_names ) ) 
-            hdf5_file_object.create_dataset('float_names', data=np.array( float_names ) ) 
+        if not "/float_names" in hdf5_file_object:
+            create_dataset(hdf5_file_object, 'float_names', data=np.array( float_names ) )
+            hdf5_file_object.create_dataset('float_names', data=np.array( float_names ) )
         if not "/int_names" in hdf5_file_object: # only add this info once per record file
-            create_dataset(hdf5_file_object, 'int_names', data=np.array( int_names ) ) 
-            hdf5_file_object.create_dataset('int_names', data=np.array( int_names ) ) 
+            create_dataset(hdf5_file_object, 'int_names', data=np.array( int_names ) )
+            hdf5_file_object.create_dataset('int_names', data=np.array( int_names ) )
         if not "/str_names" in hdf5_file_object: # only add this info once per record file
-            create_dataset(hdf5_file_object, 'str_names', data=np.array( str_names ) ) 
-            hdf5_file_object.create_dataset('str_names', data=np.array( str_names ) ) 
+            create_dataset(hdf5_file_object, 'str_names', data=np.array( str_names ) )
+            hdf5_file_object.create_dataset('str_names', data=np.array( str_names ) )
 
         # Create the datasets for the int and float and string arrays
         int_arrays_dset = create_dataset(data_grp, 'array_of_ints', (len(int_names),),dtype=np.int64)
@@ -364,20 +367,23 @@ class HDF5CaseRecorder(object):
         data_grp = iteration_case_group['data']
 
         dp( 'determine metadata' )
-        metadata = [] 
+        metadata = []
         for name in [ '_driver_id', '_driver_name', '_id', '_parent_id', '_itername', 'error_message', 'error_status', 'timestamp'] :
             value = info[ name ]
             if name == 'error_status' and value == None :
                 from sys import maxint
                 value = maxint
             metadata.append( value )
-        
+
         dp('set metadata_dset' )
         metadata_dset[()] = np.array([ tuple(metadata), ], dtype = hdf5_file_object['metadatatype'])
 
         dp('set values in data')
         for name, value in info[ 'data' ].items():
-            if self.is_variable_local( driver, prefix, name ): # TODO should cache these. 
+
+            print_var = self.is_variable_local( driver, prefix, name )
+
+            if print_var:
                 if isinstance(value,int):
                     idx = int_names.index(name) # where in the index is this value?
                     int_arrays_dset[idx] = value
@@ -399,8 +405,10 @@ class HDF5CaseRecorder(object):
         Note that a closed recorder will do nothing in :meth:`record`.
         """
 
+        import h5py  # do it here to avoid warning from autodoc in Sphinx
+
         for hdf5_case_record_file in self.hdf5_case_record_file_objects.values() :
-            hdf5_case_record_file.close()            
+            hdf5_case_record_file.close()
 
         # if 1 or not MPI or get_rank() == 0 : # only rank 0 process needs to write the primary case recording file
 
@@ -409,44 +417,12 @@ class HDF5CaseRecorder(object):
         iteration_case_grp = self.hdf5_main_file_object.create_group("iteration_cases")
 
         for driver_path, filename in self.case_recording_filenames.items():
-            # Create an external link to the root group "/" in the driver specific iteration cases 
+            # Create an external link to the root group "/" in the driver specific iteration cases
             # B['External'] = h5py.ExternalLink("dset.h5", "/dset")
             iteration_case_grp[driver_path] = h5py.ExternalLink(filename, "/") # root should work
         self.hdf5_main_file_object.close()
 
         self._cases = None
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
     def get_simulation_info(self, constants):
         """ Return simulation info dictionary. """
@@ -574,8 +550,6 @@ class HDF5CaseRecorder(object):
         """ Return case info dictionary. """
         in_names, out_names = self._cfg_map[driver]
 
-        #import pdb; pdb.set_trace()
-
         scope = driver.parent
         prefix = scope.get_pathname()
         if prefix:
@@ -585,16 +559,6 @@ class HDF5CaseRecorder(object):
 
         data = dict(zip(in_names, inputs))
         data.update(zip(out_names, outputs))
-
-        # print 'get_case_info'
-        # import pprint
-        # print pprint.pprint( data )
-
-        #subdriver_last_case_uuids = {}
-        #for subdriver in driver.subdrivers():
-            #subdriver_last_case_uuids[ id(subdriver) ] = self._last_child_case_uuids[ id(subdriver) ]
-        #self._last_child_case_uuids[ id(driver) ] = case_uuid
-
 
         return dict(_id=case_uuid,
                     _parent_id=parent_uuid or self._uuid,
@@ -610,4 +574,3 @@ class HDF5CaseRecorder(object):
     def get_iterator(self):
         """ Just returns None. """
         return None
-

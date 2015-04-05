@@ -1801,6 +1801,10 @@ def get_nondiff_groups(graph, cgraph, scope):
         else:
             raise RuntimeError("malformed graph in get_nondiff_groups()")
 
+        # Ignore deriv-ignore
+        if data[var].get('deriv_ignore') == True:
+            continue
+
         # Can't include the containing assembly as a nondiff block.
         if data[var].get('boundary'):
             continue

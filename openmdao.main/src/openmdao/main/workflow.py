@@ -304,16 +304,6 @@ class Workflow(object):
                     outputs.append(output_name)
                     #outputs.append(prefix + output_name)
                     #self._rec_all_outputs.append(output_name)
-                    
-        #####
-        # also need get any outputs of comps that are not connected vars
-        #   and therefore not in the graph
-        # could use
-        #   scope._depgraph
-        #      there's 'iotype' metadata in the var nodes
-        #
-        #   also:
-        #         scope._depgraph.list_outputs('comp2')
 
         for cname in driver._ordering:
             comp = getattr(self.scope, cname)
@@ -328,38 +318,6 @@ class Workflow(object):
                     outputs.append(output_name)
                     #outputs.append(prefix + output_name)
                     self._rec_outputs.append(output_name)
-
-        # Other outputs.
-        #self._rec_outputs = []
-        # srcs = scope.list_inputs()
-        # if hasattr(driver, 'get_parameters'):
-        #     srcs.extend(param.target
-        #                 for param in driver.get_parameters().values())
-        # dsts = scope.list_outputs()
-
-        # if hasattr(driver, 'get_objectives'):
-        #     dsts.extend(objective.pcomp_name+'.out0'
-        #                 for objective in driver.get_objectives().values())
-        # if hasattr(driver, 'get_responses'):
-        #     dsts.extend(response.pcomp_name+'.out0'
-        #                 for response in driver.get_responses().values())
-        # if hasattr(driver, 'get_eq_constraints'):
-        #     dsts.extend(constraint.pcomp_name+'.out0'
-        #                 for constraint in driver.get_eq_constraints().values())
-        # if hasattr(driver, 'get_ineq_constraints'):
-        #     dsts.extend(constraint.pcomp_name+'.out0'
-        #                 for constraint in driver.get_ineq_constraints().values())
-
-        # graph = scope._depgraph
-        # for src, dst in _get_inner_connections(graph, srcs, dsts):
-        #     if scope.get_metadata(src)['iotype'] == 'in':
-        #         continue
-        #     path = prefix+src
-        #     if src not in inputs and src not in outputs and \
-        #        self._check_path(path, includes, excludes):
-        #         self._rec_outputs.append(src)
-        #         #outputs.append(src)
-
 
         name = '%s.workflow.itername' % driver.name
         path = prefix+name
