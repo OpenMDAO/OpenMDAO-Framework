@@ -68,9 +68,6 @@ class NewtonSolver(Driver):
         nstring = 'NEWTON'
 
         # perform an initial run
-        system.run(iterbase, case_uuid=Case.next_uuid())
-
-        # Now, evaluate residuals
         system.evaluate(iterbase, case_uuid=Case.next_uuid())
 
         f_norm = get_norm(fvec)
