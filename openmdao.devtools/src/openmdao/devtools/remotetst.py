@@ -10,7 +10,7 @@ import paramiko.util
 from openmdao.devtools.utils import push_and_run, rm_remote_tree, \
                                     make_git_archive, fabric_cleanup, \
                                     remote_mkdir, put_dir, \
-                                    retrieve_docs, retrieve_pngs
+                                    retrieve_docs
 
 from openmdao.devtools.remote_cfg import process_options, \
                                          run_host_processes, get_tmp_user_dir, \
@@ -78,14 +78,6 @@ def _remote_build_and_test(fname=None, pyversion='python', keep=False,
 
         return result.return_code
     finally:
-        if build_type == 'dev':
-            print "pulling any pngs from %s" % hostname
-            try:
-                retrieve_pngs(os.path.join('~', remotedir))
-                print "png retrieval successful"
-            except Exception as exc:
-                print "png retrieval failed:", exc
-
         if not keep:
             print "removing remote directory: %s" % remotedir
             rm_remote_tree(remotedir)
