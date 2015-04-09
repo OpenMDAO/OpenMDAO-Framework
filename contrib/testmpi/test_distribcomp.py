@@ -203,8 +203,6 @@ class DistribInputDistribOutputComp(Component):
         self.invec = np.ones(sizes[rank], dtype=float)
         self.outvec = np.ones(sizes[rank], dtype=float)
 
-        print self.name,".outvec",self.outvec
-
         return {
             'invec': make_idx_array(start, end),
             'outvec': make_idx_array(start, end)
