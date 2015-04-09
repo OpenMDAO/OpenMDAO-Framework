@@ -739,6 +739,12 @@ class Assembly(Component):
             system.pre_run()
         self._system.run(self.itername, case_uuid=self._case_uuid)
 
+        # Need to copy to scope any direct bdry to bdry connections
+        dconns = [c[1] for c in self.list_connections() \
+                  if c[0].split('[')[0].split('.')[0] in self.list_inputs() \
+                  and c[1].split('[')[0].split('.')[0] in self.list_outputs()]
+        self._system.vec['u'].set_to_scope(self, vnames=dconns)
+
     def configure_recording(self, recording_options=None):
         """Called at start of top-level run to configure case recording.
         Returns set of paths for changing inputs."""
