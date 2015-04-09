@@ -957,6 +957,53 @@ subassy.comp3: ReRun.2-driverB.2-subassy.2-comp3"""
         self.assertEqual([c.name for c in asm.sub.driver.workflow],
                          ['newcomp2', 'newcomp3'])
 
+    def test_direct_connection_bug(self):
+
+        # Test for a bug introduced with the MPI changes, where direct bdry-input to
+        # bdry-output connections weren't happening because there was no comp-output
+        # scatter to trigger a set to scope.
+
+        import numpy as np
+
+        class VTsource(VariableTree):
+
+            x = Float(13.0)
+            y = Float(77.0)
+
+        class VTtarget(VariableTree):
+
+            x = Float(0.0)
+            y = Float(0.0)
+
+        class Start(Assembly):
+            """can't connect input directly to output"""
+
+            W = Float(100.0, iotype="in")
+            W_out = Float(0.0, iotype="out")
+
+            A = Array(np.array((3.0, 5.0)), iotype="in")
+            A_out = Array(np.array((0.0, 0.0)), iotype="out")
+
+            V = VarTree(VTsource(), iotype='in')
+            V_out = VarTree(VTtarget(), iotype='out')
+
+            def configure(self):
+
+                self.connect("W","W_out")
+                self.connect('A[0]', 'A_out[1]')
+                self.connect('V.x', 'V_out.y')
+
+
+        start = set_as_top(Start())
+
+        start.run()
+
+        self.assertEqual(start.W_out, 100)
+        self.assertEqual(start.A_out[0], 0.0)
+        self.assertEqual(start.A_out[1], 3.0)
+        self.assertEqual(start.V_out.y, 13.0)
+        self.assertEqual(start.V_out.x, 0.0)
+
 
 def pseudo_edges(index, num_inputs):
     pname = '_pseudo_%d' % index
