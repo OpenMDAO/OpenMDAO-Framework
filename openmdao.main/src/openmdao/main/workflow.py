@@ -211,7 +211,7 @@ class Workflow(object):
                     name = name[0]
                 path = prefix+name
                 if save_problem_formulation or \
-                   self._check_path(path, includes, excludes):
+                    self._check_path(path, includes, excludes):
                     self._rec_parameters.append(param)
                     inputs.append(name)
 
@@ -254,6 +254,7 @@ class Workflow(object):
                    self._check_path(path, includes, excludes):
                     self._rec_constraints.append(con)
                     outputs.append(name + '.out0')
+
         if hasattr(driver, 'get_ineq_constraints'):
             for con in driver.get_ineq_constraints().values():
                 name = con.pcomp_name
@@ -262,11 +263,17 @@ class Workflow(object):
                    self._check_path(path, includes, excludes):
                     self._rec_constraints.append(con)
                     outputs.append(name + '.out0')
-                    #outputs.append(path+'.out0')
 
         self._rec_outputs = []
         for comp in self:
-            successors = driver._reduced_graph.successors(comp.name)
+            try:
+                successors = driver.get_reduced_graph().successors(comp.name)
+            except:
+                err = sys.exc_info()
+                import traceback
+                print traceback.format_exc()
+                raise err[0], err[1], err[2]
+
             for output_name, aliases in successors:
 
                 # From Bret: it does make sense to skip subdrivers like you said, except for the
@@ -284,20 +291,10 @@ class Workflow(object):
                             output_name = n
                             break
                 #output_name = prefix + output_name
-                if output_name not in outputs and self._check_path(output_name, includes, excludes) :
-                    outputs.append(output_name)
+                if output_name not in outputs and self._check_path(prefix + output_name, includes, excludes) :
                     self._rec_outputs.append(output_name)
+                    outputs.append(output_name)
                     #self._rec_all_outputs.append(output_name)
-
-        #####
-        # also need get any outputs of comps that are not connected vars
-        #   and therefore not in the graph
-        # could use
-        #   scope._depgraph
-        #      there's 'iotype' metadata in the var nodes
-        #
-        #   also:
-        #         scope._depgraph.list_outputs('comp2')
 
         for cname in driver._ordering:
             comp = getattr(self.scope, cname)
@@ -308,41 +305,9 @@ class Workflow(object):
                         continue
 
                 #output_name = prefix + output_name
-                if output_name not in outputs and self._check_path(output_name, includes, excludes) :
+                if output_name not in outputs and self._check_path(prefix + output_name, includes, excludes) :
                     outputs.append(output_name)
                     self._rec_outputs.append(output_name)
-
-        # Other outputs.
-        #self._rec_outputs = []
-        # srcs = scope.list_inputs()
-        # if hasattr(driver, 'get_parameters'):
-        #     srcs.extend(param.target
-        #                 for param in driver.get_parameters().values())
-        # dsts = scope.list_outputs()
-
-        # if hasattr(driver, 'get_objectives'):
-        #     dsts.extend(objective.pcomp_name+'.out0'
-        #                 for objective in driver.get_objectives().values())
-        # if hasattr(driver, 'get_responses'):
-        #     dsts.extend(response.pcomp_name+'.out0'
-        #                 for response in driver.get_responses().values())
-        # if hasattr(driver, 'get_eq_constraints'):
-        #     dsts.extend(constraint.pcomp_name+'.out0'
-        #                 for constraint in driver.get_eq_constraints().values())
-        # if hasattr(driver, 'get_ineq_constraints'):
-        #     dsts.extend(constraint.pcomp_name+'.out0'
-        #                 for constraint in driver.get_ineq_constraints().values())
-
-        # graph = scope._depgraph
-        # for src, dst in _get_inner_connections(graph, srcs, dsts):
-        #     if scope.get_metadata(src)['iotype'] == 'in':
-        #         continue
-        #     path = prefix+src
-        #     if src not in inputs and src not in outputs and \
-        #        self._check_path(path, includes, excludes):
-        #         self._rec_outputs.append(src)
-        #         #outputs.append(src)
-
 
         name = '%s.workflow.itername' % driver.name
         path = prefix+name
@@ -389,6 +354,13 @@ class Workflow(object):
 
         inputs = []
         outputs = []
+
+        # print "recording case"
+        # if MPI:
+        #     print 'workflow', self
+        #     print 'workflow comm',self._system.mpi.comm
+        #     print 'workflow rank',self._system.mpi.rank
+
 
         # Parameters.
         for param in self._rec_parameters:

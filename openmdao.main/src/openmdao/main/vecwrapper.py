@@ -435,11 +435,27 @@ class InputVecWrapper(VecWrapperBase):
 
             if isinstance(name, tuple):
                 for dest in name[1]:
+                    if '[' in dest:
+                        val = scope.get(dest.split('[')[0])
+                        if isinstance(val, ndarray):
+                            scope.set(dest.split('[')[0],
+                                      numpy.asarray(val, dtype=numpy.complex128))
                     array_val = scope.get_flattened_value(dest)
-                    scope.set_flattened_value(dest, array_val + step*1j)
+                    # FIXME: the following is a workaround to prevent double
+                    #        perturbations in subassemblies with passthroughs, but
+                    #        we need to fix the actual underlying problem at some point.
+                    scope.set_flattened_value(dest, array_val.real + step*1j)
             else:
+                if '[' in name:
+                    val = scope.get(name.split('[')[0])
+                    if isinstance(val, ndarray):
+                        scope.set(name.split('[')[0],
+                                  numpy.asarray(val, dtype=numpy.complex128))
                 array_val = scope.get_flattened_value(name)
-                scope.set_flattened_value(name, array_val + step*1j)
+                # FIXME: the following is a workaround to prevent double
+                #        perturbations in subassemblies with passthroughs, but
+                #        we need to fix the actual underlying problem at some point.
+                scope.set_flattened_value(name, array_val.real + step*1j)
 
 
 class DataTransfer(object):

@@ -332,11 +332,23 @@ class MPITests1(MPITestCase):
 
         # Piggyback testing of the is_variable_local function.
         system = top.driver.workflow._system
-        self.assertTrue(system.is_variable_local('C1.c') is True)
 
-        # Exclusive or - you either got C2 or C3.
-        self.assertTrue(system.is_variable_local('C2.a') != system.is_variable_local('C3.a'))
-        self.assertTrue(system.is_variable_local('C2.c') != system.is_variable_local('C3.c'))
+        # Only lowest rank has vars that are on all proceses
+        if self.comm.rank == 0:
+            self.assertTrue(system.is_variable_local('C1.c'))
+            self.assertTrue(system.is_variable_local('C2.a'))
+            self.assertTrue(system.is_variable_local('C3.b'))
+            self.assertTrue(system.is_variable_local('C1.exec_count'))
+        else:
+            self.assertFalse(system.is_variable_local('C1.c'))
+            self.assertFalse(system.is_variable_local('C2.a'))
+            self.assertFalse(system.is_variable_local('C3.b'))
+            self.assertFalse(system.is_variable_local('C1.exec_count'))
+
+        # Exclusive or - you either got C2 or C3 on a given process.
+        self.assertTrue(system.is_variable_local('C2.c') != system.is_variable_local('C3.d'))
+        self.assertTrue(system.is_variable_local('C4.a') != system.is_variable_local('C4.b'))
+
 
     def test_fan_out_in_force_serial(self):
         size = 5  # array var size
@@ -450,6 +462,25 @@ class MPITests2(MPITestCase):
 
             if expected:
                 self.fail("expected values %s were not found" % expected.keys())
+
+        # Piggyback testing of the is_variable_local function.
+        system = top.driver.workflow._system
+
+        # Only lowest rank has vars that are on all proceses
+        if self.comm.rank == 0:
+            self.assertTrue(system.is_variable_local('_pseudo_0.out0'))
+
+            # Params on lowest rank
+            self.assertTrue(system.is_variable_local('C1.y2'))
+            self.assertTrue(system.is_variable_local('C2.y1'))
+        else:
+            self.assertFalse(system.is_variable_local('_pseudo_0.out0'))
+            self.assertFalse(system.is_variable_local('C1.y2'))
+            self.assertFalse(system.is_variable_local('C2.y1'))
+
+        # Exclusive or - you either got C2 or C3 on a given process.
+        self.assertTrue(system.is_variable_local('C1.y1') != system.is_variable_local('C2.y2'))
+        self.assertTrue(system.is_variable_local('C1.exec_count') != system.is_variable_local('C2.exec_count'))
 
     def test_sellar_Newton_parallel(self):
 

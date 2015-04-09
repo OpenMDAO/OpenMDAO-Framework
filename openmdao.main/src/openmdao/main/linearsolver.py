@@ -584,7 +584,7 @@ class LinearGS(LinearSolver):
             elif system.mode == 'adjoint':
                 #print "Start Adjoint", system.name, system; sys.stdout.flush()
 
-                rev_systems = [item for item in reversed(system.subsystems(local=True))]
+                rev_systems = [item for item in reversed(list(system.subsystems(local=True)))]
 
                 for subsystem in rev_systems:
                     #print "Outer", subsystem.name; sys.stdout.flush()

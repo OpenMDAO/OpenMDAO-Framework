@@ -169,7 +169,7 @@ class System(object):
             return self.local_subsystems()
         return self.all_subsystems()
 
-    def local_subsystems(self):
+    def local_subsystems(self, recurse=False):
         return ()
 
     def all_subsystems(self):
@@ -670,7 +670,7 @@ class System(object):
         stream.write(" "*nest)
         stream.write(str(self.name).replace(' ','').replace("'",""))
         klass = self.__class__.__name__
-        stream.write(" [%s](req=%d)(rank=%d)(vsize=%d)(isize=%d)\n" %
+        stream.write(" [%s](req=%s)(rank=%d)(vsize=%d)(isize=%d)\n" %
                                           (klass.lower()[:5],
                                            self.get_req_cpus(),
                                            world_rank,
@@ -713,7 +713,7 @@ class System(object):
             self._comp._system.dump(nest, stream)
         else:
             if self.scatter_full:
-                self.scatter_full.dump(self, self.vec['u'], self.vec['p'], nest)
+                self.scatter_full.dump(self, self.vec['u'], self.vec['p'], nest, stream)
             partial_subs = [s for s in self.local_subsystems() if s.scatter_partial]
             for sub in self.local_subsystems():
                 if sub in partial_subs:
@@ -1593,11 +1593,17 @@ class CompoundSystem(System):
         self._ordering = ()
         self._grouped_nodes = subg.nodes()
 
-    def local_subsystems(self):
+    def local_subsystems(self, recurse=False):
         if MPI:
-            return self._local_subsystems
+            it = self._local_subsystems
         else:
-            return self.all_subsystems()
+            it = self.all_subsystems()
+
+        for sub in it:
+            yield sub
+            if recurse:
+                for s in sub.local_subsystems(recurse=True):
+                    yield s
 
     def all_subsystems(self):
         return self._local_subsystems + [data['system'] for node, data in
@@ -1815,6 +1821,26 @@ class CompoundSystem(System):
         to perform a matrix vector product.
         """
         self.dfd_solver.calculate(arg, result)
+
+    def is_variable_local(self, name):
+        """Returns True if the variable in name is local to this process and
+        our rank is the lowest rank that it appears on. Otherwise it returns
+        False. If name can't be found, then an exception is raised.
+        """
+        scope = self.scope
+        try:
+            if MPI is None:
+                scope.get(name) # make sure var exists
+                return True
+            elif self.is_active():
+                while scope.parent:
+                    scope = scope.parent
+                return self.mpi.rank in scope.print_ranks[name]
+        except:
+            msg = 'Cannot find a system that contains varpath %s' % name
+            raise RuntimeError(msg)
+
+        return False
 
     def find_system(self, name, recurse_subassy=True):
         """ Return system with given name.
@@ -2088,7 +2114,7 @@ class ParallelSystem(CompoundSystem):
                 sub.setup_variables(variables, resid_state_map)
 
         if self.local_subsystems():
-            sub = self.local_subsystems()[0]
+            sub = list(self.local_subsystems())[0]
             names = sub.variables.keys()
         else:
             sub = None
@@ -2195,6 +2221,11 @@ class OpaqueSystem(SimpleSystem):
 
     def inner(self):
         return self._inner_system
+
+    def local_subsystems(self, recurse=False):
+        if recurse:
+            for sub in self._inner_system.local_subsystems(recurse):
+                yield sub
 
     def _all_comp_nodes(self, local=False):
         return self._inner_system._all_comp_nodes(local=local)
@@ -2327,8 +2358,13 @@ class DriverSystem(SimpleSystem):
         super(DriverSystem, self).__init__(scope, graph, driver.name)
         driver._system = self
 
-    def local_subsystems(self):
-        return [s for s in self.all_subsystems() if s.is_active()]
+    def local_subsystems(self, recurse=False):
+        for sub in self.all_subsystems():
+            if sub.is_active():
+                yield sub
+                if recurse:
+                    for s in sub.local_subsystems(recurse=True):
+                        yield s
 
     def all_subsystems(self):
         return (self._comp.workflow._system,)

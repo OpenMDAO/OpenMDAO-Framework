@@ -67,8 +67,8 @@ Working from Virtual Environment
 Creating the Virtual Environment
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-OpenMDAO operates inside of a virtual Python environment. To create that environment,
-run ``python go-openmdao-dev.py`` from the top directory of your
+One of the ways OpenMDAO operates is  inside of a virtual Python environment. To create that environment,
+run ``python install_openmdao_dev.py`` from the top directory of your
 repository. The script will check the version of Python you are running. **You must
 be running version 2.7.x.** (To find out which Python version you are
 running, you can type ``python --version``.)
@@ -86,10 +86,11 @@ running, you can type ``python --version``.)
 
 ::
 
-   python go-openmdao-dev.py
+   python install_openmdao_dev.py
    
-Running ``go-openmdao-dev.py`` creates a ``devenv`` directory at the top of
-your repository and populates it with all of the packages that OpenMDAO
+If you do not have Anaconda installed, running ``install_openmdao_dev.py`` will run 
+``go-openmdao-dev.py``, which creates a ``devenv`` directory at the top of your repository
+and populates it with all of the packages that OpenMDAO
 depends upon. It also installs the openmdao namespace packages in your virtual
 Python environment as "develop" eggs so that you can make changes to the
 source code and immediately see the results without having to rebuild any
@@ -173,15 +174,11 @@ Creating Anaconda Environment
 To install the development version of OpenMDAO into a conda environment,
 navigate to the root of the OpenMDAO-Framework repository and type:
 
-OS X and Linux ::
+All platforms ::
 
-  . conda-openmdao-dev.sh
-  
-Windows ::
+    python install_openmdao_dev.py
 
-  conda-openmdao-dev.bat
- 
-The scripts automatically install OpenMDAO-Framework into an environment named `openmdao`.
+The script automatically installs OpenMDAO-Framework into a conda environment named `openmdao`.
 
 Activating Environment
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -533,3 +530,4 @@ follow these steps:
 
    One of the maintainers will review the changes on your branch and decide whether to approve
    the requested merge. If the maintainer has a question or problem, you will be contacted.
+
