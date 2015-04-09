@@ -1,9 +1,13 @@
+import os
+import sys
 import time
+import tempfile
+import shutil
 from unittest import TestCase
 import numpy as np
 
-from openmdao.main.api import Assembly, Component, set_as_top, Driver
-from openmdao.main.datatypes.api import Float, Array, Str, List
+from openmdao.main.api import Assembly, Component, set_as_top, Driver, SimulationRoot
+from openmdao.main.datatypes.api import Float, Array, Str, List, File, FileRef, Int
 from openmdao.main.mpiwrap import MPI, MPIContext
 from openmdao.lib.drivers.mpicasedriver import MPICaseDriver
 from openmdao.lib.drivers.simplecid import SimpleCaseIterDriver
@@ -115,44 +119,6 @@ def model_par3_setup(num_inputs, mpi=True):
     return top, expected
 
 
-# class MPITests1(MPITestCase):
-#
-#     N_PROCS = 2
-#
-#     def test_fan_out_in(self):
-#         size = 5   # array var size
-#
-#         # a comp feeds two parallel comps which feed
-#         # another comp
-#         top = set_as_top(Assembly())
-#         top.add("C1", ABCDArrayComp(size))
-#         top.add("C2", ABCDArrayComp(size))
-#         top.add("C3", ABCDArrayComp(size))
-#         top.add("C4", ABCDArrayComp(size))
-#         top.driver.workflow.add(['C1', 'C2', 'C3', 'C4'])
-#         top.connect('C1.c', 'C2.a')
-#         top.connect('C1.d', 'C3.b')
-#         top.connect('C2.c', 'C4.a')
-#         top.connect('C3.d', 'C4.b')
-#
-#         top.C1.a = np.ones(size, float) * 3.0
-#         top.C1.b = np.ones(size, float) * 7.0
-#
-#         top.run()
-#
-#         with MPIContext():
-#             self.assertTrue(all(top.C4.a==np.ones(size, float)*11.))
-#             self.assertTrue(all(top.C4.b==np.ones(size, float)*5.))
-#
-#         # Piggyback testing of the is_variable_local function.
-#         system = top.driver.workflow._system
-#         self.assertTrue(system.is_variable_local('C1.c') is True)
-#
-#         # Exclusive or - you either got C2 or C3.
-#         self.assertTrue(system.is_variable_local('C2.a') != system.is_variable_local('C3.a'))
-#         self.assertTrue(system.is_variable_local('C2.c') != system.is_variable_local('C3.c'))
-
-
 class MPITests9(MPITestCase):
 
     N_PROCS = 7
@@ -198,6 +164,115 @@ class MPITests5(MPITestCase):
                             self.assertEqual(v1, v2)
                 else:
                     self.assertEqual(val, [])
+
+class FComp(Component):
+
+    infile = File(iotype='in', local_path='input')
+    outfile = File(FileRef('output'), iotype='out')
+    outval = Int(iotype='out')
+
+    def execute(self):
+        """ Runs code and sets `outfile`. """
+        with open(self.infile.abspath()) as f:
+            s = f.read().strip()
+            val = int(s.split()[1])
+
+        self.outval = val + 1
+
+        fname = self.outfile.abspath()
+        print "about to open",fname;sys.stdout.flush()
+        with open(fname, 'w') as f:
+            print "writing %s %d %d to %s" % (self.name, self.outval,
+                                              MPI.COMM_WORLD.rank,fname)
+            sys.stdout.flush()
+
+            f.write("%s %d %d\n" % (self.name, self.outval, MPI.COMM_WORLD.rank))
+            print "wrote %s %d %d to %s" % (self.name, self.outval,
+                                              MPI.COMM_WORLD.rank,fname)
+            sys.stdout.flush()
+
+
+class FComp2(Component):
+
+    inval = Int(iotype='in')
+    outfile = File(FileRef('output'), iotype='out')
+    outval = Int(iotype='out')
+
+    def execute(self):
+        self.outval = self.inval + 1
+        fname = self.outfile.abspath()
+        print "about to open",fname;sys.stdout.flush()
+        with open(fname, 'w') as f:
+            print "writing %s %d %d to %s" % (self.name, self.outval,
+                                              MPI.COMM_WORLD.rank,fname)
+            sys.stdout.flush()
+            f.write("%s %d %d\n" % (self.name, self.outval, MPI.COMM_WORLD.rank))
+            print "wrote %s %d %d to %s" % (self.name, self.outval,
+                                              MPI.COMM_WORLD.rank,fname)
+            sys.stdout.flush()
+
+
+# FIXME: handling FileRefs in MPI still doesn't work
+# class FileTestCase(MPITestCase):
+#     """ Test the ExternalCode component. """
+#
+#     N_PROCS = 2
+#
+#     def setUp(self):
+#         self.startdir = os.getcwd()
+#         self.tempdir = tempfile.mkdtemp(prefix='test_distfile-')
+#         os.chdir(self.tempdir)
+#         SimulationRoot.chroot(self.tempdir)
+#
+#     def tearDown(self):
+#         SimulationRoot.chroot(self.startdir)
+#         os.chdir(self.startdir)
+#         if not os.environ.get('OPENMDAO_KEEPDIRS', False):
+#             try:
+#                 shutil.rmtree(self.tempdir)
+#             except OSError:
+#                 pass
+#
+#     def test_normal(self):
+#         print "CWD:",os.getcwd()
+#         top = Assembly()
+#         print "CWD:",os.getcwd()
+#         top.create_instance_dir = 'rank'
+#         driver = top.add("driver", SimpleCaseIterDriver())
+#
+#         top.add('C1', FComp2())
+#         top.add('C2', FComp())
+#         top.add('C3', FComp())
+#         top.add('C4', FComp())
+#         top.add('C5', FComp())
+#
+#         driver.add_parameter("C1.inval")
+#         driver.add_response("C4.outval")
+#         driver.add_response("C5.outval")
+#
+#         invals = [5,4,3,2,1]
+#         driver.case_inputs.C1.inval = invals
+#
+#         top.C1.create_instance_dir = True
+#         top.C2.create_instance_dir = True
+#         top.C3.create_instance_dir = True
+#         top.C4.create_instance_dir = True
+#
+#         top.driver.workflow.add(['C1','C2','C3'])
+#         top.connect('C1.outfile', 'C2.infile')
+#         top.connect('C1.outfile', 'C3.infile')
+#         top.connect('C3.outfile', 'C4.infile')
+#         top.connect('C2.outfile', 'C5.infile')
+#
+#         print "CWD:",os.getcwd()
+#         top.run()
+#         print "run done";sys.stdout.flush()
+#         print driver.case_outputs.C4.outval
+#
+#         for i,val in enumerate(invals):
+#             self.assertEqual(driver.case_outputs.C4.outval[i],
+#                              val+3)
+#
 
 
 class SerialTests(TestCase):

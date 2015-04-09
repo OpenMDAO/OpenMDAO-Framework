@@ -8,6 +8,8 @@ from openmdao.main.array_helpers import offset_flat_index, \
                                         get_flat_index_start, get_val_and_index, get_shape, \
                                         get_flattened_index, to_slice, to_indices
 from openmdao.main.interfaces import IImplicitComponent
+from openmdao.main.datatypes.file import FileRef
+
 from openmdao.util.typegroups import int_types
 from openmdao.util.graph import base_var
 
@@ -534,12 +536,19 @@ class DataTransfer(object):
                         if system.mpi.rank == min(actives):
                             # grab local scope value
                             val = system.scope.get_attr_w_copy(src)
+                            # FIXME: FileRef handling in MPI still doesn't work
+                            if isinstance(val, FileRef):
+                                if val.owner is None:
+                                    val.set_owner_by_name(src, system.scope)
+                                val._abspath = val.abspath()
                             for inactive in inactives:
                                 system.mpi.comm.send(val, dest=inactive,
-                                                   tag=isrc)
+                                                     tag=isrc)
                         # if we're one of the inactives, pull value across using MPI
                         elif system.mpi.rank in inactives:
                             val = system.mpi.comm.recv(source=min(actives), tag=isrc)
+                            if isinstance(val, FileRef):
+                                val = val._abspath
                         # otherwise just use our local scope value
                         else:
                             val = system.scope.get_attr_w_copy(src)
