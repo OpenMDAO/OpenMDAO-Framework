@@ -7,7 +7,7 @@ import unittest
 import numpy as np
 
 from openmdao.main.api import Component, VariableTree, Driver, Assembly, set_as_top
-from openmdao.main.datatypes.api import Float, Array
+from openmdao.main.datatypes.api import Float, Array, File
 from openmdao.main.depgraph import simple_node_iter
 from openmdao.main.test.test_derivatives import SimpleDriver, ArrayComp2D
 from openmdao.test.execcomp import ExecCompWithDerivatives, ExecComp
@@ -391,6 +391,31 @@ class TestFiniteDifference(unittest.TestCase):
 
         assert_rel_error(self, J[0, 0], 7.0, .001)
         assert_rel_error(self, J[1, 0], 19.0, .001)
+
+    def test_deriv_ignore_nondiff_groups(self):
+
+        # This test makes sure that we don't group comps in a nondiff block
+        # if we have 1 differentiable connection and 1 non-differentiable one
+        # with deriv_ignore.
+
+        top = set_as_top(Assembly())
+        top.add('src', MyCompDerivs())
+        top.add('target', MyCompDerivs())
+
+        top.src.add('mesh_file', File(iotype='out', deriv_ignore=True))
+        top.target.add('mesh_file', File(iotype='in', deriv_ignore=True))
+
+        top.connect('src.mesh_file', 'target.mesh_file')
+        top.connect('src.y', 'target.x1')
+
+        top.driver.workflow.add(['src', 'target'])
+
+        top.run()
+
+        J = top.driver.calc_gradient(inputs=['src.x1'], outputs=['target.y'])
+        assert_rel_error(self, J[0, 0], 64.0, .001)
+        systems = top._system.dump(stream=None)
+        self.assertTrue('FD_' not in systems)
 
 if __name__ == '__main__':
     import nose

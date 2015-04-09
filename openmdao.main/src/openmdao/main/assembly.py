@@ -43,7 +43,8 @@ from openmdao.main.depgraph import DependencyGraph, all_comps, \
                                    list_driver_connections, \
                                    simple_node_iter, \
                                    is_boundary_node
-from openmdao.main.systems import SerialSystem, _create_simple_sys, OpaqueSystem
+from openmdao.main.systems import SimpleSystem, SerialSystem, ParamSystem, \
+                                  _create_simple_sys, OpaqueSystem
 from openmdao.main.mpiwrap import to_idx_array
 
 from openmdao.util.graph import list_deriv_vars, base_var, fix_single_tuple
@@ -1106,6 +1107,7 @@ class Assembly(Component):
         return self._top_driver.get_req_cpus()
 
     def setup_communicators(self, comm):
+        self.mpi.comm = comm
         self._system.setup_communicators(comm)
 
     def setup_variables(self):
@@ -1555,6 +1557,76 @@ class Assembly(Component):
         for name in simple_node_iter(node):
             self._var_meta[name] = meta
 
+    def get_var_print_ranks(self):
+        """Collect info from all processes indicating what variables
+        are local to that process, and record the lowest rank where
+        a given variable is local.  Distributed variables will need
+        to record all of their active ranks, since each rank will
+        contain different data.  This info is used for parallel case
+        recording in order to avoid saving redundant data.
+        """
+        self.print_ranks = print_ranks = {}
+
+        if MPI is None or not self._system.is_active():
+            return
+
+        # first, get all of our local vars
+        ourvars = self.get_all_local_vars()
+
+        # now distribute this information across all ranks
+        allvars = self.mpi.comm.allgather(ourvars)
+
+        # now loop over all vars in each rank and record the
+        # rank.  Go in reverse so the lowest rank written will
+        # be the last.  If a var name is a tuple, that indicates
+        # it's a distributed var, so all ranks will be recorded
+        for rank in range(self.mpi.comm.size-1, -1, -1):
+            for v in allvars[rank]:
+                if isinstance(v, tuple): # it's a distributed var
+                    print_ranks.setdefault(v, []).append(rank)
+                else:
+                    print_ranks[v] = (rank,)
+
+        # for any connected vars, the rank of a destination is changed
+        # to match the rank of its source
+        cnames = [self.name2collapsed.get(n,n) for n in print_ranks]
+        for cname in cnames:
+            if isinstance(cname, tuple):
+                src = cname[0]
+                for dest in cname[1]:
+                    print_ranks[dest] = print_ranks[src]
+
+    def get_all_local_vars(self):
+        """Return the set of all variables in this Assembly and any
+        of its children that are local to the current MPI process.
+        """
+        all_locs = set()
+        all_locs.update(self.list_inputs())
+        all_locs.update(self.list_outputs())
+
+        for s in [self._system] + list(self._system.local_subsystems(recurse=True)):
+            if isinstance(s, SimpleSystem):
+                try:
+                    obj = self.get(s.name)
+                except:
+                    continue
+                if has_interface(obj, IAssembly):
+                    all_locs.update(['.'.join([obj.name, n])
+                                          for n in obj.get_all_local_vars()])
+                elif has_interface(obj, IComponent):
+                    lvars = ['.'.join([obj.name, n])
+                                          for n in obj.list_inputs() +
+                                                   obj.list_outputs()]
+                    for i, v in enumerate(lvars):
+                        if v in s.distrib_idxs:
+                            lvars[i] = (v,)  # wrap in tuple to indicate its a distrib var
+                    all_locs.update(lvars)
+
+                elif isinstance(s, ParamSystem):
+                    all_locs.add(s.name)
+
+        return all_locs
+
     def setup_init(self):
         """This is for any last minute configuration (like with
         ArchitectureAssembly).  Components' setup_init methods
@@ -1630,6 +1702,8 @@ class Assembly(Component):
             self.setup_communicators(comm)
 
             self.collect_metadata()
+
+            self.get_var_print_ranks()
 
             self.setup_variables()
             self.setup_sizes()

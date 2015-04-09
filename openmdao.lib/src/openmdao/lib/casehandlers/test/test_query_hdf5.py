@@ -6,12 +6,12 @@ import os.path
 import tempfile
 import shutil
 import unittest
+from unittest import SkipTest
 
 from math import isnan
 
 from openmdao.main.api import Assembly, Component, VariableTree, set_as_top
 from openmdao.main.datatypes.api import Array, Float, VarTree
-from openmdao.lib.casehandlers.api import CaseDatasetHDF5, HDF5CaseRecorder
 from openmdao.lib.drivers.api import FixedPointIterator, SLSQPdriver
 from openmdao.lib.optproblems import sellar
 from openmdao.util.testutil import assert_rel_error
@@ -118,6 +118,12 @@ def create_files():
 class TestCase(unittest.TestCase):
 
     def setUp(self):
+        try:
+            import h5py
+        except ImportError:
+            raise SkipTest("this test requires h5py")
+        from openmdao.lib.casehandlers.api import CaseDatasetHDF5, HDF5CaseRecorder
+
         #create_files()  # Uncomment to create 'sellar.new'
         path = os.path.join(os.path.dirname(__file__), 'sellar.hdf5')
         self.cds = CaseDatasetHDF5(path, 'hdf5')
@@ -136,31 +142,31 @@ class TestCase(unittest.TestCase):
 
 
     def test_query(self):
-        
-        #cases = self.cds.data.driver('driver').vars(['_itername',]).by_variable().fetch() # TODO. This works here but fails when run later in this method. 
+
+        #cases = self.cds.data.driver('driver').vars(['_itername',]).by_variable().fetch() # TODO. This works here but fails when run later in this method.
         # when run here, it messes up later queries
-        
-        
+
+
         # Check the variable names for the full dataset.
         vnames = self.cds.data.var_names().fetch()
-        
-        expected = ['_driver_id', '_driver_name', '_id', '_itername', '_parent_id', '_pseudo_0.out0', 
-        '_pseudo_1.out0', '_pseudo_2.out0', 'driver.workflow.itername', 'error_message', 'error_status', 
-        'half.derivative_exec_count', 'half.exec_count', 'half.itername', 'half.z2a', 'half.z2b', 
+
+        expected = ['_driver_id', '_driver_name', '_id', '_itername', '_parent_id', '_pseudo_0.out0',
+        '_pseudo_1.out0', '_pseudo_2.out0', 'driver.workflow.itername', 'error_message', 'error_status',
+        'half.derivative_exec_count', 'half.exec_count', 'half.itername', 'half.z2a', 'half.z2b',
         'sub._pseudo_0.out0', 'sub.derivative_exec_count', 'sub.dis1.derivative_exec_count', 'sub.dis1.exec_count',
-         'sub.dis1.itername', 'sub.dis1.y1', 'sub.dis1.y2', 'sub.dis2.derivative_exec_count', 
-         'sub.dis2.exec_count', 'sub.dis2.itername', 'sub.dis2.y2', 'sub.driver.workflow.itername', 
-         'sub.exec_count', 'sub.globals.z1', 'sub.itername', 'sub.states', 'sub.states.y[0]', 
+         'sub.dis1.itername', 'sub.dis1.y1', 'sub.dis1.y2', 'sub.dis2.derivative_exec_count',
+         'sub.dis2.exec_count', 'sub.dis2.itername', 'sub.dis2.y2', 'sub.driver.workflow.itername',
+         'sub.exec_count', 'sub.globals.z1', 'sub.itername', 'sub.states', 'sub.states.y[0]',
          'sub.states.y[1]', 'sub.x1', 'timestamp']
-        
-        expected = ['_driver_id', '_driver_name', '_id', '_itername', '_parent_id', '_pseudo_0.out0', 
-                    '_pseudo_1.out0', '_pseudo_2.out0', 'driver.workflow.itername', 'error_message', 
-                    'error_status', 'half.derivative_exec_count', 'half.exec_count', 'half.itername', 
-                    'half.z2a', 'half.z2b', 'sub._pseudo_0.out0', 'sub.derivative_exec_count', 
-                    'sub.dis1.derivative_exec_count', 'sub.dis1.exec_count', 'sub.dis1.itername', 
+
+        expected = ['_driver_id', '_driver_name', '_id', '_itername', '_parent_id', '_pseudo_0.out0',
+                    '_pseudo_1.out0', '_pseudo_2.out0', 'driver.workflow.itername', 'error_message',
+                    'error_status', 'half.derivative_exec_count', 'half.exec_count', 'half.itername',
+                    'half.z2a', 'half.z2b', 'sub._pseudo_0.out0', 'sub.derivative_exec_count',
+                    'sub.dis1.derivative_exec_count', 'sub.dis1.exec_count', 'sub.dis1.itername',
                     'sub.dis1.y1', 'sub.dis1.y2', 'sub.dis2.derivative_exec_count', 'sub.dis2.exec_count',
-                    'sub.dis2.itername', 'sub.dis2.y2', 'sub.driver.workflow.itername', 'sub.exec_count', 
-                    'sub.globals.z1', 'sub.itername', 'sub.states', 'sub.states.y[0]', 'sub.states.y[1]', 
+                    'sub.dis2.itername', 'sub.dis2.y2', 'sub.driver.workflow.itername', 'sub.exec_count',
+                    'sub.globals.z1', 'sub.itername', 'sub.states', 'sub.states.y[0]', 'sub.states.y[1]',
                     'sub.x1', 'timestamp']
         self.assertEqual(vnames, expected)
 
@@ -168,14 +174,14 @@ class TestCase(unittest.TestCase):
         cases = self.cds.data.fetch()
         self.assertEqual(len(cases), 74)
         self.assertEqual(len(cases[0]), len(expected))
-        
+
         # check to see if the driver method works
-        cases = self.cds.data.driver('driver').fetch() 
+        cases = self.cds.data.driver('driver').fetch()
         self.assertEqual(len(cases), 10)
-        vnames = self.cds.data.driver('driver').var_names().fetch() 
-        expected = ['_driver_id', '_driver_name', '_id', '_itername', '_parent_id', 
-                    '_pseudo_0.out0', '_pseudo_1.out0', '_pseudo_2.out0', 'driver.workflow.itername', 
-                    'error_message', 'error_status', 'half.derivative_exec_count', 'half.exec_count', 
+        vnames = self.cds.data.driver('driver').var_names().fetch()
+        expected = ['_driver_id', '_driver_name', '_id', '_itername', '_parent_id',
+                    '_pseudo_0.out0', '_pseudo_1.out0', '_pseudo_2.out0', 'driver.workflow.itername',
+                    'error_message', 'error_status', 'half.derivative_exec_count', 'half.exec_count',
                     'half.itername', 'half.z2a', 'half.z2b', 'sub.derivative_exec_count', 'sub.exec_count',
                     'sub.globals.z1', 'sub.itername', 'sub.states', 'sub.states.y[0]', 'sub.states.y[1]',
                     'sub.x1', 'timestamp']
@@ -189,22 +195,22 @@ class TestCase(unittest.TestCase):
         cases = self.cds.data.vars(names).fetch()
         self.assertEqual(len(cases), 74)
         self.assertEqual(len(cases[0]), len(names))
-        
+
         # Check to see if the vars and driver method work together
-        cases = self.cds.data.driver('driver').vars('sub.x1').fetch() 
-        expected = [[1.0], [1.0], [-2.2204460492503131e-15], [1.5833286366705896e-15], 
-                    [-1.4920636625846083e-15], [-7.076328627021676e-15], [-4.4055932092474378e-15], 
+        cases = self.cds.data.driver('driver').vars('sub.x1').fetch()
+        expected = [[1.0], [1.0], [-2.2204460492503131e-15], [1.5833286366705896e-15],
+                    [-1.4920636625846083e-15], [-7.076328627021676e-15], [-4.4055932092474378e-15],
                     [-4.0009363277664916e-15], [1.34802409522104e-14], [4.941980752962757e-15]]
 
         for exp, act in zip( expected, cases):
             self.assertAlmostEqual(exp[0], act[0])
 
         #TODO: the order that this returns is not the correct order
-        cases = self.cds.data.driver('driver').vars(['sub.x1', 'half.z2a']).by_variable().fetch() 
-        expected = [[1.0, 1.0, -2.2204460492503131e-15, 1.5833286366705896e-15, -1.4920636625846083e-15, 
-                     -7.076328627021676e-15, -4.4055932092474378e-15, -4.0009363277664916e-15, 
+        cases = self.cds.data.driver('driver').vars(['sub.x1', 'half.z2a']).by_variable().fetch()
+        expected = [[1.0, 1.0, -2.2204460492503131e-15, 1.5833286366705896e-15, -1.4920636625846083e-15,
+                     -7.076328627021676e-15, -4.4055932092474378e-15, -4.0009363277664916e-15,
                      1.34802409522104e-14, 4.941980752962757e-15], [2.0, 2.0, 1.3982923058163501,
-                    0.66069127222525592, -1.1213252548714081e-13, -8.3705631699668261e-13, 
+                    0.66069127222525592, -1.1213252548714081e-13, -8.3705631699668261e-13,
                     -2.5667509986838707e-15, 1.7620750445643237e-15, -8.9255408786136536e-15, -8.2170907529898209e-15]]
 
         for i in range(2):
@@ -218,7 +224,7 @@ class TestCase(unittest.TestCase):
         actual = cases[0]['sub.states']['y']
         for exp, act in zip( expected, actual):
             self.assertAlmostEqual(exp, act)
-            
+
         # Check to see if case method works
         cases = self.cds.data.case('3-sub.5').fetch()
         self.assertEqual(1, len(cases))
