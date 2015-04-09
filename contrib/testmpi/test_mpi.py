@@ -9,12 +9,12 @@ from openmdao.lib.drivers.newton_solver import NewtonSolver
 from openmdao.lib.optproblems import sellar
 
 from openmdao.main.api import Assembly, Component, set_as_top, Driver
-from openmdao.main.datatypes.api import Float, Array
+from openmdao.main.datatypes.api import Float, Array, Str, List
 from openmdao.main.interfaces import implements, ISolver
-from openmdao.main.mpiwrap import MPI
+from openmdao.main.mpiwrap import MPI, MPIContext
 from openmdao.main.test.simpledriver import SimpleDriver
 from openmdao.test.execcomp import ExecComp
-from openmdao.test.mpiunittest import MPITestCase, MPIContext
+from openmdao.test.mpiunittest import MPITestCase
 from openmdao.util.testutil import assert_rel_error
 
 
@@ -34,6 +34,10 @@ class NoDerivSimpleDriverSetter(NoDerivSimpleDriver):
 
 class ABCDArrayComp(Component):
     delay = Float(0.01, iotype='in')
+    in_string = Str(iotype='in')
+    out_string = Str(iotype='out')
+    in_list = List(iotype='in')
+    out_list = List(iotype='out')
 
     def __init__(self, arr_size=9):
         super(ABCDArrayComp, self).__init__()
@@ -46,6 +50,8 @@ class ABCDArrayComp(Component):
         time.sleep(self.delay)
         self.c = self.a + self.b
         self.d = self.a - self.b
+        self.out_string = self.in_string + '_' + self.name
+        self.out_list = self.in_list[:]+[1.5]
 
     def dump(self, comm):
         print "%d: %s.a = %s" % (comm.rank, self.name, self.a)
@@ -507,6 +513,48 @@ class MPITests2(MPITestCase):
 
             if expected:
                 self.fail("not all expected values were found")
+
+
+class MPITests3(MPITestCase):
+
+    N_PROCS = 3
+
+    def test_fan_out_in_noflats(self):
+        size = 5   # array var size
+
+        # a comp feeds 3 parallel comps which feed
+        # another comp
+        top = set_as_top(Assembly())
+        top.add("C1", ABCDArrayComp(size))
+        top.add("C2", ABCDArrayComp(size))
+        top.add("C3", ABCDArrayComp(size))
+        top.add("C4", ABCDArrayComp(size))
+        top.add("C5", ABCDArrayComp(size))
+        top.driver.workflow.add(['C1', 'C2', 'C3', 'C4', 'C5'])
+        top.connect('C1.c', 'C2.a')
+        top.connect('C1.out_string', 'C2.in_string')
+        top.connect('C1.out_list', 'C4.in_list')
+
+        top.connect('C1.d', 'C3.b')
+        top.connect('C1.c', 'C4.a')
+        top.connect('C2.out_string', 'C5.in_string')
+        top.connect('C3.d', 'C5.b')
+        top.connect('C4.c', 'C5.a')
+        top.connect('C4.out_list', 'C5.in_list')
+
+        top.C1.a = np.ones(size, float) * 3.0
+        top.C1.b = np.ones(size, float) * 7.0
+
+        top.C1.in_string = 'foo'
+        top.C1.in_list = [1, 1, 1]
+
+        top.run()
+
+        self.assertTrue(all(top.C5.a==np.ones(size, float)*11.))
+        self.assertTrue(all(top.C5.b==np.ones(size, float)*5.))
+
+        self.assertEqual(top.C5.out_string, 'foo_C1_C2_C5')
+        self.assertEqual(top.C5.out_list, [1, 1, 1, 1.5, 1.5, 1.5])
 
 
 class TestCaseSerial(TestCase):

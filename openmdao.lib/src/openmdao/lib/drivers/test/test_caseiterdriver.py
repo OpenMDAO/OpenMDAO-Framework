@@ -932,7 +932,6 @@ class ParameterTarget(unittest.TestCase):
 
     def test_parameter_target_replace(self):
         a2 = set_as_top(PTAssembly())
-        a2.configure()
         a2.replace('c', PTReplacement())
         # connecting the replacement 'c' to the driver results in the
         # case_inputs.c.i being set to [], so we need to recreate the list of inputs

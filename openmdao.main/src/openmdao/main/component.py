@@ -7,6 +7,7 @@ __all__ = ['Component', 'SimulationRoot']
 import fnmatch
 import glob
 import logging
+import traceback
 import os.path
 from os.path import isabs, isdir, dirname, exists, join, normpath, relpath
 import pkg_resources
@@ -27,6 +28,7 @@ from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, \
 from openmdao.main.hasobjective import HasObjective, HasObjectives
 from openmdao.main.file_supp import FileMetadata
 from openmdao.main.rbac import rbac
+from openmdao.main.mpiwrap import MPI
 from openmdao.main.mp_support import has_interface, is_instance
 from openmdao.main.datatypes.api import Bool, List, Str, Int, Slot, \
                                         FileRef, Enum
@@ -143,10 +145,10 @@ class Component(Container):
                                      'analytical derivatives are provided '
                                      'but some are missing')
 
-    create_instance_dir = Bool(False)
-
     def __init__(self):
         super(Component, self).__init__()
+
+        self.create_instance_dir = False
 
         self.mpi = MPI_info()
 
@@ -366,6 +368,33 @@ class Component(Container):
         for var_name in outputs:
             self._check_deriv_var(var_name)
 
+    def _unique_dirname(self, name):
+        """Return a unique director name based on the starting name."""
+        parent_dir = self.parent.get_abs_directory()
+        new_name = name
+        new_suffix = ''
+        counter = 1
+        new_dir = ''.join((new_name, new_suffix))
+        path = os.path.join(parent_dir, new_dir)
+        while os.path.exists(path):
+            counter += 1
+            new_suffix = '_%d' % counter
+            new_dir = ''.join((new_name, new_suffix))
+            path = os.path.join(parent_dir, new_dir)
+
+        return path
+
+    def _rank_dirname(self, name):
+        """Return a directory name based on the starting name and
+        the MPI rank.
+        """
+        new_suffix = '_%d' % MPI.COMM_WORLD.rank
+        new_dir = ''.join((name, new_suffix))
+        if self.parent:
+            return os.path.join(self.parent.get_abs_directory(), new_dir)
+        else:
+            return new_dir
+
     @rbac(('owner', 'user'))
     def cpath_updated(self):
         """Calls the base class version of *cpath_updated()*, checks our
@@ -374,33 +403,30 @@ class Component(Container):
         super(Component, self).cpath_updated()
 
         if self.create_instance_dir:
-            # Create unique subdirectory of parent based on our name.
-            parent_dir = self.parent.get_abs_directory()
-            new_name = self.name
-            new_suffix = ''
-            counter = 1
-            new_dir = ''.join((new_name, new_suffix))
-            path = os.path.join(parent_dir, new_dir)
-            while os.path.exists(path):
-                counter += 1
-                new_suffix = '_%d' % counter
-                new_dir = ''.join((new_name, new_suffix))
-                path = os.path.join(parent_dir, new_dir)
-            try:
-                os.makedirs(path)
-            except OSError, exc:
-                self.raise_exception("Can't create execution directory '%s': %s"
-                                     % (path, exc.strerror), OSError)
+            if self.create_instance_dir == 'rank':
+                path = self._rank_dirname(self.name)
+                if not os.path.exists(path):
+                    os.makedirs(path)
+            else:
+                # Create unique subdirectory of parent based on our name.
+                path = self._unique_dirname(self.name)
+
+                try:
+                    os.makedirs(path)
+                except OSError, exc:
+                    self.raise_exception("Can't create execution directory '%s': %s"
+                                         % (path, exc.strerror), OSError)
 
             # Populate with external files from config directory.
             config_dir = self.directory
-            self.directory = new_dir
+            self.directory = os.path.basename(path)
 
-            try:
-                self._restore_files(config_dir, '', [], from_egg=False)
-            except Exception:
-                self.directory = config_dir
-                raise
+            if MPI is None or self.mpi.rank == 0:
+                try:
+                    self._restore_files(config_dir, '', [], from_egg=False)
+                except Exception:
+                    self.directory = config_dir
+                    raise
             self.create_instance_dir = False
 
         elif self.directory:
@@ -417,6 +443,11 @@ class Component(Container):
             else:
                 self.check_path(path, check_dir=True)
 
+        # moved this here to allow parent to create new dir before children,
+        # but it breaks things, so need to find another way to handle
+        # directories based on MPI rank
+        #super(Component, self).cpath_updated()
+
         if self._call_configure:
             self.configure()
             self._call_configure = False
@@ -430,6 +461,9 @@ class Component(Container):
 
         if self._call_cpath_updated:
             self.cpath_updated()
+
+        if self.directory:
+            self.push_dir()
 
         if self._new_config:
             self._setup()
@@ -508,9 +542,6 @@ class Component(Container):
             Identifier for the Case that is associated with this run.
         """
 
-        if self.directory:
-            self.push_dir()
-
         self._stop = False
         self._case_uuid = case_uuid
 
@@ -530,13 +561,17 @@ class Component(Container):
             self._post_run()
         except Exception:
             info = sys.exc_info()
+            if MPI:
+                # this can cause the trackback to appear twice, but
+                # better to see it twice than not at all
+                print traceback.format_exc(); sys.stdout.flush()
             self._set_exec_state('INVALID')
             raise info[0], info[1], info[2]
         finally:
             # If this is the top-level component, perform run termination.
             if self.parent is None:
                 self._run_terminated()
-            if self.directory:
+            if self.directory and self._dir_stack:
                 self.pop_dir()
 
     @rbac(('owner', 'user'))

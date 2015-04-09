@@ -9,7 +9,6 @@ import time
 import traceback
 import subprocess
 from cStringIO import StringIO
-from contextlib import contextmanager
 from unittest import TestCase, SkipTest
 from os.path import join, dirname, abspath
 from inspect import getmembers, ismethod, isclass, getargspec
@@ -22,27 +21,6 @@ try:
 except ImportError:
     pass
 else:
-
-    @contextmanager
-    def MPIContext():
-        try:
-            yield
-        except:
-            exc_type, exc_val, exc_tb = sys.exc_info()
-            if exc_val is not None:
-                fail = True
-            else:
-                fail = False
-
-            fails = MPI.COMM_WORLD.allgather(fail)
-
-            if fail or not any(fails):
-                raise exc_type, exc_val, exc_tb
-            else:
-                for i,f in enumerate(fails):
-                    if f:
-                        raise RuntimeError("a test failed in (at least) rank %d" % i)
-
 
     class MPITestCase(TestCase):
         """A base class for all TestCases that are

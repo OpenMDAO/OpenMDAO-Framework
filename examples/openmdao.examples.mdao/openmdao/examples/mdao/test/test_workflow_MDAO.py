@@ -353,7 +353,7 @@ class SolverCO2(Assembly):
         self.driver.gradient_options.force_fd = True
         self.driver.add_parameter('x', low=array([-10, -10]), high=array([10, 10]))
         self.driver.add_objective('(x[0]-1)**2 + (x[1]-1)**2')
-        
+
 class SolverCO2scalar(Assembly):
 
     x = Float(iotype='in', desc='test x')
@@ -385,7 +385,7 @@ class TestSubOptInclusion(unittest.TestCase):
 
         assert_rel_error(self, J[0, 0], 2.0, .001)
         assert_rel_error(self, J[0, 1], 2.0, .001)
-        
+
     def test_SolverCO2scalar(self):
         sim = set_as_top(SolverCO2scalar())
         sim.x = 1.0
@@ -401,4 +401,3 @@ if __name__ == '__main__':
     sys.argv.append('--cover-package=openmdao')
     sys.argv.append('--cover-erase')
     nose.runmodule()
-

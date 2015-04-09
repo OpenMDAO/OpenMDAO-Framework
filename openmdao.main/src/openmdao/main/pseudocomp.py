@@ -386,7 +386,7 @@ class PseudoComponent(object):
         return tuple(self._inputs), ('out0',)
 
     def get_req_cpus(self):
-        return 1
+        return (1, 1)
 
     def setup_init(self):
         self.Jsize = None

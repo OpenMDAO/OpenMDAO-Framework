@@ -30,9 +30,9 @@ class File(Variable):
     :attr:`local_path` is set, then upon assignent the associated file will
     be copied to that path.
     """
-    
+
     def __init__(self, default_value=None, iotype=None, **metadata):
-        
+
         if default_value is not None:
             if isinstance(default_value, FileRef):
                 pass
@@ -44,7 +44,7 @@ class File(Variable):
                 default_value = FileRef(default_value.name)
             else:
                 raise TypeError('File default value must be a FileRef.')
-            
+
         if iotype is not None:
             metadata['iotype'] = iotype
             if iotype == 'out':
@@ -54,7 +54,7 @@ class File(Variable):
                     raise ValueError("'local_path' invalid for output File.")
 
         # iotype of None => we can't check anything.
-            
+
         super(File, self).__init__(default_value, **metadata)
 
 # It appears this scheme won't pickle, requiring a hack in Container...
@@ -215,6 +215,13 @@ class FileRef(FileMetadata):
         mode = 'rb' if self.binary else 'rU'
         return RemoteFile(open(self.abspath(), mode))
 
+    def set_owner_by_name(self, name, scope):
+        parts = name.split('.')
+        if len(parts) == 1:
+            owner = scope
+        else:
+            owner = scope.get(parts[0])
+        self.owner = owner
 
 def _get_valid_owner(owner):
     """ Try to find an owner that supports the required functionality. """
@@ -227,4 +234,3 @@ def _get_valid_owner(owner):
         else:
             return None
     return None
-
