@@ -433,15 +433,19 @@ class InputVecWrapper(VecWrapperBase):
 
             if isinstance(name, tuple):
                 for dest in name[1]:
-                    val = scope.get(dest.split('[')[0])
-                    if isinstance(val, ndarray):
-                        scope.set(dest.split('[')[0], numpy.asarray(val, dtype=numpy.complex128))
+                    if '[' in dest:
+                        val = scope.get(dest.split('[')[0])
+                        if isinstance(val, ndarray):
+                            scope.set(dest.split('[')[0],
+                                      numpy.asarray(val, dtype=numpy.complex128))
                     array_val = scope.get_flattened_value(dest)
                     scope.set_flattened_value(dest, array_val.real + step*1j)
             else:
-                val = scope.get(name.split('[')[0])
-                if isinstance(val, ndarray):
-                    scope.set(name.split('[')[0], numpy.asarray(val, dtype=numpy.complex128))
+                if '[' in name:
+                    val = scope.get(name.split('[')[0])
+                    if isinstance(val, ndarray):
+                        scope.set(name.split('[')[0],
+                                  numpy.asarray(val, dtype=numpy.complex128))
                 array_val = scope.get_flattened_value(name)
                 scope.set_flattened_value(name, array_val.real + step*1j)
 
