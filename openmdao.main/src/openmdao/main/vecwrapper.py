@@ -439,6 +439,9 @@ class InputVecWrapper(VecWrapperBase):
                             scope.set(dest.split('[')[0],
                                       numpy.asarray(val, dtype=numpy.complex128))
                     array_val = scope.get_flattened_value(dest)
+                    # FIXME: the following is a workaround to prevent double
+                    #        perturbations in subassemblies with passthroughs, but
+                    #        we need to fix the actual underlying problem at some point.
                     scope.set_flattened_value(dest, array_val.real + step*1j)
             else:
                 if '[' in name:
@@ -447,6 +450,9 @@ class InputVecWrapper(VecWrapperBase):
                         scope.set(name.split('[')[0],
                                   numpy.asarray(val, dtype=numpy.complex128))
                 array_val = scope.get_flattened_value(name)
+                # FIXME: the following is a workaround to prevent double
+                #        perturbations in subassemblies with passthroughs, but
+                #        we need to fix the actual underlying problem at some point.
                 scope.set_flattened_value(name, array_val.real + step*1j)
 
 
