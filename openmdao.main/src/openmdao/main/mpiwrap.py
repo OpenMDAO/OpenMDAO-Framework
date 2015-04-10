@@ -113,14 +113,14 @@ class MPI_info(object):
 
     @property
     def size(self):
-        if MPI:
+        if MPI and self.comm != COMM_NULL:
             return self.comm.size
         return 1
 
     @property
     def rank(self):
         if MPI:
-            if self.comm is not COMM_NULL:
+            if self.comm != COMM_NULL:
                 return self.comm.rank
             else:
                 return -1
