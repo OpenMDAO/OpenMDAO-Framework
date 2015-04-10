@@ -399,7 +399,7 @@ class PseudoComponent(object):
         pass
 
     def setup_systems(self):
-        return ()
+        pass
 
     def setup_communicators(self, comm, scope=None):
         self.mpi.comm = comm

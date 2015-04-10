@@ -1413,7 +1413,7 @@ class Component(Container):
 
     @rbac(('owner', 'user'))
     def setup_systems(self):
-        return ()
+        pass
 
     @rbac(('owner', 'user'))
     def setup_communicators(self, comm):

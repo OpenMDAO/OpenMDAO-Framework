@@ -2519,9 +2519,7 @@ class TransparentDriverSystem(DriverSystem):
 
 
 class SolverSystem(TransparentDriverSystem):  # Implicit
-    """A System for a Solver component. While it inherits from a SimpleSystem,
-    much of the behavior is like a CompoundSystem, particularly variable
-    propagation."""
+    """A System for a Solver component."""
 
     def _get_resid_state_map(self):
 
