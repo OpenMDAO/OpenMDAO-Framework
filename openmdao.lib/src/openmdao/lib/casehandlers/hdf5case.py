@@ -196,7 +196,7 @@ class HDF5CaseRecorder(object):
         if not driver._system.is_active():
             return # do not want to open file if this driver not active on this process
 
-        if driver.workflow._system.get_req_cpus() > 1:
+        if driver.workflow._system.mpi.size > 1:
             communicator = driver.workflow._system.mpi.comm # Recommened by Bret. check to see if None, MPI.COMM_NULL
             self.hdf5_case_record_file_objects[driver] = h5py.File(case_recording_filename, "w",driver='mpio', comm=communicator)
         else:
