@@ -1,6 +1,7 @@
 import os
 import sys
 import numpy
+from contextlib import contextmanager
 
 # import ctypes
 # import io
@@ -104,21 +105,22 @@ else:
 
 class MPI_info(object):
     def __init__(self):
-        self.requested_cpus = 1
+        # min/max requested cpus
+        self.requested_cpus = (1, 1)
 
         # the MPI communicator used by this comp and its children
         self.comm = COMM_NULL
 
     @property
     def size(self):
-        if MPI:
+        if MPI and self.comm != COMM_NULL:
             return self.comm.size
         return 1
 
     @property
     def rank(self):
         if MPI:
-            if self.comm is not COMM_NULL:
+            if self.comm != COMM_NULL:
                 return self.comm.rank
             else:
                 return -1
@@ -157,30 +159,50 @@ def to_idx_array(idxs):
     """
     return numpy.array(idxs, dtype=idx_arr_type)
 
-def evenly_distrib_idxs(comm, arr_size):
-    """Given an MPI communicator and the size of an array, chop the array up
-    into pieces according to the size of the communicator, keeping the distribution
+def evenly_distrib_idxs(num_divisions, arr_size):
+    """Given a number of divisions and the size of an array, chop the array up
+    into pieces according to number of divisions, keeping the distribution
     of entries as even as possible. Returns a tuple of
-    (start, end, sizes, offsets), where start and end are for the current rank
-    and sizes and offsets contain values for all ranks.
+    (sizes, offsets), where sizes and offsets contain values for all
+    divisions.
     """
-    rank = comm.rank
-
-    base = arr_size / comm.size
-    leftover = arr_size % comm.size
-    sizes = numpy.ones(comm.size, dtype="int") * base
+    base = arr_size / num_divisions
+    leftover = arr_size % num_divisions
+    sizes = numpy.ones(num_divisions, dtype="int") * base
 
     # evenly distribute the remainder across size-leftover procs,
     # instead of giving the whole remainder to one proc
     sizes[:leftover] += 1
 
-    offsets = numpy.zeros(comm.size, dtype="int")
+    offsets = numpy.zeros(num_divisions, dtype="int")
     offsets[1:] = numpy.cumsum(sizes)[:-1]
 
-    start = offsets[rank]
-    end = start + sizes[rank]
+    return sizes, offsets
 
-    return start, end, sizes, offsets
+
+@contextmanager
+def MPIContext():
+    """Wrap this around code that you want to globally fail if it fails
+    on any MPI process in MPI_WORLD.
+    """
+    try:
+        yield
+    except:
+        exc_type, exc_val, exc_tb = sys.exc_info()
+        if exc_val is not None:
+            fail = True
+        else:
+            fail = False
+
+        fails = MPI.COMM_WORLD.allgather(fail)
+
+        if fail or not any(fails):
+            raise exc_type, exc_val, exc_tb
+        else:
+            for i,f in enumerate(fails):
+                if f:
+                    raise RuntimeError("a test failed in (at least) rank %d" % i)
+
 
 
 if os.environ.get('USE_PROC_FILES'):

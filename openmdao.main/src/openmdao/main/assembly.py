@@ -7,7 +7,6 @@ __all__ = ['Assembly', 'set_as_top']
 from fnmatch import fnmatch
 import re
 import sys
-import threading
 import traceback
 from itertools import chain
 
@@ -62,23 +61,12 @@ _iodict = {'out': 'output', 'in': 'input'}
 
 _missing = object()
 
-__has_top__ = False
-__toplock__ = threading.RLock()
-
-
 def set_as_top(cont, first_only=False):
     """Specifies that the given Container is the top of a Container hierarchy.
     If first_only is True, then only set it as a top if a global
     top doesn't already exist.
     """
-    global __has_top__
-    with __toplock__:
-        if __has_top__ is False and isinstance(cont, Assembly):
-            __has_top__ = True
-        elif first_only:
-            return cont
-    if cont._call_cpath_updated:
-        cont.cpath_updated()
+    cont.cpath_updated()
     return cont
 
 
@@ -177,9 +165,6 @@ class Assembly(Component):
 
         # default Driver executes its workflow once
         self.add('driver', Driver())
-
-        # we're the top Assembly only if we're the first instantiated
-        set_as_top(self, first_only=True)
 
         # Assemblies automatically figure out their own derivatives, so
         # any boundary vars that are unconnected should be zero.
@@ -738,6 +723,12 @@ class Assembly(Component):
         for system in self._system.local_subsystems():
             system.pre_run()
         self._system.run(self.itername, case_uuid=self._case_uuid)
+
+        # Need to copy to scope any direct bdry to bdry connections
+        dconns = [c[1] for c in self.list_connections() \
+                  if c[0].split('[')[0].split('.')[0] in self.list_inputs() \
+                  and c[1].split('[')[0].split('.')[0] in self.list_outputs()]
+        self._system.vec['u'].set_to_scope(self, vnames=dconns)
 
     def configure_recording(self, recording_options=None):
         """Called at start of top-level run to configure case recording.
@@ -1633,6 +1624,8 @@ class Assembly(Component):
         are NOT called in execution order because that isn't
         known at this point.
         """
+        self.cpath_updated()
+
         self._var_meta = {}
         self._pre_driver = None
         self._unexecuted = []
