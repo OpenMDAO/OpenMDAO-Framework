@@ -26,7 +26,7 @@ class SensitivityDriver(Driver):
     it as a driver output. The gradient is calculated from all
     inputs (Parameters) to all outputs (Objectives and Constraints).
 
-    SensitivityDriver includes requires OpenMDAO to calculate a gradient.
+    SensitivityDriver requires OpenMDAO to calculate a gradient.
     """
 
     implements(IHasParameters, IHasObjectives, IHasConstraints)
@@ -54,7 +54,6 @@ class SensitivityDriver(Driver):
 
     def execute(self):
         """Calculate the gradient of the workflow."""
-
 
         # Inital run to make sure the workflow executes
         self.run_iteration()
