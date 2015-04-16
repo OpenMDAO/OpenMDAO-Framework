@@ -30,7 +30,12 @@ def _remote_build_and_test(fname=None, pyversion='python', keep=False,
     remotedir = get_tmp_user_dir()
     remote_mkdir(remotedir)
 
-    locbldtstfile = os.path.join(os.path.dirname(__file__), 'loc_bld_tst.py')
+    if cfg and cfg.has_option(hostname, 'anaconda') :
+        locbldtstfile = os.path.join(os.path.dirname(__file__), 'loc_bld_tst_anaconda.py')
+        anaconda = cfg.getboolean(hostname, 'anaconda')
+    else:
+        locbldtstfile = os.path.join(os.path.dirname(__file__), 'loc_bld_tst.py')
+        anaconda = False
 
     pushfiles = [locbldtstfile]
 

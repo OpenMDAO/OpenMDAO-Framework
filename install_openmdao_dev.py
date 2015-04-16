@@ -33,7 +33,8 @@ def check_dist():
     return dist
 
 def install(dist):
-    cmd =['python']
+    # cmd =['python']
+    cmd=[sys.executable]
     if dist == "Anaconda":
         cmd.append('openmdao.devtools/src/openmdao/devtools/conda_build.py')
         cmd.append('dev')
