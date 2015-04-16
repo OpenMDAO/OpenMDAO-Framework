@@ -1586,8 +1586,13 @@ class Assembly(Component):
         of its children that are local to the current MPI process.
         """
         all_locs = set()
-        all_locs.update(self.list_inputs())
-        all_locs.update(self.list_outputs())
+        myvars = self.list_inputs() + self.list_outputs()
+        for v in myvars:
+            obj = getattr(self, v)
+            if isinstance(obj, VariableTree):
+                all_locs.update(obj.list_all_vars())
+            else:
+                all_locs.add(v)
 
         for s in [self._system] + list(self._system.local_subsystems(recurse=True)):
             if isinstance(s, SimpleSystem):
@@ -1599,12 +1604,22 @@ class Assembly(Component):
                     all_locs.update(['.'.join([obj.name, n])
                                           for n in obj.get_all_local_vars()])
                 elif has_interface(obj, IComponent):
-                    lvars = ['.'.join([obj.name, n])
-                                          for n in obj.list_inputs() +
-                                                   obj.list_outputs()]
-                    for i, v in enumerate(lvars):
-                        if v in s.distrib_idxs:
-                            lvars[i] = (v,)  # wrap in tuple to indicate its a distrib var
+                    lvars = []
+                    cvars = obj.list_inputs() + obj.list_outputs()
+                    for v in cvars:
+                        var = getattr(obj, v)
+                        if isinstance(var, VariableTree):
+                            for vtv in var.list_all_vars():
+                                full = '.'.join([obj.name, vtv])
+                                if full in s.distrib_idxs:
+                                    full = (full,)
+                                lvars.append(full)
+                        else:
+                            full = '.'.join([obj.name, v])
+                            if full in s.distrib_idxs:
+                                full = (full,)
+                            lvars.append(full)
+
                     all_locs.update(lvars)
 
                 elif isinstance(s, ParamSystem):
