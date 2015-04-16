@@ -503,6 +503,25 @@ class TestCase(unittest.TestCase):
         for i, name in enumerate(roots[0].iternames()):
             self.assertEqual(name, expected[i])
 
+    def test_noflat(self):
+
+        class A(Component):
+            x = Float(iotype='in', noflat=True)
+            X = Array(iotype='out', noflat=True)
+
+        class Analysis(Assembly):
+            def configure(self):
+                self.add('a', A())
+                self.add('driver', CaseIteratorDriver())
+                self.driver.add_parameter('a.x')
+                self.driver.add_response('a.X')
+
+                self.driver.workflow.add('a')
+
+        top = set_as_top(Analysis())
+        top.run()
+        self.assertTrue(top._pseudo_0._meta['out0'].get('noflat') == True)
+
 
 # Test bugs reported by Pierre-Elouan Rethore regarding problems using List.
 
