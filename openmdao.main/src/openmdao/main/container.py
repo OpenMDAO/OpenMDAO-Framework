@@ -38,7 +38,7 @@ from openmdao.main.datatypes.slot import Slot
 from openmdao.main.datatypes.vtree import VarTree
 from openmdao.main.interfaces import ICaseIterator, IResourceAllocator, \
                                      IContainer, \
-                                     IVariableTree, IContainerProxy
+                                     IVariableTree, IContainerProxy, IOverrideSet
 #from openmdao.main.index import get_indexed_value, deep_hasattr, \
                                 #INDEX, ATTR, SLICE, _index_functs
 from openmdao.main.mp_support import ObjectManager, \
@@ -1011,7 +1011,8 @@ class Container(SafeHasTraits):
         # if restofpath is truthy, it means either that path
         # contains a proxy or it contains some syntax that causes
         # getattr to fail, e.g., a function eval, array element ref, etc.
-        if restofpath and IContainerProxy.providedBy(obj):
+
+        if IOverrideSet.providedBy(obj) or (restofpath and IContainerProxy.providedBy(obj)):
             obj.set(restofpath, value)
             return
 
