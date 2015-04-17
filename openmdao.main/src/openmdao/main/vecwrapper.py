@@ -467,7 +467,7 @@ class DataTransfer(object):
                  scatter_conns, noflat_vars):
         self.scatter = None
         self.scatter_conns = scatter_conns
-        self.noflat_vars = list(noflat_vars)
+        self.noflat_vars = sorted(noflat_vars)
 
         if not (MPI or scatter_conns or noflat_vars):
             return  # no data to xfer
