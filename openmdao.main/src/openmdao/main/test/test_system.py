@@ -182,6 +182,59 @@ class TestArrayComp(unittest.TestCase):
         else:
             self.fail("Exception expected")
 
+    def test_no_flat_subassy_slice(self):
+
+        # Test for a bug that Cal found.
+
+        class BtoR(Component):
+            B = Array(iotype='in', noflat=True)
+            M = Array(iotype='in', noflat=True)
+            R = Array(iotype='out', noflat=True)
+
+            def execute(self):
+                self.R = np.array([np.dot(self.M.T, b) for b in self.B])
+
+        class B(Component):
+            X = Array(iotype='in', noflat=True)
+
+            def execute(self):
+                self.X += 2
+
+        class AA(Assembly):
+            def configure(self):
+                self.add('b_to_r', BtoR())
+                self.create_passthrough('b_to_r.R')
+                self.create_passthrough('b_to_r.M')
+                self.create_passthrough('b_to_r.B')
+                self.driver.workflow.add(['b_to_r'])
+
+        class BB(Assembly):
+            def configure(self):
+                self.add('b', B())
+
+                self.create_passthrough('b.X')
+
+                self.driver.workflow.add(['b'])
+
+        class Analysis(Assembly):
+            def configure(self):
+                self.add('aa', AA())
+                self.add('bb', BB())
+
+                self.connect('aa.R[:4]', 'bb.X')
+
+                self.driver.workflow.add(['aa', 'bb'])
+
+        analysis = set_as_top(Analysis())
+
+        #Initialize camera settings
+        analysis.aa.M = np.eye(3)
+        analysis.aa.B = np.random.random((3,3))
+
+        # Make sure it runs without a size error.
+        analysis.run()
+
+
 class UninitializedArray(unittest.TestCase):
     class C1(Component):
         x = Array(iotype='out')
