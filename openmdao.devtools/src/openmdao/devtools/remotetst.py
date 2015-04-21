@@ -31,11 +31,12 @@ def _remote_build_and_test(fname=None, pyversion='python', keep=False,
     remote_mkdir(remotedir)
 
     if cfg and cfg.has_option(hostname, 'anaconda') :
-        locbldtstfile = os.path.join(os.path.dirname(__file__), 'loc_bld_tst_anaconda.py')
+        # locbldtstfile = os.path.join(os.path.dirname(__file__), 'loc_bld_tst_anaconda.py')
         anaconda = cfg.getboolean(hostname, 'anaconda')
     else:
-        locbldtstfile = os.path.join(os.path.dirname(__file__), 'loc_bld_tst.py')
+        # locbldtstfile = os.path.join(os.path.dirname(__file__), 'loc_bld_tst.py')
         anaconda = False
+    locbldtstfile = os.path.join(os.path.dirname(__file__), 'loc_bld_tst.py')
 
     pushfiles = [locbldtstfile]
 
@@ -69,6 +70,9 @@ def _remote_build_and_test(fname=None, pyversion='python', keep=False,
 
     if testargs:
         remoteargs.append('--testargs="%s"' % testargs)
+
+    if anaconda:
+        remoteargs.append('--anaconda' )
 
     try:
         result = push_and_run(pushfiles, runner=pyversion,

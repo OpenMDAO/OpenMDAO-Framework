@@ -66,12 +66,58 @@ def _run_gofile(startdir, gopath, args=()):
         os.chdir(startdir)
     return retcode
 
+def _run_install_script(startdir, install_script_path, args=()):
+    import os
+    retcode = -1
+    install_script_dir, install_script_file = os.path.split(install_script_path)
+    os.chdir(install_script_dir)
+
+    outname = 'build.out'
+    f = open(outname, 'wb')
+    py = sys.executable.replace('\\','/')
+    envdict = os.environ.copy()
+
+    # import os
+    # os.environ['PATH'] = '/home/ubuntu/anaconda/bin:' + os.environ['PATH'] 
+
+    print 'inside _run_install_script PATH', os.environ['PATH']
+
+
+    # if we're running from inside of a virtualenv, we need to
+    # remove VIRTUAL_ENV from the environment before spawning the
+    # subprocess, else the build will end up inside of devenv
+    # instead of where it's supposed to be
+    # if 'VIRTUAL_ENV' in envdict:
+    #     del envdict['VIRTUAL_ENV']
+    try:
+        print 'running install script with', '%s %s %s' % (py, install_script_file, ' '.join(args))
+        p = subprocess.Popen('%s %s %s' % (py, install_script_file, ' '.join(args)),
+                             stdout=f, stderr=subprocess.STDOUT,
+                             shell=True, env=envdict)
+        _wait(p)
+        retcode = p.returncode
+    finally:
+        f.close()
+        # in some cases there are some unicode characters in the
+        # output which cause fabric to barf, so strip out unicode
+        # before returning
+        if sys.platform.startswith('win'):
+            mode = 'r'
+        else:
+            mode = 'rt'
+        with codecs.open(outname, mode, encoding='ascii', errors='ignore') as f:
+            for line in f:
+                print line,
+        sys.stdout.flush()
+        os.chdir(startdir)
+    return retcode
+
 
 def _run_sub(outname, cmd, env=None):
     f = open(outname, 'wb')
     try:
         p = subprocess.Popen(cmd, stdout=f, stderr=subprocess.STDOUT,
-                             shell=True, env=env)
+                             shell=True, env=env, executable='/bin/bash')
         _wait(p)
     finally:
         f.close()
@@ -107,7 +153,7 @@ def _wait(p):
 
 
 def build_and_test(fname=None, workdir='.', keep=False,
-                   branch=None, testargs=()):
+                   branch=None, anaconda=False, testargs=()):
     """Builds OpenMDAO, either a dev build or a release build, and runs
     the test suite on it.
     """
@@ -139,7 +185,8 @@ def build_and_test(fname=None, workdir='.', keep=False,
         if build_type == 'release':
             envdir, retcode = install_release(fname)
         else: # dev test
-            envdir, retcode = install_dev_env(fname, branch=options.branch)
+            # envdir, retcode = install_dev_env(fname, branch=options.branch)
+            envdir, retcode = install_dev_env(fname, branch=branch, anaconda=anaconda)
     finally:
         os.chdir(workdir)
 
@@ -160,7 +207,7 @@ def build_and_test(fname=None, workdir='.', keep=False,
     sys.stdout.flush()
 
     try:
-        retcode = activate_and_test(envdir, testargs)
+        retcode = activate_and_test(envdir, testargs=testargs, anaconda=anaconda)
         print "test return code =", retcode
     finally:
         sys.stdout.flush()
@@ -209,7 +256,7 @@ def install_release(url):
     return (releasedir, retcode)
 
 
-def install_dev_env(url, branch=None):
+def install_dev_env(url, branch=None, anaconda=False):
     """
     Installs an OpenMDAO dev environment given an OpenMDAO source
     tree.
@@ -267,41 +314,81 @@ def install_dev_env(url, branch=None):
 
     print "building openmdao development environment in %s" % treedir
 
-    gopath = os.path.join(treedir, 'go-openmdao-dev.py')
+    # gopath = os.path.join(treedir, 'go-openmdao-dev.py')
 
-    retcode = _run_gofile(startdir, gopath)
+    # retcode = _run_gofile(startdir, gopath)
 
-    envdir = os.path.join(treedir, 'devenv')
+    install_script_path = os.path.join(treedir, 'install_openmdao_dev.py')
+
+    print 'calling _run_install_script'
+    retcode = _run_install_script(startdir, install_script_path)
+
+
+
+    if anaconda:
+        envdir = treedir
+    else:
+        envdir = os.path.join(treedir, 'devenv')
+
+
+
+    # envdir = treedir # qqq in the new version
+    
+
+
+
+
+
     print 'new openmdao environment built in %s' % envdir
 
     return (envdir, retcode)
 
 
-def activate_and_test(envdir, testargs=()):
+def activate_and_test(envdir, testargs=(), anaconda=False):
     """
     Runs the test suite on an OpenMDAO virtual environment located
     in the specified directory.
 
     Returns the return code of the process that runs the test suite.
     """
-    if sys.platform.startswith('win'):
-        devbindir = 'Scripts'
-        command = 'activate.bat && openmdao test %s' % ' '.join(testargs)
-    else:
-        devbindir = 'bin'
-        command = '. ./activate && openmdao test %s 2>&1 | tee ../../test.out' \
-                  % ' '.join(testargs)
 
-    # activate the environment and run tests
-    devbinpath = os.path.join(envdir, devbindir)
-    os.chdir(devbinpath)
-    print "running tests from %s" % devbinpath
-    env = os.environ.copy()
-    for name in ['VIRTUAL_ENV', '_OLD_VIRTUAL_PATH', '_OLD_VIRTUAL_PROMPT']:
-        if name in env:
-            del env[name]
-    print "command = ", command
-    return _run_sub('test.out', command, env=env)
+    if anaconda:
+        if sys.platform.startswith('win'):
+            command = 'activate openmdao-dev && openmdao test %s' % ' '.join(testargs)
+        else:
+            command = 'source activate openmdao-dev && openmdao test %s 2>&1 | tee ../test.out' \
+                      % ' '.join(testargs)
+
+        # activate the environment and run tests
+        # devbinpath = os.path.join(envdir, devbindir)
+        os.chdir(envdir)
+        print "running tests from %s" % envdir
+        # print "running tests from %s" % devbinpath
+        env = os.environ.copy()
+        # for name in ['VIRTUAL_ENV', '_OLD_VIRTUAL_PATH', '_OLD_VIRTUAL_PROMPT']:
+        #     if name in env:
+        #         del env[name]
+        print "command = ", command
+        return _run_sub('test.out', command, env=env)
+    else:
+        if sys.platform.startswith('win'):
+            devbindir = 'Scripts'
+            command = 'activate.bat && openmdao test %s' % ' '.join(testargs)
+        else:
+            devbindir = 'bin'
+            command = '. ./activate && openmdao test %s 2>&1 | tee ../../test.out' \
+                      % ' '.join(testargs)
+
+        # activate the environment and run tests
+        devbinpath = os.path.join(envdir, devbindir)
+        os.chdir(devbinpath)
+        print "running tests from %s" % devbinpath
+        env = os.environ.copy()
+        for name in ['VIRTUAL_ENV', '_OLD_VIRTUAL_PATH', '_OLD_VIRTUAL_PROMPT']:
+            if name in env:
+                del env[name]
+        print "command = ", command
+        return _run_sub('test.out', command, env=env)
 
 
 if __name__ == '__main__':
@@ -321,6 +408,7 @@ if __name__ == '__main__':
     parser.add_option("--testargs", action="store", type='string',
                       dest='testargs', default='',
                       help="args to pass to openmdao test")
+    parser.add_option("--anaconda", action="store_true", dest="anaconda", default=False)
 
     # Handle quoting problem that happens on Windows (at least).
     # (--testargs="-v --gui" gets split into: '--testargs="-v', '--gui', '"')
@@ -338,6 +426,6 @@ if __name__ == '__main__':
     (options, args) = parser.parse_args(args)
 
     sys.exit(build_and_test(fname=options.fname, workdir=options.directory,
-                            branch=options.branch,
+                            branch=options.branch,anaconda=options.anaconda,
                             testargs=shlex.split(options.testargs)))
 
