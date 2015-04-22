@@ -135,11 +135,18 @@ class PseudoComponent(object):
         varmap[refs[0]] = 'out0'
         rvarmap.setdefault(_get_varname(refs[0]), set()).add(refs[0])
 
+        noflat = False
         for name, meta in srcexpr.get_metadata():
+
+            # If any input is noflat, then the output must be too.
+            if 'noflat' in meta:
+                noflat = True
             for rname in rvarmap[name]:
                 self._meta[varmap[rname]] = meta
 
         for name, meta in destexpr.get_metadata():
+            if noflat and 'noflat' not in meta:
+                meta['noflat'] = True
             for rname in rvarmap[name]:
                 self._meta[varmap[rname]] = meta
 
@@ -386,7 +393,7 @@ class PseudoComponent(object):
         return tuple(self._inputs), ('out0',)
 
     def get_req_cpus(self):
-        return 1
+        return (1, 1)
 
     def setup_init(self):
         self.Jsize = None

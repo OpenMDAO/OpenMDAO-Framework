@@ -2,8 +2,9 @@
 import numpy as np
 import sys
 
+from openmdao.main.mpiwrap import MPIContext
+from openmdao.test.mpiunittest import MPITestCase
 from openmdao.util.testutil import assert_rel_error
-from openmdao.test.mpiunittest import MPITestCase, MPIContext
 from openmdao.main.api import Assembly, Component, set_as_top, Driver
 from openmdao.main.datatypes.api import Float, Array
 from openmdao.main.test.simpledriver import SimpleDriver

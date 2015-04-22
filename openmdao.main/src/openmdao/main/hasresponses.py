@@ -35,6 +35,23 @@ class Response(ConnectedExprEvaluator):
             else:
                 scope.remove(self._pseudo.name)
 
+    def evaluate(self, scope=None):
+        """Use the value in the u vector if it exists instead of pulling
+        the value from scope.
+        """
+        if self.pcomp_name:
+            scope = self._get_updated_scope(scope)
+            try:
+                system = getattr(scope, self.pcomp_name)._system
+                vname = self.pcomp_name + '.out0'
+                if scope._var_meta[vname].get('scalar'):
+                    return system.vec['u'][scope.name2collapsed[vname]][0]
+                else:
+                    return system.vec['u'][scope.name2collapsed[vname]]
+            except (KeyError, AttributeError):
+                pass
+
+        return super(Response, self).evaluate(scope)
 
 class HasResponses(object):
     """This class provides an implementation of the IHasResponses interface."""
@@ -193,19 +210,11 @@ class HasResponses(object):
 
     def eval_responses(self):
         """Returns a list of values of the evaluated responses."""
-        scope = self._get_scope()
-        responses = []
-        for response in self._responses.values():
-            pcomp = getattr(scope, response.pcomp_name)
-            responses.append(pcomp.out0)
-        return responses
+        return [r.evaluate() for r in self._responses.values()]
 
     def eval_response(self, name):
         """Returns the value of response `name`."""
-        scope = self._get_scope()
-        response = self._responses[name]
-        pcomp = getattr(scope, response.pcomp_name)
-        return pcomp.out0
+        return self._responses[name].evaluate()
 
     def list_pseudocomps(self):
         """Returns a list of pseudocomponent names associated with our
@@ -284,10 +293,10 @@ class HasVarTreeResponses(HasResponses):
 
     def init_responses(self, length):
         """Initializes response storage in the driver."""
-        nans = [float('NaN')] * length
+        nan = float('NaN')
         for path in self._responses:
-            path = make_legal_path(path)
-            self.parent.set('case_outputs.'+path, list(nans))
+            self.parent.case_outputs.set(make_legal_path(path),
+                                         [nan] * length)
 
     def remove_response(self, expr):
         """Removes the specified response expression. Spaces within

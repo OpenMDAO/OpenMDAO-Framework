@@ -346,46 +346,6 @@ def retrieve_docs(remote_dir):
     remote_py_cmd(cmds)
     get(os.path.join(remote_dir, 'html.tar.gz'), 'html.tar.gz')
 
-
-@stub_if_missing_deps('fabric')
-def retrieve_pngs(remote_dir):
-    """Retrieve a tar file of PNG & server files generated on a remote machine."""
-    cmds = [
-        "import tarfile",
-        "import os",
-        "import glob",
-        "import sys",
-        "remote_dir = os.path.expanduser('%s')" % remote_dir,
-        "for fname in os.listdir(remote_dir):",
-        "    if '-OpenMDAO-Framework-' in fname and not fname.endswith('.gz'):",
-        "        break",
-        "else:",
-        "    raise RuntimeError('install dir not found in %s' % remote_dir)",
-        "if sys.platform == 'win32':",
-        "    pngdir = os.path.join(remote_dir, fname, 'devenv', 'Scripts')",
-        "else:",
-        "    pngdir = os.path.join(remote_dir, fname, 'devenv', 'bin')",
-        "tar = tarfile.open(os.path.join(remote_dir, 'png.tar'), mode='w')",
-        "for pattern in ('*.png', '*-log.txt', '*-stdout.txt'):",
-        "    for path in glob.glob(os.path.join(pngdir, pattern)):",
-        "        tar.add(path)",
-        "tar.close()",
-    ]
-
-    for pattern in ('*.png', '*-log.txt', '*-stdout.txt'):
-        for name in glob.glob(pattern):
-            os.remove(name)
-    remote_py_cmd(cmds)
-    get(os.path.join(remote_dir, 'png.tar'), 'png.tar')
-    tar = tarfile.open('png.tar', mode='r')
-    for name in tar.getnames():
-        fileobj = tar.extractfile(name)
-        with open(os.path.basename(name), 'wb') as png:
-            png.write(fileobj.read())
-        fileobj.close()
-    tar.close()
-
-
 #
 # Git related utilities
 #
@@ -461,11 +421,11 @@ def do_line_profile(follow=[]):
     Decorator for profiling a function line by line
     using `line_profiler`. To use the decorator, `line_profiler`
     must be installed manually, as it is not required
-    by openmdao.devtools. 
- 
+    by openmdao.devtools.
+
     You can obtain `line_profiler` at http://pypi.python.org/pypi/line_profiler
 
-    If `line_profiler` cannot be imported, fallback to 
+    If `line_profiler` cannot be imported, fallback to
     profiling using `cProfile`
     """
 
@@ -488,5 +448,3 @@ def do_line_profile(follow=[]):
     except ImportError:
         print "Could not import 'line_profiler'. Falling back to profiling using 'cProfile'."
         return do_cprofile
-        
-

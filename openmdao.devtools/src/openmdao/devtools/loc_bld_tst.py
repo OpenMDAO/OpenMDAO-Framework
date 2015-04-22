@@ -203,8 +203,19 @@ def build_and_test(fname=None, workdir='.', keep=False,
     print '\ntesting  (testargs=%s) ...' % testargs
     sys.stdout.flush()
 
+    #do mpi testing only on machines on which mpi is present
     try:
-        retcode = activate_and_test(envdir, testargs=testargs, anaconda=anaconda)
+        __import__('mpi4py')
+    except ImportError:
+        mpi = False
+    else:
+        mpi = True
+
+    try:
+        if not mpi:
+            retcode = activate_and_test(envdir, testargs,anaconda=anaconda)
+        else:
+            retcode = activate_and_test_mpi(envdir, testargs, anaconda=anaconda)
         print "test return code =", retcode
     finally:
         sys.stdout.flush()
@@ -368,6 +379,31 @@ def activate_and_test(envdir, testargs=(), anaconda=False):
         print "command = ", command
         return _run_sub('test.out', command, env=env)
 
+def activate_and_test_mpi(envdir, testargs=()):
+    """
+    Runs the mpi test suite using testflo
+    Returns the return code of the process that runs the test suite.
+    """
+    if sys.platform.startswith('win'):
+        devbindir = 'Scripts'
+        act_cmd = 'activate.bat'
+    else:
+        devbindir = 'bin'
+        act_cmd = '. ./activate'
+
+    devbinpath = os.path.join(envdir, devbindir)
+    os.chdir(devbinpath)
+
+    env = os.environ.copy()
+    for name in ['VIRTUAL_ENV', '_OLD_VIRTUAL_PATH', '_OLD_VIRTUAL_PROMPT']:
+        if name in env:
+            del env[name]
+    #Do everything in one big command, because issuing separate ones clones new shells,
+    #in which we are not activated nor in the same dir.
+    command = act_cmd + " && cd ../.. && git clone http://github.com/naylor-b/testflo.git && cd testflo && python setup.py install && cd .. && testflo -i contrib/testmpi"
+    print "command = ", command
+    return _run_sub('activate_and_test.out', command, env=env)
+
 
 if __name__ == '__main__':
     from optparse import OptionParser
@@ -406,4 +442,3 @@ if __name__ == '__main__':
     sys.exit(build_and_test(fname=options.fname, workdir=options.directory,
                             branch=options.branch,anaconda=options.anaconda,
                             testargs=shlex.split(options.testargs)))
-

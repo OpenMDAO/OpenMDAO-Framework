@@ -73,6 +73,7 @@ Component, Driver, Variable and other plugins for OpenMDAO
       openmdao.lib.drivers.newton_solver.NewtonSolver = openmdao.lib.drivers.newton_solver:NewtonSolver
       openmdao.lib.drivers.newsumtdriver.NEWSUMTdriver = openmdao.lib.drivers.newsumtdriver:NEWSUMTdriver
       openmdao.lib.drivers.simplecid.SimpleCaseIterDriver = openmdao.lib.drivers.simplecid:SimpleCaseIterDriver
+      openmdao.lib.drivers.mpicasedriver.MPICaseDriver = openmdao.lib.drivers.mpicasedriver.MPICaseDriver
       openmdao.lib.drivers.slsqpdriver.SLSQPdriver = openmdao.lib.drivers.slsqpdriver:SLSQPdriver
       openmdao.lib.drivers.sensitivity.SensitivityDriver = openmdao.lib.drivers.sensitivity:SensitivityDriver
       openmdao.lib.drivers.brent.Brent = openmdao.lib.drivers.brent:Brent

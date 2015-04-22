@@ -82,7 +82,7 @@ class System(object):
         self._out_nodes = sorted(self._out_nodes)
 
         self.mpi = MPI_info()
-        self.mpi.requested_cpus = None
+        self.mpi.requested_cpus = (1,1)
         self.vec = {}
         self.app_ordering = None
         self.scatter_full = None
@@ -122,6 +122,27 @@ class System(object):
                     return s
 
         return None
+
+    def is_variable_local(self, name):
+        """Returns True if the variable in name is local to this process,
+        otherwise it returns False. If name can't be found, then an exception
+        is raised."""
+
+        # Regular paths, get the compname
+        cname = name.split('.')[0]
+
+        # If name is a boundary var, then it belongs to our containing
+        # assembly, which must be local.
+        if cname in self.scope.list_vars():
+            return True
+
+        system = self.scope._system.find_system(cname, recurse_subassy=False)
+
+        if system:
+            return system.is_active()
+
+        msg = 'Cannot find a system that contains varpath %s' % name
+        raise RuntimeError(msg)
 
     def is_differentiable(self):
         """Return True if analytical derivatives can be
@@ -464,7 +485,6 @@ class System(object):
 
         if not self.is_active():
             self.local_var_sizes = numpy.zeros((0,0), int)
-            self.noflat_var_sizes = numpy.zeros((0,0), int)
             self.input_sizes = numpy.zeros(0, int)
             return
 
@@ -479,13 +499,18 @@ class System(object):
         # create an (nproc x numvars) var size vector containing
         # local sizes across all processes in our comm
         self.local_var_sizes = numpy.zeros((size, len(self.vector_vars)), int)
-        self.noflat_var_sizes = numpy.zeros((size, len(self.noflat_vars)), int)
+
+        # create a vec indicating whether a nonflat variable is active
+        # in this rank or not
+        self.noflat_isactive = numpy.zeros((size, len(self.noflat_vars)), int)
 
         ours = numpy.zeros((1, len(self.vector_vars)), int)
         for i, (name, var) in enumerate(self.vector_vars.items()):
             ours[0, i] = var['size']
-        for i, (name, var) in enumerate(self.noflat_vars.items()):
-            self.noflat_var_sizes[rank, i] = 1
+
+        our_noflats = numpy.zeros((1, len(self.noflat_vars)), int)
+        for i, name in enumerate(self.noflat_vars.keys()):
+            our_noflats[0, i] = int(self.is_variable_local(name[0]))
 
         # collect local var sizes from all of the processes in our comm
         # these sizes will be the same in all processes except in cases
@@ -494,8 +519,7 @@ class System(object):
         # only have a slice of each of the component's variables.
         if MPI:
             comm.Allgather(ours[0,:], self.local_var_sizes)
-            comm.Allgather(self.noflat_var_sizes[rank,:],
-                           self.noflat_var_sizes)
+            comm.Allgather(our_noflats[0,:], self.noflat_isactive)
 
         self.local_var_sizes[rank, :] = ours[0, :]
 
@@ -646,7 +670,7 @@ class System(object):
         stream.write(" "*nest)
         stream.write(str(self.name).replace(' ','').replace("'",""))
         klass = self.__class__.__name__
-        stream.write(" [%s](req=%d)(rank=%d)(vsize=%d)(isize=%d)\n" %
+        stream.write(" [%s](req=%s)(rank=%d)(vsize=%d)(isize=%d)\n" %
                                           (klass.lower()[:5],
                                            self.get_req_cpus(),
                                            world_rank,
@@ -943,7 +967,7 @@ class SimpleSystem(System):
     def __init__(self, scope, graph, name):
         comp = None
         nodes = set([name])
-        cpus = 1
+        cpus = (1, 1)
         self._grouped_nodes = name
         if not isinstance(name, tuple):
             self._grouped_nodes = tuple([name])
@@ -1015,13 +1039,14 @@ class SimpleSystem(System):
 
     def setup_communicators(self, comm):
         if self._comp:
-            cpus = self._comp.get_req_cpus()
-            if cpus == 1 or IAssembly.providedBy(self._comp) or IDriver.providedBy(self._comp):
+            cpus, max_cpus = self._comp.get_req_cpus()
+            if max_cpus==1 or max_cpus is None or MPI is None or comm==MPI.COMM_NULL or comm.size <= max_cpus or \
+                               IAssembly.providedBy(self._comp) or \
+                               IDriver.providedBy(self._comp):
                 pass
             else:
-                color = [0] * cpus
-                if comm.size > cpus:
-                    color.extend([MPI.UNDEFINED]*(comm.size-cpus))
+                color = [0] * max_cpus
+                color.extend([MPI.UNDEFINED]*(comm.size-max_cpus))
 
                 comm = comm.Split(color[comm.rank])
 
@@ -1553,7 +1578,8 @@ class AssemblySystem(SimpleSystem):
         if not recurse_subassy:
             return None
 
-        return self._comp._system.find_system(name, recurse_subassy=recurse_subassy)
+        if self._comp:
+            return self._comp._system.find_system(name, recurse_subassy=recurse_subassy)
 
 
 class CompoundSystem(System):
@@ -1695,8 +1721,6 @@ class CompoundSystem(System):
 
         dest_start = numpy.sum(input_sizes[:rank])
 
-        #print "SCATTERS for %s" % str(self.name)
-        #print "vars:",self.vector_vars.keys()
         for subsystem in self.all_subsystems():
             src_partial = []
             dest_partial = []
@@ -1755,16 +1779,12 @@ class CompoundSystem(System):
                     scatter_conns_full.add(node)
 
             if MPI or scatter_conns or noflat_conns:
-                #print "PARTIAL %s --> %s: %s --> %s" % (self.name, subsystem.name, idx_merge(src_partial),
-                #                                        idx_merge(dest_partial)); sys.stdout.flush()
                 subsystem.scatter_partial = DataTransfer(self, src_partial,
                                                          dest_partial,
                                                          scatter_conns, noflat_conns)
 
             # special partial reverse scatter for adjoint linearGS
             if scatter_conns_rev:
-                #print "PARTIAL rev %s --> %s: %s --> %s" % (self.name, subsystem.name, idx_merge(src_rev_partial),
-                #                                        idx_merge(dest_rev_partial)); sys.stdout.flush()
                 subsystem.scatter_partial_rev = DataTransfer(self, src_rev_partial,
                                                              dest_rev_partial,
                                                              scatter_conns_rev, set())
@@ -1894,10 +1914,19 @@ class SerialSystem(CompoundSystem):
             s.set_ordering(ordering, opaque_map)
 
     def get_req_cpus(self):
-        cpus = []
+        cpus = [(1,1)]
         for sub in self.all_subsystems():
             cpus.append(sub.get_req_cpus())
-        self.mpi.requested_cpus = max(cpus+[1])
+
+        min_cpu = max([mincpu for mincpu, maxcpu in cpus])
+        maxs = [maxcpu for mincpu, maxcpu in cpus]
+        if None in maxs:
+            max_cpu = None
+        else:
+            max_cpu = max(maxs)
+
+        self.mpi.requested_cpus = (min_cpu, max_cpu)
+
         return self.mpi.requested_cpus
 
     def run(self, iterbase, case_label='', case_uuid=None):
@@ -1951,13 +1980,22 @@ class SerialSystem(CompoundSystem):
 class ParallelSystem(CompoundSystem):
 
     def get_req_cpus(self):
-        cpus = 0
+        cpus = []
+        for sub in self.all_subsystems():
+            cpus.append(sub.get_req_cpus())
+
         # in a parallel system, the required cpus is the sum of
         # the required cpus of the members
-        for node, data in self.graph.nodes_iter(data=True):
-            cpus += data['system'].get_req_cpus()
-        self.mpi.requested_cpus = cpus
-        return cpus
+        min_cpu = sum([mincpu for mincpu, maxcpu in cpus])
+        maxs = [maxcpu for mincpu, maxcpu in cpus]
+        if None in maxs:
+            max_cpu = None
+        else:
+            max_cpu = sum(maxs)
+
+        self.mpi.requested_cpus = (min_cpu, max_cpu)
+
+        return self.mpi.requested_cpus
 
     def run(self, iterbase, case_label='', case_uuid=None):
         # don't scatter unless we contain something that's actually
@@ -1995,12 +2033,13 @@ class ParallelSystem(CompoundSystem):
 
         subsystems = []
         requested_procs = []
+        max_req_procs = []
         for system in self.all_subsystems():
             subsystems.append(system)
-            cpus = system.get_req_cpus()
-            if cpus < 1:
-                cpus = 1
-            requested_procs.append(cpus)
+            mincpu, maxcpu = system.get_req_cpus()
+            assert(mincpu > 0)
+            requested_procs.append(mincpu)
+            max_req_procs.append(maxcpu)
 
         assigned_procs = [0]*len(requested_procs)
 
@@ -2008,14 +2047,21 @@ class ParallelSystem(CompoundSystem):
 
         requested = sum(requested_procs)
 
-        limit = min(size, requested)
+        mn, mx = self.get_req_cpus()
+        if mx is None:
+            limit = size
+            max_requested = size
+        else:
+            max_requested = sum(max_req_procs)
+            limit = min(size, max_requested)
 
         # first, just use simple round robin assignment of requested CPUs
         # until everybody has what they asked for or we run out
         if requested:
             while assigned < limit:
                 for i, system in enumerate(subsystems):
-                    if assigned_procs[i] < requested_procs[i]:
+                    if max_req_procs[i] is None or \
+                                   assigned_procs[i] < max_req_procs[i]:
                         assigned_procs[i] += 1
                         assigned += 1
                         if assigned == limit:
@@ -2024,12 +2070,13 @@ class ParallelSystem(CompoundSystem):
         self._local_subsystems = []
 
         for i,sub in enumerate(subsystems):
-            if requested_procs[i] > 0 and assigned_procs[i] == 0:
-                raise RuntimeError("subsystem group %s requested %d processors but got 0" %
-                                   (sub.name, requested_procs[i]))
+            if requested_procs[i] > assigned_procs[i]:
+                raise RuntimeError("subsystem group %s requested %d processors but got %s" %
+                                   (sub.name, requested_procs[i], assigned_procs[i]))
+
 
         color = []
-        for i, procs in enumerate([p for p in assigned_procs if p > 0]):
+        for i, procs in enumerate(assigned_procs):
             color.extend([i]*procs)
 
         if size > assigned:
@@ -2701,11 +2748,11 @@ def get_comm_if_active(obj, comm):
     if comm is None or comm == MPI.COMM_NULL:
         return comm
 
-    req = obj.get_req_cpus()
-    if req == comm.size:
+    req, max_req = obj.get_req_cpus()
+    if max_req is None or max_req >= comm.size:
         return comm
 
-    if comm.rank+1 > req:
+    if comm.rank+1 > max_req:
         color = MPI.UNDEFINED
     else:
         color = 1
