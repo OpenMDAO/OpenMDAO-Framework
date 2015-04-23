@@ -203,8 +203,9 @@ def build_and_test(fname=None, workdir='.', keep=False,
     print '\ntesting  (testargs=%s) ...' % testargs
     sys.stdout.flush()
 
-    retcode = activate_and_test(envdir, testargs,anaconda=anaconda, mpi=mpi)
-    print "test return code =", retcode
+    try:
+        retcode = activate_and_test(envdir, testargs,anaconda=anaconda, mpi=mpi)
+        print "test return code =", retcode
 
     finally:
         sys.stdout.flush()
@@ -456,4 +457,5 @@ if __name__ == '__main__':
 
     sys.exit(build_and_test(fname=options.fname, workdir=options.directory,
                             branch=options.branch,anaconda=options.anaconda,
+                            mpi=options.mpi,
                             testargs=shlex.split(options.testargs)))
