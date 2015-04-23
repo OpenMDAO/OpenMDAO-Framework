@@ -154,6 +154,11 @@ class IContainerProxy(IContainer):
     """Marker interface for proxy containers."""
 
 
+class IOverrideSet(IContainer):
+    """Marker interface for a container that must do it's own sets rather than
+    having the parent container evaluate it's member variables as an expression.
+    """
+
 class IVariableTree(IContainer):
     """Marker interface for VariableTrees."""
 
@@ -501,7 +506,7 @@ class IHasCouplingVars(Interface):
 
     #def list_global_des_vars():
         #"""returns a list of all the names of global design variable objects in the assembly"""
-        
+
 class IPredictor(Interface):
 
     def get_uncertain_value(value):
@@ -539,7 +544,7 @@ class IMultiFiSurrogate(IPredictor):
             Values representing the multi-fidelity training case input history.
         y: list of lists
             Training case output history for this surrogate's output,
-            which corresponds to the multi-fidelity training case input history 
+            which corresponds to the multi-fidelity training case input history
             given by X.
         """
 
