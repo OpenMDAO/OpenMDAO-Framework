@@ -36,9 +36,9 @@ def _remote_build_and_test(fname=None, pyversion='python', keep=False,
         anaconda = False
 
     if cfg and cfg.has_option(hostname, 'mpi') :
-        anaconda = cfg.getboolean(hostname, 'mpi')
+        mpi = cfg.getboolean(hostname, 'mpi')
     else:
-        anaconda = False
+        mpi = False
 
     locbldtstfile = os.path.join(os.path.dirname(__file__), 'loc_bld_tst.py')
 
