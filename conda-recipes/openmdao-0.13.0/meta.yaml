@@ -38,6 +38,7 @@ requirements:
         - pycrypto ==2.3
         - pyevolve ==0.6
         - pyparsing >=1.5.7
+        - pytz >=2014.4
         - requests ==2.2.1
         - scipy >=0.11
         - sphinx ==1.2.2

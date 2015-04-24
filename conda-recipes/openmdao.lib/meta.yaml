@@ -21,6 +21,7 @@ requirements:
     - cobyla
     - conmin
     - newsumt
+    - pytz
     - slsqp
 
 build:
