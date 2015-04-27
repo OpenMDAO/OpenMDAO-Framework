@@ -1,9 +1,18 @@
+{% set pkg_version = environ['PKG_VERSION'] %}
+{% set remote = "https://github.com/OpenMDAO/OpenMDAO-Framework.git" %}
+
+{% if pkg_version == "dev" %}
+{% set source="git_url: {}\n  git_branch: {}".format(remote, pkg_version) %}
+{% else %}
+{% set source="  git_url: {}\n  git_branch: {}".format(remote, pkg_version) %}
+{% endif %}
+
 package:
   name: openmdao.lib
   version: !!str {{ pkg_version }}
 
 source:
-    path: ../../openmdao.lib
+{{ source }}
 
 requirements:
   build:
@@ -21,6 +30,7 @@ requirements:
     - cobyla
     - conmin
     - newsumt
+    - pytz
     - slsqp
 
 build:
