@@ -580,10 +580,7 @@ class UnitConversionPComp(PseudoComponent):
         """
         super(UnitConversionPComp, self).ensure_init()
 
-        #src    = PhysicalQuantity(1.0, self._srcunits)
         target = self._meta['out0'].get('units')
-        #src.convert_to_unit(target)
-        #self.grad = src.get_value()
         self.grad, _ = get_conversion_tuple(self._srcunits, target)
 
     def provideJ(self):

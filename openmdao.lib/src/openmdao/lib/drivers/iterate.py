@@ -112,7 +112,6 @@ class FixedPointIterator(Driver):
 
     def post_iteration(self):
         """Runs after each iteration"""
-        print self.workflow._system.vec['f'].array
         self.normval = get_norm(self.workflow._system.vec['f'],
                                 self._norm_order)
         if self.iprint > 0:
