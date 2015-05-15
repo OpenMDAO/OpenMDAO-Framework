@@ -283,6 +283,54 @@ class CompInch(Component):
         output_keys = ('y',)
         return input_keys, output_keys
 
+class CompDegC(Component):
+    """ Evaluates the equation y=x"""
+
+    x = Float(1.0, iotype='in')
+    y = Float(1.0, iotype='out', units='degC')
+
+    def execute(self):
+        """ Executes it """
+
+        self.y = self.x
+
+    def provideJ(self):
+        """Analytical first derivatives"""
+
+        dy_dx = 1.0
+        self.J = array([[dy_dx]])
+        return self.J
+
+    def list_deriv_vars(self):
+        input_keys = ('x',)
+        output_keys = ('y',)
+        return input_keys, output_keys
+
+
+class CompDegF(Component):
+    """ Evaluates the equation y=x"""
+
+    x = Float(1.0, iotype='in', units='degF')
+    y = Float(1.0, iotype='out')
+
+    def execute(self):
+        """ Executes it """
+
+        self.y = self.x
+
+    def provideJ(self):
+        """Analytical first derivatives"""
+
+        dy_dx = 1.0
+        self.J = array([[dy_dx]])
+        return self.J
+
+    def list_deriv_vars(self):
+        input_keys = ('x',)
+        output_keys = ('y',)
+        return input_keys, output_keys
+
+
 class ArrayComp1(Component):
     '''Array component'''
 
@@ -2739,6 +2787,30 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
 
         J = top.driver.calc_gradient(mode='adjoint')
         assert_rel_error(self, J[0, 0], 48.0, .001)
+
+    def test_unit_with_offset(self):
+        top = set_as_top(Assembly())
+
+        top.add('comp1', CompDegC())
+        top.add('comp2', CompDegF())
+
+        top.connect('comp1.y', 'comp2.x')
+
+        top.add('driver', SimpleDriver())
+        top.driver.workflow.add(['comp1', 'comp2'])
+
+        top.driver.add_parameter('comp1.x', low=-50., high=50., fd_step=.0001)
+        top.driver.add_objective('comp2.y')
+
+        top.comp1.x = 55.0
+        top.run()
+
+        J = top.driver.calc_gradient(outputs=['comp2.y'],
+                                     mode='forward')
+        assert_rel_error(self, J[0, 0], 1.8, .001)
+
+        J = top.driver.calc_gradient(mode='adjoint')
+        assert_rel_error(self, J[0, 0], 1.8, .001)
 
     def test_paramgroup(self):
 

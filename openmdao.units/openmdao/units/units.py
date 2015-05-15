@@ -802,6 +802,25 @@ def convert_units(value, units, convunits):
     pq.convert_to_unit(convunits)
     return pq.value
 
+def get_conversion_tuple(src_units, target_units):
+    """Return the factor and offset between the 2 compatible units.
+
+    value: float
+        Quantity you would like to convert
+
+    src_units: string
+        Valid unit string that declares the source units.
+
+    target_units: string
+        Valid unit string that declares the target units.
+
+    Returns
+    tuple(float, float): Tuple containing the conversion factor and offset
+    """
+    pq = PhysicalQuantity(1.0, src_units)
+    target = _find_unit(target_units)
+    return pq.unit.conversion_tuple_to(target)
+
 
 try:
     default_lib = resource_stream(__name__, 'unitLibdefault.ini')

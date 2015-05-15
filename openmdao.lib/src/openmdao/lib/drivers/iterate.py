@@ -52,7 +52,7 @@ class FixedPointIterator(Driver):
     def execute(self):
         """ Executes an iterative solver """
 
-        # print 'Executes an iterative solver', 
+        # print 'Executes an iterative solver',
         # if MPI:
         #     print 'driver', self
         #     #print 'size',self.workflow._system.mpi.size
