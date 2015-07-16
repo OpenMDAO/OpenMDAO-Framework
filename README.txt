@@ -1,3 +1,10 @@
+A newer version of this software (a complete rewrite of OpenMDAO) exists here:
+    https://github.com/OpenMDAO/OpenMDAO
+
+Active development of OpenMDAO-Framework beyond 0.13.0 by the OpenMDAO team has ceased.
+To use the legacy version anyway, follow the directions below.
+-----------------------------------
+
 To set up a development virtual environment for OpenMDAO, run:
 
     python install_openmdao_dev.py
@@ -13,3 +20,5 @@ For additional options, run:
     python install_openmdao_dev.py --help
 
 For more information, go to http://openmdao.org/dev_docs
+
+
