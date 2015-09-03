@@ -21,7 +21,7 @@ from openmdao.main.resource import ResourceAllocationManager as RAM
 from openmdao.util.filexfer import filexfer, pack_zipfile, unpack_zipfile
 from openmdao.util import shellproc
 
-from distutils.spawn import find_executable
+from numpy.distutils.exec_command import find_executable
 
 
 class ExternalCode(Component):
@@ -253,9 +253,13 @@ class ExternalCode(Component):
         if not command_full_path:
             self.raise_exception("The command to be executed, '%s', cannot be found" % program_to_execute,
                                  ValueError)
-            
+
+        command_for_shell_proc = self.command
+        if sys.platform == 'win32':
+            command_for_shell_proc = ['cmd.exe', '/c' ] + command_for_shell_proc
+
         self._process = \
-            shellproc.ShellProc(self.command, self.stdin,
+            shellproc.ShellProc(command_for_shell_proc, self.stdin,
                                 self.stdout, self.stderr, self.env_vars)
         self._logger.debug('PID = %d', self._process.pid)
 
