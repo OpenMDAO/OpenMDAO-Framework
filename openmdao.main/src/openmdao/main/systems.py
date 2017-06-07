@@ -1829,12 +1829,13 @@ class CompoundSystem(System):
         """
         scope = self.scope
         try:
+            while scope.parent:
+                name = scope.name + '.' + name
+                scope = scope.parent
             if MPI is None:
                 scope.get(name) # make sure var exists
                 return True
             elif self.is_active():
-                while scope.parent:
-                    scope = scope.parent
                 return self.mpi.rank in scope.print_ranks[name]
         except:
             msg = 'Cannot find a system that contains varpath %s' % name
@@ -2519,9 +2520,7 @@ class TransparentDriverSystem(DriverSystem):
 
 
 class SolverSystem(TransparentDriverSystem):  # Implicit
-    """A System for a Solver component. While it inherits from a SimpleSystem,
-    much of the behavior is like a CompoundSystem, particularly variable
-    propagation."""
+    """A System for a Solver component."""
 
     def _get_resid_state_map(self):
 

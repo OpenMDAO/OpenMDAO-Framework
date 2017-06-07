@@ -1108,17 +1108,11 @@ class Assembly(Component):
         """Calculate the local sizes of all relevant variables
         and share those across all processes in the communicator.
         """
-        # find all local systems
-        sys_stack = [self._system]
         loc_comps = []
 
-        while sys_stack:
-            system = sys_stack.pop()
+        for system in self._system.local_subsystems(recurse=True):
             loc_comps.extend([s.name for s in system.simple_subsystems()
                                     if s._comp is not None])
-            sys_stack.extend(system.local_subsystems())
-            if isinstance(system, OpaqueSystem):
-                sys_stack.append(system._inner_system)
 
         loc_comps = set(loc_comps)
         loc_comps.add(None)
@@ -1592,8 +1586,13 @@ class Assembly(Component):
         of its children that are local to the current MPI process.
         """
         all_locs = set()
-        all_locs.update(self.list_inputs())
-        all_locs.update(self.list_outputs())
+        myvars = self.list_inputs() + self.list_outputs()
+        for v in myvars:
+            obj = getattr(self, v)
+            if isinstance(obj, VariableTree):
+                all_locs.update(obj.list_all_vars())
+            else:
+                all_locs.add(v)
 
         for s in [self._system] + list(self._system.local_subsystems(recurse=True)):
             if isinstance(s, SimpleSystem):
@@ -1605,12 +1604,22 @@ class Assembly(Component):
                     all_locs.update(['.'.join([obj.name, n])
                                           for n in obj.get_all_local_vars()])
                 elif has_interface(obj, IComponent):
-                    lvars = ['.'.join([obj.name, n])
-                                          for n in obj.list_inputs() +
-                                                   obj.list_outputs()]
-                    for i, v in enumerate(lvars):
-                        if v in s.distrib_idxs:
-                            lvars[i] = (v,)  # wrap in tuple to indicate its a distrib var
+                    lvars = []
+                    cvars = obj.list_inputs() + obj.list_outputs()
+                    for v in cvars:
+                        var = getattr(obj, v)
+                        if isinstance(var, VariableTree):
+                            for vtv in var.list_all_vars():
+                                full = '.'.join([obj.name, vtv])
+                                if full in s.distrib_idxs:
+                                    full = (full,)
+                                lvars.append(full)
+                        else:
+                            full = '.'.join([obj.name, v])
+                            if full in s.distrib_idxs:
+                                full = (full,)
+                            lvars.append(full)
+
                     all_locs.update(lvars)
 
                 elif isinstance(s, ParamSystem):
@@ -1656,10 +1665,8 @@ class Assembly(Component):
 
     def _setup(self, inputs=None, outputs=None, drvname=None):
         """This is called automatically on the top level Assembly
-        prior to execution.  It will also be called if
-        calc_gradient is called with input or output lists that
-        differ from the lists of parameters or objectives/constraints
-        that are inherent to the model.
+        prior to execution.  It sets up the entire System hierarchy
+        that is used for execution and derivative calculation.
         """
         # only perform full setup if we're the top Assembly
         if self.parent:
@@ -1672,14 +1679,40 @@ class Assembly(Component):
             comm = None
 
         try:
+            # Clean up old cached stuff, old pseudocomps,
+            # and configure ArchitectureAssemblies.
             self.setup_init()
 
+            # Create the dependency graph based on Assembly connections,
+            # driver params, objectives, and constraints, and any
+            # specific inputs and outputs explicitly passed to a driver
+            # calc_gradient call.  Pseudocomps for unit conversions and
+            # expression connections are added here too.
             self.setup_depgraph()
+
+            # Determine the full workflow (unordered) for each driver, based
+            # on the explict driver workflow components and any other
+            # pseudocomps or other components that are strongly connected to
+            # them.  Having the full workflow for each driver also gives
+            # us the full iteration set for each driver, which contains
+            # all of the components in a given driver and all of its subdrivers
+            # recursively.
             self.compute_itersets(None)
+
+            # Once we have the driver iteration sets, we can create component
+            # graphs with subdrivers collapsed so that we can order all of
+            # the comps in each driver's (full) workflow.
             self.compute_ordering(None)
 
+            # This calls init_var_sizes on all child components in execution
+            # order so that they can size their inputs and outputs.  We currently
+            # don't pass any args indicating the sizes of the vars connected
+            # to their inputs, but we probably should...
             self.init_var_sizes()
 
+            # Collapse all edges into nodes so that all sources and their
+            # destinations become the same variable. This gets rid of
+            # some data duplication.
             self.setup_reduced_graph(inputs=inputs, outputs=outputs,
                                      drvname=drvname)
             self.setup_systems()

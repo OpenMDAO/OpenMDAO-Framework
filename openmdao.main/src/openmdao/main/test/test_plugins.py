@@ -29,9 +29,9 @@ class PluginsTestCase(unittest.TestCase):
     def test_basic(self):
         #Testing in pythonxy fails due to the pip version
         if sys.platform == 'win32':
-          pipvers = pip.__version__
-          if pipvers.__contains__("xy"):
-             raise nose.SkipTest("PythonXY's pip name is non-standard 'pip-2.7xy' and causes test failure when 'pip-2.7' is searched for and not found.")
+            pipvers = pip.__version__
+            if pipvers.__contains__("xy"):
+                raise nose.SkipTest("PythonXY's pip name is non-standard 'pip-2.7xy' and causes test failure when 'pip-2.7' is searched for and not found.")
 
         logging.debug('')
         logging.debug('test_basic')
@@ -70,6 +70,7 @@ class PluginsTestCase(unittest.TestCase):
         logdata = ''
         os.chdir(os.path.join(self.tdir, 'foobar'))
         try:
+            err = False
             argv = ['makedist']
             parser = _get_plugin_parser()
             options, args = parser.parse_known_args(argv)
@@ -81,12 +82,19 @@ class PluginsTestCase(unittest.TestCase):
                 self.assertTrue(os.path.exists('foobar-0.1.zip'))
             else:
                 self.assertTrue(os.path.exists('foobar-0.1.tar.gz'))
+        except Exception:
+            exc = sys.exc_info()
+            err = True
+            raise exc[0], exc[1], exc[2]
         finally:
             captured_stdout = sys.stdout.getvalue()
             captured_stderr = sys.stderr.getvalue()
             sys.stdout = orig_stdout
             sys.stderr = orig_stderr
             os.chdir(orig_dir)
+            if err:
+                sys.stderr.write(logdata)
+                sys.stderr.write(captured_stderr)
             logging.debug('captured stdout:')
             logging.debug(captured_stdout)
             logging.debug('captured stderr:')
@@ -101,6 +109,7 @@ class PluginsTestCase(unittest.TestCase):
         sys.stderr = cStringIO.StringIO()
         os.chdir(os.path.join(self.tdir, 'foobar'))
         try:
+            err = False
             argv = ['makedist']
             parser = _get_plugin_parser()
             options, args = parser.parse_known_args(argv)
@@ -108,12 +117,19 @@ class PluginsTestCase(unittest.TestCase):
             with open('makedist.out', 'r') as inp:
                 logdata = inp.read()
             self.assertEqual(retval, 0)
+        except Exception:
+            exc = sys.exc_info()
+            err = True
+            raise exc[0], exc[1], exc[2]
         finally:
             captured_stdout = sys.stdout.getvalue()
             captured_stderr = sys.stderr.getvalue()
             sys.stdout = orig_stdout
             sys.stderr = orig_stderr
             os.chdir(orig_dir)
+            if err:
+                sys.stderr.write(logdata)
+                sys.stderr.write(captured_stderr)
             logging.debug('captured stdout:')
             logging.debug(captured_stdout)
             logging.debug('captured stderr:')
@@ -129,6 +145,7 @@ class PluginsTestCase(unittest.TestCase):
         logdata = ''
         os.chdir(self.tdir)
         try:
+            err = False
             argv = ['install', 'foobar']
             parser = _get_plugin_parser()
             options, args = parser.parse_known_args(argv)
@@ -136,12 +153,19 @@ class PluginsTestCase(unittest.TestCase):
             with open('install.out', 'r') as inp:
                 logdata = inp.read()
             self.assertEqual(retval, 0)
+        except Exception:
+            exc = sys.exc_info()
+            err = True
+            raise exc[0], exc[1], exc[2]
         finally:
             captured_stdout = sys.stdout.getvalue()
             captured_stderr = sys.stderr.getvalue()
             sys.stdout = orig_stdout
             sys.stderr = orig_stderr
             os.chdir(orig_dir)
+            if err:
+                sys.stderr.write(logdata)
+                sys.stderr.write(captured_stderr)
             logging.debug('captured stdout:')
             logging.debug(captured_stdout)
             logging.debug('captured stderr:')
