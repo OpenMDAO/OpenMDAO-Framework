@@ -44,7 +44,7 @@ setup(name='openmdao.devtools',
           'virtualenv',
           'openmdao.util',
           'boto',
-          'paramiko==1.7.7.1',
+          'paramiko==2.10.1',
           'requests',
       ],
       entry_points = {
